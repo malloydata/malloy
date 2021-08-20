@@ -1,0 +1,107 @@
+--! styles names.styles.json
+
+export define names is (explore ('bigquery-public-data.usa_names.usa_1910_2013' | reduce
+    decade is floor(`year`/10)*10
+    state
+    baby_gender is gender: pick 'Male' when ='M' else 'Female'
+    gender
+    cohort_population is `number`.sum()
+    by_name is (reduce
+      name
+      population is `number`.sum()
+    )
+  )
+  births_per_100k is FLOOR(by_name.population.sum()/cohort_population.sum() *100000)
+  total_cohort_population is cohort_population.sum()
+  total_population is by_name.population.sum()
+  name is concat(by_name.name,'') -- bug
+  
+
+  state_map is (reduce
+    state
+    births_per_100k
+  )
+  decade_graph is (reduce
+    decade
+    births_per_100k
+    baby_gender
+  )
+  -- explore names | name_list
+  name_dashboard is (reduce top 15
+    name
+    total_population
+    state_map
+    decade_graph
+  )
+
+  location_iconic_names is (reduce
+    name,
+    baby_gender
+    births_per_100k
+    by_state is (reduce
+      state
+      births_per_100k
+    )
+  | reduce : [births_per_100k > 50]
+    by_state.state
+    by_gender is (reduce
+      baby_gender
+      iconic_name_list is (reduce top 15 order by 2 desc
+        name
+        popularity is (by_state.births_per_100k - births_per_100k) /births_per_100k
+      )
+    )
+  )
+
+  time_iconic_names is (reduce 
+    name,
+    baby_gender
+    births_per_100k
+    by_decade is (reduce
+      decade
+      births_per_100k
+    )
+  | reduce : [births_per_100k > 50]
+    by_decade.decade
+    by_gender is (reduce
+      baby_gender
+      iconic_name_list is (reduce top 50 order by 2 desc
+        name
+        popularity is (by_decade.births_per_100k - births_per_100k) /births_per_100k
+      )
+    )
+  )
+);
+
+define  jes_dashboard is ( 
+  names | 
+  name_dashboard : [name: ~ r'Jes']
+);
+
+
+define jessie_over_time is (
+  names |
+  reduce: [name:'Jessie']
+    decade_graph
+    total_population
+    by_state_and_time is (reduce
+      state
+      total_population
+      decade_graph
+    )
+);
+
+define alabama_iconic_names_by_decade is (
+  names | 
+  time_iconic_names : [state: 'AL'] 
+);
+
+define newyork_iconic_names_by_decade is (
+  names |
+  time_iconic_names : [state: 'NY'] 
+);
+
+define old_iconic_names_by_state is (
+  names |
+  location_iconic_names : [decade: <= 1940] 
+);

@@ -1,0 +1,17 @@
+EXPLORE
+  f0
+  : [ f7:'7' ]
+  PRIMARY KEY g9
+   g1 is 'g1'
+   g2 is 'g2'
+   JOINS e1 ON f4
+   | t1
+   | REDUCE
+    : [ f4:'v1' ]
+    g1,g2
+    f0_f1 is f1,
+    f2_filtered is f2 : [ f3: 'c' ]
+    order by 1,2,3 limit 100
+  | project *
+  | index
+    f1,f2

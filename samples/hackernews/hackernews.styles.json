@@ -1,0 +1,14 @@
+{
+    "faang_story_chart" : {
+      "renderer" : "line_chart"
+    },
+    "posts_over_time" : {
+      "renderer" : "line_chart"
+    },
+    "percent_good_over_time" : {
+      "renderer" : "line_chart"
+    },
+    "url" : {
+      "renderer" : "link"
+    }
+  }

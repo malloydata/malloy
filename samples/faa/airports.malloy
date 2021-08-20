@@ -1,0 +1,32 @@
+--! styles airports.styles.json
+
+export define airports is (explore 'malloy-data.faa.airports'
+  airport_count is count(*)
+
+  by_fac_type is (reduce
+    fac_type
+    airport_count
+    own_type
+  )
+
+  by_state is (reduce 
+    state
+    airport_count
+    by_fac_type
+    by_county is (reduce top 5
+      county
+      airport_count
+    )
+  )
+
+  major_airports is (reduce : [major:'Y']
+    name is concat(state, '-', full_name)
+  )
+
+  airports_by_region is (reduce
+    faa_region
+    by_fac_type
+    by_state
+    major_airports
+  )
+);

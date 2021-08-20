@@ -1,0 +1,51 @@
+{
+  "total_revenue": {
+    "renderer": "currency",
+    "currency": {
+      "unit": "pounds"
+    },
+    "text": {
+      "italic": true
+    },
+    "data": {
+      "color": "#21877d"
+    }
+  },
+  "top_products": {
+    "renderer": "bar_chart"
+  },
+  "by_month": {
+    "renderer": "line_chart"
+  },
+  "scatter": {
+    "renderer": "scatter_chart",
+    "cartesian_chart": {
+      "size": "order_count",
+      "shape": "status"
+    }
+  },
+  "bar": {
+    "renderer": "bar_chart"
+  },
+  "line": {
+    "renderer": "line_chart"
+  },
+  "status_by_month": {
+    "sheet": {
+      "by_month": {
+        "renderer": "spark_line"
+      }
+    }
+  },
+  "status_by_month3": {
+    "renderer": "bar_chart"
+  },
+  "ii.product_brand": {
+    "data": {
+      "color": "blue"
+    },
+    "text": {
+      "italic": true
+    }
+  }
+}

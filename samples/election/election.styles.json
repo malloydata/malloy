@@ -1,0 +1,8 @@
+{
+   "stations_by_service" : {
+      "renderer": "bar_chart"
+   },
+   "stations_by_state" : {
+      "renderer": "shape_map"
+   }
+}

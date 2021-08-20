@@ -1,0 +1,37 @@
+--! styles hackernews.styles.json
+
+import "hackernews.malloy"
+
+
+-- analysis about FAANG (Facebook Apple Amazon Netflix and Google)
+-- a resonable threshold for interesting stories is about 10
+define faang_analysis is (explore stories
+
+  faang is title :
+    pick 'Facebook' when ~ r'(Facebook|Instagram|Whatsapp)'
+    pick 'Apple' when ~ r'(Apple|iPhone|IOS|Macbook)'
+    pick 'Amazon' when ~ r'(Amazon|AWS)'
+    pick 'Netflix' when ~ r'Netflix'
+    pick 'Google' when ~ r'(Google|GOOG|Alphabet|GCloud|Chrome)'
+    else 'OTHER'
+
+  apple_dashboard is (reduce : [faang : 'Apple', score >= threshold] term_dashboard)
+  google_dashboard is (reduce : [faang: 'Google', score >= threshold] term_dashboard)
+
+  faang_stories is (reduce : [faang: != 'OTHER', score >= threshold] stories)
+
+  faang_dashboard is (reduce : [faang != 'OTHER', score >= threshold, post_type: 'story']
+    faang_story_chart is (reduce 
+      posted_at is post_time.month
+      post_count
+      faang
+    )
+    facebook is top_sites : [faang: 'Facebook']
+    apple is top_sites : [faang: 'Apple']
+    amazon is top_sites : [faang: 'Amazon']
+    netflix is top_sites : [faang: 'Netflix']
+    google is top_sites : [faang: 'Google']
+  )
+
+  poster_dashboard2 is (reduce : [faang != 'OTHER'] poster_dashboard)
+);

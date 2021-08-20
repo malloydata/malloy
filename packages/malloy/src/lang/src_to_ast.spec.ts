@@ -1,0 +1,843 @@
+/*
+ * Copyright 2021 Google LLC
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
+import "./jestery";
+import { readFileSync, readdirSync } from "fs";
+import { Malloy } from "../malloy";
+import {
+  aExpr,
+  mkExprField,
+  mkFieldName,
+  caFilter,
+  mkExploreOf,
+  mkFieldRefs,
+  aTableDef,
+  TestTranslator,
+} from "./jest-factories";
+import * as ast from "./ast";
+import { MalloyTranslator } from "./parse-malloy";
+
+describe("translation api", () => {
+  test("format an explore, looks correct", () => {
+    const ep = new TestTranslator(
+      "explore a primary key astring c is count(*) | reduce newName is afloat + 1",
+      "explore"
+    );
+    const epAst = ep.ast();
+    expect(epAst?.toString()).toBe(
+      `<explore>
+  source: <namedSource> name=a
+  primaryKey: <primary key>
+    field: <field name> name=astring
+  fields: [
+    <expressionField> exprSrc=count(*)
+      expr: <count> func=count
+      fieldName: <field name> name=c
+  ]
+  pipeline: <pipeline>
+    pipeBody: [
+      <reduce>
+        fields: [
+          <expressionField> exprSrc=afloat+1
+            expr: <+-> op=+
+              left: <field name>
+                fieldName: <field name> name=afloat
+              right: <numeric literal> n=1
+            fieldName: <field name> name=newName
+        ]
+        orderBy: []
+    ]`
+    );
+  });
+
+  test("table reference generates SchemaRequest", () => {
+    const x = new TestTranslator("explore 'table.name'", "explore");
+    const mustNeedTables = x.translate();
+    expect(mustNeedTables).toHaveProperty("tables");
+  });
+
+  test("schema data satisfies SchemaRequest", () => {
+    const x = new TestTranslator("explore 'table.name'", "explore");
+    const mustNeedTables = x.translate();
+    expect(mustNeedTables).toHaveProperty("tables");
+    x.update({ tables: { "table.name": aTableDef } });
+    const mustNeedNothing = x.translate();
+    expect(mustNeedNothing).toHaveProperty("translated");
+  });
+});
+
+describe("expressions", () => {
+  const aTrue = new ast.Boolean("true");
+  const aFalse = new ast.Boolean("false");
+  const n42 = new ast.ExprNumber("42");
+  const n4p2 = new ast.ExprNumber("4.2");
+  const sString = new ast.ExprString("'malloy is for dummies'");
+  const aNULL = new ast.ExprNULL();
+
+  test("literal true", () => {
+    expect("true").toMakeAst("fieldExpr", aTrue);
+  });
+
+  test("literal false", () => {
+    expect("false").toMakeAst("fieldExpr", aFalse);
+  });
+  test("not", () => {
+    expect("not false").toMakeAst("fieldExpr", new ast.ExprNot(aFalse));
+  });
+  test("and", () => {
+    expect("true and false").toMakeAst(
+      "fieldExpr",
+      new ast.ExprLogicalOp(aTrue, "and", aFalse)
+    );
+  });
+  test("or", () => {
+    expect("true or false").toMakeAst(
+      "fieldExpr",
+      new ast.ExprLogicalOp(aTrue, "or", aFalse)
+    );
+  });
+
+  test("string literal", () => {
+    expect("'malloy is for dummies'").toMakeAst("fieldExpr", sString);
+  });
+
+  test("integer literal", () => {
+    expect("42").toMakeAst("fieldExpr", n42);
+  });
+  test("float literal", () => {
+    expect("4.2").toMakeAst("fieldExpr", n4p2);
+  });
+  test("field name", () => {
+    expect("a").toMakeAst("fieldExpr", aExpr);
+  });
+  test("NULL", () => {
+    expect("NULL").toMakeAst("fieldExpr", aNULL);
+  });
+  test("( 42 )", () => {
+    expect("(42)").toMakeAst("fieldExpr", new ast.ExprParens(n42));
+  });
+  test("-42", () => {
+    expect("-42").toMakeAst("fieldExpr", new ast.ExprMinus(n42));
+  });
+  test("42 - 4.2", () => {
+    expect("42 - 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprAddSub(n42, "-", n4p2)
+    );
+  });
+  test("42 + 4.2", () => {
+    expect("42 + 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprAddSub(n42, "+", n4p2)
+    );
+  });
+  test("42 * 4.2", () => {
+    expect("42 * 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprMulDiv(n42, "*", n4p2)
+    );
+  });
+  test("42 / 4.2", () => {
+    expect("42 / 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprMulDiv(n42, "/", n4p2)
+    );
+  });
+  test("42 > 4.2", () => {
+    expect("42 > 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(n42, ">", n4p2)
+    );
+  });
+  test("42 = 4.2", () => {
+    expect("42 = 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(n42, "=", n4p2)
+    );
+  });
+  test("42 < 4.2", () => {
+    expect("42 < 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(n42, "<", n4p2)
+    );
+  });
+  test("42 >= 4.2", () => {
+    expect("42 >= 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(n42, ">=", n4p2)
+    );
+  });
+  test("42 <= 4.2", () => {
+    expect("42 <= 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(n42, "<=", n4p2)
+    );
+  });
+  test("42 != 4.2", () => {
+    expect("42 != 4.2").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(n42, "!=", n4p2)
+    );
+  });
+
+  test("count()", () => {
+    expect("count()").toMakeAst("fieldExpr", new ast.ExprCount());
+  });
+  test("count(distinct a)", () => {
+    expect("count(distinct a)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCountDistinct(aExpr)
+    );
+  });
+  test("sum(a)", () => {
+    expect("sum(a)").toMakeAst("fieldExpr", new ast.ExprSum(aExpr));
+  });
+  test("avg(a)", () => {
+    expect("avg(a)").toMakeAst("fieldExpr", new ast.ExprAvg(aExpr));
+  });
+  test("min(a)", () => {
+    expect("min(a)").toMakeAst("fieldExpr", new ast.ExprMin(aExpr));
+  });
+  test("max(a)", () => {
+    expect("max(a)").toMakeAst("fieldExpr", new ast.ExprMax(aExpr));
+  });
+  test("a.sum(b)", () => {
+    const func = new ast.ExprSum(mkExprField("b"), "a");
+    expect("a.sum(b)").toMakeAst("fieldExpr", func);
+  });
+  test("function call", () => {
+    expect("withargs(42, 'malloy is for dummies')").toMakeAst(
+      "fieldExpr",
+      new ast.ExprFunc("withargs", [n42, sString])
+    );
+  });
+  test("function()", () => {
+    expect("noargs()").toMakeAst("fieldExpr", new ast.ExprFunc("noargs", []));
+  });
+
+  test("case when 42 then 4.2 else NULL end", () => {
+    expect("case when 42 then 4.2 else NULL end").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCase([new ast.WhenClause(n42, n4p2)], aNULL)
+    );
+  });
+
+  test("case when 42 then 4.2", () => {
+    expect("case when 42 then 4.2 end").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCase([new ast.WhenClause(n42, n4p2)])
+    );
+  });
+
+  test("full pick", () => {
+    expect("pick 'a' when 'A' pick 'B' when 'b' else 'c'").toMakeAst(
+      "fieldExpr",
+      new ast.Pick(
+        [
+          new ast.PickWhen(
+            new ast.ExprString(`'a'`),
+            new ast.ExprString(`'A'`)
+          ),
+          new ast.PickWhen(
+            new ast.ExprString(`'B'`),
+            new ast.ExprString(`'b'`)
+          ),
+        ],
+        new ast.ExprString(`'c'`)
+      )
+    );
+  });
+
+  test("pick no value", () => {
+    expect("'a': pick when 'a' ELSE 'nota'").toMakeAst(
+      "fieldExpr",
+      new ast.Apply(
+        new ast.ExprString(`'a'`),
+        new ast.Pick(
+          [new ast.PickWhen(undefined, new ast.ExprString(`'a'`))],
+          new ast.ExprString("'nota'")
+        )
+      )
+    );
+  });
+
+  test("pick no else", () => {
+    expect("pick 'a' when 'A' pick 'B' when 'b'").toMakeAst(
+      "fieldExpr",
+      new ast.Pick([
+        new ast.PickWhen(new ast.ExprString(`'a'`), new ast.ExprString(`'A'`)),
+        new ast.PickWhen(new ast.ExprString(`'B'`), new ast.ExprString(`'b'`)),
+      ])
+    );
+  });
+
+  test("some_count : [ state:'ca']", () => {
+    expect("some_count : [ state:'ca']").toMakeAst(
+      "fieldExpr",
+      new ast.ExprFilter(mkExprField("some_count"), caFilter)
+    );
+  });
+
+  test("cast to string", () => {
+    expect("cast(42 as string)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCast(n42, "string")
+    );
+  });
+
+  test("cast to boolean", () => {
+    expect("cast(42 as boolean)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCast(n42, "boolean")
+    );
+  });
+
+  test("cast to number", () => {
+    expect("cast(42 as number)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCast(n42, "number")
+    );
+  });
+  test("cast to date", () => {
+    expect("cast(42 as date)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCast(n42, "date")
+    );
+  });
+
+  test("cast to timestamp", () => {
+    expect("cast(42 as timestamp)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCast(n42, "timestamp")
+    );
+  });
+
+  test("safecast timestamp", () => {
+    expect("42::timestamp)").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCast(n42, "timestamp", true)
+    );
+  });
+
+  test("month truncation", () => {
+    expect("now.month").toMakeAst(
+      "fieldExpr",
+      new ast.ExprGranularTime(new ast.ExprNow(), "month", true)
+    );
+  });
+
+  test("colon with partial", () => {
+    expect("42:>4.2").toMakeAst(
+      "fieldExpr",
+      new ast.Apply(n42, new ast.PartialCompare(">", n4p2))
+    );
+  });
+
+  test("compare plus conjunction", () => {
+    expect("42 >= 4.2|42").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(
+        n42,
+        ">=",
+        new ast.ExprAlternationTree(n4p2, "|", n42)
+      )
+    );
+  });
+
+  test("compare plus partial", () => {
+    expect("42 > 4.2 & =42").toMakeAst(
+      "fieldExpr",
+      new ast.ExprCompare(
+        n42,
+        ">",
+        new ast.ExprAlternationTree(n4p2, "&", new ast.PartialCompare("=", n42))
+      )
+    );
+  });
+  test("numeric range", () => {
+    expect("4.2 to 42").toMakeAst("fieldExpr", new ast.Range(n4p2, n42));
+  });
+
+  test("date for range", () => {
+    expect("now for 42 days").toMakeAst(
+      "fieldExpr",
+      new ast.ForRange(new ast.ExprNow(), n42, new ast.Timeframe("day"))
+    );
+  });
+});
+
+describe("field definitions", () => {
+  test("newName rename oldName", () => {
+    expect("newA renames a").toMakeAst(
+      "fieldDef",
+      new ast.RenameField("newA", "a")
+    );
+  });
+
+  test("rename reserved word in external table", async () => {
+    const countyData = "bigquery-public-data.covid19_nyt.us_counties";
+    const src = `
+      explore '${countyData}'
+      fields
+        foo renames \`date\`
+    `;
+    const tables = await Malloy.db.getSchemaForMissingTables([countyData]);
+    const trans = new TestTranslator(src, "explore");
+    trans.update({ tables });
+    expect(trans).toBeValidMalloy();
+  });
+
+  test("fieldName", () => {
+    expect("a").toMakeAst("fieldDef", mkFieldRefs("a"));
+  });
+
+  test("exploreName.fieldName", () => {
+    expect("a.b").toMakeAst("fieldDef", mkFieldRefs("a.b"));
+  });
+
+  test("wildcard", () => {
+    expect("*").toMakeAst(
+      "fieldDef",
+      new ast.FieldReferences([new ast.Wildcard("", "*")])
+    );
+  });
+
+  test("wildcard double star", () => {
+    expect("**").toMakeAst(
+      "fieldDef",
+      new ast.FieldReferences([new ast.Wildcard("", "**")])
+    );
+  });
+
+  test("wildcard dot star", () => {
+    expect("joinName.*").toMakeAst(
+      "fieldDef",
+      new ast.FieldReferences([new ast.Wildcard("joinName", "*")])
+    );
+  });
+
+  test("field name with quoted keywords", () => {
+    expect("`explore`.`join`").toMakeAst(
+      "fieldDef",
+      mkFieldRefs("explore.join")
+    );
+  });
+
+  test("name is field_expression", () => {
+    const eAnswer = new ast.ExprMulDiv(
+      new ast.ExprNumber("6"),
+      "*",
+      new ast.ExprNumber("9")
+    );
+    expect("answer is 6*9").toMakeAst(
+      "fieldDef",
+      new ast.ExpressionFieldDef(eAnswer, mkFieldName("answer"), "6*9")
+    );
+  });
+
+  const aReduce = new ast.PipelineElement([
+    new ast.Reduce({ fields: [mkFieldRefs("a")] }),
+  ]);
+
+  test("stage field", () => {
+    expect("justa is (reduce a)").toMakeAst(
+      "fieldDef",
+      new ast.Turtle(aReduce, mkFieldName("justa"))
+    );
+  });
+  test("name staged field", () => {
+    expect("aReduce is (reduce a)").toMakeAst(
+      "fieldDef",
+      new ast.Turtle(aReduce, new ast.FieldName("aReduce"))
+    );
+  });
+});
+
+describe("pipe stages", () => {
+  test("fields", () => {
+    expect("reduce a,b").toMakeAst(
+      "queryStage",
+      new ast.Reduce({
+        fields: [mkFieldRefs("a", "b")],
+      })
+    );
+  });
+
+  test("filters", () => {
+    expect("reduce : [state:'ca'] x").toMakeAst(
+      "queryStage",
+      new ast.Reduce({
+        fields: [mkFieldRefs("x")],
+        filter: caFilter,
+      })
+    );
+  });
+
+  test("order by", () => {
+    expect("reduce a order by 1").toMakeAst(
+      "queryStage",
+      new ast.Reduce({
+        fields: [mkFieldRefs("a")],
+        orderBy: [new ast.OrderBy(1)],
+      })
+    );
+  });
+
+  test("order by limit", () => {
+    expect("reduce a order by 1 limit 42").toMakeAst(
+      "queryStage",
+      new ast.Reduce({
+        fields: [mkFieldRefs("a")],
+        orderBy: [new ast.OrderBy(1)],
+        limit: 42,
+      })
+    );
+  });
+
+  test("project everything", () => {
+    expect("project : [state: 'ca'] a order by 1 limit 42").toMakeAst(
+      "queryStage",
+      new ast.Project({
+        filter: caFilter,
+        fields: [mkFieldRefs("a")],
+        orderBy: [new ast.OrderBy(1)],
+        limit: 42,
+      })
+    );
+  });
+
+  test("turtle", () => {
+    const want = new ast.PipelineElement([], mkFieldName("turtleHead"));
+    const trans = new TestTranslator("turtleHead", "pipeline");
+    expect(trans).toBeValidMalloy();
+    const turtleAst = trans.ast();
+    expect(turtleAst).toEqualAst(want);
+  });
+
+  test("index", () => {
+    expect("index").toMakeAst("queryStage", new ast.Index());
+  });
+
+  test("index field", () => {
+    const oneField = new ast.Index();
+    oneField.fields = [mkFieldRefs("a")];
+    expect("index a").toMakeAst("queryStage", oneField);
+  });
+
+  test("index on", () => {
+    const indexOn = new ast.Index();
+    indexOn.on = mkFieldName("a");
+    expect("index on a").toMakeAst("queryStage", indexOn);
+  });
+
+  test("index []", () => {
+    const indexFiltered = new ast.Index();
+    indexFiltered.filter = caFilter;
+    expect("index [ state:'ca']").toMakeAst("queryStage", indexFiltered);
+  });
+
+  test("index limit", () => {
+    const index = new ast.Index();
+    index.limit = 42;
+    expect("index limit 42").toMakeAst("queryStage", index);
+  });
+});
+
+describe("query", () => {
+  test("filtered turtle", () => {
+    const src = `
+      explore a | aturtle : [ state:'ca' ]
+    `;
+    const aturtle = new ast.PipelineElement([]);
+    aturtle.addHead(mkFieldName("aturtle"), caFilter);
+    const want = mkExploreOf("a", { pipeline: aturtle });
+    expect(src).toMakeAst("explore", want);
+  });
+
+  test("named_explore", () => {
+    expect("a").toMakeAst("explore", mkExploreOf("a"));
+  });
+
+  test("'table.name'", () => {
+    expect("'aTable'").toMakeAst(
+      "explore",
+      new ast.Explore(new ast.TableSource("aTable"))
+    );
+  });
+
+  test("optional keyword explore", () => {
+    expect("explore a").toMakeAst("explore", mkExploreOf("a"));
+  });
+
+  test("( a )", () => {
+    expect("(a)").toMakeAst(
+      "explore",
+      new ast.Explore(new ast.AnonymousSource(mkExploreOf("a")))
+    );
+  });
+
+  test("primary key", () => {
+    expect("a primary key b").toMakeAst(
+      "explore",
+      mkExploreOf("a", {
+        primaryKey: new ast.PrimaryKey(new ast.FieldName("b")),
+      })
+    );
+  });
+
+  test("explore one field", () => {
+    expect("a b is c").toMakeAst(
+      "explore",
+      mkExploreOf("a", {
+        fields: [new ast.NameOnly(mkFieldName("c"), new ast.Filter([]), "b")],
+      })
+    );
+  });
+
+  test("filtered", () => {
+    expect("a: [ state:'ca' ]").toMakeAst(
+      "explore",
+      mkExploreOf("a", { filter: caFilter })
+    );
+  });
+
+  test("accept", () => {
+    expect("a accept astring").toMakeAst(
+      "explore",
+      mkExploreOf("a", {
+        fieldListEdit: new ast.FieldListEdit("accept", mkFieldRefs("astring")),
+      })
+    );
+  });
+
+  test("with pipeline", () => {
+    expect("a | reduce astring").toMakeAst(
+      "explore",
+      mkExploreOf("a", {
+        pipeline: new ast.PipelineElement([
+          new ast.Reduce({ fields: [mkFieldRefs("astring")] }),
+        ]),
+      })
+    );
+  });
+
+  test("with turtle pipe", () => {
+    const want = mkExploreOf("a", {
+      fields: [
+        new ast.Turtle(
+          new ast.PipelineElement([
+            new ast.Reduce({
+              fields: [
+                mkFieldRefs("astring"),
+                new ast.ExpressionFieldDef(
+                  new ast.ExprCount(),
+                  new ast.FieldName("val_count"),
+                  "count(*)"
+                ),
+              ],
+            }),
+          ]),
+          mkFieldName("by_string_val")
+        ),
+      ],
+      pipeline: new ast.PipelineElement([], mkFieldName("by_string_val")),
+    });
+    expect(
+      "a fields by_string_val is (reduce astring, val_count is count(*)) | by_string_val"
+    ).toMakeAst("explore", want);
+  });
+});
+
+describe("joins", () => {
+  function join(nm: string, src: ast.Mallobj, ky: string): ast.Join {
+    return new ast.Join(mkFieldName(nm), src, mkFieldName(ky));
+  }
+
+  test("b on k", () => {
+    expect("b on k").toMakeAst(
+      "join",
+      join("b", new ast.NamedSource("b"), "k")
+    );
+  });
+  test("d is b on k", () => {
+    expect("d is b on k").toMakeAst(
+      "join",
+      join("d", new ast.NamedSource("b"), "k")
+    );
+  });
+  test("d is (b) on k", () => {
+    expect("d is (b) on k").toMakeAst(
+      "join",
+      join("d", new ast.AnonymousSource(mkExploreOf("b")), "k")
+    );
+  });
+  test("d is 'table' on key", () => {
+    expect("d is 'aTable' on k").toMakeAst(
+      "join",
+      join("d", new ast.TableSource("aTable"), "k")
+    );
+  });
+});
+
+describe("document", () => {
+  function defineStatement(src: string) {
+    const defParse = new TestTranslator(src, "defineStatement");
+    expect(defParse).toBeValidMalloy();
+    const def = defParse.ast() as ast.Define;
+    expect(def).toBeDefined();
+    return def;
+  }
+
+  test("define newA is explore a", () => {
+    const got = defineStatement("define newA is (explore a)");
+    const src = new ast.NamedSource("a");
+    const want = new ast.Define("newA", new ast.Explore(src), false);
+    expect(got).toEqualAst(want);
+  });
+
+  test("export define a is explore b", () => {
+    const got = defineStatement("export define newA is (explore a)");
+    const src = new ast.NamedSource("a");
+    const want = new ast.Define("newA", new ast.Explore(src), false);
+    expect(got).toEqualAst(want);
+  });
+
+  test("define three explores", () => {
+    const srcCode = `
+      export define newA is (a);
+      define newB is (b);
+      export define newBB is (newB)
+    `;
+    const docParse = new TestTranslator(srcCode);
+    expect(docParse).toTranslate();
+    const doc = docParse.ast() as ast.Document;
+    expect(doc).toBeDefined();
+    expect(doc.statements.length).toBe(3);
+    for (const [index, eName] of ["newA", "newB", "newBB"].entries()) {
+      const st = doc.statements[index];
+      expect(st).toBeInstanceOf(ast.Define);
+      expect((st as ast.Define).name).toBe(eName);
+    }
+  });
+
+  test("simple import", () => {
+    const docParse = new TestTranslator(`import "child"`);
+    const xr = docParse.unresolved();
+    expect(docParse).toBeErrorless();
+    expect(xr).toEqual({ URLs: ["internal://test/child"] });
+    docParse.update({
+      URLs: { "internal://test/child": "export define aa is (explore a)" },
+    });
+    const yr = docParse.unresolved();
+    expect(yr).toBeNull();
+  });
+
+  test("translator malformed root url", () => {
+    const docParse = new MalloyTranslator("not_a_ful_path");
+    const xr = docParse.unresolved();
+    expect(xr).toBeNull();
+    expect(docParse).not.toBeErrorless();
+  });
+
+  test.skip("import malformed url", () => {
+    // skipped because it appears that any string does not parse as a full URL
+    // is simply appended to the root as a relative URL
+    const docParse = new TestTranslator(`import ":"`);
+    const badRef = docParse.unresolved();
+    expect(docParse).toBeErrorless();
+    expect(badRef).toBeUndefined();
+  });
+
+  test("missing import", () => {
+    const docParse = new TestTranslator(`import "child"`);
+    const xr = docParse.unresolved();
+    expect(docParse).toBeErrorless();
+    expect(xr).toEqual({ URLs: ["internal://test/child"] });
+    const reportedError = "ENOWAY: No way to find your child";
+    docParse.update({
+      errors: { URLs: { "internal://test/child": reportedError } },
+    });
+    expect(docParse).not.toTranslate();
+    expect(docParse.prettyErrors()).toContain(reportedError);
+  });
+
+  test("chained imports", () => {
+    const docParse = new TestTranslator(`import "child"`);
+    docParse.update({
+      URLs: { "internal://test/child": `import "grandChild"` },
+    });
+    const xr = docParse.unresolved();
+    expect(docParse).toBeErrorless();
+    expect(xr).toEqual({ URLs: ["internal://test/grandChild"] });
+  });
+
+  test("query lists", () => {
+    const doc = new ast.Document([
+      new ast.DocumentQuery(mkExploreOf("a"), 0),
+      new ast.DocumentQuery(mkExploreOf("b"), 1),
+    ]);
+    expect("a;b").toMakeAst("malloyDocument", doc);
+  });
+});
+
+describe("syntax errors", () => {
+  test.todo("errors with location report correct location");
+  test.todo("errors with span report correct span");
+});
+
+describe("json support", () => {
+  test("define using json", () => {
+    const jsonModel = "export define js is json " + JSON.stringify(aTableDef);
+    const jParse = new TestTranslator(jsonModel);
+    expect(jParse).toTranslate();
+    const jModel = jParse.translate().translated?.modelDef.structs;
+    expect(jModel).toBeDefined();
+    const js = jModel?.js;
+    expect(js).toBeDefined();
+
+    const malloyModel = "export define js is (explore 'aTable')";
+    const mParse = new TestTranslator(malloyModel);
+    const mModel = mParse.translate().translated?.modelDef.structs;
+    expect(mParse).toTranslate();
+    expect(mModel).toBeDefined();
+    const mjs = mModel?.js;
+    expect(mjs).toBeDefined();
+
+    if (mjs && js) {
+      expect(js).toEqual(mjs);
+    }
+  });
+});
+
+function findAndParseMalloyFiles(someDir: string) {
+  // paths are relative to packages/malloy ... but depending on how jest
+  // is set up, sometimes the directory is the project root ...
+  if (process.cwd().endsWith("packages/malloy")) {
+    someDir = "../../" + someDir;
+  }
+  describe(`parsing files in ${someDir}`, () => {
+    let modelsFound = false;
+    for (const fn of readdirSync(someDir)) {
+      if (fn.match(/.malloy$/)) {
+        modelsFound = true;
+        test(`parsing ${fn}`, () => {
+          const src = readFileSync(`${someDir}/${fn}`, "utf-8");
+          expect(src).toBeValidMalloy();
+        });
+      }
+    }
+    expect(modelsFound).toBeTruthy();
+  });
+}
+
+findAndParseMalloyFiles("packages/malloy/src/lang/test/malloy/parse");

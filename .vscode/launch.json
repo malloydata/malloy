@@ -1,0 +1,42 @@
+// A launch configuration that compiles the extension and then opens it inside a new window
+// Use IntelliSense to learn about possible attributes.
+// Hover to view descriptions of existing attributes.
+// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Run VSCode Extension",
+			"type": "extensionHost",
+			"request": "launch",
+			"args": [
+				"--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
+			],
+			"outFiles": [
+        "**/node_modules/malloy/**/dist/*.js",
+				"${workspaceFolder}/packages/malloy-vscode/dist/*.js"
+			],
+			"preLaunchTask": "${defaultBuildTask}",
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/node_modules/malloy/**",
+        "${workspaceFolder}/node_modules/malloy-render/**",
+        "!**/node_modules/**"
+      ],
+      "trace": true,
+      "console": "integratedTerminal",
+      "runtimeArgs": [
+        "--preserve-symlinks"
+      ]
+		},
+		{
+			"type": "node",
+			"request": "attach",
+			"name": "Attach to VSCode Language Server",
+			"port": 6009,
+			"restart": true,
+			"outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/server.js"]
+		}
+	]
+}

@@ -1,0 +1,20 @@
+{
+  "state_map": {
+    "renderer": "shape_map"
+  },
+  "decade_graph": {
+    "renderer": "line_chart"
+  },
+  "gender_p": {
+    "renderer": "pivot"
+  },
+  "iconic_name_list": {
+    "renderer": "list_detail"
+  },
+  "time_iconic_names": {
+    "renderer": "dashboard"
+  },
+  "by_gender": {
+    "renderer": "dashboard"
+  }
+}

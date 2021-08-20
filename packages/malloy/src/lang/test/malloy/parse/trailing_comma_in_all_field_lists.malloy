@@ -1,0 +1,7 @@
+DEFINE ok_trailing is (
+  explore a
+    except badness,
+  | reduce b,
+  | project c,
+  | index e, ON f
+)

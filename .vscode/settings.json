@@ -1,0 +1,14 @@
+{
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/tsconfig.tsbuildinfo": true
+  },
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "[markdown]": {
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4
+  }
+}

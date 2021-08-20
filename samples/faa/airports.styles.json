@@ -1,0 +1,11 @@
+{
+  "by_fac_type": {
+    "renderer": "bar_chart"
+  },
+  "by_state": {
+    "renderer": "shape_map"
+  },
+  "major_airports" : {
+    "renderer" : "list"
+  }
+} 

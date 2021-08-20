@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "declaration": true,
+    "composite": true,
+    "rootDir": "./src",
+    "noEmit": false,
+    "outDir": "dist",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "lib": [
+      "es2019",
+      "es2020.bigint",
+      "es2020.string",
+      "es2020.symbol.wellknown"
+    ],
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "target": "es6",
+    "experimentalDecorators": true,
+    "downlevelIteration": true,
+    "inlineSourceMap": true
+  },
+  "include": ["src", "node_modules/us-atlas"],
+  "exclude": ["**/node_modules", "dist"]
+}

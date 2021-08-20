@@ -1,0 +1,57 @@
+{
+  "private": true,
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "name": "@looker-open-source/malloy",
+  "workspaces": {
+    "packages": [
+      "packages/malloy",
+      "packages/malloy-render",
+      "packages/malloy-vscode"
+    ]
+  },
+  "engines": {
+    "yarn": "^1.22.0"
+  },
+  "files": [
+    "samples"
+  ],
+  "scripts": {
+    "clean": "yarn workspaces run clean",
+    "prebuild": "yarn clean",
+    "build": "yarn workspaces run build-without-dependencies",
+    "lint": "yarn eslint '**/*.ts{,x}'",
+    "test": "yarn lint && yarn build && yarn workspaces run test",
+    "test-fast": "yarn workspaces run test",
+    "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation",
+    "docs-prebuild": "yarn workspace malloy-render build && yarn docs-clean",
+    "docs-build": "yarn docs-prebuild && ts-node docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
+    "docs-preprocess": "ts-node docs/_scripts/build_docs/index.ts --watch",
+    "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
+    "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
+    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev"
+  },
+  "resolutions": {},
+  "devDependencies": {
+    "@types/md5": "^2.3.1",
+    "@types/prismjs": "^1.16.6",
+    "@typescript-eslint/eslint-plugin": "^4.9.1",
+    "@typescript-eslint/parser": "^4.18.0",
+    "concurrently": "^6.2.1",
+    "eslint": "^7.28.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^3.4.0",
+    "malloy": "*",
+    "malloy-render": "*",
+    "md5": "^2.3.0",
+    "prettier": "^2.3.2",
+    "prismjs": "^1.24.1",
+    "remark-gfm": "^1.0.0",
+    "remark-parse": "^9.0.0",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.3.2",
+    "unified": "^9.2.1",
+    "wait-on": "^6.0.0"
+  },
+  "dependencies": {}
+}

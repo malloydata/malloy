@@ -1,0 +1,46 @@
+{
+  "name": "malloy",
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "jest",
+    "prebuild": "yarn clean",
+    "build-watch": "yarn build-without-dependencies-watch",
+    "build": "yarn build-without-dependencies",
+    "build-without-dependencies": "yarn prebuild && yarn build-parser && tsc",
+    "build-without-dependencies-watch": "yarn prebuild && yarn build-parser && tsc --watch",
+    "build-local": "yarn clean && yarn build-without-dependencies",
+    "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
+    "testLang": "(cd src/lang ; yarn jest *.spec.ts)",
+    "testModel": "(cd src/model ; yarn jest *.spec.ts)",
+    "clean": "rm -rf dist/ && rm -rf src/lang/lib && rm -f tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^5.5.0",
+    "@google-cloud/common": "^3.6.0",
+    "antlr4ts": "^0.5.0-alpha.4",
+    "gaxios": "^4.2.0",
+    "lodash": "^4.17.20",
+    "luxon": "^1.26.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^26.6.2",
+    "@types/jest-expect-message": "^1.0.3",
+    "@types/lodash": "^4.14.165",
+    "@types/luxon": "^1.26.4",
+    "antlr4ts-cli": "^0.5.0-alpha.4",
+    "jest": "26.6.0",
+    "jest-diff": "^27.0.6",
+    "jest-expect-message": "^1.0.2",
+    "jsdoc-to-markdown": "^6.0.1",
+    "md5": "^2.3.0",
+    "path": "^0.12.7",
+    "ts-jest": "^26.4.4",
+    "ts-node": "^9.1.1",
+    "typedoc": "^0.20.27",
+    "typedoc-plugin-markdown": "^3.5.0",
+    "typescript": "^4.1.2"
+  }
+}

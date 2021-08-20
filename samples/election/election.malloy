@@ -1,0 +1,34 @@
+--! styles election.styles.json
+
+export define stations is (explore 'bigquery-public-data.fcc_political_ads.broadcast_tv_radio_station'
+  primary key stationId
+  station_count is count()
+
+  stations_by_service is (reduce 
+    service
+    station_count
+  )
+
+  owner_dashboard is (reduce top 10
+    partyName, 
+    station_count
+    stations_by_service
+    stations_by_state is (reduce
+      communityState
+      station_count
+    )
+    by_network is (reduce top 10
+      networkAfil
+      station_count
+    )
+  )
+);
+
+export define content is (explore 'bigquery-public-data.fcc_political_ads.content_info'
+  primary key rawFilePath
+  total_spend is grossSpend.sum()
+  filing_count is count()
+
+  search_index is (index advertiser, candidate, infoSource, sourceId, agency ON filing_count )
+  detail is (reduce contentInfoId, advertiser, candidate, organization, grossSpend, infoSource, sourceId, agency LIMIT 100 )
+);

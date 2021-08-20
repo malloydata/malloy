@@ -1,0 +1,100 @@
+--! styles hackernews.styles.json
+
+export define stories is (explore 'bigquery-public-data.hacker_news.full'
+  threshold is 10
+  is_good is score >= threshold
+
+  -- measures 
+  post_count is count()
+  good_post_count is post_count : [is_good]
+  percent_good is FLOOR(good_post_count /post_count * 100)
+
+  -- dimensions
+  post_time is CAST(TIMESTAMP_SECONDS(`time`) as timestamp)
+  site is REGEXP_EXTRACT(
+      REGEXP_EXTRACT(url, '^http://([^\\/]*)\\/'),
+        '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$')
+
+  score_class is IFNULL(score,0): 
+    pick 'blah' when < 5 
+    pick 'hmmm' when < 10
+    pick 'oooh' when < 100
+    else 'wow'
+
+
+  poster renames `by`
+  post_type renames `type`
+
+  by_date is (reduce
+    posted_at is post_time.month
+    post_count
+  )
+
+  posts_over_time is (reduce 
+    posted_at is post_time.month
+    post_count
+  )
+
+  percent_good_over_time is (reduce
+    posted_at is post_time.year
+    percent_good
+  )
+
+  -- stories_by_date is turtle by_date : [post_type: 'story']
+  -- jobs_by_date is (by_date: [post_type: 'jobs'])
+
+  by_post_type is (reduce
+    post_type
+    post_count
+  )
+
+  top_poster is (reduce top 10 : [poster !=  null]
+    poster
+    post_count
+  )
+
+  top_sites is (reduce top 20 : [site !=  null]
+    site
+    post_count
+  )
+
+  stories is (reduce limit 100 order by 1 desc
+    post_time
+    poster
+    score
+    title
+    post_type
+    url
+  )
+
+  term_dashboard is (reduce 
+    by_date_and_type_line_chart is (reduce
+      posted_at is post_time.month
+      post_count
+      post_type
+    )
+    top_poster
+    top_sites
+    stories
+  )
+
+  poster_dashboard is (reduce top 20 : [poster != null, post_type: 'story']
+    poster
+    post_count
+    percent_good
+    posts_over_time
+    percent_good_over_time
+    first_post is min(post_time)
+    by_sites is (reduce top 10
+      site
+      post_count
+      percent_good
+    )
+    best_stories is (reduce top 10 order by score desc
+      post_time
+      title
+      score
+      site
+    )
+  )
+);

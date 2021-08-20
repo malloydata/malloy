@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{{ page.title }}</title>
+    <link rel="stylesheet" href="/css/document.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+  </head>
+  <body>
+    <div class="top">
+      <div class="header">
+        <img src="/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+      </div>
+      <div class="main">
+        {% include /generated/toc.html %}
+        <div class="content">
+          <div class="footer">
+            {% if page.footer %}
+            {% include {{ page.footer }} %}
+            {% endif %}
+          </div>
+          <div class="document-outer">
+            {{ content }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
