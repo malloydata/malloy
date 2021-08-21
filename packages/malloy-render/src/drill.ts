@@ -17,8 +17,13 @@ import {
   isValueNumber,
   isValueString,
   isValueTimestamp,
+  isValueDate,
+  TimeTimeframe,
+  isFieldTimeBased,
 } from "malloy";
 import { DataPointer, DataTree, DataTreeRoot, isDataTree } from "./data_table";
+
+type FilterItem = { key: string; value: string | undefined };
 
 export function getDrillPath(
   ref: DataPointer | undefined,
@@ -37,36 +42,84 @@ function filterQuote(s: string): string {
   return `'${s.replace("'", "\\'")}'`;
 }
 
+// Use a record instead of a map so we know we have all the types.
+const timeFrameMap: Record<TimeTimeframe, RegExp | null> = {
+  year: /^(\d\d\d\d)/,
+  month: /^(\d\d\d\d-\d\d)/,
+  date: /^(\d\d\d\d-\d\d-\d\d)/,
+  day: /^(\d\d\d\d-\d\d-\d\d)/,
+  hour: /^(\d\d\d\d-\d\d-\d\d \d\d)/,
+  minute: /^(\d\d\d\d-\d\d-\d\d \d\d:\d\d)/,
+  second: /^(\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d)/,
+  week: null,
+  quarter: null,
+  day_of_month: null,
+  day_of_week: null,
+  day_of_year: null,
+  month_of_year: null,
+  hour_of_day: null,
+};
+
+function timestampToDateFilter(
+  key: string,
+  value: string,
+  timeFrame: TimeTimeframe | undefined
+): FilterItem {
+  if (timeFrame) {
+    const regex = timeFrameMap[timeFrame];
+    if (regex !== null) {
+      let m;
+      if ((m = value.match(regex))) {
+        value = `@${m[1]}`;
+      }
+      // if the key looks like dep_time.year, drop the truncation.  It
+      //  is implied in the filter. Don't love this...
+      const dateExpr = key.split(".");
+      if (dateExpr.length === 2) {
+        // Lookup might fail so we cast.
+        const timeframe = (timeFrameMap as Record<string, RegExp | null>)[
+          dateExpr[1]
+        ];
+        if (timeframe && timeframe != null) {
+          key = dateExpr[0];
+        }
+      }
+    }
+  }
+  return { key, value };
+}
+
 function getTableFilters(
   table: DataTree,
   row: number,
-  dest: Record<string, string | null>
+  dest: FilterItem[]
 ): void {
   for (const f of table.structDef.resultMetadata?.filterList || []) {
-    dest[f.source] = null;
+    dest.push({ key: f.source, value: undefined });
   }
   for (const dim of getDimensions(table.structDef)) {
     const value = table.getValue(row, dim.name);
     // if we have an expression, use it instead of the name of the field.
-    const name = dim.resultMetadata?.sourceExpression || dim.name;
+    const key = dim.resultMetadata?.sourceExpression || dim.name;
     if (!isDataTree(value)) {
       if (value === null) {
-        dest[name] = "= null";
+        dest.push({ key, value: "= null" });
       } else if (isValueString(value, dim)) {
-        dest[name] = filterQuote(value);
-      } else if (isValueNumber(value, dim)) {
-        dest[name] = value.toString();
-      } else if (isValueBoolean(value, dim)) {
-        dest[name] = value.toString();
-      } else if (isValueTimestamp(value, dim)) {
-        dest[name] = `@${value.toString()}`;
+        dest.push({ key, value: filterQuote(value) });
+      } else if (isValueNumber(value, dim) || isValueBoolean(value, dim)) {
+        dest.push({ key, value: value.toString() });
+      } else if (
+        isFieldTimeBased(dim) &&
+        (isValueTimestamp(value, dim) || isValueDate(value, dim))
+      ) {
+        dest.push(timestampToDateFilter(key, value.value, dim.timeframe));
       }
     }
   }
 }
 
 export function getDrillFilters(root: DataTree, path: string): string[] {
-  const filters: Record<string, string | null> = {};
+  const filters: FilterItem[] = [];
   const tablePath = path.split("|");
   let dataTable = root;
   for (const t of tablePath) {
@@ -79,9 +132,8 @@ export function getDrillFilters(root: DataTree, path: string): string[] {
   }
 
   const ret = [];
-  for (const key of Object.keys(filters)) {
-    const value = filters[key];
-    if (value !== null) {
+  for (const { key, value } of filters) {
+    if (value !== undefined) {
       ret.push(`${key}:${value}`);
     } else {
       ret.push(key);

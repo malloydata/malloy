@@ -17,7 +17,7 @@ import { RenderTree } from "../renderer";
 import { HtmlNumberRenderer } from "./number";
 
 export class HtmlTableRenderer extends RenderTree {
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
+  async render(table: DataValue, ref: DataPointer): Promise<string> {
     if (!isDataTree(table)) {
       throw new Error("Invalid type for Table Renderer");
     }
@@ -47,10 +47,10 @@ export class HtmlTableRenderer extends RenderTree {
           isNumeric ? "text-align: right;" : ""
         }">${rendered}</td>\n`;
       }
-      // const drillPath = getDrillPath(ref, rowNum);
-      // const drillQuery = getDrillQuery(table.root(), drillPath);
-      // const debugDrill = `<td><pre>${drillQuery}</pre></td>`;
-      const debugDrill = "";
+      const drillPath = getDrillPath(ref, rowNum);
+      const drillQuery = getDrillQuery(table.root(), drillPath);
+      const debugDrill = `<td><pre>${drillQuery}</pre></td>`;
+      // const debugDrill = "";
       renderedBody += `<tr>${renderedRow}${debugDrill}</tr>\n`;
     }
     return `<table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">

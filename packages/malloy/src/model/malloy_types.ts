@@ -382,6 +382,12 @@ export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   );
 }
 
+export function isFieldTimeBased(
+  f: FieldDef
+): f is FieldTimestampDef | FieldDateDef {
+  return f.type === "date" || f.type === "timestamp";
+}
+
 // Queries
 
 /** field reference in a query */
@@ -527,8 +533,15 @@ export function isValueBoolean(
 export function isValueTimestamp(
   value: QueryValue,
   field: FieldDef
-): value is string | null {
+): value is { value: string } | null {
   return field.type === "timestamp";
+}
+
+export function isValueDate(
+  value: QueryValue,
+  field: FieldDef
+): value is { value: string } | null {
+  return field.type === "date";
 }
 
 // clang-format on
