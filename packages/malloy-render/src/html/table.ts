@@ -12,12 +12,12 @@
  */
 
 import { DataPointer, DataValue, isDataTree } from "../data_table";
-import { getDrillPath, getDrillQuery } from "../drill";
+// import { getDrillPath, getDrillQuery } from "../drill";
 import { RenderTree } from "../renderer";
 import { HtmlNumberRenderer } from "./number";
 
 export class HtmlTableRenderer extends RenderTree {
-  async render(table: DataValue, ref: DataPointer): Promise<string> {
+  async render(table: DataValue, _ref: DataPointer): Promise<string> {
     if (!isDataTree(table)) {
       throw new Error("Invalid type for Table Renderer");
     }
