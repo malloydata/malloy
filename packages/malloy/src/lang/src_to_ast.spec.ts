@@ -790,6 +790,38 @@ describe("document", () => {
   });
 });
 
+describe("parameters", () => {
+  test("required condition", () => {
+    const paramList = [
+      new ast.HasParameter({
+        name: "aparam",
+        isCondition: true,
+        type: "timestamp",
+      }),
+    ];
+    const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
+    expect("define ap has aparam timestamp condition is (a)").toMakeAst(
+      "defineStatement",
+      def
+    );
+  });
+
+  test("optional value", () => {
+    const paramList = [
+      new ast.HasParameter({
+        name: "aparam",
+        isCondition: false,
+        type: "timestamp",
+        default: ast.GranularLiteral.parse("@1960-06-30"),
+      }),
+    ];
+    const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
+    expect(
+      "define ap has aparam timestamp condition @1960-06-30 is (a)"
+    ).toMakeAst("defineStatement", def);
+  });
+});
+
 describe("syntax errors", () => {
   test.todo("errors with location report correct location");
   test.todo("errors with span report correct span");

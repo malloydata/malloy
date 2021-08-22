@@ -753,10 +753,13 @@ export class MalloyToAST
 
   visitDefineStatement(pcx: parse.DefineStatementContext): ast.Define {
     const exported = pcx.EXPORT() !== undefined;
-    const name = this.idText(pcx.defineName().id());
+    const name = this.idText(pcx.id());
     const value = this.visit(pcx.defineValue());
+    const has = pcx.has().map((cx) => this.visit(cx));
     if (value instanceof ast.Mallobj) {
-      return this.astAt(new ast.Define(name, value, exported), pcx);
+      const hasParams = has.length > 0 ? has : undefined;
+      const def = new ast.Define(name, value, exported, hasParams);
+      return this.astAt(def, pcx);
     }
     this.semanticError(pcx.defineValue(), "Expected exploreable object");
     throw new Error("define needs mallobj");
@@ -870,5 +873,51 @@ export class MalloyToAST
     const nq = this.astAt(new ast.DocumentQuery(explore, this.queryIndex), pcx);
     this.queryIndex += 1;
     return nq;
+  }
+
+  visitRequiredConditionParam(
+    pcx: parse.RequiredConditionParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType().text,
+      isCondition: true,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  visitOptionalConditionParam(
+    pcx: parse.OptionalConditionParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType()?.text,
+      default: this.fieldExpression(pcx.hasExpr()),
+      isCondition: true,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  visitRequiredValueParam(
+    pcx: parse.RequiredValueParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType().text,
+      isCondition: false,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  visitOptionalValueParam(
+    pcx: parse.OptionalValueParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType()?.text,
+      default: this.fieldExpression(pcx.hasExpr()),
+      isCondition: true,
+    });
+    return this.astAt(has, pcx);
   }
 }

@@ -238,12 +238,27 @@ export abstract class Statement extends MalloyElement {
 
 export class Define extends Statement {
   elementType = "define";
+  readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
     readonly mallobj: Mallobj,
-    readonly exported: boolean
+    readonly exported: boolean,
+    params?: MalloyElement[]
   ) {
     super({ explore: mallobj });
+    if (params) {
+      this.parameters = [];
+      for (const el of params) {
+        if (el instanceof HasParameter) {
+          this.parameters.push(el);
+        } else {
+          this.log(
+            `Unexpected element type in define statement: ${el.elementType}`
+          );
+        }
+      }
+      this.has({ parameters: this.parameters });
+    }
   }
 
   execute(doc: Document): void {
@@ -969,5 +984,30 @@ export class DocumentQuery extends Statement {
 
   execute(doc: Document): void {
     doc.queryList[this.index] = this.explore.query();
+  }
+}
+
+interface HasInit {
+  name: string;
+  isCondition: boolean;
+  type?: string;
+  default?: ExpressionDef;
+}
+export class HasParameter extends MalloyElement {
+  elementType = "hasParameter";
+  readonly name: string;
+  readonly isCondition: boolean;
+  readonly type?: string;
+  readonly default?: ExpressionDef;
+
+  constructor(init: HasInit) {
+    super();
+    this.name = init.name;
+    this.isCondition = init.isCondition;
+    this.type = init.type;
+    if (init.default) {
+      this.default = init.default;
+      this.has({ default: this.default });
+    }
   }
 }

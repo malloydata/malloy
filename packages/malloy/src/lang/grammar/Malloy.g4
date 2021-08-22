@@ -25,7 +25,18 @@ malloyStatement
   ;
 
 defineStatement
-  : EXPORT? defineName defineValue
+  : EXPORT? DEFINE? id has* IS defineValue
+  ;
+
+has
+  : HAS id malloyType CONDITION           # requiredConditionParam
+  | HAS id malloyType? CONDITION hasExpr  # optionalConditionParam
+  | HAS id malloyType                     # requiredValueParam
+  | HAS id malloyType? hasExpr            # optionalValueParam
+  ;
+
+hasExpr
+  : fieldExpr
   ;
 
 defineValue
@@ -300,7 +311,7 @@ BOOLEAN: B O O L E A N;
 BY: B Y ;
 CASE: C A S E ;
 CAST: C A S T ;
-COLLECT: C O L L E C T;
+CONDITION: C O N D I T I O N ;
 COUNT: C O U N T ;
 CROSS: C R O S S ;
 DATE: D A T E;
@@ -318,6 +329,7 @@ FIELDS: F I E L D S;
 FOREIGN: F O R E I G N ;
 FOR: F O R;
 FROM: F R O M ;
+HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;
 INDEX: I N D E X ;
