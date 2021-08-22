@@ -22,6 +22,14 @@ import turtleIcon from "../../media/turtle.svg";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
+const css = `<style>
+body {
+	background-color: transparent;
+  font-size: 11px;
+}
+</style>
+`;
+
 // TODO replace this with actual JSON metadata import functionality, when it exists
 export async function dataStylesForFile(
   uri: string,
@@ -324,7 +332,7 @@ export function runMalloyQuery(
                   queryResult.sourceFilters || []
                 );
                 current.panel.webview.html = wrapHTMLSnippet(
-                  await new HtmlView().render(table, styles)
+                  css + (await new HtmlView().render(table, styles))
                 );
 
                 const renderEnd = performance.now();
