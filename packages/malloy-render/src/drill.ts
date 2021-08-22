@@ -48,11 +48,11 @@ const timeFrameMap: Record<TimeTimeframe, RegExp | null> = {
   month: /^(\d\d\d\d-\d\d)/,
   date: /^(\d\d\d\d-\d\d-\d\d)/,
   day: /^(\d\d\d\d-\d\d-\d\d)/,
-  hour: /^(\d\d\d\d-\d\d-\d\d \d\d)/,
-  minute: /^(\d\d\d\d-\d\d-\d\d \d\d:\d\d)/,
-  second: /^(\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d)/,
-  week: null,
-  quarter: null,
+  hour: /^(\d\d\d\d-\d\d-\d\dT\d\d)/,
+  minute: /^(\d\d\d\d-\d\d-\d\dT\d\d:\d\d)/,
+  second: /^(\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d)/,
+  week: /^(\d\d\d\d-\d\d-\d\d)/,
+  quarter: /^(\d\d\d\d)-\d\d/,
   day_of_month: null,
   day_of_week: null,
   day_of_year: null,
@@ -70,7 +70,15 @@ function timestampToDateFilter(
     if (regex !== null) {
       let m;
       if ((m = value.match(regex))) {
-        value = `@${m[1]}`;
+        if (timeFrame === "quarter") {
+          value = `@${m[1]}-Q${
+            Math.trunc(parseInt(m[0].substring(m[0].length - 2)) / 4) + 1
+          }`;
+        } else if (timeFrame === "week") {
+          value = `@WK${m[1]}`;
+        } else {
+          value = `@${m[1]}`;
+        }
       }
       // if the key looks like dep_time.year, drop the truncation.  It
       //  is implied in the filter. Don't love this...
