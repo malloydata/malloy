@@ -47,10 +47,10 @@ export class HtmlTableRenderer extends RenderTree {
           isNumeric ? "text-align: right;" : ""
         }">${rendered}</td>\n`;
       }
-      const drillPath = getDrillPath(ref, rowNum);
-      const drillQuery = getDrillQuery(table.root(), drillPath);
-      const debugDrill = `<td><pre>${drillQuery}</pre></td>`;
-      // const debugDrill = "";
+      // const drillPath = getDrillPath(ref, rowNum);
+      // const drillQuery = getDrillQuery(table.root(), drillPath);
+      // const debugDrill = `<td><pre>${drillQuery}</pre></td>`;
+      const debugDrill = "";
       renderedBody += `<tr>${renderedRow}${debugDrill}</tr>\n`;
     }
     return `<table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
