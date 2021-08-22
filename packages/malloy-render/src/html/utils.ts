@@ -26,7 +26,7 @@ export function timeToString(time: Date, timeframe: TimeTimeframe): string {
     case "quarter": {
       const year = numberFixedDigits(time.getUTCFullYear(), 2);
       const quarter = Math.trunc(time.getUTCMonth() / 4) + 1;
-      return `Q${quarter}-${year}`;
+      return `${year}-Q${quarter}`;
     }
     case "month": {
       const year = numberFixedDigits(time.getUTCFullYear(), 2);

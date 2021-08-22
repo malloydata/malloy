@@ -2960,7 +2960,11 @@ export class QueryModel {
     const sourceExplore =
       typeof query.structRef === "string"
         ? query.structRef
-        : "<we need to fix this>";
+        : // LTNOTE: the parser needs to capture the query before the |.  This will work
+        //  in most cases but isn't actually complete.
+        query.structRef.type === "struct"
+        ? query.structRef.as || query.structRef.name
+        : "(need to figure this out)";
     return {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
