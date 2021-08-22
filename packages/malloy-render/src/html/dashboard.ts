@@ -105,7 +105,7 @@ const ROW_SEPARATOR_OUTER = `
 const DASHBOARD_OUTER = `
   display: flex;
   flex-direction: row;
-  font-size: 12px;
+  font-size: 11px;
 `;
 
 const NESTING_DIV = `
@@ -116,15 +116,15 @@ const NESTING_DIV = `
 const NEST_INDICATOR = `
   ${NESTING_DIV}
   min-height: 100%;
-  min-width: 12px;
+  min-width: 11px;
   margin: 6px;
   border-radius: 4px;
 `;
 
 const ROW_SEPARATOR = `
   ${NESTING_DIV}
-  min-height: 12px;
-  max-height: 12px;
+  min-height: 11px;
+  max-height: 11px;
   margin: 6px;
   flex: 1 0 auto;
   border-radius: 4px;
@@ -151,7 +151,7 @@ const MEASURE_BOX = `
   padding: 10px;
   flex: 1 0 auto;
   box-shadow: 0 1px 5px 0 #f3f3f3;
-  max-width: calc(100% - 12px);
+  max-width: calc(100% - 11px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -166,7 +166,7 @@ const DIMENSION_TITLE = `
 `;
 
 const TITLE = `
-  font-size: 12px;
+  font-size: 11px;
   font-family: Roboto;
   font-weight: 500;
   color: #505050;

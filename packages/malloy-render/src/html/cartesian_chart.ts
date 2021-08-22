@@ -84,8 +84,8 @@ export abstract class HtmlCartesianChartRenderer extends HtmlChartRenderer {
     };
 
     return {
-      width: 250,
-      height: 200,
+      width: 150,
+      height: 100,
       data: {
         values: this.mapData(
           data,
