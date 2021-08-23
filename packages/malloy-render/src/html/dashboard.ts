@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, isDimensional, isMeasureLike } from "malloy";
+import { isDimensional, isMeasureLike } from "malloy";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { RenderTree } from "../renderer";
 import { HtmlTextRenderer } from "./text";
