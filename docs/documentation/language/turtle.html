@@ -1,0 +1,25 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/turtle.html
+---
+
+<div class="document">
+      <h1>
+        <a id="what-is-a-turtle-" class="header-link anchor" href="#what-is-a-turtle-">
+          What is a "turtle"
+        </a>
+      </h1>
+    <p>In Malloy, an object which has a name and transforms a shape
+is called a "turtle". The word comes from the philosophical phrase
+<a href="https://en.wikipedia.org/wiki/Turtles_all_the_way_down">Turtles All The Way Down</a>.</p>
+<p>An example of a turtle might look like this</p>
+<pre class="language-malloy">   group_by_size <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
+    size
+    object_count
+   <span class="token punctuation">)</span></pre><p>This "turtle" could then be used to build out other computations,
+for example</p>
+<pre class="language-malloy">  sizes_in_ca <span class="token keyword">is</span> group_by_size <span class="token punctuation">[</span> state : <span class="token string">'CA'</span> <span class="token punctuation">]</span></pre><p>This is an unusual word, and it may be replaced once we figure out a better word
+but right now, you will see the word "turtle" from time to time, and this
+is what it means.</p>
+</div>

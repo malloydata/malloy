@@ -1,0 +1,38 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/statement.html
+---
+
+<div class="document">
+      <h1>
+        <a id="model" class="header-link anchor" href="#model">
+          Model
+        </a>
+      </h1>
+    
+      <h1>
+        <a id="define" class="header-link anchor" href="#define">
+          define
+        </a>
+      </h1>
+    <p>When building a complex transformation from smaller pieces, there is
+a way to create a name for a query.</p>
+<ul>
+<li><p><code class="language-malloy"><span class="token keyword">define</span></code> <em>query</em> <em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span><span class="token punctuation">;</span></code></p>
+</li></ul>
+
+      <h1>
+        <a id="export" class="header-link anchor" href="#export">
+          export
+        </a>
+      </h1>
+    <p>When building a model, it is sometimes usefult to have "internal"
+queries which are not useful to a user of the model. Malloy
+copies the notion of "modules" and "export" from other
+programming languages, requiring an explicit declaration
+for symbols which would be visibel outside of a model.</p>
+<ul>
+<li><p><code class="language-malloy"><span class="token keyword">export</span></code> <code class="language-malloy"><span class="token keyword">define</span></code> <em>query</em> <em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span><span class="token punctuation">;</span></code></p>
+</li></ul>
+</div>

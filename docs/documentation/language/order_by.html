@@ -1,0 +1,269 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/order_by.html
+---
+
+<div class="document">
+      <h1>
+        <a id="ordering-and-limiting-results-" class="header-link anchor" href="#ordering-and-limiting-results-">
+          Ordering and Limiting Results.
+        </a>
+      </h1>
+    <p>The following uses the <a href="../examples/faa.html">NTSB Flight Model</a> for examples.</p>
+
+      <h2>
+        <a id="malloy-is-smart-about-ordering-your-data" class="header-link anchor" href="#malloy-is-smart-about-ordering-your-data">
+          Malloy is smart about ordering your data
+        </a>
+      </h2>
+    <p>When querying data the order in which it is presented controls what you see.  Often times,
+the number of results returned to look at are much larger than the results in their entirity.
+To make things easier, Malloy has some smart defaults in the way it presents data.  For the
+most part, you don't have to think too much about it, but in order to understand it, this
+document will show you how Malloy makes decisions about what to show you.</p>
+
+      <h2>
+        <a id="order-by-is-explicit-" class="header-link anchor" href="#order-by-is-explicit-">
+          ORDER BY is explicit.
+        </a>
+      </h2>
+    <p>All that said, in Malloy you can use the clause <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code> in a <code class="language-malloy"><span class="token keyword">reduce</span></code> or <code class="language-malloy"><span class="token keyword">project</span></code> and Malloy
+will show you exactly what you asked for.</p>
+
+      <h2>
+        <a id="don-t-say-anything-and-you-will-usually-get-what-you-want-" class="header-link anchor" href="#don-t-say-anything-and-you-will-usually-get-what-you-want-">
+          Don't say anything and you will usually get what you want.
+        </a>
+      </h2>
+    
+      <h2>
+        <a id="rule-1-if-there-is-a-time-frame-involved-show-the-results-newest-first-" class="header-link anchor" href="#rule-1-if-there-is-a-time-frame-involved-show-the-results-newest-first-">
+          Rule #1 - If there is a time frame involved, show the results newest first.
+        </a>
+      </h2>
+    <p>If there is <a href="somewhere">dimensional</a> column that represents a timeframe, it is probably the most
+important concept in the query.  Generally, when looking at data, newest first is how you think
+about thigns.  Graphs generally do not care which direction time is represented in (forward or reverse),
+so Malloy always shows queries with timeframes newest first.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">dep_month</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">572,227</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-11</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">566,014</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-10</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">592,650</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-09</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">574,212</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-08</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">630,566</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div>
+      <h2>
+        <a id="rule-2-if-there-is-a-measure-aggregate-calculation-involved-show-results-larger-values-first-" class="header-link anchor" href="#rule-2-if-there-is-a-measure-aggregate-calculation-involved-show-results-larger-values-first-">
+          Rule #2 - If there is a measure (aggregate calculation) involved, show results larger values first.
+        </a>
+      </h2>
+    <p>In this case, Rule #1 doesn't apply, we have a measure, flight_count, so we show the reuslts in order of
+flight_count with the larges values first.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  carrier
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div>
+      <h2>
+        <a id="order-by" class="header-link anchor" href="#order-by">
+          ORDER BY
+        </a>
+      </h2>
+    <p>You can be explicit about how you want the result order by using an <code>ORDER BY</code> clause.
+In this case we are going to show the results by carrier in reverse alphabetical order.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> carrier <span class="token keyword">desc</span>
+  carrier
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TZ</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">188,769</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">511,824</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div><p>Like SQL, Malloy's <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code> always defaults to ascending order so not writing <code class="language-malloy"><span class="token keyword">desc</span></code>
+in query will produce ascending orders for any column of any type.  In the example below
+the results are order by carrier in alphabetical order.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> carrier
+  carrier
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AQ</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64,834</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">956,492</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">B6</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">267,963</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,994,049</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div>
+      <h2>
+        <a id="limiting-results-with-code-class-language-malloy-span-class-token-keyword-top-span-span-class-token-operator-lt-span-n-span-class-token-operator-span-code-" class="header-link anchor" href="#limiting-results-with-code-class-language-malloy-span-class-token-keyword-top-span-span-class-token-operator-lt-span-n-span-class-token-operator-span-code-">
+          Limiting results with <code class="language-malloy"><span class="token keyword">top</span> <span class="token operator">&lt;</span>n<span class="token operator">></span></code>
+        </a>
+      </h2>
+    <p>In Malloy, you can limit the number of results returned using a <code class="language-malloy"><span class="token keyword">top</span> n</code> clause on <code class="language-malloy"><span class="token keyword">reduce</span></code> or <code class="language-malloy"><span class="token keyword">project</span></code> statement.
+Notice that in the exmaple below, rule #1 is appled for ordering the results.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">2</span>
+  dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">dep_month</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">572,227</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-11</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">566,014</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div>
+      <h2>
+        <a id="-code-class-language-malloy-span-class-token-keyword-order-span-span-class-token-keyword-by-span-code-with-code-class-language-malloy-span-class-token-keyword-top-span-n-code-" class="header-link anchor" href="#-code-class-language-malloy-span-class-token-keyword-order-span-span-class-token-keyword-by-span-code-with-code-class-language-malloy-span-class-token-keyword-top-span-n-code-">
+          <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code> with <code class="language-malloy"><span class="token keyword">top</span> N</code>
+        </a>
+      </h2>
+    <p>You can also use the full <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code> clause if you would like with <code class="language-malloy"><span class="token keyword">top</span> n</code>.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">2</span> <span class="token keyword">order</span> <span class="token keyword">by</span> flight_count <span class="token keyword">desc</span>
+  dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">dep_month</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-08</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">630,566</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-07</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">627,574</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div></div>

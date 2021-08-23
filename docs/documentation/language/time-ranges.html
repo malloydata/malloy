@@ -1,0 +1,286 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/time-ranges.html
+---
+
+<div class="document">
+      <h1>
+        <a id="malloy-time-range-expressions" class="header-link anchor" href="#malloy-time-range-expressions">
+          Malloy time range expressions
+        </a>
+      </h1>
+    
+      <h2>
+        <a id="range-expressions" class="header-link anchor" href="#range-expressions">
+          Range expressions
+        </a>
+      </h2>
+    <p>There are two forms of range expressions</p>
+<ul>
+<li><p><em>expr</em> <code class="language-malloy"><span class="token keyword">to</span></code> <em>expr</em> ( <code class="language-malloy"><span class="token date">@2001</span> <span class="token keyword">to</span> <span class="token date">@2003</span></code>)</p>
+</li>
+<li><p><em>expr</em> <code class="language-malloy"><span class="token keyword">for</span></code> <code class="language-malloy">N</code> <em>units</em> ( <code class="language-malloy">now <span class="token keyword">for</span> <span class="token number">15</span> <span class="token timeframe">minutes</span></code> )</p>
+</li></ul>
+<p>A timestamp can be compared to a range. If the time stamp is within
+the range it will be <code class="language-malloy"><span class="token operator">=</span></code>. Before the range it will be <code class="language-malloy"><span class="token operator">&lt;</span></code> and after
+the range it will be <code class="language-malloy"><span class="token operator">></span></code>. If you <a href="apply.html">apply</a> a range, (for example, <code class="language-malloy">eventDate: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2004</span></code>) that will also check if the value is within the range.</p>
+
+      <h2>
+        <a id="range-shortcuts" class="header-link anchor" href="#range-shortcuts">
+          Range shortcuts
+        </a>
+      </h2>
+    <p>Because grouping and filtering by specific time ranges is such acommon operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts.</p>
+<p>Malloy supports two time-related types, <code class="language-malloy"><span class="token type">timestamp</span></code> and <code class="language-malloy"><span class="token type">date</span></code>.
+Both of these can be used with these techniques, though the exact
+truncations or extractions available will vary depending on the
+data type (e.g. it would make no sense to attempt to truncate a <code class="language-malloy"><span class="token type">date</span></code> object by <code class="language-malloy"><span class="token timeframe">minute</span></code>).</p>
+
+      <h2>
+        <a id="truncation" class="header-link anchor" href="#truncation">
+          Truncation
+        </a>
+      </h2>
+    <p>To create truncation, use the <code class="language-malloy"><span class="token punctuation">.</span></code> operator followed by the desired timeframe.</p>
+<p>By way of example, if the value of <code class="language-malloy">expr</code> is <code class="language-malloy"><span class="token date">@2021-08-06 00:36</span></code>, then the below truncations will produce the results on the right:</p>
+<table>
+<thead>
+<tr>
+<th>expression</th>
+
+<th>result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">minute</span></code></td>
+
+<td>2021-08-06 00:36</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">hour</span></code></td>
+
+<td>2021-08-06 00:00</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">day</span></code></td>
+
+<td>2021-08-06</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">week</span></code></td>
+
+<td>WK2021-08-01 <em>(the week containing the 10th)</em></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">month</span></code></td>
+
+<td>2021-08</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">quarter</span></code></td>
+
+<td>Q2-2021</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">expr<span class="token punctuation">.</span><span class="token timeframe">year</span></code></td>
+
+<td>2021</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="truncations-as-ranges" class="header-link anchor" href="#truncations-as-ranges">
+          Truncations as ranges
+        </a>
+      </h3>
+    <p>A truncation made this way (unlike a truncation make in SQL with
+<code class="language-malloy">TIMESTAMP_TRUNC<span class="token punctuation">(</span><span class="token punctuation">)</span></code>) can also function as a range. The range begins
+at the moment of truncation and the duration is the timeframe unit
+used to specify the truncation, so for example <code class="language-malloy">eventDate<span class="token punctuation">.</span><span class="token timeframe">year</span></code>
+would be a range covering the entire year which contains <code class="language-malloy">eventDate</code></p>
+<p>This is extremely useful with the <a href="apply.html">Apply operator</a>, <code class="language-malloy">:</code>. To see if two events happen in the same calendar year, for example, the boolean expresison in Malloy is <code class="language-malloy">oneEvent: otherEvent<span class="token punctuation">.</span><span class="token timeframe">year</span></code></p>
+
+      <h2>
+        <a id="extraction" class="header-link anchor" href="#extraction">
+          Extraction
+        </a>
+      </h2>
+    <p>Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call.</p>
+<p>The "Result" column uses a value of <code class="language-malloy"><span class="token number">2021</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">06</span> <span class="token number">00</span>:<span class="token number">55</span>:<span class="token number">05</span></code> for <code class="language-malloy">expr</code>.</p>
+<table>
+<thead>
+<tr>
+<th>expression</th>
+
+<th>meaning</th>
+
+<th>result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy"><span class="token timeframe">day_of_year</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>day of year, 1-365</td>
+
+<td>218</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">day_of_month</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>day of month 1-31</td>
+
+<td>5</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">day</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>day of week 1-7</td>
+
+<td>6</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">week</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>week in year, 1-53</td>
+
+<td>31</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">quarter</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>quarter in year 1-4</td>
+
+<td>3</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">hour</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>hour of day 0-23</td>
+
+<td>0</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">minute</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>minute of hour 0-59</td>
+
+<td>55</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">second</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>second of minute 0-59</td>
+
+<td>5</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="literals" class="header-link anchor" href="#literals">
+          Literals
+        </a>
+      </h2>
+    <p>Time literals are specified in malloy with th <code class="language-malloy"><span class="token date">@</span></code> character. A literal
+specified this way has an implied duration which means a literal
+can act like a range.</p>
+<p>For example the year <code class="language-malloy"><span class="token date">@2003</span></code> can be used with <code class="language-malloy">eventTime : <span class="token date">@2003</span></code> to test if the
+event happened in the year 2003.</p>
+<table>
+<thead>
+<tr>
+<th>Literal pattern</th>
+
+<th>Duration</th>
+
+<th>Begins</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy"><span class="token date">@DDDD</span></code></td>
+
+<td>One year</td>
+
+<td>The first day of that year</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-QN</span></code></td>
+
+<td>Three months</td>
+
+<td>The first day of that quarter</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM</span></code></td>
+
+<td>One month</td>
+
+<td>The first day of that month</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@WKDDDD-MM-SS</span></code></td>
+
+<td>Seven days</td>
+
+<td>Sunday of the week containing that day</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM-DD</span></code></td>
+
+<td>One day</td>
+
+<td>Midnight on the specified date</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM-DD HH:MM</span></code></td>
+
+<td>One Minute</td>
+
+<td>The specified time</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM-DD HH:MM:SS</span></code></td>
+
+<td>One Second</td>
+
+<td>the specified time</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">now</code></td>
+
+<td><em>N/A</em></td>
+
+<td>The current time, without implied duration</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="time-units" class="header-link anchor" href="#time-units">
+          Time Units
+        </a>
+      </h3>
+    <p>These are the time units currently supported by Malloy.</p>
+<ul>
+<li><p><code class="language-malloy"><span class="token timeframe">second</span></code>, <code class="language-malloy"><span class="token timeframe">minute</span></code>, <code class="language-malloy"><span class="token timeframe">hour</span></code>, <code class="language-malloy"><span class="token timeframe">week</span></code>, <code class="language-malloy"><span class="token timeframe">month</span></code>, <code class="language-malloy"><span class="token timeframe">quarter</span></code>, <code class="language-malloy"><span class="token timeframe">year</span></code></p>
+</li></ul>
+</div>

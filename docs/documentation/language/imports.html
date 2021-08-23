@@ -1,0 +1,131 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/imports.html
+---
+
+<div class="document">
+      <h1>
+        <a id="imports-and-exports" class="header-link anchor" href="#imports-and-exports">
+          Imports and Exports
+        </a>
+      </h1>
+    <p>Malloy allows for shapes to be reused between files, or for a set of shapes
+to simply be split up among multiple files by using <code class="language-malloy"><span class="token keyword">import</span></code> and <code class="language-malloy"><span class="token keyword">export</span></code>.</p>
+
+      <h2>
+        <a id="exports" class="header-link anchor" href="#exports">
+          Exports
+        </a>
+      </h2>
+    <p>Before a shape definition, the <code class="language-malloy"><span class="token keyword">export</span></code> keyword means that the shape should
+be included in the file's <em>public namespace</em>.</p>
+<p>Consider a file <code>samples/faa/flights.malloy</code>:</p>
+<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
+  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
+  name <span class="token keyword">is</span> concat<span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
+  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">export</span> <span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  origin <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin_code
+  destination <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> destination_code
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>In this example, <code class="language-malloy">flights</code> is exported, but <code class="language-malloy">airports</code> is not, and therefore
+only <code class="language-malloy">flights</code> is part of the file's public namespace.</p>
+
+      <h2>
+        <a id="imports" class="header-link anchor" href="#imports">
+          Imports
+        </a>
+      </h2>
+    <p>In order to reuse or extend a shape from another file, you can include all the
+exported shapes from another file using <code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"path/to/some/file.malloy"</span></code>.</p>
+<p>For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the
+<code class="language-malloy">flights</code> shape, you could write:</p>
+<pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
+
+flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> carrier<span class="token punctuation">,</span> flight_count</pre><div class="result-outer large">
+      <div class="result-middle">
+        <div class="result-inner">
+          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
+</tr>
+
+		</tbody>
+	</table>
+        </div>
+      </div>
+    </div><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
+
+      <h3>
+        <a id="import-locations" class="header-link anchor" href="#import-locations">
+          Import Locations
+        </a>
+      </h3>
+    <p>Imported files may be specified with relative or absolute URIs.</p>
+<table>
+<thead>
+<tr>
+<th>Import Statement</th>
+
+<th>Meaning from <code class="language-malloy"><span class="token string">"file:///f1/a.malloy"</span></code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"b.malloy"</span></code></td>
+
+<td><code class="language-malloy"><span class="token string">"file:///f1/b.malloy"</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"./c.malloy"</span></code></td>
+
+<td><code class="language-malloy"><span class="token string">"file:///f1/c.malloy"</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"/f1/d.malloy"</span></code></td>
+
+<td><code class="language-malloy"><span class="token string">"file:///f1/d.malloy"</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"file:///f1/e.malloy"</span></code></td>
+
+<td><code class="language-malloy"><span class="token string">"file:///f1/e.malloy"</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"../f2/f.malloy"</span></code></td>
+
+<td><code class="language-malloy"><span class="token string">"file:///f2/f.malloy"</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"https://example.com/g.malloy"</span></code></td>
+
+<td><code class="language-malloy"><span class="token string">"https://example.com/g.malloy"</span></code></td>
+</tr>
+</tbody></table>
+</div>

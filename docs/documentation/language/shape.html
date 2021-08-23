@@ -1,0 +1,76 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/shape.html
+---
+
+<div class="document">
+      <h1>
+        <a id="shape-definition" class="header-link anchor" href="#shape-definition">
+          Shape Definition
+        </a>
+      </h1>
+    <p>A shape is a data source and a list of additional properties which
+extend the original source in preparation for a
+passing it to a transformation stage.</p>
+<ul>
+<li><p>shape: <em>source</em> fields <em>joins</em></p>
+</li></ul>
+
+      <h2>
+        <a id="source" class="header-link anchor" href="#source">
+          Source
+        </a>
+      </h2>
+    <p>A source can be an existing SQL table or view, or it can  be
+a Malloy query, which can either be defined in line,
+or referenced by name (see the <a href="statement.html">Models</a>
+section for more information on that)</p>
+<p>A shape can be filtered, it can be given a <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> so it can be
+used in a join, and a shape may select some or all of the fields in
+the <em>dataSource</em> to be included or excluded from the shape.</p>
+<ul>
+<li><p>source: <em>dataSource</em> <em>filters</em> <em>primaryKey</em> <em>fieldEdit</em></p>
+</li>
+<li><p>dataSource: <code class="language-malloy">'</code> <em>table</em> <em>name</em> <code class="language-malloy">'</code> | <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span></code> | <em>query</em> <em>name</em></p>
+</li>
+<li><p><em>primaryKey</em>: <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> <em>fieldName</em></p>
+</li>
+<li><p><em>fieldEdit</em>: ( <code class="language-malloy"><span class="token keyword">accept</span></code> <em>fieldNameList</em> | <code class="language-malloy"><span class="token keyword">except</span></code> <em>fieldNameLlist</em> )</p>
+</li></ul>
+
+      <h2>
+        <a id="joins" class="header-link anchor" href="#joins">
+          Joins
+        </a>
+      </h2>
+    <p>The <code class="language-malloy"><span class="token keyword">joins</span></code> section of a shape is the keyword <code class="language-malloy"><span class="token keyword">joins</span></code> followed by a list of
+join specifications..</p>
+<ul>
+<li><p>joins: <code class="language-malloy"><span class="token keyword">joins</span></code> <em>joinSpec</em> ...</p>
+</li></ul>
+
+      <h3>
+        <a id="join-keys" class="header-link anchor" href="#join-keys">
+          Join Keys
+        </a>
+      </h3>
+    <p>One of the entities being joined must have a primary key. If you
+specify a bare field name as a <em>keySpec</em> then the primary key
+for the join will come from the entity being joined. If you
+specify a field in the join, <code class="language-malloy">joinName<span class="token punctuation">.</span>some_id</code> then the
+primary key of the shape will be used to complete the join.</p>
+
+      <h3>
+        <a id="join-specifications" class="header-link anchor" href="#join-specifications">
+          Join Specifications
+        </a>
+      </h3>
+    <ul>
+<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">on</span></code> <em>keySpec</em></p>
+</li>
+<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">is</span></code> <em>existingName</em> on <em>keySpec</em></p>
+</li>
+<li><p><em>joinName</em> is <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span></code> on <em>keySpec</em></p>
+</li></ul>
+</div>

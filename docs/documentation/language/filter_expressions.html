@@ -1,0 +1,140 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/filter_expressions.html
+---
+
+<div class="document">
+      <h1>
+        <a id="filter-expressions" class="header-link anchor" href="#filter-expressions">
+          Filter Expressions
+        </a>
+      </h1>
+    
+      <h2>
+        <a id="examples" class="header-link anchor" href="#examples">
+          Examples
+        </a>
+      </h2>
+    <p>Filter expressions in Malloy are simply boolean expressions in the Malloy
+language. Here are some patterns for filters which you can use.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
+
+<td>size is equal to 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">></span> <span class="token number">10</span></code></td>
+
+<td>size is greater than 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">!=</span> <span class="token number">10</span></code></td>
+
+<td>size is not equal to 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size:  <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+
+<td>size is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> size <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td>size is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size: <span class="token operator">>=</span><span class="token number">10</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td>size is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">color : <span class="token string">'red'</span><span class="token operator">|</span><span class="token string">'green'</span><span class="token operator">|</span><span class="token string">'blue'</span></code></td>
+
+<td>color is red, green or blue</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size: <span class="token number">14</span> <span class="token operator">|</span> <span class="token number">42</span> <span class="token operator">|</span> <span class="token operator">></span> <span class="token number">100</span></code></td>
+
+<td>size is 14, 42, or greater than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">eventTime: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2013</span></code></td>
+
+<td>eventTime is between the years 2003 and 2013 (excluding 2013)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">eventTime <span class="token operator">></span> <span class="token number">1591129283</span> <span class="token operator">+</span> <span class="token number">10</span> <span class="token timeframe">hours</span></code></td>
+
+<td>eventTime greater than 10 hours after 1591129283 (epoch timestamp)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">eventTime: now<span class="token punctuation">.</span><span class="token type">date</span></code></td>
+
+<td>eventTime is today</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">eventTime: now<span class="token punctuation">.</span><span class="token timeframe">month</span> <span class="token operator">-</span> <span class="token number">1</span></code></td>
+
+<td>eventTime is in the previous calendar month</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">~</span> <span class="token string">'M%'</span></code></td>
+
+<td>first letter of name is 'M' (case sensitive)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token string">'%z%'</span></code></td>
+
+<td>name does not contain a 'z' (case sensitive)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">state <span class="token operator">~</span> <span class="token regular_expression">r'^(CA|NY)$'</span></code></td>
+
+<td>regex - state is 'CA' or 'NY'</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
+
+<td>regex - name does not end with 'Z'</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="reference" class="header-link anchor" href="#reference">
+          Reference
+        </a>
+      </h2>
+    <p>Further reading on the components of these expressions can be found
+in the <a href="../language/overview.html">Reference</a> section, especially</p>
+<ul>
+<li><p><a href="../language/expressions.html">Languge / Expressions</a></p>
+</li>
+<li><p><a href="../language/time-ranges.html">Language / Time and Ranges</a></p>
+</li>
+<li><p><a href="../language/filters.html">Language / Filters</a></p>
+</li></ul>
+</div>

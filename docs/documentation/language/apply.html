@@ -1,0 +1,70 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/apply.html
+---
+
+<div class="document">
+      <h1>
+        <a id="apply-operator" class="header-link anchor" href="#apply-operator">
+          Apply (:) Operator
+        </a>
+      </h1>
+    <p>The apply operator takes one expression and applies it to another.
+The primary us of apply is to "apply" a value to a partial comparison,
+but there are a number of other powerful gestures which use this operator.</p>
+<p>For an expression matching the pattern <code class="language-malloy">x : expression</code>, the following table outlines the various meanings.</p>
+<table>
+<thead>
+<tr>
+<th>Expression Type</th>
+
+<th>Expression</th>
+
+<th>Meaning in apply</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>partial comparison</td>
+
+<td><code class="language-malloy">x:  <span class="token operator">></span> <span class="token number">10</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td><code class="language-malloy">x <span class="token operator">></span> <span class="token number">10</span> <span class="token keyword">and</span> x <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+</tr>
+
+<tr>
+<td>alternate choices</td>
+
+<td><code class="language-malloy">x: <span class="token string">'A'</span> <span class="token operator">|</span> <span class="token string">'B'</span></code></td>
+
+<td><code class="language-malloy">x <span class="token operator">=</span> <span class="token string">'A'</span> <span class="token keyword">or</span> x <span class="token operator">=</span> <span class="token string">'B'</span></code></td>
+</tr>
+
+<tr>
+<td>range match</td>
+
+<td><code class="language-malloy">x: <span class="token number">1</span> <span class="token keyword">to</span> <span class="token number">10</span></code></td>
+
+<td><code class="language-malloy">x <span class="token operator">>=</span> <span class="token number">1</span> <span class="token keyword">and</span> x <span class="token operator">&lt;</span> <span class="token number">10</span></code></td>
+</tr>
+
+<tr>
+<td>equality</td>
+
+<td><code class="language-malloy">x: <span class="token number">47</span></code></td>
+
+<td><code class="language-malloy">x <span class="token operator">=</span> <span class="token number">47</span></code></td>
+</tr>
+
+<tr>
+<td>match</td>
+
+<td><code class="language-malloy">x: <span class="token regular_expression">/'ab'</span></code></td>
+
+<td><code class="language-malloy">x <span class="token operator">~</span> <span class="token regular_expression">/'ab'</span></code> <em>(this only works when applying a regular expression to a string)</em></td>
+</tr>
+</tbody></table>
+<p>In addition it is very common to use <a href="time-ranges.html">Time Ranges</a>
+with the apply operator, which operate similar to the numeric range
+example above.</p>
+</div>

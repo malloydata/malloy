@@ -1,0 +1,63 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/query.html
+---
+
+<div class="document">
+      <h1>
+        <a id="queries-in-malloy" class="header-link anchor" href="#queries-in-malloy">
+          Queries in malloy
+        </a>
+      </h1>
+    <p>The basic syntax for a query in Malloy consists of a <a href="shape.html"><em>shape</em></a>
+and a "pipeline" of or more <em>stages</em> seperated by a vertical bar,
+the data defined in the original shape is transformed by each stage.</p>
+<ul>
+<li><p>query: <code class="language-malloy"><span class="token keyword">explore</span></code> <a href="shape.html"><em>shape</em></a> | <em>stage</em> [ | <em>stage</em> ... ]</p>
+</li></ul>
+
+      <h2>
+        <a id="pipeline" class="header-link anchor" href="#pipeline">
+          Pipeline
+        </a>
+      </h2>
+    <p>A pipeline transforms a shape, and is made up of a series of stages. A <a href="turtles.html">Turtle</a>), which has a pipeline
+inside of it, can be the first stage in a pipleline</p>
+<ul>
+<li><p>stage: <em>turtleStage</em> | <em>normalStage</em></p>
+</li>
+<li><p>turtleStage : <em>turtleName</em> <a href="filters.html"><em>filters</em></a></p>
+</li>
+<li><p>normalStage : ( <code class="language-malloy"><span class="token keyword">reduce</span></code> | <code class="language-malloy"><span class="token keyword">project</span></code> | <code class="language-malloy"><span class="token keyword">index</span></code> ) <a href="filters.html"><em>filters</em></a> <em>ordering</em> <em>fields</em></p>
+</li></ul>
+
+      <h2>
+        <a id="fields" class="header-link anchor" href="#fields">
+          Fields
+        </a>
+      </h2>
+    <p>In a shape (not in a stage), a field can be renamed.</p>
+<ul>
+<li><p><em>newFieldName</em> <code class="language-malloy"><span class="token keyword">renames</span></code> <em>existingFieldName</em></p>
+</li></ul>
+<p>In a shape, and in a stage, a new field can be introduced. Refer to the
+<a href="expressions.html">Expressions</a> page for more information on
+Malloy expressions.</p>
+<ul>
+<li><p><em>field</em> <em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <em>expression</em></p>
+</li></ul>
+<p>You can also define a <a href="turtles.html">turtle</a>. Just as in a query,
+only the first of a turtle pipeline can be the name of another turtle.
+The keyword <code class="language-malloy"><span class="token keyword">turtle</span></code> is optional,</p>
+<ul>
+<li><p><em>turtleName</em> <code class="language-malloy"><span class="token keyword">is</span></code> <code class="language-malloy"><span class="token keyword">turtle</span></code> <code class="language-malloy"><span class="token punctuation">(</span></code> <em>normalStage</em>  <code class="language-malloy"><span class="token operator">|</span></code> <em>normalStage</em> ... <code class="language-malloy"><span class="token punctuation">)</span></code></p>
+</li></ul>
+<p>In a stage, it is also legal to simply list field names
+which should be passed on from the previous stage to the next one.
+Simple wildcard expressions <code class="language-malloy"><span class="token operator">*</span></code>, <code class="language-malloy"><span class="token operator">*</span><span class="token operator">*</span></code>, and <em>joinName</em>.<code class="language-malloy"><span class="token operator">*</span></code> are
+legal in these lists</p>
+<ul>
+<li><p><em>fieldNameOrWildCard</em> [ <code class="language-malloy"><span class="token punctuation">,</span></code> <em>fieldNameOrWildCard</em> ... ]</p>
+</li></ul>
+</div>

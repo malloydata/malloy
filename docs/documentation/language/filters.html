@@ -1,0 +1,205 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/filters.html
+---
+
+<div class="document">
+      <h1>
+        <a id="filters" class="header-link anchor" href="#filters">
+          Filters
+        </a>
+      </h1>
+    <p>A filter can be applied to a stage in a query, or to a subexpression in a field
+computation.</p>
+<p>The syntax for a filter is</p>
+<ul>
+<li><p><em>thingToBeFiltered</em> <code class="language-malloy">:</code> <code class="language-malloy"><span class="token punctuation">[</span></code> <em>filterExpression</em> ( <code class="language-malloy"><span class="token punctuation">,</span></code> _filterExpression ... ) <code class="language-malloy"><span class="token punctuation">]</span></code></p>
+</li></ul>
+<p>The comma seperated list of expressions can be thought of as being "AND"ed
+together, though in reality, the expression conditions will be checked at different
+parts of the query, depending on what types of computation (aggregate or not)
+occurs in the expression.</p>
+
+      <h2>
+        <a id="filter-expressions" class="header-link anchor" href="#filter-expressions">
+          Filter Expressions
+        </a>
+      </h2>
+    <p>A filter expression is any legal expression which generates a boolean
+result.  <a href="expressions.html">Expressions</a> in Malloy are extended in
+numerous ways in order to make the kinds of filtering which are
+common very easy to express.</p>
+
+      <h2>
+        <a id="testing-and-comparison" class="header-link anchor" href="#testing-and-comparison">
+          Testing and Comparison
+        </a>
+      </h2>
+    <p>All normal comparison operators work ... some examples:</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
+
+<td>Does size equal 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">></span> <span class="token number">10</span></code></td>
+
+<td>Is size > 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">!=</span> <span class="token number">10</span></code></td>
+
+<td>Size is not equal to 10</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="ranges-and-multiple-conditions" class="header-link anchor" href="#ranges-and-multiple-conditions">
+          Ranges and Multiple Conditions
+        </a>
+      </h2>
+    <p>A range of numeric or time values can be constructed
+with <em>beginValue</em> <code class="language-malloy"><span class="token keyword">to</span></code> <em>endValue</em>. The <code class="language-malloy"><span class="token operator">~</span></code> operator will check to
+see if a value is within a range.</p>
+<p>If you want to place multiple conditions on one expression,
+there are a number of ways to express them. Which is "best"
+depends on which most clearly conveys the intent of the
+conditions. All these mean the same thing:</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">size <span class="token operator">~</span> <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+
+<td>size is in the range <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> size <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td>size is at least 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size: <span class="token operator">>=</span><span class="token number">10</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td>size is at least 10 and less than 100</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="partial-comparison-and-alternation" class="header-link anchor" href="#partial-comparison-and-alternation">
+          Partial Comparison and Alternation
+        </a>
+      </h3>
+    <p>In the examples above we see a new operator, <code class="language-malloy">:</code> which works by
+"filling in" the missing left hand side of the expressions on
+it's right side, with the expression on the left hand side.</p>
+<p>It can also be used to specify a list of values .. Or use
+multiple values in combination with partial compairsons ...</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">color : <span class="token string">'red'</span><span class="token operator">|</span><span class="token string">'green'</span><span class="token operator">|</span><span class="token string">'blue'</span></code></td>
+
+<td>true if color is one of the primary colors</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size: <span class="token number">14</span> <span class="token operator">|</span> <span class="token number">42</span> <span class="token operator">|</span> <span class="token operator">></span> <span class="token number">100</span></code></td>
+
+<td>true if size is 14, 42, or greater than 100</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="special-time-features" class="header-link anchor" href="#special-time-features">
+          Special Time Features
+        </a>
+      </h2>
+    <p>Read the section on <a href="time-ranges.html">Time and Ranges</a>.</p>
+
+      <h2>
+        <a id="special-string-features" class="header-link anchor" href="#special-string-features">
+          Special String Features
+        </a>
+      </h2>
+    
+      <h3>
+        <a id="like" class="header-link anchor" href="#like">
+          LIKE
+        </a>
+      </h3>
+    <p>For strings the <code class="language-malloy"><span class="token operator">~</span></code> and <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operators, in most cases (see below)
+mean <code>LIKE</code> and <code>NOT LIKE</code> ...</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">name <span class="token operator">~</span> <span class="token string">'M%'</span></code></td>
+
+<td>first letter of name is 'M'</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token string">'%Z%'</span></code></td>
+
+<td>name does not contain a 'Z'</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="regular-expressions" class="header-link anchor" href="#regular-expressions">
+          Regular Expressions
+        </a>
+      </h3>
+    <p>When the right hand side of a <code class="language-malloy"><span class="token operator">~</span></code> or <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operator is a regular expression, then
+Malloy generates <code>REGEXP_COMPARE</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">state <span class="token operator">~</span> <span class="token regular_expression">r'^(CA|NY)$'</span></code></td>
+
+<td>true if state is 'CA' or 'NY'</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
+
+<td>true name does not end with 'Z'</td>
+</tr>
+</tbody></table>
+</div>
