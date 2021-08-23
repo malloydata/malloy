@@ -12,6 +12,7 @@
  */
 
 import { TimeTimeframe } from "malloy";
+import { normalColors } from "./chart";
 
 function numberFixedDigits(value: number, digits: number) {
   return value.toString().padStart(digits, "0");
@@ -91,16 +92,7 @@ export function getColorScale(
         : { range: ["#1A73E8", "#12B5CB"] };
     case "nominal":
       return {
-        range: [
-          "#1A73E8",
-          "#12B5CB",
-          "#E52592",
-          "#E8710A",
-          "#F9AB00",
-          "#7CB342",
-          "#9334E6",
-          "#80868B",
-        ],
+        range: normalColors,
       };
   }
 }

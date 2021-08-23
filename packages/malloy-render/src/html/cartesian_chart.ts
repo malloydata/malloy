@@ -102,29 +102,6 @@ export abstract class HtmlCartesianChartRenderer extends HtmlChartRenderer {
         shape: shapeDef,
       },
       background: "transparent",
-      config: {
-        // axis: {
-        //   labelFont: "Roboto",
-        //   titleFont: "Roboto",
-        //   titleFontWeight: 500,
-        //   titleColor: "#505050",
-        //   titleFontSize: 12,
-        // },
-        legend: {
-          labelFont: "Roboto",
-          titleFont: "Roboto",
-          titleFontWeight: 500,
-          titleColor: "#505050",
-          titleFontSize: 12,
-        },
-        // header: {
-        //   labelFont: "Roboto",
-        //   titleFont: "Roboto",
-        //   titleFontWeight: 500,
-        // },
-        // mark: { font: "Roboto" },
-        // title: { font: "Roboto", subtitleFont: "Roboto", fontWeight: 500 },
-      },
     };
   }
 }
