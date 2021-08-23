@@ -442,7 +442,7 @@ export type QueryScalar =
   | null;
 
 /** One value in one column of returned data. */
-export type QueryValue = QueryScalar | QueryData;
+export type QueryValue = QueryScalar | QueryData | QueryDataRow;
 
 /** A row of returned data. */
 export type QueryDataRow = { [columnName: string]: QueryValue };

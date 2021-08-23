@@ -13,7 +13,7 @@
 
 import * as lite from "vega-lite";
 import { FieldDef, QueryDataRow, QueryValue, StructDef } from "malloy";
-import { HtmlChartRenderer } from "./chart";
+import { backgroundColors, HtmlChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
@@ -28,7 +28,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     },
     layer: [
       {
-        mark: { type: "bar", color: "#00ccff" },
+        mark: { type: "bar", color: "#aec7e8" },
         encoding: {
           x: {
             field: "#{2}",
@@ -44,6 +44,47 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         },
       },
     ],
+  },
+  bar_NM: {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    description: "A simple bar chart with embedded data.",
+    mark: "bar",
+    data: [],
+    height: 150,
+    width: 200,
+    encoding: {
+      x: { field: "#{1}", type: "nominal" },
+      y: { field: "#{2}", type: "quantitative" },
+    },
+  },
+  bar_NMS: {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    description: "A simple bar chart with embedded data.",
+    mark: "bar",
+    data: [],
+    height: 150,
+    width: 200,
+    encoding: {
+      x: { field: "#{1}", type: "nominal" },
+      y: { field: "#{2}", type: "quantitative" },
+      color: { field: "#{3}", type: "nominal" },
+    },
+  },
+  bar_NMM: {
+    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    description: "A simple bar chart with embedded data.",
+    mark: "bar",
+    data: [],
+    height: 150,
+    width: 200,
+    encoding: {
+      x: { field: "#{1}", type: "nominal" },
+      y: { field: "#{2}", type: "quantitative" },
+      color: {
+        field: "#{3}",
+        type: "quantitative",
+      },
+    },
   },
   bar_SMM: {
     $schema: "https://vega.github.io/schema/vega-lite/v5.json",
@@ -64,7 +105,6 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           color: {
             field: "#{3}",
             type: "quantitative",
-            scale: { range: ["#1A73E8", "#E52592"] },
           },
         },
       },
@@ -94,6 +134,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           },
           color: {
             field: "#{3}",
+            scale: { range: backgroundColors },
           },
         },
       },
