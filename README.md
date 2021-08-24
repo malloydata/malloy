@@ -83,12 +83,12 @@ _OR_
 
 ### Development
 
-1. Open the `malloy-vscode` package directory in VSCode
+1. Open the `/malloy/packages/malloy-vscode`  directory in VSCode
 2. Select the "Run and Debug" panel.
 3. Click the green arrow run button for the "Run Extension" profile.
 
 Optional: To additionally debug the language server, run the "Attach to Language Server"
-launch profile.
+launch profile from the "Run and Debug" panel.
 
 
 ![open_vsix3](https://user-images.githubusercontent.com/7178946/130678501-cd5cf79b-0d48-42a6-a4d5-602f1b0d563d.gif)
