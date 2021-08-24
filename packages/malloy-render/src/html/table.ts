@@ -13,7 +13,7 @@
 
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 // import { getDrillPath, getDrillQuery } from "../drill";
-import { RenderTree } from "../renderer";5
+import { RenderTree } from "../renderer";
 import { HtmlNumberRenderer } from "./number";
 
 export class HtmlTableRenderer extends RenderTree {

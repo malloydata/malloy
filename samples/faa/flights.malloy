@@ -221,7 +221,7 @@ export define flights is (explore 'malloy-data.faa.flights'
         tail_num
         dep_minute is dep_time.minute
         origin_code
-        destination_code
+        dest_code is destination_code
         dep_delay
         arr_delay
         )
