@@ -75,7 +75,7 @@ yarn build
 _Note: You will need to re-run the above any time you pull in new changes._
 
 Next, in VSCode _EITHER_:
-1) Run the "Extensions: Install from VSIX" command (command + shift + p opens a command interface), and navigate to and select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
+1) Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
 
 _OR_
 
@@ -84,8 +84,8 @@ _OR_
 ### Development
 
 1. Open the `/malloy/packages/malloy-vscode`  directory in VSCode
-2. Select the "Run and Debug" panel.
-3. Click the green arrow run button for the "Run Extension" profile.
+2. Select the "Run and Debug" panel in the left bar.
+3. Click the green arrow "Run" button, with the "Run Extension" profile selected.
 
 Optional: To additionally debug the language server, run the "Attach to Language Server"
 launch profile from the "Run and Debug" panel.
