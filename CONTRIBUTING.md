@@ -1,7 +1,3 @@
-# How to Contribute
-
-This project is not accepting contributions at this time
-
 ## Contributor License Agreement
 
 Contributions to this project must be accompanied by a Contributor License
