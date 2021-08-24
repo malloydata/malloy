@@ -82,6 +82,7 @@ _OR_
 2) Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX". 
 
 ### Development
+_Note: You only need to do this for development on Malloy; it's not required to use the VSCode plugin._
 
 1. Open the `/malloy/packages/malloy-vscode`  directory in VSCode
 2. Select the "Run and Debug" panel in the left bar.
