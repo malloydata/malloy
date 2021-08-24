@@ -76,7 +76,9 @@ _Note: You will need to re-run the above any time you pull in new changes._
 
 Next, in VSCode _EITHER_:
 1) Run the "Extensions: Install from VSIX" command (command + shift + p opens a command interface), and navigate to and select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
+
 _OR_
+
 2) Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX". 
 
 ### Development
@@ -87,6 +89,9 @@ _OR_
 
 Optional: To additionally debug the language server, run the "Attach to Language Server"
 launch profile.
+
+
+![open_vsix3](https://user-images.githubusercontent.com/7178946/130678501-cd5cf79b-0d48-42a6-a4d5-602f1b0d563d.gif)
 
 
 ## Documentation
