@@ -13,7 +13,7 @@
 
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 // import { getDrillPath, getDrillQuery } from "../drill";
-import { RenderTree } from "../renderer";
+import { RenderTree } from "../renderer";5
 import { HtmlNumberRenderer } from "./number";
 
 export class HtmlTableRenderer extends RenderTree {
@@ -28,7 +28,7 @@ export class HtmlTableRenderer extends RenderTree {
         const isNumeric = childRenderer instanceof HtmlNumberRenderer;
         return `<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
           isNumeric ? "right" : "left"
-        };">${name}</th>`;
+        };">${name.replace(/_/g, "_&#8203;")}</th>`;
       })
       .join("\n");
     let renderedBody = "";
