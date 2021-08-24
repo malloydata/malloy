@@ -38,7 +38,7 @@ Key features and advantages:
 
 # Join the Community
 - Join the [**Malloy Slack Community!**](https://join.slack.com/t/malloy-community/shared_invite/zt-upi18gic-W2saeFu~VfaVM1~HIerJ7w) Use this community to ask questions, meet other Malloy users, and share ideas with one another.
-- Use [**GitHub issues**](https://github.com/looker/malloy/issues) in this Repo to provide feedback, suggest improvements, report bugs, and start new discussions. 
+- Use [**GitHub issues**](https://github.com/looker-open-source/malloy/issues) in this Repo to provide feedback, suggest improvements, report bugs, and start new discussions. 
 
 
 # Installation
