@@ -28,8 +28,10 @@ function getHighlight(
       return (
         highlight.range.start.line <= line &&
         highlight.range.end.line >= line &&
-        highlight.range.start.character <= character &&
-        highlight.range.end.character >= character
+        (line !== highlight.range.start.line ||
+          character >= highlight.range.start.character) &&
+        (line !== highlight.range.end.line ||
+          character <= highlight.range.end.character)
       );
     });
     return found;
@@ -934,13 +936,26 @@ test("boolean operators are highlighted", () => {
   });
 });
 
-test("comments are highlighted", () => {
+test("line comments are highlighted", () => {
   const doc = new TestTranslator("explore a | reduce b -- comment");
   expect(getHighlight(doc, 0, 21)).toMatchObject({
     type: "comment.line",
     range: {
       start: { line: 0, character: 21 },
       end: { line: 0, character: 31 },
+    },
+  });
+});
+
+test("block comments are highlighted", () => {
+  const doc = new TestTranslator(
+    "explore a | reduce b /* comment\n" + "more comment */ c"
+  );
+  expect(getHighlight(doc, 0, 21)).toMatchObject({
+    type: "comment.block",
+    range: {
+      start: { line: 0, character: 21 },
+      end: { line: 1, character: 15 },
     },
   });
 });
