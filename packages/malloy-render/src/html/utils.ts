@@ -76,55 +76,47 @@ export function timeToString(time: Date, timeframe: TimeTimeframe): string {
 
 export function getColorScale(
   type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,
-  isRectMark: boolean
+  isRectMark: boolean,
+  hasOverlappingText = false
 ): { range: string[] } | undefined {
   if (type === undefined) {
     return undefined;
   }
   switch (type) {
-    // case "ordinal":
-    //   return { range: ["#12B5CB", "#1A73E8"] };
-    // case "temporal":
-    // case "quantitative":
-    //   return isRectMark
-    //     ? { range: ["#1A73E8", "#E8710A"] }
-    //     : { range: ["#1A73E8", "#12B5CB"] };
-    // case "nominal":
-    //   return {
-    //     range: [
-    //       "#1A73E8",
-    //       "#12B5CB",
-    //       "#E52592",
-    //       "#E8710A",
-    //       "#F9AB00",
-    //       "#7CB342",
-    //       "#9334E6",
-    //       "#80868B",
-    //     ],
-    //   };
     case "ordinal":
-      return { range: ["#00ABC0", "#4084F3"] };
+      return { range: ["#12B5CB", "#1A73E8"] };
     case "temporal":
     case "quantitative":
       return isRectMark
-        ? { range: ["#4084F3", "#F340B0"] }
-        : { range: ["#00ABC0", "#4084F3"] };
+        ? hasOverlappingText
+          ? { range: ["#6BA4EE", "#EEA361"] }
+          : { range: ["#1A73E8", "#E8710A"] }
+        : { range: ["#1A73E8", "#12B5CB"] };
     case "nominal":
-      return {
-        range: [
-          "#4084F3",
-          "#FF5822",
-          "#FF8F00",
-          "#7CB342",
-          "#AA46BB",
-          "#00ABC0",
-          "#F57C00",
-          "#9D9C23",
-          "#5B6ABF",
-          "#EE6191",
-          "#00786A",
-          "#C2175A",
-        ],
-      };
+      return hasOverlappingText
+        ? {
+            range: [
+              "#6BA4EE",
+              "#66CEDC",
+              "#EC72B8",
+              "#EEA361",
+              "#F9C85B",
+              "#AACD85",
+              "#B87CED",
+              "#ACB0B3",
+            ],
+          }
+        : {
+            range: [
+              "#1A73E8",
+              "#12B5CB",
+              "#E52592",
+              "#E8710A",
+              "#F9AB00",
+              "#7CB342",
+              "#9334E6",
+              "#80868B",
+            ],
+          };
   }
 }

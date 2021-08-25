@@ -37,6 +37,13 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
       titleColor: "#505050",
       titleFontSize: 12,
     },
+    legend: {
+      titleFontWeight: 500,
+      titleColor: "#505050",
+      titleFontSize: 12,
+      labelFont: "Roboto",
+      titleFont: "Roboto",
+    },
   },
 };
 
@@ -128,7 +135,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           color: {
             field: "#{3}",
             type: "quantitative",
-            scale: getColorScale("quantitative", true),
+            scale: getColorScale("quantitative", true, true),
           },
         },
       },
@@ -158,7 +165,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           },
           color: {
             field: "#{3}",
-            scale: getColorScale("nominal", true),
+            scale: getColorScale("nominal", true, true),
             // scale: { range: backgroundColors },
           },
         },
@@ -192,7 +199,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
             },
             color: {
               field: "#{2}",
-              scale: getColorScale("nominal", true),
+              scale: getColorScale("nominal", true, true),
             },
           },
         },
