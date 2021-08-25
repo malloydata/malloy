@@ -106,53 +106,11 @@ export define flights is (explore 'malloy-data.faa.flights'
     destination.name
   )
 
-
-  -- by_dest is (reduce
-  --   destination_code
-  --   flight_count
-    x_vega_spec is (reduce top 10
-      carriers.nickname
-      flight_count
-      aircraft.aircraft_count
-    )
-
-    bar_SMS_vega_spec is (reduce : [origin.state: 'CA'|'TX'|'NY']
-      carriers.nickname
-      flight_count
-      origin.state
-    )
-
-    trellis is (reduce : [
-        origin.state: 'CA'|'TX'|'NY',
-        carrier: 'WN'|'DL'|'UA'|'AA'|'B8'
-      ]
-      dep_year is dep_time.year
-      bar_SSMMM_vega_spec  is (reduce
-        carriers.nickname
-        origin.state
-        flight_count
-        aircraft.aircraft_count
-        total_distance
-      )
-    )
-
-
-    year_bubble is (reduce : [origin_code: 'MRY']
-      dep_year is dep_time.year
-      bubble_DDM_vega_spec is (reduce
-        month_num is dep_time.month_of_year
-        dep_year is dep_time.day_of_month
-        flight_count
-      )
-    )
-
-  -- )
   -- explore flights : [origin.code : 'SJC'] | airport_dashboard
   airport_dashboard is ( reduce top 10
     code is destination_code
     destination is destination.full_name
     flight_count
-    x_vega_spec
     carriers_by_month
     routes_map
     delay_by_hour_of_day
