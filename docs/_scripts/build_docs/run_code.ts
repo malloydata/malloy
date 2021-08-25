@@ -17,7 +17,7 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, HtmlView } from "malloy-render";
+import { DataStyles, DataTreeRoot, HtmlView } from "malloy-render";
 import { Malloy, MalloyTranslator } from "malloy";
 import path from "path";
 import fs from "fs";
@@ -60,13 +60,21 @@ export async function dataStylesForFile(
   text: string
 ): Promise<DataStyles> {
   const PREFIX = "--! styles ";
-  if (text.startsWith(PREFIX)) {
-    const fileName = text.split("\n")[0].trimEnd().substring(PREFIX.length);
-    const stylesPath = path.join(uri.replace(/^file:\/\//, ""), "..", fileName);
-    const stylesText = await fetchFile(stylesPath);
-    return JSON.parse(stylesText);
+  let styles: DataStyles = {};
+  for (const line of text.split("\n")) {
+    if (line.startsWith(PREFIX)) {
+      const fileName = line.trimEnd().substring(PREFIX.length);
+      const stylesPath = path.join(
+        uri.replace(/^file:\/\//, ""),
+        "..",
+        fileName
+      );
+      const stylesText = await fetchFile(stylesPath);
+      styles = { ...styles, ...JSON.parse(stylesText) };
+    }
   }
-  return {};
+
+  return styles;
 }
 
 async function fetchFile(uri: string) {
@@ -84,7 +92,7 @@ async function compile(uri: string, malloy: string, documentPath: string) {
     if (result.final) {
       return { result, dataStyles };
     } else if (result.URLs) {
-      for (const neededUri in result.URLs) {
+      for (const neededUri of result.URLs) {
         const neededText = await fetchFile(neededUri);
         translator.update({ URLs: { [neededUri]: neededText } });
         addDependency(neededUri.replace(/^file:\/\//, ""), documentPath);
@@ -175,7 +183,15 @@ export async function runCode(
       ...styles,
     };
 
-    const result = await new HtmlView().render(data, namedField, dataStyles);
+    const result = await new HtmlView().render(
+      new DataTreeRoot(
+        data,
+        namedField,
+        queryResult.sourceExplore,
+        queryResult.sourceFilters || []
+      ),
+      dataStyles
+    );
 
     return `<div class="result-outer ${options.size || "small"}">
       <div class="result-middle">

@@ -28,7 +28,7 @@ export class HtmlTableRenderer extends RenderTree {
         const isNumeric = childRenderer instanceof HtmlNumberRenderer;
         return `<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
           isNumeric ? "right" : "left"
-        };">${name}</th>`;
+        };">${name.replace(/_/g, "_&#8203;")}</th>`;
       })
       .join("\n");
     let renderedBody = "";

@@ -11,42 +11,48 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, QueryValue } from "malloy";
-import { HtmlCartesianChartRenderer } from "./cartesian_chart";
-import { timeToString } from "./utils";
+import { FieldDef, isMeasureLike } from "malloy";
+import { DataValue, DataPointer, isDataTree } from "../data_table";
+import { HtmlVegaSpecRenderer, vegaSpecs } from "./vega_spec";
 
-export class HtmlBarChartRenderer extends HtmlCartesianChartRenderer {
-  getMark(): "bar" {
-    return "bar";
+function isOrdninal(f: FieldDef): boolean {
+  return ["string", "date", "timestamp", "boolean"].includes(f.type);
+}
+
+export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
+  constructor() {
+    super(vegaSpecs["bar_SM"]);
   }
 
-  getDataType(field: FieldDef): "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
-      case "string":
-        return "nominal";
-      case "number":
-        return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+  async render(table: DataValue, _ref: DataPointer): Promise<string> {
+    if (!isDataTree(table)) {
+      throw new Error("Invalid type for chart renderer");
     }
-  }
-
-  getDataValue(value: QueryValue, field: FieldDef): string | number {
-    switch (field.type) {
-      case "timestamp":
-      case "date":
-        return timeToString(
-          new Date((value as { value: string }).value),
-          field.timeframe || (field.type === "timestamp" ? "second" : "date")
-        );
-      case "number":
-        return value as number;
-      case "string":
-        return value as string;
-      default:
-        throw new Error("Invalid field type for bar chart.");
+    if (table.structDef.fields.length < 2) {
+      return "Need at least 2 fields for a bar chart.";
     }
+    let specName = "bar_";
+    if (isOrdninal(table.structDef.fields[0])) {
+      specName += "S";
+    } else if (table.structDef.fields[0].type === "number") {
+      specName += "N";
+    } else {
+      return "Invalid type for first field of a bar_chart";
+    }
+    specName += "M";
+    if (table.structDef.fields.length >= 3) {
+      const field = table.structDef.fields[2];
+      if (isMeasureLike(field)) {
+        specName += "M";
+      } else if (isOrdninal(field)) {
+        specName += "S";
+      }
+    }
+    const spec = vegaSpecs[specName];
+    if (spec === undefined) {
+      return `Unknown renderer ${specName}`;
+    }
+    this.spec = spec;
+    return super.render(table, _ref);
   }
 }

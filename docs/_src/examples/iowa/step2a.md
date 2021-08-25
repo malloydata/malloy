@@ -92,8 +92,7 @@ At the top we see our lowest cost options at under $1/mL, with the more pricey b
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
 explore iowa : [category_name: ~ r'TEQUILA']
 | reduce
-  price_per_100ml_bucket is floor(price_per_100ml)
+  price_per_100ml_bucket is floor(price_per_100ml),
   top_sellers_by_revenue
   
 ```
-

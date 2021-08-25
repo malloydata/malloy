@@ -14,7 +14,6 @@
 import {
   StructDef,
   QueryData,
-  QueryDataRow,
   QueryScalar,
   FieldDef,
   FilterCondition,
@@ -43,11 +42,12 @@ export class DataPointer {
 }
 
 type SubTreeRow = Record<string, DataTree>;
+type ScalarMap = Record<string, QueryScalar>;
 
 export class DataTree {
   parent: DataPointer | undefined;
   structDef: StructDef;
-  rows: QueryDataRow[];
+  rows: ScalarMap[];
   subTreeRows: SubTreeRow[] | undefined;
   nameMap: Record<string, FieldDef> = {};
 
@@ -63,14 +63,19 @@ export class DataTree {
     for (const field of this.structDef.fields) {
       this.nameMap[field.name] = field;
     }
-    this.addRows(data);
+    // Note1: data can be structRelationship: "inline". (non-repeated records) For simplicity, we always
+    //  put hashes in arrays.  Might regret this someday...
+    this.addRows(data instanceof Array ? data : [data]);
   }
 
   addRows(data: QueryData): void {
     let rowNum = this.rows.length;
+    const subStructs = this.getSubTreeStructs();
     for (const row of data) {
-      this.rows.push(row);
-      for (const field of this.getSubTreeStructs()) {
+      // This mapping isn't perfect. Row is declared as a QueryScalar so we only
+      //  access scalar values through it.
+      this.rows.push(row as ScalarMap);
+      for (const field of subStructs) {
         if (this.subTreeRows === undefined) {
           this.subTreeRows = [];
         }
@@ -123,12 +128,13 @@ export class DataTree {
   }
 
   getValue(rowNum: number, fieldName: string): DataValue {
-    const value = this.rows[rowNum][fieldName];
-    if (value instanceof Array) {
-      return this.getSubTable(rowNum, fieldName);
-    } else {
-      return value;
+    const tree = this.subTreeRows
+      ? this.subTreeRows[rowNum][fieldName]
+      : undefined;
+    if (tree) {
+      return tree;
     }
+    return this.rows[rowNum][fieldName];
   }
 
   getFieldNames(): string[] {
