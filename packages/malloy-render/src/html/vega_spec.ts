@@ -13,16 +13,36 @@
 
 import * as lite from "vega-lite";
 import { FieldDef, QueryDataRow, QueryValue, StructDef } from "malloy";
-import { backgroundColors, HtmlChartRenderer } from "./chart";
+import { HtmlChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
+import { getColorScale } from "./utils";
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
+export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
+  $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+  config: {
+    header: {
+      labelFont: "Roboto",
+      titleFont: "Roboto",
+      titleFontWeight: 500,
+    },
+    text: { font: "Roboto" },
+    mark: { font: "Roboto" },
+    title: { font: "Roboto", subtitleFont: "Roboto", fontWeight: 500 },
+    axis: {
+      labelFont: "Roboto",
+      titleFont: "Roboto",
+      titleFontWeight: 500,
+      titleColor: "#505050",
+      titleFontSize: 12,
+    },
+  },
+};
+
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "A simple bar chart with embedded data.",
-
+    ...DEFAULT_SPEC,
     encoding: {
       y: { field: "#{1}", type: "nominal", axis: null },
     },
@@ -34,6 +54,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
             field: "#{2}",
             type: "quantitative",
           },
+          color: { value: "#4285F4" },
         },
       },
       {
@@ -46,8 +67,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     ],
   },
   bar_NM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "A simple bar chart with embedded data.",
+    ...DEFAULT_SPEC,
     mark: "bar",
     data: [],
     height: 150,
@@ -55,11 +75,11 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     encoding: {
       x: { field: "#{1}", type: "nominal" },
       y: { field: "#{2}", type: "quantitative" },
+      color: { value: "#4285F4" },
     },
   },
   bar_NMS: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "A simple bar chart with embedded data.",
+    ...DEFAULT_SPEC,
     mark: "bar",
     data: [],
     height: 150,
@@ -67,12 +87,15 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     encoding: {
       x: { field: "#{1}", type: "nominal" },
       y: { field: "#{2}", type: "quantitative" },
-      color: { field: "#{3}", type: "nominal" },
+      color: {
+        field: "#{3}",
+        type: "nominal",
+        scale: getColorScale("nominal", true),
+      },
     },
   },
   bar_NMM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "A simple bar chart with embedded data.",
+    ...DEFAULT_SPEC,
     mark: "bar",
     data: [],
     height: 150,
@@ -83,12 +106,12 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       color: {
         field: "#{3}",
         type: "quantitative",
+        scale: getColorScale("quantitative", true),
       },
     },
   },
   bar_SMM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "Barchart String and two numeric measures.",
+    ...DEFAULT_SPEC,
     encoding: {
       y: { field: "#{1}", type: "nominal", axis: null },
     },
@@ -105,6 +128,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           color: {
             field: "#{3}",
             type: "quantitative",
+            scale: getColorScale("quantitative", true),
           },
         },
       },
@@ -112,13 +136,13 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         mark: { type: "text", align: "left", x: 5 },
         encoding: {
           text: { field: "#{1}" },
+          detail: { aggregate: "count" },
         },
       },
     ],
   },
   bar_SMS: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
-    description: "Barchart String Measure String.",
+    ...DEFAULT_SPEC,
     encoding: {
       y: { field: "#{1}", type: "nominal", axis: null },
     },
@@ -134,7 +158,8 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           },
           color: {
             field: "#{3}",
-            scale: { range: backgroundColors },
+            scale: getColorScale("nominal", true),
+            // scale: { range: backgroundColors },
           },
         },
       },
@@ -142,12 +167,13 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         mark: { type: "text", align: "left", x: 5 },
         encoding: {
           text: { field: "#{1}" },
+          detail: { aggregate: "count" },
         },
       },
     ],
   },
   bar_SSMMM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    ...DEFAULT_SPEC,
     repeat: ["#{3}", "#{4}", "#{5}"],
     spec: {
       description: "A simple bar chart with embedded data.",
@@ -166,6 +192,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
             },
             color: {
               field: "#{2}",
+              scale: getColorScale("nominal", true),
             },
           },
         },
@@ -173,13 +200,14 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
           mark: { type: "text", align: "left", x: 5 },
           encoding: {
             text: { field: "#{1}" },
+            detail: { aggregate: "count" },
           },
         },
       ],
     },
   },
   bubble_NNM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    ...DEFAULT_SPEC,
     data: [],
     mark: "circle",
     width: 400,
@@ -196,10 +224,11 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         field: "#{3}",
         type: "quantitative",
       },
+      color: { value: "#4285F4" },
     },
   },
   heat_NNM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    ...DEFAULT_SPEC,
     data: [],
     mark: "bar",
     width: 400,
@@ -215,11 +244,12 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       color: {
         field: "#{3}",
         type: "quantitative",
+        scale: getColorScale("quantitative", false),
       },
     },
   },
   heat_SNM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    ...DEFAULT_SPEC,
     data: [],
     mark: "bar",
     width: 400,
@@ -235,11 +265,12 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       color: {
         field: "#{3}",
         type: "quantitative",
+        scale: getColorScale("quantitative", false),
       },
     },
   },
   stacked_line_STM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    ...DEFAULT_SPEC,
     height: 50,
     data: [],
     mark: "area",
@@ -259,6 +290,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         field: "#{1}",
         type: "nominal",
         legend: null,
+        scale: getColorScale("nominal", false),
       },
       row: {
         field: "#{1}",
@@ -267,7 +299,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     },
   },
   grid_line_SSTM: {
-    $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+    ...DEFAULT_SPEC,
     height: 50,
     data: [],
     mark: "area",
@@ -287,6 +319,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         field: "#{1}",
         type: "nominal",
         legend: null,
+        scale: getColorScale("nominal", false),
       },
       row: {
         field: "#{1}",

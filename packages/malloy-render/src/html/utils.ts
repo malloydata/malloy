@@ -12,7 +12,6 @@
  */
 
 import { TimeTimeframe } from "malloy";
-import { normalColors } from "./chart";
 
 function numberFixedDigits(value: number, digits: number) {
   return value.toString().padStart(digits, "0");
@@ -83,16 +82,49 @@ export function getColorScale(
     return undefined;
   }
   switch (type) {
+    // case "ordinal":
+    //   return { range: ["#12B5CB", "#1A73E8"] };
+    // case "temporal":
+    // case "quantitative":
+    //   return isRectMark
+    //     ? { range: ["#1A73E8", "#E8710A"] }
+    //     : { range: ["#1A73E8", "#12B5CB"] };
+    // case "nominal":
+    //   return {
+    //     range: [
+    //       "#1A73E8",
+    //       "#12B5CB",
+    //       "#E52592",
+    //       "#E8710A",
+    //       "#F9AB00",
+    //       "#7CB342",
+    //       "#9334E6",
+    //       "#80868B",
+    //     ],
+    //   };
     case "ordinal":
-      return { range: ["#12B5CB", "#1A73E8"] };
+      return { range: ["#00ABC0", "#4084F3"] };
     case "temporal":
     case "quantitative":
       return isRectMark
-        ? { range: ["#1A73E8", "#E8710A"] }
-        : { range: ["#1A73E8", "#12B5CB"] };
+        ? { range: ["#4084F3", "#F340B0"] }
+        : { range: ["#00ABC0", "#4084F3"] };
     case "nominal":
       return {
-        range: normalColors,
+        range: [
+          "#4084F3",
+          "#FF5822",
+          "#FF8F00",
+          "#7CB342",
+          "#AA46BB",
+          "#00ABC0",
+          "#F57C00",
+          "#9D9C23",
+          "#5B6ABF",
+          "#EE6191",
+          "#00786A",
+          "#C2175A",
+        ],
       };
   }
 }

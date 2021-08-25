@@ -15,6 +15,7 @@ import { QueryData, StructDef } from "malloy";
 import * as lite from "vega-lite";
 import { HtmlChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
+import { DEFAULT_SPEC } from "./vega_spec";
 
 export abstract class HtmlCartesianChartRenderer extends HtmlChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
@@ -84,6 +85,7 @@ export abstract class HtmlCartesianChartRenderer extends HtmlChartRenderer {
     };
 
     return {
+      ...DEFAULT_SPEC,
       width: 150,
       height: 100,
       data: {
