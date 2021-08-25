@@ -335,6 +335,10 @@ export class Explore extends Mallobj implements ExploreInterface {
   structDef(): model.StructDef {
     const querySpace = this.headSpace();
     if (this.headOnly()) {
+      const filterList = this.filter?.getFilterList(querySpace);
+      if (filterList && filterList.length > 0) {
+        return { ...querySpace.structDef(), filterList };
+      }
       return querySpace.structDef();
     }
     const qs = this.queryAndShape();
@@ -348,7 +352,7 @@ export class Explore extends Mallobj implements ExploreInterface {
   }
 
   headOnly(): boolean {
-    return this.pipeline === undefined && (!this.filter || this.filter.empty());
+    return this.pipeline === undefined;
   }
 
   private headSpace(): FieldSpace {
