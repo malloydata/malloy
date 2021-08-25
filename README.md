@@ -81,6 +81,9 @@ _OR_
 
 2) Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
+### Contributing
+If you would like to work on Malloy, you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
+
 # Using the Malloy VSCode plugin
 
 *add a little video here*
@@ -235,100 +238,3 @@ state_dashboard is (reduce
 ```
 
 <img width="865" alt="Screen Shot 2021-08-19 at 12 01 56 PM" src="https://user-images.githubusercontent.com/7178946/130128823-6b7f8e97-ec28-4ced-9e38-c72384eb976b.png">
-
-
-### Malloy and Extension Development
-_Note: You only need to do this for development on Malloy; it's not required to use the VSCode plugin._
-
-1. Open the `/malloy/packages/malloy-vscode`  directory in VSCode
-2. Select the "Run and Debug" panel in the left bar.
-3. Click the green arrow "Run" button, with the "Run Extension" profile selected.
-
-Optional: To additionally debug the language server, run the "Attach to Language Server"
-launch profile from the "Run and Debug" panel.
-
-
-![open_vsix3](https://user-images.githubusercontent.com/7178946/130678501-cd5cf79b-0d48-42a6-a4d5-602f1b0d563d.gif)
-
-
-## Documentation Develoment
-
-Documentation is a static site built by [Jekyll](https://jekyllrb.com/) with
-some custom preprocessing.
-
-Source for documentation lives in the `/docs/_src` directory. Any `.md`
-files will be included in compiled documentation, `table_of_contents.json`
-specifies the sidebar, and any other files will be copied as static files.
-
-Custom preprocessing is done in `/docs/_scripts/build_docs/index.ts`.
-
-### Installation
-
-Jekyll is a Ruby Gem, so you will need to have Ruby 2.5.0+, RubyGems, GCC,
-Make, and Bundler installed. See [here](https://jekyllrb.com/docs/installation/)
-for more info on Jekyll's requirements.
-
-To install Bundler, run
-```
-gem install bundler
-```
-
-Once all that is installed, you can install Jekyll and its Ruby dependencies:
-
-```
-bundle install
-```
-
-### Compile
-
-To compile the documentation, run `yarn docs-build`. Your system must be
-authenticated to a BigQuery instance with access to all the public tables referenced in the
-`/samples` models.
-
-### Develop
-
-For developing the documentation, run `yarn docs-serve` build the docs, watch for
-file changes in any of the docs, static files, or sample models, and serve the result
-at [http://127.0.0.1:4000](http://127.0.0.1:4000). Jekyll hot-reloading is
-enabled, so pages should automatically refresh when changes are made. When initial
-compilation is complete, a browser should open to the home page.
-
-Code blocks in the documentation may begin with a command string to indicate
-whether the code should be run, and how the query should be compiled or the results
-formatted. This command string is JSON-formatted and must appear on the first
-line in a comment with an `!`, like: `--! { "isRunnable": true }`. For example,
-
-~~~
-```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "size": "large"}
-explore flights | sessionize
-```
-~~~
-
-Currently, options include `isRunnable` (which must be `true` for the snippet
-to run), `project` (which refers to a directory in `/samples`), `model` (
-which refers to a file (not including the `.malloy` extension inside that
-directory), and `size` (which adjusts the maximum scroll size of the results).
-
-### Style
-
-The following list describes style conventions used in the docs.
-
-* Use headers (`# Foo`, `## Bar`, etc.) to organize document structure, not for
-  emphasis. If you want to show emphasis, do it with `**bold**` or `_italics_`.
-* Code spans (`` `explore flights` ``) are by default _Malloy_ syntax-highlighted. If
-  you are writing a code span with code in any other language, use an HTML code tag,
-  e.g. `<code>SELECT *</code>`
-
-### Deploy
-
-To deploy the docs, use the following steps:
-
-1. Merge any docs changes into `main`
-2. `git pull main`
-2. `git checkout docs-release-static`
-3. `git merge main`
-4. `yarn docs-build`
-5. `git add docs`
-6. `git commit`
-7. `git push`
