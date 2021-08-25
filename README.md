@@ -1,5 +1,5 @@
 # The Malloy Language
-Malloy is a new language for querying and modeling data.
+Malloy is a new experimental language for querying and modeling data.
 
 Akin to a SQL “extension” it is far easier to use and reason about than SQL, usable in place of SQL, and is quick to pick up for SQL users.
 
