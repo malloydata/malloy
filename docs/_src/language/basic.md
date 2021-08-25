@@ -253,7 +253,7 @@ explore airports
 
 ## Comments
 
-Malloy code can include both line and block comments. Line comments, which begin with `--`
+Malloy code can include both line and block comments. Line comments, which begin with `--`,
 may appear anywhere within a line, and cause all subsequent characters on that line to be ignored.
 Block comments, which are enclosed between <code>/\*</code> and <code>\*/</code>, cause all enclosed characters to be ignored
 and may span multiple lines.
