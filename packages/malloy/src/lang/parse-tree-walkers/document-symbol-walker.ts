@@ -82,7 +82,7 @@ class DocumentSymbolWalker implements MalloyListener {
     }
     this.scopes.push({
       range: this.rangeOf(pcx),
-      name: pcx.defineName().id().text,
+      name: pcx.id().text,
       type,
       children: [],
     });
