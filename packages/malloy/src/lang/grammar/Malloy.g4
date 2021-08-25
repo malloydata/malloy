@@ -430,6 +430,7 @@ fragment Q: [qQ] ; fragment R: [rR] ; fragment S: [sS] ; fragment T: [tT] ;
 fragment U: [uU] ; fragment V: [vV] ; fragment W: [wW] ; fragment X: [xX] ;
 fragment Y: [yY] ; fragment Z: [zZ] ;
 
+BLOCK_COMMENT: '/*' .*? '*/' -> skip;
 DOUBLE_DASH_COMMENT: '--' ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
