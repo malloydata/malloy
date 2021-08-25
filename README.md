@@ -66,13 +66,12 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 
 ### Installation
 
-To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. Then run:
+To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
 yarn install
 yarn build
 ```
-_Note: You will need to re-run the above any time you pull in new changes._
 
 Next, in VSCode _EITHER_:
 1) Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
@@ -82,11 +81,19 @@ _OR_
 2) Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
 ### Contributing
-If you would like to work on Malloy, you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
+If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
 
 # Using the Malloy VSCode plugin
 
-*add a little video here*
+### Part 1:
+
+https://user-images.githubusercontent.com/7178946/130858341-4e2a834a-ca51-44af-b035-584d6908873f.mov
+
+
+### Part 2:
+
+https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-834a-579927b727cd.mov
+
 
 # Quick Start Video
 
@@ -95,9 +102,9 @@ If you would like to work on Malloy, you can find some helpful instructions abou
 # Documentation
 [Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
 
-[Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html)
-
-[Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html)
+- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - an introduction to the language
+- [Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Introduction: Basic Malloy Syntax & Using the VSCode Plugin
 
