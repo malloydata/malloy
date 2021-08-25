@@ -795,6 +795,15 @@ describe("syntax errors", () => {
   test.todo("errors with span report correct span");
 });
 
+describe("comments", () => {
+  test("line comments", () => {
+    expect("-- ^&*$(#HFDJKXU*(").toBeValidMalloy();
+  });
+  test("block comments", () => {
+    expect("/* $&*#(&$%# */").toBeValidMalloy();
+  });
+});
+
 describe("json support", () => {
   test("define using json", () => {
     const jsonModel = "export define js is json " + JSON.stringify(aTableDef);
