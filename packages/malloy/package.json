@@ -15,7 +15,8 @@
     "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
     "testLang": "(cd src/lang ; yarn jest *.spec.ts)",
     "testModel": "(cd src/model ; yarn jest *.spec.ts)",
-    "clean": "rm -rf dist/ && rm -rf src/lang/lib && rm -f tsconfig.tsbuildinfo"
+    "clean": "rm -rf dist/ && rm -rf src/lang/lib && rm -f tsconfig.tsbuildinfo",
+    "malloyc": "ts-node src/lang/test/malloy-to-json.ts"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^5.5.0",
