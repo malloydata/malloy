@@ -16,10 +16,17 @@
  * docs.
  */
 export const MALLOY_GRAMMAR = {
-  comment: {
-    pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|(?:--|\/\/|#).*)/,
-    lookbehind: true,
-  },
+  comment: [
+    {
+      pattern: /(^|[^\\])(?:\/\*[\s\S]*?\*\/|(?:--|\/\/|#).*)/,
+      lookbehind: true,
+    },
+    {
+      pattern: /(^|[^\\])\/\*[\s\S]*?(?:\*\/|$)/,
+      lookbehind: true,
+      greedy: true,
+    },
+  ],
   regular_expression: {
     pattern: /(^|[^@\\])(r|\/)("|')(?:\\[\s\S]|(?!\3)[^\\]|\3\3)*\3/,
     greedy: true,

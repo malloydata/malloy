@@ -92,6 +92,7 @@ export const HighlightType = {
   },
   Comment: {
     Line: "comment.line",
+    Block: "comment.block",
   },
 };
 
@@ -101,13 +102,23 @@ export function passForHighlights(
   const highlights: DocumentHighlight[] = [];
   const register = (token: Token, type: string) => {
     const offset = token.startIndex - token.charPositionInLine;
+    const tokenLines = token.text?.split("\n") || [];
+    const numberOfLines = tokenLines.length;
+    const lengthOfAllButLastLine = tokenLines
+      .slice(0, -1)
+      .reduce((a, l) => a + l.length, 0);
     highlights.push({
       type,
       range: {
         start: { line: token.line - 1, character: token.startIndex - offset },
         end: {
-          line: token.line - 1,
-          character: token.stopIndex + 1 - offset,
+          line: token.line - 1 + numberOfLines - 1,
+          character:
+            token.stopIndex +
+            2 -
+            (numberOfLines > 1 ? token.startIndex : offset) -
+            lengthOfAllButLastLine -
+            numberOfLines,
         },
       },
     });
@@ -243,6 +254,9 @@ export function passForHighlights(
         break;
       case MalloyParser.DOUBLE_DASH_COMMENT:
         register(token, HighlightType.Comment.Line);
+        break;
+      case MalloyParser.BLOCK_COMMENT:
+        register(token, HighlightType.Comment.Block);
         break;
       case MalloyParser.SUM:
       case MalloyParser.COUNT:
