@@ -95,12 +95,7 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 ## Using the Malloy VSCode plugin
 
-### Part 1:
-
 https://user-images.githubusercontent.com/7178946/130858341-4e2a834a-ca51-44af-b035-584d6908873f.mov
-
-
-### Part 2:
 
 https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-834a-579927b727cd.mov
 
