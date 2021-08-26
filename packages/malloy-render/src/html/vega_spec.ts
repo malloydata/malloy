@@ -47,76 +47,90 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
   },
 };
 
+// bar with text in the bars.
+const bar_SM: lite.TopLevelSpec = {
+  ...DEFAULT_SPEC,
+  encoding: {
+    y: { field: "#{1}", type: "nominal", axis: null },
+  },
+  layer: [
+    {
+      mark: { type: "text", align: "left", x: 5 },
+      encoding: {
+        text: { field: "#{1}" },
+      },
+    },
+    {
+      mark: { type: "bar", color: "#aec7e8" },
+      encoding: {
+        x: {
+          field: "#{2}",
+          type: "quantitative",
+        },
+        color: { value: "#4285F4" },
+      },
+    },
+  ],
+};
+
+const bar_SMS: lite.TopLevelSpec = {
+  ...bar_SM,
+  layer: [
+    ...(bar_SM.layer[0]),
+    {
+      ...bar_SM.layer,
+      color: {
+        field: "#{3}",
+        scale: getColorScale("nominal", true, true),
+        // scale: { range: backgroundColors },
+      },
+    },
+  ]
+}
+
+// simple column chart
+const bar_NM: lite.TopLevelSpec ={
+  ...DEFAULT_SPEC,
+  mark: "bar",
+  data: [],
+  height: 150,
+  width: 200,
+  encoding: {
+    x: { field: "#{1}", type: "nominal" },
+    y: { field: "#{2}", type: "quantitative" },
+    color: { value: "#4285F4" },
+  },
+};
+
+const bar_NMS: lite.TopLevelSpec = {
+  ...bar_NM,
+  encoding: {
+    ...bar_NM.encoding,
+    color: {
+      field: "#{3}",
+      type: "nominal",
+      scale: getColorScale("nominal", true),
+    },
+  },
+};
+
+const bar_NMM: lite.TopLevelSpec = {
+  ...bar_NM,
+  encoding: {
+    ...bar_NM.encoding,
+    color: {
+      field: "#{3}",
+      type: "quantitative",
+      scale: getColorScale("quantitative", true),
+    },
+  },
+};
+
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
-  bar_SM: {
-    ...DEFAULT_SPEC,
-    encoding: {
-      y: { field: "#{1}", type: "nominal", axis: null },
-    },
-    layer: [
-      {
-        mark: { type: "bar", color: "#aec7e8" },
-        encoding: {
-          x: {
-            field: "#{2}",
-            type: "quantitative",
-          },
-          color: { value: "#4285F4" },
-        },
-      },
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          // detail: { aggregate: "count" },
-        },
-      },
-    ],
-  },
-  bar_NM: {
-    ...DEFAULT_SPEC,
-    mark: "bar",
-    data: [],
-    height: 150,
-    width: 200,
-    encoding: {
-      x: { field: "#{1}", type: "nominal" },
-      y: { field: "#{2}", type: "quantitative" },
-      color: { value: "#4285F4" },
-    },
-  },
-  bar_NMS: {
-    ...DEFAULT_SPEC,
-    mark: "bar",
-    data: [],
-    height: 150,
-    width: 200,
-    encoding: {
-      x: { field: "#{1}", type: "nominal" },
-      y: { field: "#{2}", type: "quantitative" },
-      color: {
-        field: "#{3}",
-        type: "nominal",
-        scale: getColorScale("nominal", true),
-      },
-    },
-  },
-  bar_NMM: {
-    ...DEFAULT_SPEC,
-    mark: "bar",
-    data: [],
-    height: 150,
-    width: 200,
-    encoding: {
-      x: { field: "#{1}", type: "nominal" },
-      y: { field: "#{2}", type: "quantitative" },
-      color: {
-        field: "#{3}",
-        type: "quantitative",
-        scale: getColorScale("quantitative", true),
-      },
-    },
-  },
+  bar_SM,
+  bar_NM,
+  bar_NMS,
+  bar_NMM,
   bar_SMM: {
     ...DEFAULT_SPEC,
     encoding: {
@@ -155,6 +169,13 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     },
     layer: [
       {
+        mark: { type: "text", align: "left", x: 5 },
+        encoding: {
+          text: { field: "#{1}" },
+          detail: { aggregate: "count" },
+        },
+      },
+      {
         mark: {
           type: "bar",
         },
@@ -168,13 +189,6 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
             scale: getColorScale("nominal", true, true),
             // scale: { range: backgroundColors },
           },
-        },
-      },
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          detail: { aggregate: "count" },
         },
       },
     ],
