@@ -12,7 +12,6 @@
  */
 
 import { TimeTimeframe } from "malloy";
-import { normalColors } from "./chart";
 
 function numberFixedDigits(value: number, digits: number) {
   return value.toString().padStart(digits, "0");
@@ -77,7 +76,8 @@ export function timeToString(time: Date, timeframe: TimeTimeframe): string {
 
 export function getColorScale(
   type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,
-  isRectMark: boolean
+  isRectMark: boolean,
+  hasOverlappingText = false
 ): { range: string[] } | undefined {
   if (type === undefined) {
     return undefined;
@@ -88,11 +88,35 @@ export function getColorScale(
     case "temporal":
     case "quantitative":
       return isRectMark
-        ? { range: ["#1A73E8", "#E8710A"] }
+        ? hasOverlappingText
+          ? { range: ["#6BA4EE", "#EEA361"] }
+          : { range: ["#1A73E8", "#E8710A"] }
         : { range: ["#1A73E8", "#12B5CB"] };
     case "nominal":
-      return {
-        range: normalColors,
-      };
+      return hasOverlappingText
+        ? {
+            range: [
+              "#6BA4EE",
+              "#66CEDC",
+              "#EC72B8",
+              "#EEA361",
+              "#F9C85B",
+              "#AACD85",
+              "#B87CED",
+              "#ACB0B3",
+            ],
+          }
+        : {
+            range: [
+              "#1A73E8",
+              "#12B5CB",
+              "#E52592",
+              "#E8710A",
+              "#F9AB00",
+              "#7CB342",
+              "#9334E6",
+              "#80868B",
+            ],
+          };
   }
 }

@@ -23,46 +23,6 @@ import {
 import { Renderer } from "../renderer";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 
-export const normalColors = [
-  "#81AEF7",
-  "#FF906C",
-  "#FFB556",
-  "#A8CD82",
-  "#C784D2",
-  "#56C8D6",
-  "#F9A856",
-  "#BEBE6D",
-  "#929CD5",
-  "#F496B6",
-  "#56A69C",
-  "#D76592",
-];
-
-export const backgroundColors = [
-  "#A0C2F9",
-  "#FFAB90",
-  "#FFC780",
-  "#BDD9A1",
-  "#D5A2DD",
-  "#80D6E0",
-  "#FABD80",
-  "#CECE91",
-  "#ADB4DF",
-  "#F7B0C8",
-  "#80BCB4",
-  "#E18BAD",
-];
-
-export const gradiantColors = ["#1f77b4", "#aec7e8"];
-
-const defaultVegaConfig = {
-  range: {
-    ordinal: normalColors,
-    ramp: gradiantColors,
-    category: normalColors,
-  },
-};
-
 export abstract class HtmlChartRenderer implements Renderer {
   abstract getDataType(
     field: FieldDef,
@@ -110,7 +70,6 @@ export abstract class HtmlChartRenderer implements Renderer {
     const spec = this.getVegaLiteSpec(table.rows, table.structDef);
 
     const vegaspec = lite.compile(spec, {
-      config: defaultVegaConfig,
       logger: {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
