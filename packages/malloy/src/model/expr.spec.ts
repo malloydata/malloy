@@ -687,6 +687,27 @@ describe("expression tests", () => {
         `);
     expect(rows(result)[0].m_count).toBe(3496);
   });
+
+  it("joined filtered explores", async () => {
+    const result = await model.runQuery(`
+    define a_models is (explore 'lookerdata.liquor.aircraft_models'
+    : [manufacturer: ~'B%']
+    primary key aircraft_model_code
+    model_count is count()
+  )
+
+    define aircraft2 is (explore 'lookerdata.liquor.aircraft'
+    model is join a_models on aircraft_model_code
+    aircraft_count is count()
+  )
+
+    explore aircraft2 | reduce
+      model.model_count
+      aircraft_count
+        `);
+    expect(rows(result)[0].model_count).toBe(5046);
+    expect(rows(result)[0].aircraft_count).toBe(359928);
+  });
 });
 
 describe("order by tests", () => {

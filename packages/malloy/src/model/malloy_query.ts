@@ -1308,16 +1308,18 @@ class QueryQuery extends QueryField {
 
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
-    which: "where" | "having"
+    which: "where" | "having",
+    filterList: FilterCondition[] | undefined = undefined
   ): AndChain {
     const resultFilters = new AndChain();
-    if (resultStruct.firstSegment.filterList === undefined) {
+    const list = filterList || resultStruct.firstSegment.filterList;
+    if (list === undefined) {
       return resultFilters;
     }
     // Go through the filters and make or find dependant fields
     //  add them to the field index. Place the individual filters
     // in the correct catgory.
-    for (const cond of resultStruct.firstSegment.filterList || []) {
+    for (const cond of list || []) {
       const context = this.parent;
 
       if (
@@ -1542,7 +1544,15 @@ class QueryQuery extends QueryField {
         }
         const fkSql = fkDim.generateExpression(this.rootResult);
         const pkSql = pkDim.generateExpression(this.rootResult);
-        s += `LEFT JOIN ${structSQL} AS ${name} ON ${fkSql} = ${pkSql}\n`;
+        let filters = "";
+        if (qs.fieldDef.filterList) {
+          filters = `AND (${this.generateSQLFilters(
+            this.rootResult,
+            "where",
+            qs.fieldDef.filterList
+          )})`;
+        }
+        s += `LEFT JOIN ${structSQL} AS ${name} ON ${fkSql} = ${pkSql}${filters}\n`;
       } else if (structRelationship.type === "nested") {
         let prefix = "";
         if (qs.parent) {
