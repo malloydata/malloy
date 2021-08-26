@@ -66,13 +66,12 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 
 ### Installation
 
-To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. Then run:
+To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
 yarn install
 yarn build
 ```
-_Note: You will need to re-run the above any time you pull in new changes._
 
 Next, in VSCode _EITHER_:
 1) Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
@@ -82,24 +81,73 @@ _OR_
 2) Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
 ### Contributing
-If you would like to work on Malloy, you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
+If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
 
-# Using the Malloy VSCode plugin
-
-*add a little video here*
-
-# Quick Start Video
-
-*add a video here*
 
 # Documentation
 [Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
 
-[Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html)
+- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - an introduction to the language
+- [Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
-[Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html)
+# Quick Start Videos
+
+## Using the Malloy VSCode plugin
+
+https://user-images.githubusercontent.com/7178946/130858341-4e2a834a-ca51-44af-b035-584d6908873f.mov
+
+https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-834a-579927b727cd.mov
+
+## Getting Started Video Series
+These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads).
+**You will likely need to un-mute the audio.**
+
+### 1. Introduction
+
+
+https://user-images.githubusercontent.com/7178946/130884531-9f86d536-32b8-43fd-9e4e-17ed316658f1.mov
+
+
+### 2. Visualizing Results
+
+
+https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-82b6-a61b7371ac65.mov
+
+
+### 3. Joining
+
+
+https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
+
+
+### 4. Aggregating Subqueries, AKA Turtles
+
+
+https://user-images.githubusercontent.com/7178946/130885321-ba141168-2a50-423a-bf09-5a6a03ec57d8.mov
+
+
+### 5. Creating a Dashboard
+
+
+https://user-images.githubusercontent.com/7178946/130885327-2866baae-e77c-4dc4-ab63-25cfff9f19c6.mov
+
+
+### 6. Custom Dimensions
+
+
+https://user-images.githubusercontent.com/7178946/130884897-f2bb7f16-1c4f-4a4c-bf04-03849385c8fb.mov
+
+
+### 7. JSON Renderer
+
+
+https://user-images.githubusercontent.com/7178946/130884900-aad27a77-4b82-4856-8000-37f0b8410018.mov
+
+
 
 # Introduction: Basic Malloy Syntax & Using the VSCode Plugin
+The following written walk-through covers similar concepts to the videos abovem, but in a written format and on a different dataset. 
 
 Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.
 
