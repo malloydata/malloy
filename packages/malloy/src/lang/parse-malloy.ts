@@ -238,11 +238,8 @@ export abstract class MalloyTranslation {
     );
 
     if (this.root.logger.hasErrors()) {
-      // Walks of a parse tree with errors are more dangerous, lots of
-      // unexpected undefined references, so there is no walking of the
-      // parse tree unless the parse was clean.
       this.parseResponse = {
-        ...parse,
+        parse,
         ...this.fatalErrors(),
       };
     } else {
@@ -437,13 +434,21 @@ export abstract class MalloyTranslation {
       if (!tryParse.parse) {
         this.metadataResponse = tryParse;
       } else {
+        // Wrap the parse tree walker in a try block -- if the parse is bad, this walk
+        // could result in unexpected errors due to the parse tree not looking as expected.
+        // We still want to attempt to walk the tree, to preserve document symbols even
+        // when there's a bad parse, but we also want to be safe about it.
+        let symbols;
+        try {
+          symbols = walkForDocumentSymbols(
+            tryParse.parse.tokens,
+            tryParse.parse.root
+          );
+        } catch {
+          // Do nothing, symbols already `undefined`
+        }
         this.metadataResponse = {
-          symbols: tryParse.errors
-            ? [] // Don't attempt to walk a parse tree with errors
-            : walkForDocumentSymbols(
-                tryParse.parse.tokens,
-                tryParse.parse.root
-              ),
+          symbols,
           highlights: passForHighlights(tryParse.parse.tokens),
           final: true,
         };
