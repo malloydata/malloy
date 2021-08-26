@@ -249,10 +249,7 @@ describe("expression tests", () => {
             //   e: [
             //     {
             //       type: "filterExpression",
-            //       filterList: [
-            //         { field: "aircraft_models.manufacturer", e: "BOEING" },
-            //       ],
-            //       e: [{ type: "field", path: "aircraft_models.total_seats" }],
+            //  fieldDef    e: [{ type: "field", path: "aircraft_models.total_seats" }],
             //     },
             //   ],
             // },
@@ -680,6 +677,15 @@ describe("expression tests", () => {
         explore aircraft | by_manufacturer | reduce c is count()
         `);
     expect(result.queryName).toBe(undefined);
+  });
+
+  it("filtered explores", async () => {
+    const result = await model.runQuery(`
+        define b is (explore aircraft : [aircraft_models.manufacturer: ~'B%']);
+
+        explore b | reduce m_count is count(distinct aircraft_models.manufacturer);
+        `);
+    expect(rows(result)[0].m_count).toBe(3496);
   });
 });
 

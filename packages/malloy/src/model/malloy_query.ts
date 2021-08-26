@@ -2664,7 +2664,8 @@ class QueryStruct extends QueryNode {
     if (addedFilters) {
       pipeline = cloneDeep(pipeline);
       pipeline[0].filterList = addedFilters.concat(
-        pipeline[0].filterList || []
+        pipeline[0].filterList || [],
+        this.fieldDef.filterList || []
       );
     }
 
@@ -2875,43 +2876,6 @@ export class QueryModel {
     const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
     const { lastStageName, outputStruct } =
       q.generateSQLFromPipeline(stageWriter);
-
-    // // nconsole.log(JSON.stringify(query.structRef, undefined, 2));
-    // // console.log(JSON.stringify(query.pipeline, undefined, 2));
-
-    // let pipeline;
-    // if (query.pipeline instanceof Array) {
-    //   pipeline = [...query.pipeline];
-    // } else {
-    //   pipeline = [query.pipeline];
-    // }
-
-    // const struct = this.getStructFromRef(query.structRef);
-    // const firstTransform = pipeline.shift();
-    // if (!firstTransform) {
-    //   throw new Error("No Transform Specified");
-    // }
-
-    // let q = struct.getQueryFromQueryRef(
-    //   firstTransform,
-    //   query.filterList,
-    //   stageWriter
-    // );
-
-    // q.prepare();
-
-    // let lastStageName = q.generateSQL(stageWriter);
-    // let nextStruct = q.getResultStructDef();
-    // structs.push(nextStruct);
-    // for (const transform of pipeline) {
-    //   const s = new QueryStruct(nextStruct, { model: this });
-    //   // q = QueryQuery.makeQuery(transform as QueryDef, s, stageWriter);
-    //   q = s.getQueryFromQueryRef(transform, [], stageWriter);
-    //   q.prepare();
-    //   lastStageName = q.generateSQL(stageWriter);
-    //   nextStruct = q.getResultStructDef();
-    //   structs.push(nextStruct);
-    // }
     return { lastStageName, malloy, stageWriter, structs: [outputStruct] };
   }
 
