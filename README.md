@@ -83,7 +83,17 @@ _OR_
 ### Contributing
 If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
 
-# Using the Malloy VSCode plugin
+
+# Documentation
+[Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
+
+- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - an introduction to the language
+- [Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
+
+# Quick Start Videos
+
+## Using the Malloy VSCode plugin
 
 ### Part 1:
 
@@ -94,19 +104,53 @@ https://user-images.githubusercontent.com/7178946/130858341-4e2a834a-ca51-44af-b
 
 https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-834a-579927b727cd.mov
 
+## Getting Started Video Series
+These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads)
 
-# Quick Start Video
+### 1. Introduction
 
-*add a video here*
 
-# Documentation
-[Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
+https://user-images.githubusercontent.com/7178946/130884531-9f86d536-32b8-43fd-9e4e-17ed316658f1.mov
 
-- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - an introduction to the language
-- [Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
-- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
+
+### 2. Visualizing Results
+
+
+https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-82b6-a61b7371ac65.mov
+
+
+### 3. Joining
+
+
+https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
+
+
+### 4. Creating a Dashboard
+
+
+https://user-images.githubusercontent.com/7178946/130884559-9d974707-4180-45a0-b2bc-cd872753ecd6.mov
+
+
+### 5. Aggregating Subqueries, AKA Turtles
+
+
+https://user-images.githubusercontent.com/7178946/130884574-e2fb5b1d-3081-43b6-b340-15f4b05b74dd.mov
+
+
+### 6. Custom Dimensions
+
+
+https://user-images.githubusercontent.com/7178946/130884587-93960002-9987-4c71-a00d-9be9852539b2.mov
+
+
+### 7. JSON Renderer
+
+
+https://user-images.githubusercontent.com/7178946/130884599-31859bf0-844b-444b-b0ac-a164cbe3dcc4.mov
+
 
 # Introduction: Basic Malloy Syntax & Using the VSCode Plugin
+The following written walk-through covers similar concepts to the videos abovem, but in a written format and on a different dataset. 
 
 Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.
 
