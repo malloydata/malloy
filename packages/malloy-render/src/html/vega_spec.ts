@@ -76,20 +76,51 @@ const bar_SM: lite.TopLevelSpec = {
 const bar_SMS: lite.TopLevelSpec = {
   ...bar_SM,
   layer: [
-    ...(bar_SM.layer[0]),
+    bar_SM.layer[0],
     {
-      ...bar_SM.layer,
-      color: {
-        field: "#{3}",
-        scale: getColorScale("nominal", true, true),
-        // scale: { range: backgroundColors },
+      ...bar_SM.layer[1],
+      encoding: {
+        // LTNOTE: I have no idea why this won't work.
+        // ...bar_SM.layer[1].encoding,
+        x: {
+          field: "#{2}",
+          type: "quantitative",
+        },
+        color: {
+          field: "#{3}",
+          scale: getColorScale("nominal", true, true),
+          // scale: { range: backgroundColors },
+        },
       },
     },
-  ]
-}
+  ],
+};
+
+const bar_SMM: lite.TopLevelSpec = {
+  ...bar_SM,
+  layer: [
+    bar_SM.layer[0],
+    {
+      ...bar_SM.layer[1],
+      encoding: {
+        // LTNOTE: I have no idea why this won't work.
+        // ...bar_SM.layer[1].encoding,
+        x: {
+          field: "#{2}",
+          type: "quantitative",
+        },
+        color: {
+          field: "#{3}",
+          type: "quantitative",
+          scale: getColorScale("quantitative", true, true),
+        },
+      },
+    },
+  ],
+};
 
 // simple column chart
-const bar_NM: lite.TopLevelSpec ={
+const bar_NM: lite.TopLevelSpec = {
   ...DEFAULT_SPEC,
   mark: "bar",
   data: [],
@@ -128,71 +159,11 @@ const bar_NMM: lite.TopLevelSpec = {
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM,
+  bar_SMS,
   bar_NM,
   bar_NMS,
   bar_NMM,
-  bar_SMM: {
-    ...DEFAULT_SPEC,
-    encoding: {
-      y: { field: "#{1}", type: "nominal", axis: null },
-    },
-    layer: [
-      {
-        mark: {
-          type: "bar",
-        },
-        encoding: {
-          x: {
-            field: "#{2}",
-            type: "quantitative",
-          },
-          color: {
-            field: "#{3}",
-            type: "quantitative",
-            scale: getColorScale("quantitative", true, true),
-          },
-        },
-      },
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          detail: { aggregate: "count" },
-        },
-      },
-    ],
-  },
-  bar_SMS: {
-    ...DEFAULT_SPEC,
-    encoding: {
-      y: { field: "#{1}", type: "nominal", axis: null },
-    },
-    layer: [
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          detail: { aggregate: "count" },
-        },
-      },
-      {
-        mark: {
-          type: "bar",
-        },
-        encoding: {
-          x: {
-            field: "#{2}",
-            type: "quantitative",
-          },
-          color: {
-            field: "#{3}",
-            scale: getColorScale("nominal", true, true),
-            // scale: { range: backgroundColors },
-          },
-        },
-      },
-    ],
-  },
+  bar_SMM,
   bar_SSMMM: {
     ...DEFAULT_SPEC,
     repeat: ["#{3}", "#{4}", "#{5}"],
