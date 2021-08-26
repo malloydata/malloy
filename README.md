@@ -105,7 +105,8 @@ https://user-images.githubusercontent.com/7178946/130858341-4e2a834a-ca51-44af-b
 https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-834a-579927b727cd.mov
 
 ## Getting Started Video Series
-These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads)
+These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads).
+**You will likely need to un-mute the audio.**
 
 ### 1. Introduction
 
@@ -125,28 +126,29 @@ https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-8
 https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
 
 
-### 4. Creating a Dashboard
+### 4. Aggregating Subqueries, AKA Turtles
 
 
-https://user-images.githubusercontent.com/7178946/130884559-9d974707-4180-45a0-b2bc-cd872753ecd6.mov
+https://user-images.githubusercontent.com/7178946/130885321-ba141168-2a50-423a-bf09-5a6a03ec57d8.mov
 
 
-### 5. Aggregating Subqueries, AKA Turtles
+### 5. Creating a Dashboard
 
 
-https://user-images.githubusercontent.com/7178946/130884574-e2fb5b1d-3081-43b6-b340-15f4b05b74dd.mov
+https://user-images.githubusercontent.com/7178946/130885327-2866baae-e77c-4dc4-ab63-25cfff9f19c6.mov
 
 
 ### 6. Custom Dimensions
 
 
-https://user-images.githubusercontent.com/7178946/130884587-93960002-9987-4c71-a00d-9be9852539b2.mov
+https://user-images.githubusercontent.com/7178946/130884897-f2bb7f16-1c4f-4a4c-bf04-03849385c8fb.mov
 
 
 ### 7. JSON Renderer
 
 
-https://user-images.githubusercontent.com/7178946/130884599-31859bf0-844b-444b-b0ac-a164cbe3dcc4.mov
+https://user-images.githubusercontent.com/7178946/130884900-aad27a77-4b82-4856-8000-37f0b8410018.mov
+
 
 
 # Introduction: Basic Malloy Syntax & Using the VSCode Plugin
