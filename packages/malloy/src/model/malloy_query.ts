@@ -959,9 +959,28 @@ class JoinInstance {
   leafiest = false;
   parent: JoinInstance | undefined;
   queryStruct: QueryStruct;
+  joinConditions?: QueryFieldBoolean[];
   constructor(queryStruct: QueryStruct, parent: JoinInstance | undefined) {
     this.queryStruct = queryStruct;
     this.parent = parent;
+
+    // convert the filter list into a list of boolean fields so we can
+    //  generate dependancies and code for them.
+    if (this.queryStruct.fieldDef.filterList) {
+      for (const filter of this.queryStruct.fieldDef.filterList) {
+        this.joinConditions = [];
+        this.joinConditions.push(
+          new QueryFieldBoolean(
+            {
+              type: "boolean",
+              name: "ignoreme",
+              e: filter.condition,
+            },
+            this.queryStruct
+          )
+        );
+      }
+    }
   }
 }
 
@@ -1545,12 +1564,11 @@ class QueryQuery extends QueryField {
         const fkSql = fkDim.generateExpression(this.rootResult);
         const pkSql = pkDim.generateExpression(this.rootResult);
         let filters = "";
-        if (qs.fieldDef.filterList) {
-          filters = `AND (${this.generateSQLFilters(
-            this.rootResult,
-            "where",
-            qs.fieldDef.filterList
-          )})`;
+        if (ji.joinConditions) {
+          const conditions = ji.joinConditions.map((qf) =>
+            qf.generateExpression(this.rootResult)
+          );
+          filters = ` AND ${conditions.join(" AND ")}`;
         }
         s += `LEFT JOIN ${structSQL} AS ${name} ON ${fkSql} = ${pkSql}${filters}\n`;
       } else if (structRelationship.type === "nested") {
