@@ -120,7 +120,7 @@ Which can be visualized using a data_style
 ```
 {"sales_by_month_2020" : {
    "renderer" : "line_chart"}
-, “orders_by_status” : {
+, "orders_by_status" : {
    "renderer" : "bar_chart"}
 }
 ```
