@@ -209,23 +209,53 @@ describe("explore", () => {
     }
   });
 
-  test.skip("explore with define", () => {
-    const src =
-      "define ay is (a fields new_field is aninteger+afloat); explore ay | reduce astring, new_field";
-    const eq = queryForExplore(src);
-    const ay: model.Query = {
-      type: "query",
-      structRef: "ay",
-      filterList: [],
-      pipeline: [
+  test("explore with define", () => {
+    const src = `
+      export define ay is (a fields new_field is aninteger+afloat);
+      explore ay | reduce astring, new_field`;
+    const p = new TestTranslator(src);
+    expect(p).toTranslate();
+    const mr = p.translate();
+    if (mr.translated) {
+      const eq = mr.translated.queryList[0];
+      const ay: model.Query = {
+        type: "query",
+        structRef: "ay",
+        filterList: [],
+        pipeline: [
+          {
+            type: "reduce",
+            fields: ["astring", "new_field"],
+          },
+        ],
+      };
+      expect(eq).toEqual(ay);
+    }
+  });
+
+  test("explore with filter", () => {
+    const src = `define onlya is (a : [ astring: 'A' ])`;
+    const onlyaStruct = {
+      ...mkStruct("onlya"),
+      filterList: [
         {
-          type: "reduce",
-          fields: ["astring", "new_field"],
+          condition: [{ path: "astring", type: "field" }, "='A'"],
+          source: "astring:'A'",
         },
       ],
     };
-    expect(eq).toEqual(ay);
-    // expect(eq.updatedModel()).toBeTruthy();
+    const p = new TestTranslator(src);
+    expect(p).toTranslate();
+    const onlya = p.nameSpace.onlya;
+    expect(onlya).toEqual(onlyaStruct);
+  });
+
+  test("explore rejects measure filter", () => {
+    const src = `
+      define acounted is (explore a acount is count())
+      define onlya is (acounted : [ acount > 0])`;
+    const p = new TestTranslator(src);
+    expect(p).not.toTranslate();
   });
 });
 
