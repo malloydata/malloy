@@ -549,7 +549,7 @@ describe("expression tests", () => {
             aircraft_count
           )
         `);
-    console.log(result.sql);
+    // console.log(result.sql);
     // console.log(JSON.stringify(result.result, undefined, 2));
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((result.result[0] as any).by_state[0].state).toBe("VA");
@@ -705,8 +705,50 @@ describe("expression tests", () => {
       model.model_count
       aircraft_count
         `);
+    console.log(result.sql);
     expect(rows(result)[0].model_count).toBe(5046);
     expect(rows(result)[0].aircraft_count).toBe(359928);
+  });
+
+  it("joined filtered explores with dependancies", async () => {
+    const result = await model.runQuery(`
+    define bo_models is (
+      (explore 'lookerdata.liquor.aircraft_models'
+        : [manufacturer: ~ 'BO%']
+      | project
+        aircraft_model_code
+        manufacturer
+        seats
+      )
+      primary key aircraft_model_code
+      bo_count is count()
+    );
+
+    define b_models is (
+      (explore 'lookerdata.liquor.aircraft_models'
+        : [manufacturer: ~ 'B%']
+      | project
+        aircraft_model_code
+        manufacturer
+        seats
+      ) : [bo_models.seats > 200]
+      primary key aircraft_model_code
+      b_count is count()
+      bo_models is join on aircraft_model_code
+    );
+
+    define models is (explore 'lookerdata.liquor.aircraft_models'
+      b_models is join on aircraft_model_code
+      model_count is count()
+    )
+
+    explore models | reduce
+      model_count
+      b_models.b_count
+      -- b_models.bo_models.bo_count
+        `);
+    expect(rows(result)[0].model_count).toBe(60461);
+    expect(rows(result)[0].b_count).toBe(355);
   });
 });
 
