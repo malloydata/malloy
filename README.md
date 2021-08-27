@@ -1,11 +1,11 @@
 # The Malloy Language
 Malloy is a new experimental language for querying and modeling data.
 
-Akin to a SQL “extension” it is far easier to use and reason about than SQL, usable in place of SQL, and is quick to pick up for SQL users.
+Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
 It is reusable and modular, allowing you to model as you go, yet without heavy up-front work before you can start answering complex questions.
 
-Malloy is for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application, if you know SQL, Malloy will feel familiar, while more powerful and efficient.
+Malloy is for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient.
 
 This VSCode plugin is the first application of Malloy. It provides a rich environment to create Malloy models, query, and create simple visualizations and dashboards.
 
@@ -21,13 +21,13 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
     - BI Engine & database-level caching
 
 ### Why do we need another data language?
-SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to expres; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn. It is usable in place of SQL to manipulate and explore data.
+SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to express; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn. It is usable in place of SQL to manipulate and explore data.
 
 Key features and advantages:
 - Query and model in the same language; everything is reusable and extensible.
 - Malloy reads the schema so you don’t need to model everything: Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
-- Pipelining: output one query into the next easily for powerful advanced analysis
-- Turtles/Named Queries let you delve deeper into data quickly and nest data infinitely
+- Pipelining: output one query into the next easily for powerful advanced analysis.
+- Aggregating Subqueries (AKA Turtles) let you delve deeper into data quickly, and nest data infinitely.
 - Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
 - Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
 - Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.
@@ -48,8 +48,10 @@ You will need to have BigQuery credentials available, and the [gcloud CLI](https
 
 ```
 gcloud auth login --update-adc
-gcloud config set project <project id> --installation
+gcloud config set project my_project_id --installation
 ```
+
+_Replace `my_project_id` with the name of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top to view projects you have access to._
 
 You will need to have [node.js](https://nodejs.org/en/download/), [yarn](https://classic.yarnpkg.com/en/docs/install/), and a [Java Runtime Environment](https://www.oracle.com/java/technologies/javase-jre8-downloads.html) (JRE 1.6 or higher, 1.8 recommended) installed on your system in order to build the Malloy project.
 
@@ -88,7 +90,8 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 [Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
 
 - [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - an introduction to the language
-- [Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [eCommerce Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html)
+- [FAA Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
 - [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Quick Start Videos
