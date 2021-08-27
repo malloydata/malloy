@@ -136,6 +136,10 @@
       "title": "Examples",
       "items": [
         {
+          "title": "eCommerce Walkthrough",
+          "link": "/examples/ecommerce.md"
+        },
+        {
           "title": "NTSB Flight Database",
           "link": "/examples/faa.md"
         },
@@ -180,4 +184,3 @@
     }
   ]
 }
-
