@@ -53,7 +53,6 @@ explore order_items : [users.state: 'California' | 'New York' | 'Texas', status:
   percent_items_returned is 100.0 * (count() : [status : 'Returned']) / count()
 ```
 
-
 At this point we might notice we’re defining a few things we might like to re-use, so let’s add them to the model:
 ```malloy
 define users is (explore 'malloy-data.ecomm.users'
@@ -68,6 +67,7 @@ define order_items is (explore 'malloy-data.ecomm.order_items'
 
 Having defined this in the model, the VSCode plugin will give us handy "Outline" and "Schema" tools in the left menu. "Outline" provides an interactive navigator of the model, in order, and "Schema" shows all of the attributes (both raw fields in the underlying table, and the dimensions, measures, and named queries you've defined in your model).
 
+<img width="281" alt="Screen Shot 2021-08-27 at 4 21 15 PM" src="https://user-images.githubusercontent.com/7178946/131198480-28410cb0-9482-40b4-bc6f-5d67ecdeda2a.png">
 
 
 Our query is now very simple:
