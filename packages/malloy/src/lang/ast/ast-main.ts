@@ -334,9 +334,25 @@ export class Explore extends Mallobj implements ExploreInterface {
 
   structDef(): model.StructDef {
     const querySpace = this.headSpace();
+
     if (this.headOnly()) {
+      if (this.filter) {
+        const filterList: model.FilterCondition[] = [];
+        for (const el of this.filter.elements) {
+          const fc = el.filterCondition(querySpace);
+          if (fc.aggregate) {
+            el.log("Can't use aggregate computations in top level filters");
+          } else {
+            filterList.push(fc);
+          }
+        }
+        if (filterList.length > 0) {
+          return { ...querySpace.structDef(), filterList };
+        }
+      }
       return querySpace.structDef();
     }
+
     const qs = this.queryAndShape();
     return {
       ...qs.shape.structDef(),
@@ -348,7 +364,7 @@ export class Explore extends Mallobj implements ExploreInterface {
   }
 
   headOnly(): boolean {
-    return this.pipeline === undefined && (!this.filter || this.filter.empty());
+    return this.pipeline === undefined;
   }
 
   private headSpace(): FieldSpace {
