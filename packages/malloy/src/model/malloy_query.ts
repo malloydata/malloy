@@ -868,7 +868,7 @@ class FieldInstanceResult implements FieldInstance {
     const name = qs.getIdentifier();
     let join;
     if (!(join = this.root().joins.get(name))) {
-      join = new JoinInstance(qs, parent);
+      join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
     join.mayNeedUniqueKey ||= mayNeedUniqueKey;
@@ -959,9 +959,37 @@ class JoinInstance {
   leafiest = false;
   parent: JoinInstance | undefined;
   queryStruct: QueryStruct;
-  constructor(queryStruct: QueryStruct, parent: JoinInstance | undefined) {
+  joinConditions?: QueryFieldBoolean[];
+  alias: string;
+  children: JoinInstance[] = [];
+  constructor(
+    queryStruct: QueryStruct,
+    alias: string,
+    parent: JoinInstance | undefined
+  ) {
     this.queryStruct = queryStruct;
     this.parent = parent;
+    this.alias = alias;
+    if (parent) {
+      parent.children.push(this);
+    }
+
+    // convert the filter list into a list of boolean fields so we can
+    //  generate dependancies and code for them.
+    if (this.queryStruct.fieldDef.filterList) {
+      for (const filter of this.queryStruct.fieldDef.filterList) {
+        this.joinConditions = [];
+        const qf = new QueryFieldBoolean(
+          {
+            type: "boolean",
+            name: "ignoreme",
+            e: filter.condition,
+          },
+          this.queryStruct
+        );
+        this.joinConditions.push(qf);
+      }
+    }
   }
 }
 
@@ -1304,20 +1332,29 @@ class QueryQuery extends QueryField {
       const context = this.parent;
       this.addDependantExpr(resultStruct, context, cond.condition);
     }
+    for (const join of resultStruct.root().joins.values() || []) {
+      for (const qf of join.joinConditions || []) {
+        if (qf.fieldDef.type === "boolean" && qf.fieldDef.e) {
+          this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e);
+        }
+      }
+    }
   }
 
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
-    which: "where" | "having"
+    which: "where" | "having",
+    filterList: FilterCondition[] | undefined = undefined
   ): AndChain {
     const resultFilters = new AndChain();
-    if (resultStruct.firstSegment.filterList === undefined) {
+    const list = filterList || resultStruct.firstSegment.filterList;
+    if (list === undefined) {
       return resultFilters;
     }
     // Go through the filters and make or find dependant fields
     //  add them to the field index. Place the individual filters
     // in the correct catgory.
-    for (const cond of resultStruct.firstSegment.filterList || []) {
+    for (const cond of list || []) {
       const context = this.parent;
 
       if (
@@ -1514,66 +1551,108 @@ class QueryQuery extends QueryField {
     };
   }
 
-  generateSQLJoins(stageWriter: StageWriter): string {
+  generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
     let s = "";
-    // Joins
-    for (const [name, ji] of this.rootResult.joins) {
-      const qs = ji.queryStruct;
-      let structSQL = qs.structSourceSQL(stageWriter);
-      const structRelationship = qs.fieldDef.structRelationship;
-      if (structRelationship.type === "basetable") {
-        if (ji.makeUniqueKey) {
-          // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
-          structSQL = `(SELECT GENERATE_UUID() as __distinct_key, * FROM ${structSQL})`;
-        }
-        s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
-      } else if (structRelationship.type === "foreignKey") {
-        if (qs.parent === undefined) {
-          throw new Error("Expected joined struct to have a parent.");
-        }
-        const fkDim = qs.parent.getOrMakeDimension(
-          structRelationship.foreignKey
-        );
-        const pkDim = qs.primaryKey();
-        if (!pkDim) {
-          throw new Error(
-            `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
-          );
-        }
-        const fkSql = fkDim.generateExpression(this.rootResult);
-        const pkSql = pkDim.generateExpression(this.rootResult);
-        s += `LEFT JOIN ${structSQL} AS ${name} ON ${fkSql} = ${pkSql}\n`;
-      } else if (structRelationship.type === "nested") {
-        let prefix = "";
-        if (qs.parent) {
-          prefix = qs.parent.getIdentifier() + ".";
-        }
-        let sqlTableRef = `UNNEST(${prefix}${structRelationship.field})`;
-        // we need to generate primary key.  If parent has a primary key combine
-        const qsParent = qs.parent?.getJoinableParent();
-
-        if (ji.makeUniqueKey && qsParent) {
-          const pkDim = qsParent.primaryKey();
-          let _parentPkSQL = qsParent.getIdentifier() + ".__distinct_key";
-          if (pkDim) {
-            _parentPkSQL = pkDim.generateExpression(this.rootResult);
-          }
-          // sqlTableRef = `UNNEST(ARRAY((SELECT AS STRUCT TO_HEX(MD5(CAST(${parentPkSQL} AS STRING) || 'x'|| CAST(row_number() OVER() AS STRING))) as __distinct_key, * FROM ${sqlTableRef})))`;
-          sqlTableRef = `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM ${sqlTableRef})))`;
-        }
-        s += `LEFT JOIN ${sqlTableRef} as ${name}\n`;
-        // s += `LEFT JOIN UNNEST(${structRelationship.field}) as ${name}\n`;
-      } else if (structRelationship.type === "inline") {
+    const qs = ji.queryStruct;
+    const structRelationship = qs.fieldDef.structRelationship;
+    const structSQL = qs.structSourceSQL(stageWriter);
+    if (structRelationship.type === "foreignKey") {
+      if (qs.parent === undefined) {
+        throw new Error("Expected joined struct to have a parent.");
+      }
+      const fkDim = qs.parent.getOrMakeDimension(structRelationship.foreignKey);
+      const pkDim = qs.primaryKey();
+      if (!pkDim) {
         throw new Error(
-          "Internal Error: inline structs should never appear in join trees"
-        );
-      } else {
-        throw new Error(
-          `Join type not implemented ${JSON.stringify(
-            qs.fieldDef.structRelationship
-          )}`
+          `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
         );
       }
+      const fkSql = fkDim.generateExpression(this.rootResult);
+      const pkSql = pkDim.generateExpression(this.rootResult);
+      let filters = "";
+      let conditions = undefined;
+      if (ji.joinConditions) {
+        conditions = ji.joinConditions.map((qf) =>
+          qf.generateExpression(this.rootResult)
+        );
+      }
+      if (ji.children.length === 0 || conditions === undefined) {
+        if (conditions !== undefined && conditions.length >= 1) {
+          filters = ` AND ${conditions.join(" AND ")}`;
+        }
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${fkSql} = ${pkSql}${filters}\n`;
+      } else {
+        let select = `SELECT ${ji.alias}.*`;
+        let joins = "";
+        for (const childJoin of ji.children) {
+          joins += this.generateSQLJoinBlock(stageWriter, childJoin);
+          select += `, (SELECT AS STRUCT ${childJoin.alias}.*) AS ${childJoin.alias}`;
+        }
+        select += `\nFROM ${structSQL} AS ${
+          ji.alias
+        }\n${joins}\nWHERE ${conditions?.join(" AND ")}\n`;
+        s += `LEFT JOIN (\n${indent(select)}) AS ${
+          ji.alias
+        } ON ${fkSql} = ${pkSql}\n`;
+        return s;
+      }
+    } else if (structRelationship.type === "nested") {
+      let prefix = "";
+      if (qs.parent) {
+        prefix = qs.parent.getIdentifier() + ".";
+      }
+      let sqlTableRef = `UNNEST(${prefix}${structRelationship.field})`;
+      // we need to generate primary key.  If parent has a primary key combine
+      const qsParent = qs.parent?.getJoinableParent();
+
+      if (ji.makeUniqueKey && qsParent) {
+        const pkDim = qsParent.primaryKey();
+        let _parentPkSQL = qsParent.getIdentifier() + ".__distinct_key";
+        if (pkDim) {
+          _parentPkSQL = pkDim.generateExpression(this.rootResult);
+        }
+        // sqlTableRef = `UNNEST(ARRAY((SELECT AS STRUCT TO_HEX(MD5(CAST(${parentPkSQL} AS STRING) || 'x'|| CAST(row_number() OVER() AS STRING))) as __distinct_key, * FROM ${sqlTableRef})))`;
+        sqlTableRef = `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM ${sqlTableRef})))`;
+      }
+      s += `LEFT JOIN ${sqlTableRef} as ${ji.alias}\n`;
+      // s += `LEFT JOIN UNNEST(${structRelationship.field}) as ${ji.alias}\n`;
+    } else if (structRelationship.type === "inline") {
+      throw new Error(
+        "Internal Error: inline structs should never appear in join trees"
+      );
+    } else {
+      throw new Error(
+        `Join type not implemented ${JSON.stringify(
+          qs.fieldDef.structRelationship
+        )}`
+      );
+    }
+    for (const childJoin of ji.children) {
+      s += this.generateSQLJoinBlock(stageWriter, childJoin);
+    }
+    return s;
+  }
+
+  generateSQLJoins(stageWriter: StageWriter): string {
+    let s = "";
+    // get the first value from the map (weird, I know)
+    const [[, ji]] = this.rootResult.joins;
+    const qs = ji.queryStruct;
+    // Joins
+    let structSQL = qs.structSourceSQL(stageWriter);
+    const structRelationship = qs.fieldDef.structRelationship;
+    if (structRelationship.type === "basetable") {
+      if (ji.makeUniqueKey) {
+        // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT GENERATE_UUID() as __distinct_key, * FROM ${structSQL})`;
+      }
+      s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
+    } else {
+      throw new Error("Internal Error, queries must start from a basetable");
+    }
+
+    for (const childJoin of ji.children) {
+      s += this.generateSQLJoinBlock(stageWriter, childJoin);
     }
     return s;
   }
@@ -2664,7 +2743,8 @@ class QueryStruct extends QueryNode {
     if (addedFilters) {
       pipeline = cloneDeep(pipeline);
       pipeline[0].filterList = addedFilters.concat(
-        pipeline[0].filterList || []
+        pipeline[0].filterList || [],
+        this.fieldDef.filterList || []
       );
     }
 
@@ -2875,43 +2955,6 @@ export class QueryModel {
     const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
     const { lastStageName, outputStruct } =
       q.generateSQLFromPipeline(stageWriter);
-
-    // // nconsole.log(JSON.stringify(query.structRef, undefined, 2));
-    // // console.log(JSON.stringify(query.pipeline, undefined, 2));
-
-    // let pipeline;
-    // if (query.pipeline instanceof Array) {
-    //   pipeline = [...query.pipeline];
-    // } else {
-    //   pipeline = [query.pipeline];
-    // }
-
-    // const struct = this.getStructFromRef(query.structRef);
-    // const firstTransform = pipeline.shift();
-    // if (!firstTransform) {
-    //   throw new Error("No Transform Specified");
-    // }
-
-    // let q = struct.getQueryFromQueryRef(
-    //   firstTransform,
-    //   query.filterList,
-    //   stageWriter
-    // );
-
-    // q.prepare();
-
-    // let lastStageName = q.generateSQL(stageWriter);
-    // let nextStruct = q.getResultStructDef();
-    // structs.push(nextStruct);
-    // for (const transform of pipeline) {
-    //   const s = new QueryStruct(nextStruct, { model: this });
-    //   // q = QueryQuery.makeQuery(transform as QueryDef, s, stageWriter);
-    //   q = s.getQueryFromQueryRef(transform, [], stageWriter);
-    //   q.prepare();
-    //   lastStageName = q.generateSQL(stageWriter);
-    //   nextStruct = q.getResultStructDef();
-    //   structs.push(nextStruct);
-    // }
     return { lastStageName, malloy, stageWriter, structs: [outputStruct] };
   }
 

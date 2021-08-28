@@ -43,9 +43,11 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const tokensBuilder = new SemanticTokensBuilder();
 
   const uri = document.uri.toString();
+  const text = document.getText();
+  const textLines = text.split("\n");
   const translator = new MalloyTranslator(uri, {
     URLs: {
-      [uri]: document.getText(),
+      [uri]: text,
     },
   });
 
@@ -53,15 +55,36 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const highlights = metadata.highlights || [];
 
   highlights.forEach((highlight) => {
-    const length =
-      highlight.range.end.character - highlight.range.start.character;
-    tokensBuilder.push(
-      highlight.range.start.line,
-      highlight.range.start.character,
-      length,
-      TOKEN_TYPES.indexOf(mapTypes(highlight.type)),
-      0
-    );
+    for (
+      let line = highlight.range.start.line;
+      line <= highlight.range.end.line;
+      line++
+    ) {
+      const lineText = textLines[line];
+      let length;
+      let start;
+      if (highlight.range.start.line === highlight.range.end.line) {
+        length =
+          highlight.range.end.character - highlight.range.start.character;
+        start = highlight.range.start.character;
+      } else if (line === highlight.range.start.line) {
+        length = lineText.length - highlight.range.start.character;
+        start = highlight.range.start.character;
+      } else if (line === highlight.range.end.line) {
+        length = highlight.range.end.character;
+        start = 0;
+      } else {
+        length = lineText.length;
+        start = 0;
+      }
+      tokensBuilder.push(
+        line,
+        start,
+        length,
+        TOKEN_TYPES.indexOf(mapTypes(highlight.type)),
+        0
+      );
+    }
   });
 
   return tokensBuilder.build();
@@ -132,6 +155,7 @@ function mapTypes(type: string) {
     case HighlightType.Operator.Date:
       return "keyword";
     case HighlightType.Comment.Line:
+    case HighlightType.Comment.Block:
       return "comment";
     default:
       throw new Error(`Unexpected type ${type}`);

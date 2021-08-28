@@ -348,7 +348,7 @@ export type StructSource =
 //  the relationshipo is implied
 
 /** struct that is intrinsic to the table */
-export interface StructDef extends NamedObject, ResultMetadata {
+export interface StructDef extends NamedObject, ResultMetadata, Filtered {
   type: "struct";
   structSource: StructSource;
   structRelationship: StructRelationship;
