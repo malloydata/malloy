@@ -47,6 +47,21 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
   },
 };
 
+const sizeSmall = {
+  height: 80,
+  width: 150,
+};
+
+// const sizeMedium = {
+//   height: 150,
+//   width: 200,
+// };
+
+const sizeLarge = {
+  height: 350,
+  width: 500,
+};
+
 // bar with text in the bars.
 const bar_SM: lite.TopLevelSpec = {
   ...DEFAULT_SPEC,
@@ -54,12 +69,6 @@ const bar_SM: lite.TopLevelSpec = {
     y: { field: "#{1}", type: "nominal", axis: null },
   },
   layer: [
-    {
-      mark: { type: "text", align: "left", x: 5 },
-      encoding: {
-        text: { field: "#{1}" },
-      },
-    },
     {
       mark: { type: "bar", color: "#aec7e8" },
       encoding: {
@@ -70,15 +79,20 @@ const bar_SM: lite.TopLevelSpec = {
         color: { value: "#4285F4" },
       },
     },
+    {
+      mark: { type: "text", align: "left", x: 5 },
+      encoding: {
+        text: { field: "#{1}" },
+      },
+    },
   ],
 };
 
 const bar_SMS: lite.TopLevelSpec = {
   ...bar_SM,
   layer: [
-    bar_SM.layer[0],
     {
-      ...bar_SM.layer[1],
+      ...bar_SM.layer[0],
       encoding: {
         // LTNOTE: I have no idea why this won't work.
         // ...bar_SM.layer[1].encoding,
@@ -93,15 +107,15 @@ const bar_SMS: lite.TopLevelSpec = {
         },
       },
     },
+    bar_SM.layer[1],
   ],
 };
 
 const bar_SMM: lite.TopLevelSpec = {
   ...bar_SM,
   layer: [
-    bar_SM.layer[0],
     {
-      ...bar_SM.layer[1],
+      ...bar_SM.layer[0],
       encoding: {
         // LTNOTE: I have no idea why this won't work.
         // ...bar_SM.layer[1].encoding,
@@ -116,6 +130,7 @@ const bar_SMM: lite.TopLevelSpec = {
         },
       },
     },
+    bar_SM.layer[1],
   ],
 };
 
@@ -159,6 +174,11 @@ const bar_NMM: lite.TopLevelSpec = {
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM,
+
+  bar_SM_small: { ...bar_SM, ...sizeSmall },
+  // bar_SM_medium: { ...bar_SM, ...sizeMedium }, // just use the default
+  bar_SM_large: { ...bar_SM, ...sizeLarge },
+
   bar_SMS,
   bar_NM,
   bar_NMS,

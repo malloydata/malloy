@@ -106,11 +106,10 @@ function getRenderer(field: FieldDef, dataStyles: DataStyles): Renderer {
     field.name.endsWith("_scatter_chart")
   ) {
     return new HtmlScatterChartRenderer();
-  } else if (
-    renderDef.renderer === "bar_chart" ||
-    field.name.endsWith("_bar_chart")
-  ) {
-    return new HtmlBarChartRenderer();
+  } else if (renderDef.renderer === "bar_chart") {
+    return new HtmlBarChartRenderer(renderDef);
+  } else if (field.name.endsWith("_bar_chart")) {
+    return new HtmlBarChartRenderer({});
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
     if (spec) {

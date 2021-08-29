@@ -12,6 +12,7 @@
  */
 
 import { FieldDef, isMeasureLike } from "malloy";
+import { BarChartRenderOptions, ChartSize } from "../data_styles";
 import { DataValue, DataPointer, isDataTree } from "../data_table";
 import { HtmlVegaSpecRenderer, vegaSpecs } from "./vega_spec";
 
@@ -20,8 +21,10 @@ function isOrdninal(f: FieldDef): boolean {
 }
 
 export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
-  constructor() {
+  size: ChartSize;
+  constructor(options: BarChartRenderOptions) {
     super(vegaSpecs["bar_SM"]);
+    this.size = options.size || "medium";
   }
 
   async render(table: DataValue, _ref: DataPointer): Promise<string> {
@@ -48,7 +51,10 @@ export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
         specName += "S";
       }
     }
-    const spec = vegaSpecs[specName];
+    let spec = vegaSpecs[`${specName}_${this.size}`];
+    if (spec === undefined) {
+      spec = vegaSpecs[specName];
+    }
     if (spec === undefined) {
       return `Unknown renderer ${specName}`;
     }
