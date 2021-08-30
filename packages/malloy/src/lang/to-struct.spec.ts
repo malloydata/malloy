@@ -239,7 +239,7 @@ describe("explore", () => {
       ...mkStruct("onlya"),
       filterList: [
         {
-          condition: [{ path: "astring", type: "field" }, "='A'"],
+          expression: [{ path: "astring", type: "field" }, "='A'"],
           source: "astring:'A'",
         },
       ],

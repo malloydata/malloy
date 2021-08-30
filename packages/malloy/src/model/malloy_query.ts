@@ -19,7 +19,7 @@ import {
   FieldDef,
   FieldRef,
   FieldTimestampDef,
-  FilterCondition,
+  FilterExpression,
   getIdentifier,
   ModelDef,
   Query,
@@ -247,7 +247,7 @@ class QueryField extends QueryNode {
         this.generateExpressionFromExpr(
           resultSet,
           context,
-          cond.condition,
+          cond.expression,
           undefined
         )
       );
@@ -463,7 +463,7 @@ class QueryAtomicField extends QueryField {
     );
   }
 
-  getFilterList(): FilterCondition[] {
+  getFilterList(): FilterExpression[] {
     return [];
   }
 }
@@ -983,7 +983,7 @@ class JoinInstance {
           {
             type: "boolean",
             name: "ignoreme",
-            e: filter.condition,
+            e: filter.expression,
           },
           this.queryStruct
         );
@@ -1256,7 +1256,7 @@ class QueryQuery extends QueryField {
         }
       } else if (isFilterFragment(expr)) {
         for (const filterCond of expr.filterList) {
-          this.addDependantExpr(resultStruct, context, filterCond.condition);
+          this.addDependantExpr(resultStruct, context, filterCond.expression);
         }
       } else if (isAsymmetricFragment(expr)) {
         if (expr.structPath) {
@@ -1330,7 +1330,7 @@ class QueryQuery extends QueryField {
     // in the correct catgory.
     for (const cond of resultStruct.firstSegment.filterList || []) {
       const context = this.parent;
-      this.addDependantExpr(resultStruct, context, cond.condition);
+      this.addDependantExpr(resultStruct, context, cond.expression);
     }
     for (const join of resultStruct.root().joins.values() || []) {
       for (const qf of join.joinConditions || []) {
@@ -1344,7 +1344,7 @@ class QueryQuery extends QueryField {
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
     which: "where" | "having",
-    filterList: FilterCondition[] | undefined = undefined
+    filterList: FilterExpression[] | undefined = undefined
   ): AndChain {
     const resultFilters = new AndChain();
     const list = filterList || resultStruct.firstSegment.filterList;
@@ -1364,7 +1364,7 @@ class QueryQuery extends QueryField {
         const sqlClause = this.generateExpressionFromExpr(
           resultStruct,
           context,
-          cond.condition,
+          cond.expression,
           undefined
         );
         resultFilters.add(sqlClause);

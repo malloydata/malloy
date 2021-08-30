@@ -44,7 +44,7 @@ export interface TypedObject {
 }
 
 export interface FilteredAliasedName extends AliasedName {
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
 }
 export function isFilteredAliasedName(
   f: FieldTypeRef
@@ -66,7 +66,7 @@ export interface ResultMetadataDef {
   sourceField: string;
   sourceExpression?: string;
   sourceClasses: string[];
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
   fieldKind: "measure" | "dimension" | "struct";
 }
 
@@ -76,7 +76,7 @@ export interface ResultMetadata {
 
 export interface FilterFragment {
   type: "filterExpression";
-  filterList: FilterCondition[];
+  filterList: FilterExpression[];
   e: Expr;
 }
 export function isFilterFragment(f: Fragment): f is FilterFragment {
@@ -276,7 +276,7 @@ export interface AnonymousExploreDef {
   primaryKey?: string;
   joins?: JoinedStruct[];
   fields?: FieldDef[];
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
 }
 
 /** join pattern structs is a struct. */
@@ -287,7 +287,7 @@ export interface JoinedStruct {
 }
 
 export interface Filtered {
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
 }
 
 /**
@@ -422,8 +422,8 @@ export type FieldRef = string | FieldDef;
 export type PrimaryKeyRef = string;
 
 /** filters */
-export interface FilterCondition {
-  condition: Expr;
+export interface FilterExpression {
+  expression: Expr;
   source: string;
   aggregate?: boolean;
 }
@@ -473,7 +473,7 @@ export type MalloyQueryData = {
 
 export interface DrillSource {
   sourceExplore: string;
-  sourceFilters?: FilterCondition[];
+  sourceFilters?: FilterExpression[];
 }
 
 export interface CompiledQuery extends DrillSource {

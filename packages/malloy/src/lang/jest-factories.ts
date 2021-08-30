@@ -18,7 +18,7 @@ import {
   Expr,
   FieldDef,
   StructRef,
-  FilterCondition,
+  FilterExpression,
   StructDef,
   Query,
   AtomicFieldType,
@@ -101,8 +101,8 @@ export function mkQuery(struct: StructRef): Query {
   };
 }
 
-export function mkFilters(...pairs: string[]): FilterCondition[] {
-  const filters: FilterCondition[] = [];
+export function mkFilters(...pairs: string[]): FilterExpression[] {
+  const filters: FilterExpression[] = [];
   let i = 0;
   while (i <= pairs.length - 2) {
     const thing = pairs[i];
@@ -111,7 +111,7 @@ export function mkFilters(...pairs: string[]): FilterCondition[] {
     const expr = new ast.Apply(mkExprField(thing), new ast.ExprString(thingIs));
     const fs = new FieldSpace(aTableDef);
     filters.push({
-      condition: compressExpr(expr.getExpression(fs).value),
+      expression: compressExpr(expr.getExpression(fs).value),
       source: exprSrc,
     });
     i += 2;

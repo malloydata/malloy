@@ -168,7 +168,7 @@ export const aircraftHandStructDef: StructDef = {
                 {
                   aggregate: false,
                   source: "manufacturer='BOEING'",
-                  condition: [
+                  expression: [
                     {
                       type: "field",
                       path: "manufacturer",

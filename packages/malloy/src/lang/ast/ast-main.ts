@@ -352,9 +352,9 @@ export class Explore extends Mallobj implements ExploreInterface {
 
     if (this.headOnly()) {
       if (this.filter) {
-        const filterList: model.FilterCondition[] = [];
+        const filterList: model.FilterExpression[] = [];
         for (const el of this.filter.elements) {
-          const fc = el.filterCondition(querySpace);
+          const fc = el.filterExpression(querySpace);
           if (fc.aggregate) {
             el.log("Can't use aggregate computations in top level filters");
           } else {
@@ -488,18 +488,18 @@ export class FilterElement extends MalloyElement {
     super({ expr });
   }
 
-  filterCondition(fs: FieldSpace): model.FilterCondition {
+  filterExpression(fs: FieldSpace): model.FilterExpression {
     const exprVal = this.expr.getExpression(fs);
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
       return {
         source: this.exprSrc,
-        condition: ["_FILTER_MUST_RETURN_BOOLEAN_"],
+        expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
       };
     }
-    const exprCond: model.FilterCondition = {
+    const exprCond: model.FilterExpression = {
       source: this.exprSrc,
-      condition: compressExpr(exprVal.value),
+      expression: compressExpr(exprVal.value),
     };
     if (exprVal.aggregate) {
       exprCond.aggregate = true;
@@ -522,8 +522,8 @@ export class Filter extends MalloyElement {
     return this.elements.length > 0;
   }
 
-  getFilterList(fs: FieldSpace): model.FilterCondition[] {
-    return this.elements.map((e) => e.filterCondition(fs));
+  getFilterList(fs: FieldSpace): model.FilterExpression[] {
+    return this.elements.map((e) => e.filterExpression(fs));
   }
 }
 
@@ -858,7 +858,7 @@ export class PipelineElement extends MalloyElement {
     this.headFilters = filter;
   }
 
-  getFilterList(fs: FieldSpace): model.FilterCondition[] | undefined {
+  getFilterList(fs: FieldSpace): model.FilterExpression[] | undefined {
     if (this.headFilters) {
       return this.headFilters.getFilterList(fs);
     }

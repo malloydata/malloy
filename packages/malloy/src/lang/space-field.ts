@@ -255,7 +255,7 @@ export class TurtleFieldStruct extends TurtleField {
  */
 export class FANSPaceField extends SpaceField {
   as?: string;
-  filterList?: model.FilterCondition[];
+  filterList?: model.FilterExpression[];
   constructor(
     readonly ref: string,
     readonly inSpace: FieldSpace,
