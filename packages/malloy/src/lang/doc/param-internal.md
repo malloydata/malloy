@@ -182,3 +182,10 @@ This is weird because I kind of rejected the word "predicate" for talking about 
 Actually I think ALL "partials" in malloy are actually predicates and the word "partial" should probably be scrubbed from the code and replaced with "predicate" ... going to take a swing at that this morning.
 
 Ok yes this is a problem. I have this magic thing called "requestTranslation" which all non partials respond to which all partials do NOT respond to. The assumption is that if you ask an expression for a value, it will return a value unless it can't, but in the case of a dat predicate, we want `@2003` to return a predicate when used in a predicate context, so there needs to be a "request predicate" also ?
+
+---
+
+Notes for tuesday
+
+Test to make sure parameter references are generated properly in expressions.
+Predicates from partials

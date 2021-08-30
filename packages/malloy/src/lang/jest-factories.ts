@@ -44,7 +44,7 @@ export function mkFieldName(s: string) {
   return new ast.FieldName(s);
 }
 export function mkExprField(s: string) {
-  return new ast.ExprField(mkFieldName(s));
+  return new ast.ExprValueName(mkFieldName(s));
 }
 export function mkFieldDef(expr: string) {
   return new ast.ExpressionFieldDef(mkExprField(expr), mkFieldName("test"));

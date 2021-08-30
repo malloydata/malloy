@@ -18,9 +18,11 @@
 
 import {
   AggregateFragment,
+  FieldFragment,
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
+  ParameterFragment,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
@@ -37,6 +39,7 @@ import {
   TimeType,
 } from "./ast-types";
 import { applyBinary, nullsafeNot } from "./apply-expr";
+import { SpaceParam } from "../space-field";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -298,25 +301,31 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
   legalChildTypes = [FT.boolT, { ...FT.boolT, aggregate: true }];
 }
 
-export class ExprField extends ExpressionDef {
+export class ExprValueName extends ExpressionDef {
   elementType = "field name";
-  constructor(readonly fieldName: FieldName) {
-    super({ fieldName });
+  constructor(readonly valueName: FieldName) {
+    super({ valueName });
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const field = fs.field(this.fieldName.name);
-    if (field) {
+    const entry = fs.field(this.valueName.name);
+    if (entry) {
       // TODO if type is a query or a struct this should fail nicely
-      const typeMixin = field.type();
-      return {
-        dataType: typeMixin.type,
-        aggregate: !!typeMixin.aggregate,
-        value: [{ type: "field", path: this.fieldName.name }],
-      };
+      const typeMixin = entry.type();
+      const dataType = typeMixin.type;
+      const aggregate = !!typeMixin.aggregate;
+      if (entry instanceof SpaceParam) {
+        const param: ParameterFragment = {
+          type: "parameter",
+          path: this.valueName.name,
+        };
+        return { dataType, aggregate, value: [param] };
+      }
+      const field: FieldFragment = { type: "field", path: this.valueName.name };
+      return { dataType, aggregate, value: [field] };
     }
-    this.log(`Reference to undefined field '${this.fieldName.name}`);
-    return errorFor(`undefined ${this.fieldName.name}`);
+    this.log(`Reference to '${this.valueName.name}' with no definition`);
+    return errorFor(`undefined ${this.valueName.name}`);
   }
 }
 

@@ -165,8 +165,8 @@ export class MalloyToAST
     }
   }
 
-  visitExprField(pcx: parse.ExprFieldContext): ast.ExprField {
-    return new ast.ExprField(this.visitFieldName(pcx.fieldName()));
+  visitExprField(pcx: parse.ExprFieldContext): ast.ExprValueName {
+    return new ast.ExprValueName(this.visitFieldName(pcx.fieldName()));
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {

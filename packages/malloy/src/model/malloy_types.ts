@@ -104,9 +104,18 @@ export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === "field";
 }
 
+export interface ParameterFragment {
+  type: "parameter";
+  path: string;
+}
+export function isParameterFragment(f: Fragment): f is ParameterFragment {
+  return (f as ParameterFragment)?.type === "parameter";
+}
+
 export type Fragment =
   | string
   | FieldFragment
+  | ParameterFragment
   | FilterFragment
   | AggregateFragment;
 
