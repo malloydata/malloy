@@ -70,6 +70,11 @@ export abstract class ExpressionDef extends MalloyElement {
     return this.getExpression(fs);
   }
 
+  constantExpression(): ExprValue {
+    this.log(`Expected constant expression for element '${this.elementType}'`);
+    return errorFor("constant expression required");
+  }
+
   defaultFieldName(): string | undefined {
     return undefined;
   }
@@ -163,7 +168,11 @@ export class ExprString extends ExpressionDef {
     super();
   }
 
-  getExpression(): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
+    return this.constantExpression();
+  }
+
+  constantExpression(): ExprValue {
     return { ...FT.stringT, value: [this.value] };
   }
 }
@@ -174,7 +183,11 @@ export class ExprNumber extends ExpressionDef {
     super();
   }
 
-  getExpression(): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
+    return this.constantExpression();
+  }
+
+  constantExpression(): ExprValue {
     return { ...FT.numberT, value: [this.n] };
   }
 }

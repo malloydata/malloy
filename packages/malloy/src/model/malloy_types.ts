@@ -14,9 +14,9 @@
 // clang-format off
 
 type ConstantExpr = Expr;
-type PartialCondition = Expr;
-interface PartialConditionValue {
-  conditionValue: PartialCondition | null;
+type Condition = Expr;
+interface ConditionValue {
+  condition: Condition | null;
 }
 interface ConstantValue {
   value: ConstantExpr | null;
@@ -25,7 +25,7 @@ interface ParamBase {
   name: string;
   type: AtomicFieldType;
 }
-export type Parameter = ParamBase & (PartialConditionValue | ConstantValue);
+export type Parameter = ParamBase & (ConditionValue | ConstantValue);
 
 /** put line number into the parse tree. */
 export interface LineNumber {

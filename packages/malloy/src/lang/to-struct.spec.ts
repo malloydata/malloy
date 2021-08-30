@@ -57,6 +57,16 @@ function sourceStructFromExplore(exploreSource: string): model.StructDef {
   );
 }
 
+function translatedModel(docSource: string): model.ModelDef {
+  const x = new TestTranslator(docSource, "malloyDocument");
+  expect(x).toTranslate();
+  const tr = x.translate();
+  if (tr.translated) {
+    return tr.translated.modelDef;
+  }
+  throw new Error("cannot get here");
+}
+
 function fieldDefFromExpression(expr: string): model.FieldTypeDef {
   const exprParse = new TestTranslator(expr, "fieldExpr");
   const exprAst = exprParse.ast();
@@ -1481,4 +1491,57 @@ describe("reasonable handling of undefined references", () => {
 
 describe("semantic checks", () => {
   test.todo("name is name in an explore field list");
+});
+
+describe("parameters", () => {
+  test("declare required condition", () => {
+    const md = translatedModel(
+      "define ap has aparam timestamp condition is (a)"
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        condition: null,
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional timestamp value", () => {
+    const md = translatedModel(
+      "define ap has aparam timestamp @1960-06-30 is (a)"
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        value: ["'1960-06-30'"],
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional string value", () => {
+    const md = translatedModel(
+      `define ap has aparam string 'forty two' is (a)`
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "string",
+        value: ["'forty two'"],
+      },
+    };
+    expect(ap).toEqual(want);
+  });
 });

@@ -296,6 +296,10 @@ export class GranularLiteral extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
+    return this.constantExpression();
+  }
+
+  constantExpression(): ExprValue {
     const dataType = this.timeType || "date";
     return {
       dataType: dataType,

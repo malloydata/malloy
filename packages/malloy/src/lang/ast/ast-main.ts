@@ -266,8 +266,18 @@ export class Define extends Statement {
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
+      const struct = {
+        ...this.mallobj.structDef(),
+        as: this.name,
+      };
+      if (this.parameters && this.parameters.length > 0) {
+        struct.parameters = {};
+        for (const p of this.parameters) {
+          struct.parameters[p.name] = p.parameter();
+        }
+      }
       doc.setEntry(this.name, {
-        struct: { ...this.mallobj.structDef(), as: this.name },
+        struct,
         exported: this.exported,
       });
     }
@@ -1014,17 +1024,41 @@ export class HasParameter extends MalloyElement {
   elementType = "hasParameter";
   readonly name: string;
   readonly isCondition: boolean;
-  readonly type?: string;
+  readonly type?: model.AtomicFieldType;
   readonly default?: ExpressionDef;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
     this.isCondition = init.isCondition;
-    this.type = init.type;
+    if (init.type && model.isAtomicFieldType(init.type)) {
+      this.type = init.type;
+    }
     if (init.default) {
       this.default = init.default;
       this.has({ default: this.default });
     }
+  }
+
+  parameter(): model.Parameter {
+    const type = this.type || "string";
+    if (this.isCondition) {
+      if (!this.default) {
+        return {
+          type,
+          name: this.name,
+          condition: null,
+        };
+      }
+    } else if (this.default) {
+      const cVal = this.default.constantExpression();
+      // TODO type checking?
+      return {
+        value: cVal.value,
+        type,
+        name: this.name,
+      };
+    }
+    throw new Error("Parameter translation NYI");
   }
 }
