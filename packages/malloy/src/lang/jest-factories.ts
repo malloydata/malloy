@@ -111,7 +111,7 @@ export function mkFilters(...pairs: string[]): FilterCondition[] {
     const expr = new ast.Apply(mkExprField(thing), new ast.ExprString(thingIs));
     const fs = new FieldSpace(aTableDef);
     filters.push({
-      condition: compressExpr(expr.translation(fs).value),
+      condition: compressExpr(expr.getExpression(fs).value),
       source: exprSrc,
     });
     i += 2;

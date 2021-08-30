@@ -489,7 +489,7 @@ export class FilterElement extends MalloyElement {
   }
 
   filterCondition(fs: FieldSpace): model.FilterCondition {
-    const exprVal = this.expr.translation(fs);
+    const exprVal = this.expr.getExpression(fs);
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
       return {
@@ -772,7 +772,7 @@ abstract class QuerySegmentElement extends SegmentElement implements PipeInit {
       if (typeof byThing === "string") {
         qSeg.by = { by: "name", name: byThing };
       } else {
-        const eVal = byThing.translation(inputSpace);
+        const eVal = byThing.getExpression(inputSpace);
         if (eVal.aggregate) {
           qSeg.by = { by: "expression", e: eVal.value };
         } else {

@@ -166,16 +166,19 @@ The bigger question is, for other things which can have parameters ( turtles and
 
 And mahybe we don't care until then?
 
-```typescript
-interface PartialConditionValue {
-    conditionValue: ParitalCondition | null;
-}
-interface NormalValue {
-    value: Expr | null;
-}
-interface ParamBase {
-    name: string;
-    type: AtomicType;
-}
-type Parameter = ParamBase & (PartialConduitionValue | NormalValue);
-```
+---
+
+This morning the think that I need before I can start actually generating code for parameters is what constant predicate expressions look like as expervalues?
+
+ The problem is they have two types, they really are of the form `Predicate<BaseType>`, so probably they should be stored ...
+
+     type: "predicate";
+     baseType: AtomicFieldType;
+
+Which I am ok with. Then the only thing is what word to use for "predicate". One of these values is a template for an expression into which we insert a value. The "predicate" will generate a boolean based on the value passed in.
+
+This is weird because I kind of rejected the word "predicate" for talking about this type for the end user and have been experimenting with "condition" there, except we already use the word "condition" to mean "one clause in a filter list", these would then be something like "partial conditions, "condition generators"
+
+Actually I think ALL "partials" in malloy are actually predicates and the word "partial" should probably be scrubbed from the code and replaced with "predicate" ... going to take a swing at that this morning.
+
+Ok yes this is a problem. I have this magic thing called "requestTranslation" which all non partials respond to which all partials do NOT respond to. The assumption is that if you ask an expression for a value, it will return a value unless it can't, but in the case of a dat predicate, we want `@2003` to return a predicate when used in a predicate context, so there needs to be a "request predicate" also ?

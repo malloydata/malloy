@@ -56,7 +56,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
    */
-  abstract translation(space: FieldSpace, toTypes?: FragType[]): ExprValue;
+  abstract getExpression(space: FieldSpace, toTypes?: FragType[]): ExprValue;
   legalChildTypes = FT.anyAtomicT;
 
   /**
@@ -66,8 +66,8 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param fs FieldSpace
    * @returns Translated expression or undefined
    */
-  requestTranslation(fs: FieldSpace): ExprValue | undefined {
-    return this.translation(fs);
+  requestExpression(fs: FieldSpace): ExprValue | undefined {
+    return this.getExpression(fs);
   }
 
   defaultFieldName(): string | undefined {
@@ -122,7 +122,7 @@ export class ExpressionFieldDef extends MalloyElement {
   }
 
   fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
-    const exprValue = this.expr.translation(fs);
+    const exprValue = this.expr.getExpression(fs);
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
     if (isAtomicFieldType(retType)) {
@@ -163,7 +163,7 @@ export class ExprString extends ExpressionDef {
     super();
   }
 
-  translation(): ExprValue {
+  getExpression(): ExprValue {
     return { ...FT.stringT, value: [this.value] };
   }
 }
@@ -174,7 +174,7 @@ export class ExprNumber extends ExpressionDef {
     super();
   }
 
-  translation(): ExprValue {
+  getExpression(): ExprValue {
     return { ...FT.numberT, value: [this.n] };
   }
 }
@@ -185,7 +185,7 @@ export class ExprRegEx extends ExpressionDef {
     super();
   }
 
-  translation(): ExprValue {
+  getExpression(): ExprValue {
     return {
       dataType: "regular expression",
       aggregate: false,
@@ -211,7 +211,7 @@ export class ExprTime extends ExpressionDef {
     };
   }
 
-  translation(_fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     return this.translationValue;
   }
 }
@@ -229,8 +229,8 @@ export class ExprNot extends Unary {
     super(expr);
   }
 
-  translation(space: FieldSpace): ExprValue {
-    const notThis = this.expr.translation(space);
+  getExpression(space: FieldSpace): ExprValue {
+    const notThis = this.expr.getExpression(space);
     if (this.typeCheck(this.expr, notThis)) {
       return {
         ...notThis,
@@ -248,7 +248,7 @@ export class Boolean extends ExpressionDef {
     super();
   }
 
-  translation(): ExprValue {
+  getExpression(): ExprValue {
     return { ...FT.boolT, value: [this.value] };
   }
 }
@@ -266,9 +266,9 @@ export abstract class BinaryBoolean<
     super({ left, right });
   }
 
-  translation(space: FieldSpace): ExprValue {
-    const left = this.left.translation(space);
-    const right = this.right.translation(space);
+  getExpression(space: FieldSpace): ExprValue {
+    const left = this.left.getExpression(space);
+    const right = this.right.getExpression(space);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return {
         dataType: "boolean",
@@ -291,7 +291,7 @@ export class ExprField extends ExpressionDef {
     super({ fieldName });
   }
 
-  translation(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     const field = fs.field(this.fieldName.name);
     if (field) {
       // TODO if type is a query or a struct this should fail nicely
@@ -309,7 +309,7 @@ export class ExprField extends ExpressionDef {
 
 export class ExprNULL extends ExpressionDef {
   elementType = "NULL";
-  translation(): ExprValue {
+  getExpression(): ExprValue {
     return {
       dataType: "null",
       value: ["NULL"],
@@ -328,12 +328,12 @@ export class ExprParens extends ExpressionDef {
     return this.expr.apply(fs, op, expr);
   }
 
-  requestTranslation(fs: FieldSpace): ExprValue | undefined {
-    return this.expr.requestTranslation(fs);
+  requestExpression(fs: FieldSpace): ExprValue | undefined {
+    return this.expr.requestExpression(fs);
   }
 
-  translation(fs: FieldSpace): ExprValue {
-    const subExpr = this.expr.translation(fs);
+  getExpression(fs: FieldSpace): ExprValue {
+    const subExpr = this.expr.getExpression(fs);
     return { ...subExpr, value: ["(", ...subExpr.value, ")"] };
   }
 }
@@ -345,8 +345,8 @@ export class ExprMinus extends ExpressionDef {
     this.legalChildTypes = [FT.numberT];
   }
 
-  translation(fs: FieldSpace): ExprValue {
-    const expr = this.expr.translation(fs);
+  getExpression(fs: FieldSpace): ExprValue {
+    const expr = this.expr.getExpression(fs);
     if (this.typeCheck(this.expr, expr)) {
       if (expr.value.length > 1) {
         return { ...expr, value: ["-(", ...expr.value, ")"] };
@@ -370,7 +370,7 @@ export abstract class BinaryNumeric<
     this.legalChildTypes = [FT.numberT];
   }
 
-  translation(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     return this.right.apply(fs, this.op, this.left);
   }
 }
@@ -404,11 +404,11 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
     };
   }
 
-  requestTranslation(_fs: FieldSpace): ExprValue | undefined {
+  requestExpression(_fs: FieldSpace): ExprValue | undefined {
     return undefined;
   }
 
-  translation(_fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     this.log(`Alternation tree has no value`);
     return errorFor("no value from alternation tree");
   }
@@ -432,8 +432,8 @@ abstract class ExprAggregateFunction extends ExpressionDef {
     return "number";
   }
 
-  translation(fs: FieldSpace): ExprValue {
-    let exprVal = this.expr?.translation(fs);
+  getExpression(fs: FieldSpace): ExprValue {
+    let exprVal = this.expr?.getExpression(fs);
     let source = this.source;
     if (source) {
       const sourceFoot = fs.field(source);
@@ -543,7 +543,7 @@ export class ExprCount extends ExprAggregateFunction {
     return undefined;
   }
 
-  translation(_fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     const ret: AggregateFragment = {
       type: "aggregate",
       function: "count",
@@ -581,7 +581,7 @@ export class WhenClause extends ExpressionDef {
     super({ whenThis, thenThis });
   }
 
-  translation(_fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     throw new Error("expression did something unxpected with 'WHEN'");
   }
 }
@@ -596,13 +596,13 @@ export class ExprCase extends ExpressionDef {
     this.has({ elseClause });
   }
 
-  translation(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     let retType: FragType | undefined;
     let aggregate = false;
     const caseExpr: Fragment[] = ["CASE "];
     for (const clause of this.when) {
-      const whenExpr = clause.whenThis.translation(fs);
-      const thenExpr = clause.thenThis.translation(fs);
+      const whenExpr = clause.whenThis.getExpression(fs);
+      const thenExpr = clause.thenThis.getExpression(fs);
       aggregate ||= whenExpr.aggregate || thenExpr.aggregate;
       if (thenExpr.dataType !== "null") {
         if (retType && !FT.typeEq(retType, thenExpr)) {
@@ -617,7 +617,7 @@ export class ExprCase extends ExpressionDef {
       caseExpr.push("WHEN ", ...whenExpr.value, " THEN ", ...thenExpr.value);
     }
     if (this.elseClause) {
-      const elseExpr = this.elseClause.translation(fs);
+      const elseExpr = this.elseClause.getExpression(fs);
       aggregate ||= elseExpr.aggregate;
       caseExpr.push(" ELSE ", ...elseExpr.value);
       if (elseExpr.dataType !== "null") {
@@ -651,9 +651,9 @@ export class ExprFilter extends ExpressionDef {
     super({ expr, filter });
   }
 
-  translation(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     const testList = this.filter.getFilterList(fs);
-    const resultExpr = this.expr.translation(fs);
+    const resultExpr = this.expr.getExpression(fs);
     for (const cond of testList) {
       if (cond.aggregate) {
         this.filter.log("Cannot filter a field with an aggregate computation");
@@ -697,8 +697,8 @@ export class ExprCast extends ExpressionDef {
     super({ expr });
   }
 
-  translation(fs: FieldSpace): ExprValue {
-    const expr = this.expr.translation(fs);
+  getExpression(fs: FieldSpace): ExprValue {
+    const expr = this.expr.getExpression(fs);
     const castTo = this.castType === "number" ? "float64" : this.castType;
     const cast = this.safe ? "safe_cast" : "cast";
     let castValue = [`${cast}(`, ...expr.value, ` as ${castTo})`];
@@ -775,11 +775,11 @@ export class Range extends ExpressionDef {
     throw new Error("mysterious error in range computation");
   }
 
-  requestTranslation(_fs: FieldSpace): ExprValue | undefined {
+  requestExpression(_fs: FieldSpace): ExprValue | undefined {
     return undefined;
   }
 
-  translation(_fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     return errorFor("a range is not a value");
   }
 }
@@ -808,7 +808,7 @@ export class Pick extends ExpressionDef {
     this.has({ elsePick });
   }
 
-  requestTranslation(fs: FieldSpace): ExprValue | undefined {
+  requestExpression(fs: FieldSpace): ExprValue | undefined {
     // pick statements are sometimes partials which must be applied
     // and sometimes have a value.
     if (this.elsePick === undefined) {
@@ -817,12 +817,12 @@ export class Pick extends ExpressionDef {
     if (
       this.choices.find(
         (c) =>
-          c.pick === undefined || c.when.requestTranslation(fs) === undefined
+          c.pick === undefined || c.when.requestExpression(fs) === undefined
       )
     ) {
       return undefined;
     }
-    return this.translation(fs);
+    return this.getExpression(fs);
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
@@ -832,8 +832,8 @@ export class Pick extends ExpressionDef {
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, "=", expr);
       const thenExpr = choice.pick
-        ? choice.pick.translation(fs)
-        : expr.translation(fs);
+        ? choice.pick.getExpression(fs)
+        : expr.getExpression(fs);
       anyAggregate ||= whenExpr.aggregate || thenExpr.aggregate;
       if (returnType) {
         if (!FT.typeEq(returnType, thenExpr, true)) {
@@ -848,7 +848,7 @@ export class Pick extends ExpressionDef {
       caseValue.push(" WHEN ", ...whenExpr.value, " THEN ", ...thenExpr.value);
     }
     const elsePart = this.elsePick || expr;
-    const elseVal = elsePart.translation(fs);
+    const elseVal = elsePart.getExpression(fs);
     returnType ||= elseVal;
     if (!FT.typeEq(returnType, elseVal, true)) {
       this.log(
@@ -863,7 +863,7 @@ export class Pick extends ExpressionDef {
     };
   }
 
-  translation(fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     if (this.elsePick === undefined) {
       this.log("'pick' has no value, must specify 'else' or use ':'");
       return errorFor("no value for partial pick");
@@ -875,14 +875,14 @@ export class Pick extends ExpressionDef {
         this.log("pick with no value can only be used with apply");
         return errorFor("no value for partial pick");
       }
-      const pickWhen = c.when.requestTranslation(fs);
+      const pickWhen = c.when.requestExpression(fs);
       if (pickWhen === undefined) {
         this.log("pick with partial when can only be used with apply");
         return errorFor("partial when");
       }
       choiceValues.push({
-        pick: c.pick.translation(fs),
-        when: c.when.translation(fs),
+        pick: c.pick.getExpression(fs),
+        when: c.when.getExpression(fs),
       });
     }
     const returnType = choiceValues[0].pick;
@@ -915,7 +915,7 @@ export class Pick extends ExpressionDef {
         ...aChoice.pick.value
       );
     }
-    const elseValue = this.elsePick.translation(fs);
+    const elseValue = this.elsePick.getExpression(fs);
     anyAggregate ||= elseValue.aggregate;
     if (!FT.typeEq(returnType, elseValue, true)) {
       this.elsePick.log(

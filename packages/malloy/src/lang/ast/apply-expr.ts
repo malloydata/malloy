@@ -139,8 +139,8 @@ function equality(
   op: Equality,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.translation(fs);
-  const rhs = right.translation(fs);
+  const lhs = left.getExpression(fs);
+  const rhs = right.getExpression(fs);
   let value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   switch (op) {
@@ -186,8 +186,8 @@ function compare(
   op: string,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.translation(fs);
-  const rhs = right.translation(fs);
+  const lhs = left.getExpression(fs);
+  const rhs = right.getExpression(fs);
   const anyAggregate = lhs.aggregate || rhs.aggregate;
   const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
@@ -204,8 +204,8 @@ function numeric(
   op: string,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.translation(fs);
-  const rhs = right.translation(fs);
+  const lhs = left.getExpression(fs);
+  const rhs = right.getExpression(fs);
   const anyAggregate = lhs.aggregate || rhs.aggregate;
 
   if (allAre("number", lhs, rhs)) {
@@ -226,8 +226,8 @@ function delta(
   op: string,
   right: ExpressionDef
 ): ExprValue {
-  const lhs = left.translation(fs);
-  const rhs = right.translation(fs);
+  const lhs = left.getExpression(fs);
+  const rhs = right.getExpression(fs);
 
   if (isTimeType(lhs.dataType)) {
     let duration: ExpressionDef = right;
