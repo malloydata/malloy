@@ -13,7 +13,7 @@
 
 import * as model from "../model/malloy_types";
 import { FieldSpace } from "./field-space";
-import { ColumnSpaceField, TurtleFieldStruct } from "./space-field";
+import { ColumnSpaceField, SpaceParam, TurtleFieldStruct } from "./space-field";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
@@ -182,5 +182,24 @@ describe("structdef comprehension", () => {
     expect(space.field("t")).toBeInstanceOf(TurtleFieldStruct);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
+  });
+
+  test("import struct with parameters", () => {
+    const struct = mkStructDef({ name: "f", type: "string" });
+    struct.parameters = {
+      cReqStr: {
+        name: "cReqStr",
+        type: "string",
+        value: null,
+      },
+      cOptStr: {
+        name: "cOptStr",
+        type: "string",
+        value: ["value"],
+      },
+    };
+    const space = new FieldSpace(struct);
+    expect(space.field("cReqStr")).toBeInstanceOf(SpaceParam);
+    expect(space.field("cOptStr")).toBeInstanceOf(SpaceParam);
   });
 });
