@@ -13,6 +13,20 @@
 
 // clang-format off
 
+type ConstantExpr = Expr;
+type PartialCondition = Expr;
+interface PartialConditionValue {
+  conditionValue: PartialCondition | null;
+}
+interface ConstantValue {
+  value: ConstantExpr | null;
+}
+interface ParamBase {
+  name: string;
+  type: AtomicFieldType;
+}
+export type Parameter = ParamBase & (PartialConditionValue | ConstantValue);
+
 /** put line number into the parse tree. */
 export interface LineNumber {
   fileName?: string;
@@ -354,6 +368,7 @@ export interface StructDef extends NamedObject, ResultMetadata, Filtered {
   structRelationship: StructRelationship;
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
+  parameters?: Record<string, Parameter>;
 }
 
 // /** the resulting structure of the query (and it's source) */

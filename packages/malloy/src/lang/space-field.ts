@@ -28,7 +28,21 @@ interface FieldType {
   aggregate?: boolean;
 }
 
-export abstract class SpaceField {
+export abstract class SpaceEntry {
+  abstract type(): FieldType;
+}
+
+export class SpaceParam extends SpaceEntry {
+  constructor(readonly paramDef: model.Parameter) {
+    super();
+  }
+
+  type(): FieldType {
+    return { type: this.paramDef.type };
+  }
+}
+
+export abstract class SpaceField extends SpaceEntry {
   // TODO Field should decide if they care about naming with an "implements"
   abstract rename(newName: string): void;
 
@@ -47,8 +61,6 @@ export abstract class SpaceField {
   fieldDef(): model.FieldDef | undefined {
     return undefined;
   }
-
-  abstract type(): FieldType;
 }
 
 export class WildSpaceField extends SpaceField {

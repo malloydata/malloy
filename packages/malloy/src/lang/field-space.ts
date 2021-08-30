@@ -39,9 +39,11 @@ import {
   FANSPaceField,
   WildSpaceField,
   TurtleField,
+  SpaceParam,
+  SpaceEntry,
 } from "./space-field";
 
-type FieldMap = Record<string, SpaceField>;
+type FieldMap = Record<string, SpaceEntry>;
 
 /**
  * The grand daddy of all FieldSpace(s) is JUST a wrapper for a StructDef
@@ -75,6 +77,19 @@ export class FieldSpace {
         const name = f.as || f.name;
         this.memoMap[name] = this.fromFieldDef(f);
       }
+      if (this.fromStruct.parameters) {
+        for (const [paramName, paramDef] of Object.entries(
+          this.fromStruct.parameters
+        )) {
+          if (this.memoMap[paramName]) {
+            throw new Error(
+              `In struct '${this.fromStruct.as || this.fromStruct.name}': ` +
+                ` : Field and parameter name conflict '${paramName}`
+            );
+          }
+          this.memoMap[paramName] = new SpaceParam(paramDef);
+        }
+      }
     }
     return this.memoMap;
   }
@@ -87,15 +102,15 @@ export class FieldSpace {
     delete this.map[name];
   }
 
-  protected entry(name: string): SpaceField | undefined {
+  protected entry(name: string): SpaceEntry | undefined {
     return this.map[name];
   }
 
-  protected setEntry(name: string, value: SpaceField): void {
+  protected setEntry(name: string, value: SpaceEntry): void {
     this.map[name] = value;
   }
 
-  protected entries(): [string, SpaceField][] {
+  protected entries(): [string, SpaceEntry][] {
     return Object.entries(this.map);
   }
 
@@ -113,7 +128,7 @@ export class FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  field(fieldPath: string): SpaceField | undefined {
+  field(fieldPath: string): SpaceEntry | undefined {
     const split = FieldPath.of(fieldPath);
     const ref = this.entry(split.head);
     if (ref) {
@@ -179,7 +194,7 @@ export class TranslationFieldSpace extends FieldSpace {
 
   private anonymousFieldIndex = 0;
 
-  protected setEntry(name: string, value: SpaceField): void {
+  protected setEntry(name: string, value: SpaceEntry): void {
     if (this.final) {
       throw new Error("Space already final");
     }
@@ -215,7 +230,7 @@ export class TranslationFieldSpace extends FieldSpace {
       // or a newName RENAMES oldName statement
     } else if (def instanceof RenameField) {
       const oldValue = this.entry(def.oldName);
-      if (oldValue) {
+      if (oldValue instanceof SpaceField) {
         oldValue.rename(def.newName);
         this.setEntry(def.newName, oldValue);
         this.dropEntry(def.oldName);
@@ -260,8 +275,10 @@ export class TranslationFieldSpace extends FieldSpace {
           joins.push([name, spaceField]);
         } else if (spaceField instanceof TurtleField) {
           turtles.push([name, spaceField]);
-        } else {
+        } else if (spaceField instanceof SpaceField) {
           fields.push([name, spaceField]);
+        } else if (spaceField instanceof SpaceParam) {
+          throw new Error("Can't write structdefs with params yet");
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
@@ -319,7 +336,7 @@ export abstract class PipeFieldSpace extends TranslationFieldSpace {
    ** somehow evaluated correctly without this hack to field()
    ** and structDef() which feel like signs I don't have the right abstractions
    */
-  field(fieldPath: string): SpaceField | undefined {
+  field(fieldPath: string): SpaceEntry | undefined {
     return this.inputSpace.field(fieldPath);
   }
 
@@ -359,11 +376,15 @@ export abstract class PipeFieldSpace extends TranslationFieldSpace {
   queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     for (const [name, field] of this.entries()) {
-      const fieldQueryDef = field.queryFieldDef();
-      if (fieldQueryDef) {
-        fields.push(fieldQueryDef);
+      if (field instanceof SpaceField) {
+        const fieldQueryDef = field.queryFieldDef();
+        if (fieldQueryDef) {
+          fields.push(fieldQueryDef);
+        } else {
+          throw new Error(`'${name}' does not have a QueryFieldDef`);
+        }
       } else {
-        throw new Error(`'${name}' does not have a QueryFieldDef`);
+        throw new Error("Params lost in outputting queryFieldDefs");
       }
     }
     return fields;

@@ -165,3 +165,17 @@ The question is where are all the places that a named thing can be referenced
 The bigger question is, for other things which can have parameters ( turtles and measures ) where do the parameter blocks sit for references and for declaration. In this case every reference is kind of a delcaration so copying the declaraiton into the reference isn't a problem, but maybe that isn't the case for the other parameterized things ?
 
 And mahybe we don't care until then?
+
+```typescript
+interface PartialConditionValue {
+    conditionValue: ParitalCondition | null;
+}
+interface NormalValue {
+    value: Expr | null;
+}
+interface ParamBase {
+    name: string;
+    type: AtomicType;
+}
+type Parameter = ParamBase & (PartialConduitionValue | NormalValue);
+```
