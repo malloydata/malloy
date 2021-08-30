@@ -916,7 +916,7 @@ export class MalloyToAST
       name: this.idText(pcx.id()),
       type: pcx.malloyType()?.text,
       default: this.fieldExpression(pcx.hasExpr()),
-      isCondition: true,
+      isCondition: false,
     });
     return this.astAt(has, pcx);
   }

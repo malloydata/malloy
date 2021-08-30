@@ -186,11 +186,12 @@ export abstract class MalloyElement {
   private varInfo(): string {
     let extra = "";
     for (const [key, value] of Object.entries(this)) {
-      if (
-        (typeof value === "string" || typeof value === "number") &&
-        key !== "elementType"
-      ) {
-        extra += ` ${key}=${value}`;
+      if (key !== "elementType") {
+        if (typeof value == "boolean") {
+          extra += value ? ` ${key}` : ` !${key}`;
+        } else if (typeof value === "string" || typeof value === "number") {
+          extra += ` ${key}=${value}`;
+        }
       }
     }
     return extra;

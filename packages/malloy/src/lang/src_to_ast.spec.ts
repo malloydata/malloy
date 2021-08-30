@@ -708,7 +708,7 @@ describe("document", () => {
   test("export define a is explore b", () => {
     const got = defineStatement("export define newA is (explore a)");
     const src = new ast.NamedSource("a");
-    const want = new ast.Define("newA", new ast.Explore(src), false);
+    const want = new ast.Define("newA", new ast.Explore(src), true);
     expect(got).toEqualAst(want);
   });
 
@@ -816,9 +816,10 @@ describe("parameters", () => {
       }),
     ];
     const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-    expect(
-      "define ap has aparam timestamp condition @1960-06-30 is (a)"
-    ).toMakeAst("defineStatement", def);
+    expect("define ap has aparam timestamp @1960-06-30 is (a)").toMakeAst(
+      "defineStatement",
+      def
+    );
   });
 });
 
