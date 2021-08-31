@@ -7,18 +7,17 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Set up JDK 11
-        uses: actions/setup-java@v2
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-      - uses: actions/checkout@v2
-      - uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: install # will run `yarn install` command
-      - uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: build # will run `yarn build` command
-      - uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: test # will run `yarn test` command
+    - uses: joschi/setup-jdk@v2
+      with:
+        java-version: '11' # The OpenJDK version to make available on the path
+        architecture: 'x64' # defaults to 'x64'
+    - uses: actions/checkout@v2
+    - uses: borales/actions-yarn@v2.3.0
+      with:
+        cmd: install # will run `yarn install` command
+    - uses: borales/actions-yarn@v2.3.0
+      with:
+        cmd: build # will run `yarn build` command
+    - uses: borales/actions-yarn@v2.3.0
+      with:
+        cmd: test # will run `yarn test` command
