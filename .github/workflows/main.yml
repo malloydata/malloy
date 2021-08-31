@@ -15,7 +15,8 @@ jobs:
     - name: find java
       run: |
         java --version 
-        which java
+        which java 
+        echo /opt/hostedtoolcache/Java_Adopt_jdk/11.0.11-9/x64/bin >> $GITHUB_PATH
     - uses: actions/checkout@v2
     - uses: borales/actions-yarn@v2.3.0
       with:
