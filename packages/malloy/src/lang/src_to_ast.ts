@@ -101,13 +101,17 @@ export class MalloyToAST
   }
 
   visitFieldName(pcx: parse.FieldNameContext): ast.FieldName {
-    const fn = new ast.FieldName(
+    return this.astAt(
+      new ast.FieldName(this.idReference(pcx.idReference())),
       pcx
-        .id()
-        .map((idcx) => this.idText(idcx))
-        .join(".")
     );
-    return this.astAt(fn, pcx);
+  }
+  idReference(pcx: parse.IdReferenceContext): string {
+    const fullRef = pcx
+      .id()
+      .map((idcx) => this.idText(idcx))
+      .join(".");
+    return fullRef;
   }
 
   visitExprLogical(pcx: parse.ExprLogicalContext): ast.ExprLogicalOp {
@@ -165,8 +169,8 @@ export class MalloyToAST
     }
   }
 
-  visitExprField(pcx: parse.ExprFieldContext): ast.ExprValueName {
-    return new ast.ExprValueName(this.visitFieldName(pcx.fieldName()));
+  visitExprIdReference(pcx: parse.ExprIdReferenceContext): ast.ExprIdReference {
+    return new ast.ExprIdReference(this.idReference(pcx.idReference()));
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {

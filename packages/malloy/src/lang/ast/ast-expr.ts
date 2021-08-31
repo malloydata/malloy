@@ -301,14 +301,14 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
   legalChildTypes = [FT.boolT, { ...FT.boolT, aggregate: true }];
 }
 
-export class ExprValueName extends ExpressionDef {
-  elementType = "field name";
-  constructor(readonly valueName: FieldName) {
-    super({ valueName });
+export class ExprIdReference extends ExpressionDef {
+  elementType = "id reference";
+  constructor(readonly refString: string) {
+    super();
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const entry = fs.field(this.valueName.name);
+    const entry = fs.field(this.refString);
     if (entry) {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = entry.type();
@@ -317,15 +317,15 @@ export class ExprValueName extends ExpressionDef {
       if (entry instanceof SpaceParam) {
         const param: ParameterFragment = {
           type: "parameter",
-          path: this.valueName.name,
+          path: this.refString,
         };
         return { dataType, aggregate, value: [param] };
       }
-      const field: FieldFragment = { type: "field", path: this.valueName.name };
+      const field: FieldFragment = { type: "field", path: this.refString };
       return { dataType, aggregate, value: [field] };
     }
-    this.log(`Reference to '${this.valueName.name}' with no definition`);
-    return errorFor(`undefined ${this.valueName.name}`);
+    this.log(`Reference to '${this.refString}' with no definition`);
+    return errorFor(`undefined ${this.refString}`);
   }
 }
 

@@ -170,7 +170,7 @@ defineName
   ;
 
 fieldExpr
-  : fieldName                                              # exprField
+  : idReference                                            # exprIdReference
   | fieldExpr filterList                                   # exprFilter
   | literal                                                # exprLiteral
   | MINUS fieldExpr                                        # exprMinus
@@ -251,6 +251,11 @@ collectionMember
   ;
 
 fieldName
+  : idReference
+  ;
+
+// Syntactically same as a field name, but semantically, might be a parameter
+idReference
   : id ( DOT id )*
   ;
 

@@ -16,7 +16,7 @@ import { readFileSync, readdirSync } from "fs";
 import { Malloy } from "../malloy";
 import {
   aExpr,
-  mkExprField,
+  mkExprIdRef,
   mkFieldName,
   caFilter,
   mkExploreOf,
@@ -50,8 +50,7 @@ describe("translation api", () => {
         fields: [
           <expressionField> exprSrc=afloat+1
             expr: <+-> op=+
-              left: <field name>
-                fieldName: <field name> name=afloat
+              left: <id reference> refString=afloat
               right: <numeric literal> n=1
             fieldName: <field name> name=newName
         ]
@@ -212,7 +211,7 @@ describe("expressions", () => {
     expect("max(a)").toMakeAst("fieldExpr", new ast.ExprMax(aExpr));
   });
   test("a.sum(b)", () => {
-    const func = new ast.ExprSum(mkExprField("b"), "a");
+    const func = new ast.ExprSum(mkExprIdRef("b"), "a");
     expect("a.sum(b)").toMakeAst("fieldExpr", func);
   });
   test("function call", () => {
@@ -284,7 +283,7 @@ describe("expressions", () => {
   test("some_count : [ state:'ca']", () => {
     expect("some_count : [ state:'ca']").toMakeAst(
       "fieldExpr",
-      new ast.ExprFilter(mkExprField("some_count"), caFilter)
+      new ast.ExprFilter(mkExprIdRef("some_count"), caFilter)
     );
   });
 

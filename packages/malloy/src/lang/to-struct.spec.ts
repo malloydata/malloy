@@ -1478,7 +1478,7 @@ describe("document", () => {
 describe("reasonable handling of undefined references", () => {
   test("field name in expression", () => {
     expect("define ax is (explore a thex is xyzzy + 1)").toHaveExploreErrors(
-      "Reference to undefined field"
+      "Reference to 'xyzzy' with no definition"
     );
   });
 
