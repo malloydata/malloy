@@ -8,19 +8,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt install default-jre
-      - name: find java
-        run: |
-          java --version 
-          which java 
-      - uses: actions/checkout@v2
-      - uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: install # will run `yarn install` command
-      - name: yarn build
-        uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: build # will run `yarn build` command
-      - name: yarn test
-        uses: borales/actions-yarn@v2.3.0
-        with:
-          cmd: test # will run `yarn test` command
+      - run: sudo apt install npm
+      - run: npm install --global yarn
+      - run: yarn install
+      - run: yarn build
+      
+#       - name: find java
+#         run: |
+#           java --version 
+#           which java 
+#       - uses: actions/checkout@v2
+#       - uses: borales/actions-yarn@v2.3.0
+#         with:
+#           cmd: install # will run `yarn install` command
+#       - name: yarn build
+#         uses: borales/actions-yarn@v2.3.0
+#         with:
+#           cmd: build # will run `yarn build` command
+#       - name: yarn test
+#         uses: borales/actions-yarn@v2.3.0
+#         with:
+#           cmd: test # will run `yarn test` command
