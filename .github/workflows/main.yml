@@ -3,40 +3,24 @@
 name: CI
 on: [push]
 jobs:
-  setup:
+  build:
     name: Test Setup
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt install default-jre
-#     - name: Set up Java
-#       uses: actions/setup-java@v2
-#       with:
-#         java-version: '11'
-#         distribution: 'adopt'
       - name: find java
         run: |
           java --version 
           which java 
-          echo /opt/hostedtoolcache/Java_Adopt_jdk/11.0.11-9/x64/bin >> $GITHUB_PATH
       - uses: actions/checkout@v2
       - uses: borales/actions-yarn@v2.3.0
         with:
           cmd: install # will run `yarn install` command
-  build:
-    name: Test Build
-    runs-on: ubuntu-latest
-    needs: setup
-    steps:
-    - name: yarn build
-      uses: borales/actions-yarn@v2.3.0
-      with:
-        cmd: build # will run `yarn build` command
-  test:
-    name: Test Run
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-    - name: yarn test
-      uses: borales/actions-yarn@v2.3.0
-      with:
-        cmd: test # will run `yarn test` command
+      - name: yarn build
+        uses: borales/actions-yarn@v2.3.0
+        with:
+          cmd: build # will run `yarn build` command
+      - name: yarn test
+        uses: borales/actions-yarn@v2.3.0
+        with:
+          cmd: test # will run `yarn test` command
