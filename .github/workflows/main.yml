@@ -3,8 +3,8 @@
 name: CI
 on: [push]
 jobs:
-  build:
-    name: Test
+  setup:
+    name: Test Setup
     runs-on: ubuntu-latest
     steps:
     - name: Set up Java
@@ -21,8 +21,11 @@ jobs:
     - uses: borales/actions-yarn@v2.3.0
       with:
         cmd: install # will run `yarn install` command
+  build:
+    name: Test Run
+    runs-on: ubuntu-latest
+    steps:
     - uses: borales/actions-yarn@v2.3.0
-      needs: Set up Java
       with:
         cmd: build # will run `yarn build` command
     - uses: borales/actions-yarn@v2.3.0
