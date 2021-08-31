@@ -7,10 +7,11 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-    - uses: joschi/setup-jdk@v2
+    - name: Set up Java
+      uses: actions/setup-java@v2
       with:
-        java-version: '11' # The OpenJDK version to make available on the path
-        architecture: 'x64' # defaults to 'x64'
+        java-version: '11'
+        distribution: 'adopt'
     - uses: actions/checkout@v2
     - uses: borales/actions-yarn@v2.3.0
       with:
