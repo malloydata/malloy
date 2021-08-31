@@ -7,6 +7,7 @@ jobs:
     name: Test Setup
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
       - run: sudo apt install default-jre
       - run: sudo apt install npm
       - run: npm install --global yarn
