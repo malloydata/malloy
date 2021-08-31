@@ -24,6 +24,7 @@ jobs:
   build:
     name: Test Run
     runs-on: ubuntu-latest
+    needs: setup
     steps:
     - uses: borales/actions-yarn@v2.3.0
       with:
