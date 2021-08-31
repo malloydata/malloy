@@ -12,8 +12,10 @@ jobs:
       with:
         java-version: '11'
         distribution: 'adopt'
-    - name: test java
-      run: java --version
+    - name: find java
+      run: |
+        java --version 
+        which java
     - uses: actions/checkout@v2
     - uses: borales/actions-yarn@v2.3.0
       with:
