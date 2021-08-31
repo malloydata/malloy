@@ -22,6 +22,7 @@ jobs:
       with:
         cmd: install # will run `yarn install` command
     - uses: borales/actions-yarn@v2.3.0
+      needs: Set up Java
       with:
         cmd: build # will run `yarn build` command
     - uses: borales/actions-yarn@v2.3.0
