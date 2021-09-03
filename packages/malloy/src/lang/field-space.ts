@@ -27,6 +27,7 @@ import {
   FieldReferences,
   MalloyElement,
   Turtle,
+  HasParameter,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
@@ -39,8 +40,10 @@ import {
   FANSPaceField,
   WildSpaceField,
   TurtleField,
-  SpaceParam,
+  DefinedParameter,
   SpaceEntry,
+  AbstractParameter,
+  SpaceParam,
 } from "./space-field";
 
 type FieldMap = Record<string, SpaceEntry>;
@@ -87,7 +90,7 @@ export class FieldSpace {
                 ` : Field and parameter name conflict '${paramName}`
             );
           }
-          this.memoMap[paramName] = new SpaceParam(paramDef);
+          this.memoMap[paramName] = new DefinedParameter(paramDef);
         }
       }
     }
@@ -128,12 +131,12 @@ export class FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  field(fieldPath: string): SpaceEntry | undefined {
+  findEntry(fieldPath: string): SpaceEntry | undefined {
     const split = FieldPath.of(fieldPath);
     const ref = this.entry(split.head);
     if (ref) {
       if (ref instanceof StructSpaceField) {
-        return ref.fieldSpace.field(split.tail);
+        return ref.fieldSpace.findEntry(split.tail);
       }
       if (split.tail === "") {
         return ref;
@@ -217,6 +220,12 @@ export class TranslationFieldSpace extends FieldSpace {
     return this;
   }
 
+  addParameters(params: HasParameter[]): void {
+    for (const oneP of params) {
+      this.setEntry(oneP.name, new AbstractParameter(oneP));
+    }
+  }
+
   addField(def: FieldDefinition): void {
     // TODO express the "three fields kinds" in a typesafe way
     // one of three kinds of fields are legal in an explore: expressions ...
@@ -244,7 +253,7 @@ export class TranslationFieldSpace extends FieldSpace {
       });
       this.setEntry(ref.name(), ref);
     } else if (def instanceof Join) {
-      const joining = def.getStructDef();
+      const joining = def.structDef();
       this.setEntry(def.name.name, new StructSpaceField(joining));
     } else if (def instanceof MalloyElement) {
       def.log(
@@ -261,6 +270,7 @@ export class TranslationFieldSpace extends FieldSpace {
   }
 
   structDef(): model.StructDef {
+    const parameters = this.fromStruct.parameters || {};
     if (this.final === undefined) {
       this.final = {
         ...this.fromStruct,
@@ -270,15 +280,15 @@ export class TranslationFieldSpace extends FieldSpace {
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
-      for (const [name, spaceField] of this.entries()) {
-        if (spaceField instanceof StructSpaceField) {
-          joins.push([name, spaceField]);
-        } else if (spaceField instanceof TurtleField) {
-          turtles.push([name, spaceField]);
-        } else if (spaceField instanceof SpaceField) {
-          fields.push([name, spaceField]);
-        } else if (spaceField instanceof SpaceParam) {
-          throw new Error("Can't write structdefs with params yet");
+      for (const [name, spaceEntry] of this.entries()) {
+        if (spaceEntry instanceof StructSpaceField) {
+          joins.push([name, spaceEntry]);
+        } else if (spaceEntry instanceof TurtleField) {
+          turtles.push([name, spaceEntry]);
+        } else if (spaceEntry instanceof SpaceField) {
+          fields.push([name, spaceEntry]);
+        } else if (spaceEntry instanceof SpaceParam) {
+          parameters[name] = spaceEntry.parameter();
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
@@ -289,6 +299,9 @@ export class TranslationFieldSpace extends FieldSpace {
         } else {
           throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
         }
+      }
+      if (Object.entries(parameters).length > 0) {
+        this.final.parameters = parameters;
       }
     }
     return this.final;
@@ -336,8 +349,8 @@ export abstract class PipeFieldSpace extends TranslationFieldSpace {
    ** somehow evaluated correctly without this hack to field()
    ** and structDef() which feel like signs I don't have the right abstractions
    */
-  field(fieldPath: string): SpaceEntry | undefined {
-    return this.inputSpace.field(fieldPath);
+  findEntry(fieldPath: string): SpaceEntry | undefined {
+    return this.inputSpace.findEntry(fieldPath);
   }
 
   structDef(): model.StructDef {

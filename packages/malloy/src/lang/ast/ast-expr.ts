@@ -18,11 +18,9 @@
 
 import {
   AggregateFragment,
-  FieldFragment,
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
-  ParameterFragment,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
@@ -39,7 +37,6 @@ import {
   TimeType,
 } from "./ast-types";
 import { applyBinary, nullsafeNot } from "./apply-expr";
-import { SpaceParam } from "../space-field";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -308,21 +305,14 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const entry = fs.field(this.refString);
+    const entry = fs.findEntry(this.refString);
     if (entry) {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = entry.type();
       const dataType = typeMixin.type;
       const aggregate = !!typeMixin.aggregate;
-      if (entry instanceof SpaceParam) {
-        const param: ParameterFragment = {
-          type: "parameter",
-          path: this.refString,
-        };
-        return { dataType, aggregate, value: [param] };
-      }
-      const field: FieldFragment = { type: "field", path: this.refString };
-      return { dataType, aggregate, value: [field] };
+      const value = [{ type: entry.refType, path: this.refString }];
+      return { dataType, aggregate, value };
     }
     this.log(`Reference to '${this.refString}' with no definition`);
     return errorFor(`undefined ${this.refString}`);
@@ -458,7 +448,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
     let exprVal = this.expr?.getExpression(fs);
     let source = this.source;
     if (source) {
-      const sourceFoot = fs.field(source);
+      const sourceFoot = fs.findEntry(source);
       if (sourceFoot) {
         const footType = sourceFoot.type();
         if (isAtomicFieldType(footType.type)) {

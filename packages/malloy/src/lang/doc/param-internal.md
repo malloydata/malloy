@@ -185,7 +185,17 @@ Ok yes this is a problem. I have this magic thing called "requestTranslation" wh
 
 ---
 
-Notes for tuesday
+    EKW flights : [ dep_time: @2003 ]          | by_carrier
+    EKW flights(dep_time_filter is @2003)      | by_carrier
+    EKW flights{ dep_time_filter: @2003 }      | by_carrier
+    EKW flights PKW dep_time_filter is @2003   | by_carrier
+    PKW dep_time_filter is @2003 EKW flights   | by_carrier
+    DKW (dep_time_filter is @2003) | flights   | by_carrier
+    (flights dep_time_filter is @2003) | by_carrier
+---
 
-Test to make sure parameter references are generated properly in expressions.
+REMAINING TO DO ...
+
+Provide values for params with a reference
 Predicates from partials
+Parameters and paths if joining a thing with parameters into a thing with parameters

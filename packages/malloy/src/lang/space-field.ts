@@ -19,6 +19,7 @@ import {
   FieldValueType,
   ExpressionFieldDef,
   Turtle,
+  HasParameter,
 } from "./ast";
 
 // "Space Fields" are a field in a field space
@@ -30,11 +31,21 @@ interface FieldType {
 
 export abstract class SpaceEntry {
   abstract type(): FieldType;
+  abstract refType: "field" | "parameter";
 }
 
-export class SpaceParam extends SpaceEntry {
+export abstract class SpaceParam extends SpaceEntry {
+  abstract parameter(): model.Parameter;
+  readonly refType = "parameter";
+}
+
+export class DefinedParameter extends SpaceParam {
   constructor(readonly paramDef: model.Parameter) {
     super();
+  }
+
+  parameter(): model.Parameter {
+    return this.paramDef;
   }
 
   type(): FieldType {
@@ -42,9 +53,25 @@ export class SpaceParam extends SpaceEntry {
   }
 }
 
+export class AbstractParameter extends SpaceParam {
+  constructor(readonly astParam: HasParameter) {
+    super();
+  }
+
+  parameter(): model.Parameter {
+    return this.astParam.parameter();
+  }
+
+  type(): FieldType {
+    const type = this.astParam.type || "unknown";
+    return { type };
+  }
+}
+
 export abstract class SpaceField extends SpaceEntry {
   // TODO Field should decide if they care about naming with an "implements"
   abstract rename(newName: string): void;
+  readonly refType = "field";
 
   protected fieldTypeFromFieldDef(def: model.FieldDef): FieldType {
     const ref: FieldType = { type: def.type };
@@ -161,7 +188,7 @@ export abstract class TurtleField extends SpaceField {
     if (turtleName === undefined) {
       return fs;
     }
-    const turtle = fs.field(turtleName);
+    const turtle = fs.findEntry(turtleName);
     if (turtle === undefined) {
       logEl.log(`Reference to undefined turtle '${turtleName}'`);
       return undefined;
@@ -281,14 +308,23 @@ export class FANSPaceField extends SpaceField {
     if (this.as === undefined) {
       return undefined;
     }
-    const fromField = this.inSpace.field(this.ref);
+    const fromField = this.inSpace.findEntry(this.ref);
     if (fromField === undefined) {
       // TODO should errror
       return undefined;
     }
     const fieldTypeInfo = fromField.type();
     const fieldType = fieldTypeInfo.type;
+    // TODO starting to feel like this should me a method call on a spaceentry
     if (model.isAtomicFieldType(fieldType)) {
+      if (fromField instanceof SpaceParam) {
+        return {
+          type: fieldType,
+          name: this.as,
+          e: [{ type: "parameter", path: this.ref }],
+          aggregate: false,
+        };
+      }
       let fieldExpr: model.Expr = [{ type: "field", path: this.ref }];
       if (this.filtersPresent() && this.filterList) {
         const newfieldExpr: model.Expr = [
@@ -324,7 +360,7 @@ export class FANSPaceField extends SpaceField {
   }
 
   type(): FieldType {
-    const field = this.inSpace.field(this.ref);
+    const field = this.inSpace.findEntry(this.ref);
     return field?.type() || { type: "unknown" };
   }
 }

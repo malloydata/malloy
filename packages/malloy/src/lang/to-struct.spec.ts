@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2021 Google LLC
  *
@@ -28,6 +29,15 @@ import {
 import * as ast from "./ast";
 import { FieldSpace } from "./field-space";
 import { NeedSchemaData } from "./parse-malloy";
+
+function findField(
+  struct: model.NamedMalloyObject | undefined,
+  fn: string
+): model.FieldDef | undefined {
+  if (struct && struct.type === "struct") {
+    return struct.fields.find((f) => (f.as || f.name) === fn);
+  }
+}
 
 function queryForExplore(exploreSource: string): model.Query {
   const x = new TestTranslator(exploreSource, "explore");
@@ -183,14 +193,12 @@ describe("explore", () => {
     `;
     const explore = queryForExplore(src);
     if (model.refIsStructDef(explore.structRef)) {
-      const join = explore.structRef.fields.find(
-        (f) => f.name === "string_and_count"
-      );
+      const join = findField(explore.structRef, "string_and_count");
       expect(join).toBeDefined();
       if (join && join.type === "struct") {
         expect(join.fields.length).toBe(2);
-        const astring = join.fields.find((f) => f.name === "astring");
-        const stringCount = join.fields.find((f) => f.name === "string_count");
+        const astring = findField(join, "astring");
+        const stringCount = findField(join, "string_count");
         expect(astring).toBeDefined();
         expect(stringCount).toBeDefined();
       }
@@ -208,9 +216,7 @@ describe("explore", () => {
     `;
     const explore = queryForExplore(src);
     if (model.refIsStructDef(explore.structRef)) {
-      const join = explore.structRef.fields.find(
-        (f) => f.as === "string_and_count"
-      );
+      const join = findField(explore.structRef, "string_and_count");
       expect(join).toBeDefined();
       if (join && join.type === "struct") {
         expect(join.fields.length).toBe(aTableDef.fields.length + 1);
@@ -1396,11 +1402,11 @@ describe("document", () => {
     expect(parentDoc).toTranslate();
     const parent = parentDoc.nameSpace.parent;
     expect(parent).toBeDefined();
-    expect(parent.fields).toBeDefined();
-    if (parent.fields) {
-      expect(parent.fields.find((f) => f.name === "astring")).toBeTruthy();
-      expect(parent.fields.find((f) => f.name === "new1")).toBeTruthy();
-      expect(parent.fields.find((f) => f.name === "new0")).toBeTruthy();
+    expect(parent.type === "struct");
+    if (parent && parent.type === "struct") {
+      expect(findField(parent, "astring")).toBeDefined();
+      expect(findField(parent, "new1")).toBeDefined();
+      expect(findField(parent, "new0")).toBeDefined();
     }
   });
 
@@ -1543,5 +1549,43 @@ describe("parameters", () => {
       },
     };
     expect(ap).toEqual(want);
+  });
+
+  test("reference only string value parameter", () => {
+    const md = translatedModel(
+      `define ap has aparam string 'forty two' is (a
+        afield is aparam)
+      `
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    if (ap.type === "struct") {
+      const afield = findField(ap, "afield");
+      expect(afield).toEqual({
+        type: "string",
+        name: "afield",
+        e: [{ type: "parameter", path: "aparam" }],
+        aggregate: false,
+      });
+    }
+  });
+
+  test("reference number value parameter in expression", () => {
+    const md = translatedModel(
+      `define ap has aparam number 41 is (a
+        afield is aparam + 1)
+      `
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    if (ap.type === "struct") {
+      const afield = findField(ap, "afield");
+      expect(afield).toEqual({
+        name: "afield",
+        type: "number",
+        e: [{ type: "parameter", path: "aparam" }, "+1"],
+        source: "aparam+1",
+      });
+    }
   });
 });

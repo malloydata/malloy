@@ -231,6 +231,23 @@ export function isFieldDefinition(f: MalloyElement): f is FieldDefinition {
  */
 export abstract class Mallobj extends MalloyElement {
   abstract structDef(): model.StructDef;
+
+  withParameters(pList: HasParameter[] | undefined): model.StructDef {
+    const before = this.structDef();
+    // TODO name collisions are flagged where?
+    if (pList) {
+      const parameters = { ...(before.parameters || {}) };
+      for (const hasP of pList) {
+        const pVal = hasP.parameter();
+        parameters[pVal.name] = pVal;
+      }
+      return {
+        ...before,
+        parameters,
+      };
+    }
+    return before;
+  }
 }
 
 export abstract class Statement extends MalloyElement {
@@ -267,15 +284,9 @@ export class Define extends Statement {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
       const struct = {
-        ...this.mallobj.structDef(),
+        ...this.mallobj.withParameters(this.parameters),
         as: this.name,
       };
-      if (this.parameters && this.parameters.length > 0) {
-        struct.parameters = {};
-        for (const p of this.parameters) {
-          struct.parameters[p.name] = p.parameter();
-        }
-      }
       doc.setEntry(this.name, {
         struct,
         exported: this.exported,
@@ -301,8 +312,10 @@ export class Explore extends Mallobj implements ExploreInterface {
   fields: FieldDefinition[] = [];
   filter?: Filter;
   pipeline?: PipelineElement;
+  headNameSpace?: TranslationFieldSpace;
 
-  referenceName?: NamedSource;
+  private referenceName?: NamedSource;
+  private additionalParameters: HasParameter[] = [];
 
   constructor(readonly source: Mallobj, init: ExploreInterface = {}) {
     super({ source });
@@ -328,10 +341,13 @@ export class Explore extends Mallobj implements ExploreInterface {
     return this.queryAndShape().query;
   }
 
-  private queryAndShape(): { shape: FieldSpace; query: model.Query } {
+  private queryAndShape(): {
+    shape: FieldSpace;
+    query: model.Query;
+  } {
     const querySpace = this.headSpace();
     let queryPipe: model.Pipeline = { pipeline: [] };
-    let shape = querySpace;
+    let shape: FieldSpace = querySpace;
     const filterList = this.filter?.getFilterList(querySpace) || [];
     if (this.pipeline) {
       [shape, queryPipe] = this.pipeline.getPipeline(querySpace);
@@ -393,19 +409,30 @@ export class Explore extends Mallobj implements ExploreInterface {
     return this.pipeline === undefined;
   }
 
-  private headSpace(): FieldSpace {
-    let from = this.source.structDef();
-    if (this.primaryKey) {
-      // TODO check that primary key exists
-      from = cloneDeep(from);
-      from.primaryKey = this.primaryKey.field.name;
+  private headSpace(): TranslationFieldSpace {
+    if (this.headNameSpace === undefined) {
+      let from = this.source.structDef();
+      if (this.primaryKey) {
+        // TODO check that primary key exists
+        from = cloneDeep(from);
+        from.primaryKey = this.primaryKey.field.name;
+      }
+      const inProgress = TranslationFieldSpace.filteredFrom(
+        from,
+        this.fieldListEdit
+      );
+      inProgress.addFields(this.fields);
+      this.headNameSpace = inProgress;
     }
-    const inProgress = TranslationFieldSpace.filteredFrom(
-      from,
-      this.fieldListEdit
-    );
-    inProgress.addFields(this.fields);
-    return inProgress;
+    return this.headNameSpace;
+  }
+
+  withParameters(pList: HasParameter[] | undefined): model.StructDef {
+    const nameSpace = this.headSpace();
+    if (pList) {
+      nameSpace.addParameters(pList);
+    }
+    return this.structDef();
   }
 }
 
@@ -474,7 +501,7 @@ export class Join extends MalloyElement {
     super({ name, source, key });
   }
 
-  getStructDef(): model.StructDef {
+  structDef(): model.StructDef {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
