@@ -13,7 +13,11 @@
 
 import * as model from "../model/malloy_types";
 import { FieldSpace } from "./field-space";
-import { ColumnSpaceField, DefinedParameter, TurtleFieldStruct } from "./space-field";
+import {
+  ColumnSpaceField,
+  DefinedParameter,
+  TurtleFieldStruct,
+} from "./space-field";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces

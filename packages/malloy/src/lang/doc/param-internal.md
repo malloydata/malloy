@@ -196,6 +196,6 @@ Ok yes this is a problem. I have this magic thing called "requestTranslation" wh
 
 REMAINING TO DO ...
 
-Provide values for params with a reference
 Predicates from partials
+Provide values for params with a reference
 Parameters and paths if joining a thing with parameters into a thing with parameters
