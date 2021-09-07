@@ -1,28 +1,194 @@
-A reference to a value parameter will produce
+# The Big Plan
 
-    { type: "value parameter", path: "parametername" },
+Landmarks on the road to a "fully parameterized Malloy" would be.
 
- reference to a condition parameter ... thinking ...
+## Phase 0
 
-    someExpr : someCondition
+1) Exploreable items can require filter definition to limit the size of a query
+2) Explorable itmes can have an optional filter definition to limit the size of a query
 
-we have to compile a condition to a predicate function which takes the LHS as an argument, so what does a reference to a predicate
-expression look like ...
+## No assigned phase
 
-    {
-        type: "apply parameter expression",
-        lhs: [ "SQL from someExpr" ],
-        path: "paramName",
-    }
+* Measures with parameters
+* Turtles with parameters
+* Constants at least at the outermost (model) scope, but possibly also at the explorable, measure, and turtle scopes.
 
-So these are the same except for the left hand side for the condition, we could try putting them in the same interface
+### Possibly on the plan
+
+* Because these are a LOT like functions, maybe there is a ways to write parameterized expressions at some level other than the field expressions, maybe even up at the level where we declare explorable items, then very likely these "functions" or paramterized expressions are declared and instantiated with the same gestures all of the above items use.
+
+
+## Phase 0+
+
+It is not much additional work to move constant parameters into the phase zero, inside and explore, and so even though  constant parameters are not in the MVP for parameters, they are part of the MVP design
+
+# Syntax
+
+Trying to make something which feels lke Malloy. Malloy inherits from SQL a strong preference for keyword based, rather than punctuation based structure. It is an interesting experiment to at least try and stretch that into parameters, even though to an experienced programmer these things feel a lot like functions declarations and function calls, which use parentheses to mark them out.
+
+There are many possible syntaxes listed below, obviously only one will eventually be chosen, but as progress is happening, the reasons for choosing one way of expressing parameters are changing also, so it had turned out to be important to sort of have a record of all the choices.
+
+## Declaration
+
+`has` before an `is` indicates a parameter. The type or the parameter is next, which is either just a type name if this is a constant, or a typename followed by the word `condition` for a filtering parameter.
+
+Optional parameters are indicated by providing a default value to be used when the parameter is not specified ...
+
+    -- TYPENAME is "string", "number", "date", "timestamp", etc.
+    define thingWithParams
+      has optCondParam TYPENAME condition VALUE
+      has reqCondParam TYPENAME condition
+      has optValueParam TYPENAME VALUE
+      has reqValueParam TYPENAME
+      is ( ... )
+
+### Default vales for optional parameters
+
+The default value just hanging out there at the end of the declaration as the indication that a parameter is not required is not super great. It reads a little like a run on sentence.
+
+Not sure what I want to do about that ... I kind of have rejected the Typescript answer of use `=`
+
+    has someThing string "groovy"
+    has someThing string = "groovy"
+    has someThing string or "groovy"
+
+The use of `or` is intriguing, it scans pleasantly
+
+### Constants vs. optional parameters
+
+Recent realization that the long running asumption that constants are kind of the same thing as optional parameters is actually incorrect. Something intended to be a constant should NOT be changable by a user ...
+
+    define analyzeSomething
+      has y2k_begin timestamp @2000-01-01 00:00:00
+
+There needs to be some way to express that it is NOT approriate to provide a new value for `y2k_begin`, something like ...
+
+    define analyzeSomething
+      has constantT timestamp always @2000-01-01 00:00:00
+      has optionalT timestamp or @2000-01-01 00:00:00
+
+### Replace the word "condition" with a ":"
+
+Becauase that is how it would be dereferenced, maybe it
+totally makes sense to declare it that way ... something like
+
+I am not sure how will this would read for required values which are conditions ...
+
+    define thingWithParams
+      has reqTime timestamp :
+      has optTime timestamp : @2003
+
+That ':' hanging out there all by itself looks like a syntax error.
+
+opening up the constraints trying to make this work ... `name is Type Value` ... is the pattern ... lean into that ...
+
+    define thingWithParams
+      reqTime is required : timestamp
+      optTime is optional : timestamp or @2003
+      reqVal is required timestamp
+      optVal is optional timestamp
+      is ( ... )
+
+This is going to need parentheses around declarations in measures, though not things that have field lists.
+
+### Rejected for sure ...
+
+You could move the parameter declarations inside the explore, since they match the syntax for statements inside an explore head ... The good thing about this is they are physically declared in the same textual unit where the namespace the exist in is defined. (something which is not true for programming languages)
+
+    define thingWithParams is (
+      'project.schema.thingTable'
+
+      reqTime is required : timestamp
+      optTime is optional : timestamp or @2003
+      reqVal is required timestamp
+      optVal is optional timestamp
+
+      : [ thingTme : reqTime ]
+
+      ...
+    )
+
+The problem with this is that in a quick scan of a file, it isn't easy to see the parameters if their declarations are hidden inside the explore body.
+
+## Invocation
+
+    explore thingWithParams
+     reqCondParam is value
+     reqValueParam is value
+    | thingTurtle
+
+
+## Parentheses around parameter lists ...
+
+If you want this to look like a function call, parentheses can placed around the parameters, this could be optional syntax.  Commas between parameters will probably need to at least be optional because these look more like lists rather than commands and people will try and use commas.
+
+### Is in define statements with parentheses
+
+Not sure I like `is` in params, the sentence is describing a requirement, not a computation, but it would be something like this ...
+
+    define thingWithParams(
+        reqCondParam is required timestamp conditional
+        optValue is timestamp @2003
+    )
+
+### Has in define statements with parentheses
+
+`has` reads a little different in parens, the result doesn't scan quite as naturally for some reason.
+
+    define thingWithParams(
+        has reqCondParam timestamp conditional
+        has optValue timestamp @2003
+    )
+
+This makes me thing there would be a different word, maybe this is where `requires` appears? Something like ...
+
+    define thingWithParams(
+        requires reqCondParam : timestamp
+        uses optValue timestamp or @2003
+    )
+
+
+### Invocation with parentheses
+
+Invocation with `is` ... seems to scan pretty naturally
+
+    explore thingWithParams(
+     reqCondParam is value
+     reqValueParam is value
+    ) | thingTurtle
+
+# Internals
+
+A reference to a value parameter will produce an expression fragment which looks pretty much exactly like a field name reference, except it is marked as a parameter reference ...
 
     interface ParameterFragment {
         type: "parameter";
         path: string;
-        conditionValue:? Expr;
-    }
+    };
 
+ For condition valued parameters we need to be able to compile the condition to an expression, and then somehow apply the runtime value to that condition.
+
+    define xflights
+        has dep_filter timestamp condition @2003
+        is (explore flights : [ dep_filter ]);
+
+Needs to make a structdef, and the default value of that filter needs to expand `@2003` to a range test, like it would if it had been the right hand side of a `:` in an expression.
+
+```javascript
+{
+ type: "struct",
+ parameters: {
+     dep_filter: {
+         name: "dep_filter",
+         type: "timestamp",
+         condition: [
+            // XXX This is the condition expression
+         ]
+
+     }
+ }
+}
+```
 But then what does a compiled predicate expression look like, for for a default value, or for a query time provided value?
 Well, that is essentially a function which takes an argument and substitutes the passed in as the value of the argument.
 
