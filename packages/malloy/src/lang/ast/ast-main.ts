@@ -26,7 +26,7 @@ import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
 import { ExpressionFieldDef, By, ExpressionDef } from "./ast-expr";
-import { compressExpr } from "./ast-types";
+import { compressExpr, errorFor } from "./ast-types";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -1047,6 +1047,7 @@ interface HasInit {
   type?: string;
   default?: ExpressionDef;
 }
+
 export class HasParameter extends MalloyElement {
   elementType = "hasParameter";
   readonly name: string;
@@ -1078,7 +1079,9 @@ export class HasParameter extends MalloyElement {
         };
       }
     } else if (this.default) {
-      const cVal = this.default.constantExpression();
+      const cVal =
+        this.default.constantExpression() ||
+        errorFor("constant expression expected");
       // TODO type checking?
       return {
         value: cVal.value,

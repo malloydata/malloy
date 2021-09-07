@@ -29,10 +29,15 @@ defineStatement
   ;
 
 has
-  : HAS id malloyType CONDITION           # requiredConditionParam
-  | HAS id malloyType? CONDITION hasExpr  # optionalConditionParam
-  | HAS id malloyType                     # requiredValueParam
-  | HAS id malloyType? hasExpr            # optionalValueParam
+  : HAS id COLON malloyType            # requiredConditionParam
+  | HAS id COLON malloyType OR hasCond # optionalConditionParam
+  | HAS id malloyType                  # requiredValueParam
+  | HAS id malloyType OR hasExpr       # optionalValueParam
+  | HAS id hasExpr                     # constantParam
+  ;
+
+hasCond
+  : fieldExpr
   ;
 
 hasExpr

@@ -88,6 +88,19 @@ export class MalloyToAST
     return new ast.Boolean(pcx.TRUE() ? "true" : "false");
   }
 
+  hasExpression(cx: parse.HasExprContext): ast.ParameterValue {
+    const element = this.visit(cx);
+    if (element instanceof ast.ExpressionDef) {
+      const val = ast.ParameterValue.fromExpr(element);
+      if (val) {
+        return this.astAt(val, cx);
+      }
+    }
+    throw new Error(
+      `parameter value node unknown type '${element.elementType}`
+    );
+  }
+
   fieldExpression(cx: parse.FieldExprContext): ast.ExpressionDef {
     const element = this.visit(cx);
     if (element instanceof ast.ExpressionDef) {
@@ -893,11 +906,13 @@ export class MalloyToAST
   visitOptionalConditionParam(
     pcx: parse.OptionalConditionParamContext
   ): ast.HasParameter {
+    const e = this.fieldExpression(pcx.hasCond().fieldExpr());
+    const pv = ast.ParameterConditionValue.fromExpr(e);
     const has = new ast.HasParameter({
       name: this.idText(pcx.id()),
       type: pcx.malloyType()?.text,
-      default: this.fieldExpression(pcx.hasExpr()),
       isCondition: true,
+      default: pv,
     });
     return this.astAt(has, pcx);
   }
@@ -916,10 +931,12 @@ export class MalloyToAST
   visitOptionalValueParam(
     pcx: parse.OptionalValueParamContext
   ): ast.HasParameter {
+    const e = this.fieldExpression(pcx.hasExpr().fieldExpr());
+    const pv = ast.ParameterValue.fromExpr(e);
     const has = new ast.HasParameter({
       name: this.idText(pcx.id()),
       type: pcx.malloyType()?.text,
-      default: this.fieldExpression(pcx.hasExpr()),
+      default: pv,
       isCondition: false,
     });
     return this.astAt(has, pcx);

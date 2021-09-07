@@ -70,9 +70,9 @@ export abstract class ExpressionDef extends MalloyElement {
     return this.getExpression(fs);
   }
 
-  constantExpression(): ExprValue {
+  constantExpression(): ExprValue | undefined {
     this.log(`Expected constant expression for element '${this.elementType}'`);
-    return errorFor("constant expression required");
+    return undefined;
   }
 
   defaultFieldName(): string | undefined {
@@ -112,6 +112,54 @@ export abstract class ExpressionDef extends MalloyElement {
     }
     const tsSelf = compressExpr(["TIMESTAMP(", ...selfValue.value, ")"]);
     return new ExprTime("timestamp", tsSelf, selfValue.aggregate);
+  }
+}
+
+export class ParameterValue extends ExpressionDef {
+  elementType = "paramVal";
+
+  static validParamExpr(expr: ExpressionDef): boolean {
+    if (expr.constantExpression()) {
+      return true;
+    }
+    // TODO walk this expression to make sure it only has constants
+    // and parameter references in it
+    return false;
+  }
+
+  static fromExpr(expr: ExpressionDef | undefined): ParameterValue | undefined {
+    if (expr && ParameterValue.validParamExpr(expr)) {
+      return new ParameterValue(expr);
+    }
+  }
+
+  protected constructor(readonly value: ExpressionDef) {
+    super({ value });
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.value.getExpression(fs);
+  }
+
+  constantExpression(): ExprValue | undefined {
+    return this.value.constantExpression();
+  }
+}
+
+export class ParameterConditionValue extends ParameterValue {
+  elementType = "paramCondVal";
+  static fromExpr(expr: ExpressionDef): ParameterValue | undefined {
+    if (ParameterValue.validParamExpr(expr)) {
+      return new ParameterConditionValue(expr);
+    }
+  }
+
+  private constructor(value: ExpressionDef) {
+    super(value);
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.value.getExpression(fs);
   }
 }
 

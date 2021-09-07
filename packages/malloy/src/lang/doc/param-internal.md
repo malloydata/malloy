@@ -34,11 +34,11 @@ Here's the current choice for a declaration block which declares one of each tim
 
     define thingWithParams
       has reqCondition : timestamp
-      has optCondition : timestamp or @2003 to @2010
+      has optCondition : timestamp or @1960 to @1970
       has reqValue timestamp
       has optValue timestamp or @2001-09-11
       has constValue @1969-07-20 12:56
-      is (
+      is ('project.schema.tableName'
         ...
       )
 
@@ -114,6 +114,39 @@ Here's an attempt with that in mind.
 
 This would need parentheses around declarations in measures, though not things that have field lists. , with `is` in invocations to seperate that from the definition, since that is an "is" also.
 
+
+### has block, kind of like paramter lists ...
+
+    define thingWithParams
+
+      has
+        reqCondition : timestamp
+        optCondition : timestamp or @1960 to @1970
+        reqValue timestamp
+        optValue timestamp or @2001-09-11
+        constValue @1969-07-20 12:56
+
+      is ('project.schema.tableName'
+        ...
+      )
+
+This has a nice conciseness but the complete lack of keywords in each individual parameter declaration makes each block unreadable ... this might work better with the keywords from the "is style" above ...
+
+Also the "has" followed by a list really makes it feel like each element in the list should have a comma, as opposed to inside an explore, where each field definition is more like a statement
+
+    define thingWithParams
+
+      has
+        reqCondition required : timestamp
+        optCondition optional : timestamp or @1960 to @1970
+        reqValue required timestamp
+        optValue optional timestamp or @2001-09-11
+        constValue const @1969-07-20 12:56
+
+      is ('project.schema.tableName'
+        ...
+
+
 ### Rejected for sure ...
 
 You could move the parameter declarations inside the explore, since they match the syntax for statements inside an explore head ... The good thing about this is they are physically declared in the same textual unit where the namespace the exist in is defined. (something which is not true for programming languages)
@@ -135,11 +168,64 @@ The problem with this is that in a quick scan of a file, it isn't easy to see th
 
 ## Invocation
 
+### No new syntax ...
+
+Maybe invocation is as simple as a few "is" statements and then the pipe ...
+
     explore thingWithParams
      reqCondParam is value
      reqValueParam is value
+    | reduce
+        ...
+
+This is problematic though because this syntax is not distinguishble from a simple extension of the explore, and so all the error checking on this would have to happen in the semantic pass, which feels fraught.
+
+### Some word to signify the parameter list ...
+
+`given` is placeholder word ... but something like:
+
+    explore thingWithParams
+     given
+       reqCondParam is value
+       reqValueParam is value
+    | someTurtle
+
+### Some bracketing of the parameter list ...
+
+    explore thingWithParams
+     {
+       reqCondParam is value
+       reqValueParam is value
+     }
+     | someTurtle
+
+Any bracketing would change the declaration syntax, they need to look kind of like each other.
+
+### bracketing, but something like : []
+
+    explore flights : { dep_filter is @2003 } : [ arr_time : @2004 ]
+
+### prefix before the explore
+
+    given
+      a is ...
+      b is ...
+    thingWithParams
+        : [ some: Filter ]
     | thingTurtle
 
+### the "is" statements come after "explore" and before the exploreable
+
+    explore
+      a is ..
+      b is ...
+    thingWithParams
+    | thingTurtle
+
+    a is ..
+    b is ...
+    explore thingWithParams
+    | thingTurtle
 
 ## Parentheses around parameter lists ...
 
