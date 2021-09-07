@@ -11,7 +11,7 @@ Landmarks on the road to a "fully parameterized Malloy" would be.
 
 * Measures with parameters
 * Turtles with parameters
-* Constants at least at the outermost (model) scope, but possibly also at the explorable, measure, and turtle scopes.
+* Normal constant parameters at least at the outermost (model) scope, but possibly also at the explorable, measure, and turtle scopes.
 
 ### Possibly on the plan
 
@@ -29,6 +29,22 @@ Trying to make something which feels lke Malloy. Malloy inherits from SQL a stro
 There are many possible syntaxes listed below, obviously only one will eventually be chosen, but as progress is happening, the reasons for choosing one way of expressing parameters are changing also, so it had turned out to be important to sort of have a record of all the choices.
 
 ## Declaration
+
+Here's the current choice for a declaration block which declares one of each time of parameter: required condition, optional condition, required value, optional value, and constant.
+
+    define thingWithParams
+      has reqCondition : timestamp
+      has optCondition : timestamp or @2003 to @2010
+      has reqValue timestamp
+      has optValue timestamp or @2001-09-11
+      has constValue @1969-07-20 12:56
+      is (
+        ...
+      )
+
+What follows is all the thinking which led to this ...
+
+---
 
 `has` before an `is` indicates a parameter. The type or the parameter is next, which is either just a type name if this is a constant, or a typename followed by the word `condition` for a filtering parameter.
 
@@ -81,7 +97,13 @@ I am not sure how will this would read for required values which are conditions 
 
 That ':' hanging out there all by itself looks like a syntax error.
 
-opening up the constraints trying to make this work ... `name is Type Value` ... is the pattern ... lean into that ...
+### Musing about `has`
+
+`has` grew out of the pair `requires` and `has` as a way to declare an optional or require parameter. The way that `has` sit's with `is` read very well. The sentence-like scanning left to right "the definition of foo has these parameters and is this" feels pretty good and there is a way to indent it that also looks good.
+
+However it is a departure from the "_name_ `is` _type_ _value_" template. I have my eye on this problem and am looking for reasons to make the the number one design principle for the syntax.
+
+Here's an attempt with that in mind.
 
     define thingWithParams
       reqTime is required : timestamp
@@ -90,7 +112,7 @@ opening up the constraints trying to make this work ... `name is Type Value` ...
       optVal is optional timestamp
       is ( ... )
 
-This is going to need parentheses around declarations in measures, though not things that have field lists.
+This would need parentheses around declarations in measures, though not things that have field lists. , with `is` in invocations to seperate that from the definition, since that is an "is" also.
 
 ### Rejected for sure ...
 
@@ -366,3 +388,14 @@ REMAINING TO DO ...
 Predicates from partials
 Provide values for params with a reference
 Parameters and paths if joining a thing with parameters into a thing with parameters
+Constants (override not allowed)
+
+---
+
+Here's one suite of declarations
+
+    has reqCondition : timestamp
+    has optCondition : timestamp or @2003 to @2010
+    has reqValue timestamp
+    has optValue timestamp or @2001-09-11
+    has constValue @1969-07-20 12:56
