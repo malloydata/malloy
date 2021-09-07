@@ -64,8 +64,9 @@ Recent realization that the long running asumption that constants are kind of th
 There needs to be some way to express that it is NOT approriate to provide a new value for `y2k_begin`, something like ...
 
     define analyzeSomething
-      has constantT timestamp always @2000-01-01 00:00:00
       has optionalT timestamp or @2000-01-01 00:00:00
+      has constantT1 timestamp always @2000-01-01 00:00:00
+      has constantT2 @2000-01-01 00:00:00
 
 ### Replace the word "condition" with a ":"
 
