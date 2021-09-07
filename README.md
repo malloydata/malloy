@@ -21,7 +21,7 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
     - BI Engine & database-level caching
 
 ### Why do we need another data language?
-SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to expres; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn. It is usable in place of SQL to manipulate and explore data.
+SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to express; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn. It is usable in place of SQL to manipulate and explore data.
 
 Key features and advantages:
 - Query and model in the same language; everything is reusable and extensible.
