@@ -1087,6 +1087,7 @@ export class HasParameter extends MalloyElement {
         value: cVal.value,
         type,
         name: this.name,
+        constant: false,
       };
     }
     throw new Error("Parameter translation NYI");

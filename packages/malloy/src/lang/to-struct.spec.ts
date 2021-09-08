@@ -1527,6 +1527,7 @@ describe("parameters", () => {
         name: "aparam",
         type: "timestamp",
         value: ["'1960-06-30'"],
+        constant: false,
       },
     };
     expect(ap).toEqual(want);
@@ -1544,6 +1545,7 @@ describe("parameters", () => {
         name: "aparam",
         type: "string",
         value: ["'forty two'"],
+        constant: false,
       },
     };
     expect(ap).toEqual(want);

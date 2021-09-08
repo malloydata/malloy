@@ -41,6 +41,7 @@ import {
   FieldValueType,
   MalloyElement,
   Comparison,
+  ParameterValue,
 } from "./index";
 
 export class Timeframe extends MalloyElement {
@@ -594,5 +595,39 @@ export class ExprFunc extends ExpressionDef {
       aggregate: anyAggregate,
       value: compressExpr(funcCall),
     };
+  }
+}
+
+class DollarReference extends ExpressionDef {
+  elementType = "$";
+  getExpression(_fs: FieldSpace): ExprValue {
+    throw new Error("NYI");
+  }
+}
+
+export class ParameterConditionValue extends ParameterValue {
+  elementType = "paramCondVal";
+  static fromExpr(expr: ExpressionDef): ParameterValue | undefined {
+    if (ParameterValue.validParamExpr(expr)) {
+      return new ParameterConditionValue(expr);
+    }
+  }
+
+  private constructor(value: ExpressionDef) {
+    super(value);
+  }
+
+  // TODO This is where I do not understand, and where things need to happen
+  // TODO what value is written in the structdef for a condition, it is some
+  // TODO kind of half apply of this.value ... I think a faux ExprCompare
+  // TODO would be constructed, with the LHS being a dollar reference with
+  // the type, and then the RHS being the value ...
+  getExpression(fs: FieldSpace): ExprValue {
+    const compareAndContrast = new ExprCompare(
+      new DollarReference(),
+      "=",
+      this.value
+    );
+    return compareAndContrast.getExpression(fs);
   }
 }

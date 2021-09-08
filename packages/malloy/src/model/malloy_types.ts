@@ -15,17 +15,18 @@
 
 type ConstantExpr = Expr;
 type Condition = Expr;
-interface ConditionValue {
+interface ParamCondition {
   condition: Condition | null;
 }
-interface ConstantValue {
+interface ParamValue {
   value: ConstantExpr | null;
+  constant: boolean;
 }
 interface ParamBase {
   name: string;
   type: AtomicFieldType;
 }
-export type Parameter = ParamBase & (ConditionValue | ConstantValue);
+export type Parameter = ParamBase & (ParamCondition | ParamValue);
 
 /** put line number into the parse tree. */
 export interface LineNumber {

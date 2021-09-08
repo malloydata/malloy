@@ -146,23 +146,6 @@ export class ParameterValue extends ExpressionDef {
   }
 }
 
-export class ParameterConditionValue extends ParameterValue {
-  elementType = "paramCondVal";
-  static fromExpr(expr: ExpressionDef): ParameterValue | undefined {
-    if (ParameterValue.validParamExpr(expr)) {
-      return new ParameterConditionValue(expr);
-    }
-  }
-
-  private constructor(value: ExpressionDef) {
-    super(value);
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    return this.value.getExpression(fs);
-  }
-}
-
 export class ExpressionFieldDef extends MalloyElement {
   elementType = "expressionField";
   constructor(
