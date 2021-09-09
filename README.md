@@ -89,8 +89,10 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 # Documentation
 [Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
 
-- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - an introduction to the language
-- [eCommerce Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html)
+You can find Quick Start videos, below.
+
+- [eCommerce Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
+- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - docs introduction to the language
 - [FAA Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
 - [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
