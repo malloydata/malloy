@@ -21,6 +21,7 @@ import { LogMessage, MessageLogger } from "./parse-log";
 import * as Source from "./source-reference";
 import { isComparison, isFieldDefinition } from "./ast";
 import { ParseMalloy } from "./parse-malloy";
+import { AtomicFieldType, isAtomicFieldType } from "../model";
 /**
  * Parse tree visitor which generates an AST from the ANTLR parse tree
  */
@@ -903,14 +904,27 @@ export class MalloyToAST
     return this.astAt(has, pcx);
   }
 
+  malloyType(cx: parse.MalloyTypeContext): AtomicFieldType {
+    const type = cx.text;
+    if (isAtomicFieldType(type)) {
+      return type;
+    }
+    throw new Error("grammar for malloy type doesn't match atomic types");
+  }
+
   visitOptionalConditionParam(
     pcx: parse.OptionalConditionParamContext
   ): ast.HasParameter {
-    const e = this.fieldExpression(pcx.hasCond().fieldExpr());
-    const pv = ast.ParameterConditionValue.fromExpr(e);
+    const name = this.idText(pcx.id());
+    const type = this.malloyType(pcx.malloyType());
+    const e = this.visit(pcx.hasCond());
+    if (!(e instanceof ast.ExpressionDef)) {
+      throw new Error("compiler error, param value not expression");
+    }
+    const pv = ast.ParameterConditionValue.condFromExpr(e, type);
     const has = new ast.HasParameter({
-      name: this.idText(pcx.id()),
-      type: pcx.malloyType()?.text,
+      name,
+      type,
       isCondition: true,
       default: pv,
     });

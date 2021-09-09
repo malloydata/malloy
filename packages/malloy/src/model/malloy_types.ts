@@ -113,8 +113,16 @@ export function isParameterFragment(f: Fragment): f is ParameterFragment {
   return (f as ParameterFragment)?.type === "parameter";
 }
 
+export interface DollarFragment {
+  type: "$";
+}
+export function isDollarFragment(f: Fragment): f is DollarFragment {
+  return (f as DollarFragment)?.type === "$";
+}
+
 export type Fragment =
   | string
+  | DollarFragment
   | FieldFragment
   | ParameterFragment
   | FilterFragment

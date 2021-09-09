@@ -37,7 +37,7 @@ has
   ;
 
 hasCond
-  : fieldExpr
+  : partialAllowedFieldExpr
   ;
 
 hasExpr

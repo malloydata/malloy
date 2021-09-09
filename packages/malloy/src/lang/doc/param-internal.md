@@ -34,9 +34,9 @@ Here's the current choice for a declaration block which declares one of each tim
 
     define thingWithParams
       has reqCondition : timestamp
-      has optCondition : timestamp or @1960 to @1970
+      has optCondition : timestamp default @1960 to @1970
       has reqValue timestamp
-      has optValue timestamp or @2001-09-11
+      has optValue timestamp default @2001-09-11
       has constValue @1969-07-20 12:56
       is ('project.schema.tableName'
         ...
@@ -67,8 +67,10 @@ Not sure what I want to do about that ... I kind of have rejected the Typescript
     has someThing string "groovy"
     has someThing string = "groovy"
     has someThing string or "groovy"
+    has someThing string default "groovy"
+    has someThing (string "groovy")
 
-The use of `or` is intriguing, it scans pleasantly
+The use of `or` is intriguing, it scans pleasantly.
 
 ### Constants vs. optional parameters
 

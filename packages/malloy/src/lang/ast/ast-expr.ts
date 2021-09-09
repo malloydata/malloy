@@ -118,13 +118,13 @@ export abstract class ExpressionDef extends MalloyElement {
 export class ParameterValue extends ExpressionDef {
   elementType = "paramVal";
 
-  static validParamExpr(expr: ExpressionDef): boolean {
-    if (expr.constantExpression()) {
-      return true;
-    }
-    // TODO walk this expression to make sure it only has constants
-    // and parameter references in it
-    return false;
+  static validParamExpr(_expr: ExpressionDef): boolean {
+    // if (expr.constantExpression()) {
+    //   return true;
+    // }
+    // // TODO walk this expression to make sure it only has constants
+    // // and parameter references in it
+    return true;
   }
 
   static fromExpr(expr: ExpressionDef | undefined): ParameterValue | undefined {
@@ -378,6 +378,10 @@ export class ExprParens extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
     return { ...subExpr, value: ["(", ...subExpr.value, ")"] };
+  }
+
+  constantExpression(): ExprValue | undefined {
+    return this.expr.constantExpression();
   }
 }
 

@@ -13,6 +13,7 @@
 
 import { DateTime } from "luxon";
 import {
+  AtomicFieldType,
   Fragment,
   isTimeTimeframe,
   TimeTimeframe,
@@ -598,22 +599,38 @@ export class ExprFunc extends ExpressionDef {
   }
 }
 
+/*
+ ** These classes are here becase ParameterCondition references ExprCompare
+ ** which is here and there is weird cicrularity that I still don't just
+ ** magically know how to fix. Ideally they'd be in ast-expr.
+ */
+
 class DollarReference extends ExpressionDef {
   elementType = "$";
+  constructor(readonly refType: FieldValueType) {
+    super();
+  }
   getExpression(_fs: FieldSpace): ExprValue {
-    throw new Error("NYI");
+    return {
+      dataType: this.refType,
+      value: [{ type: "$" }],
+      aggregate: false,
+    };
   }
 }
 
 export class ParameterConditionValue extends ParameterValue {
   elementType = "paramCondVal";
-  static fromExpr(expr: ExpressionDef): ParameterValue | undefined {
+  static condFromExpr(
+    expr: ExpressionDef,
+    type: AtomicFieldType
+  ): ParameterValue | undefined {
     if (ParameterValue.validParamExpr(expr)) {
-      return new ParameterConditionValue(expr);
+      return new ParameterConditionValue(expr, type);
     }
   }
 
-  private constructor(value: ExpressionDef) {
+  private constructor(value: ExpressionDef, readonly type: AtomicFieldType) {
     super(value);
   }
 
@@ -622,12 +639,20 @@ export class ParameterConditionValue extends ParameterValue {
   // TODO kind of half apply of this.value ... I think a faux ExprCompare
   // TODO would be constructed, with the LHS being a dollar reference with
   // the type, and then the RHS being the value ...
-  getExpression(fs: FieldSpace): ExprValue {
+  constantExpression(): ExprValue {
+    const fs = new FieldSpace({
+      type: "struct",
+      name: "empty structdef",
+      structSource: { type: "table" },
+      structRelationship: { type: "basetable" },
+      fields: [],
+    });
     const compareAndContrast = new ExprCompare(
-      new DollarReference(),
+      new DollarReference(this.type),
       "=",
       this.value
     );
-    return compareAndContrast.getExpression(fs);
+    const application = compareAndContrast.getExpression(fs);
+    return { ...application, value: compressExpr(application.value) };
   }
 }

@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2021 Google LLC
  *
@@ -11,6 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
+/* eslint-disable no-console */
 
 import "./jestery";
 import * as model from "../model/malloy_types";
@@ -1510,6 +1510,23 @@ describe("parameters", () => {
         name: "aparam",
         type: "timestamp",
         condition: null,
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional numeric condition", () => {
+    const md = translatedModel(
+      "define ap has aparam : number or > 10 & < 100 is (a)"
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "number",
+        condition: ["(", { type: "$" }, ">10)and(", { type: "$" }, "<100)"],
       },
     };
     expect(ap).toEqual(want);

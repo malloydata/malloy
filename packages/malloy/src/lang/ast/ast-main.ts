@@ -1071,13 +1071,12 @@ export class HasParameter extends MalloyElement {
   parameter(): model.Parameter {
     const type = this.type || "string";
     if (this.isCondition) {
-      if (!this.default) {
-        return {
-          type,
-          name: this.name,
-          condition: null,
-        };
-      }
+      const defaultValue = this.default?.constantExpression()?.value;
+      return {
+        type,
+        name: this.name,
+        condition: defaultValue || null,
+      };
     } else if (this.default) {
       const cVal =
         this.default.constantExpression() ||
