@@ -799,7 +799,7 @@ describe("parameters", () => {
       }),
     ];
     const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-    expect("define ap has aparam : timestamp is (a)").toMakeAst(
+    expect("define ap(has aparam : timestamp) is (a)").toMakeAst(
       "defineStatement",
       def
     );
@@ -817,7 +817,25 @@ describe("parameters", () => {
       }),
     ];
     const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-    expect("define ap has aparam timestamp or @1960-06-30 is (a)").toMakeAst(
+    expect("define ap(has aparam timestamp or @1960-06-30) is (a)").toMakeAst(
+      "defineStatement",
+      def
+    );
+  });
+
+  test("constant value", () => {
+    const paramList = [
+      new ast.HasParameter({
+        name: "aparam",
+        isCondition: false,
+        type: "timestamp",
+        default: ast.ParameterValue.fromExpr(
+          ast.GranularLiteral.parse("@1960-06-30")
+        ),
+      }),
+    ];
+    const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
+    expect("define ap(has aparam @1960-06-30) is (a)").toMakeAst(
       "defineStatement",
       def
     );

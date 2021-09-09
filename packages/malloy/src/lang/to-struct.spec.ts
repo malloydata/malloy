@@ -1501,7 +1501,7 @@ describe("semantic checks", () => {
 
 describe("parameters", () => {
   test("declare required condition", () => {
-    const md = translatedModel("define ap has aparam : timestamp is (a)");
+    const md = translatedModel("define ap(has aparam : timestamp) is (a)");
     const ap = md.structs.ap;
     expect(ap).toBeDefined();
     const want = mkStruct("ap");
@@ -1517,7 +1517,7 @@ describe("parameters", () => {
 
   test("declare optional numeric condition", () => {
     const md = translatedModel(
-      "define ap has aparam : number or > 10 & < 100 is (a)"
+      "define ap(has aparam : number or > 10 & < 100) is (a)"
     );
     const ap = md.structs.ap;
     expect(ap).toBeDefined();
@@ -1532,9 +1532,38 @@ describe("parameters", () => {
     expect(ap).toEqual(want);
   });
 
+  test("declare optional timestamp condition", () => {
+    const md = translatedModel(
+      "define ap(has aparam : timestamp or @1960 to @1970) is (a)"
+    );
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        condition: [
+          "(",
+          { type: "$" },
+          ">='1960-01-01')and(",
+          { type: "$" },
+          "<'1970-01-01')",
+        ],
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test.skip("typecheck declared parameter type with actual type of expression", () => {
+    const _md = translatedModel(
+      "define ap(has aparam : number or @1960 to @1970) is (a)"
+    );
+  });
+
   test("declare optional timestamp value", () => {
     const md = translatedModel(
-      "define ap has aparam timestamp or @1960-06-30 is (a)"
+      "define ap(has aparam timestamp or @1960-06-30) is (a)"
     );
     const ap = md.structs.ap;
     expect(ap).toBeDefined();
@@ -1552,7 +1581,7 @@ describe("parameters", () => {
 
   test("declare optional string value", () => {
     const md = translatedModel(
-      `define ap has aparam string or 'forty two' is (a)`
+      `define ap(has aparam string or 'forty two') is (a)`
     );
     const ap = md.structs.ap;
     expect(ap).toBeDefined();
@@ -1570,7 +1599,7 @@ describe("parameters", () => {
 
   test("reference only string value parameter", () => {
     const md = translatedModel(
-      `define ap has aparam string or 'forty two' is (a
+      `define ap(has aparam string or 'forty two') is (a
         afield is aparam)
       `
     );
@@ -1589,7 +1618,7 @@ describe("parameters", () => {
 
   test("reference number value parameter in expression", () => {
     const md = translatedModel(
-      `define ap has aparam number or 41 is (a
+      `define ap(has aparam number or 41) is (a
         afield is aparam + 1)
       `
     );

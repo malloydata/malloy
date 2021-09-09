@@ -32,13 +32,15 @@ There are many possible syntaxes listed below, obviously only one will eventuall
 
 Here's the current choice for a declaration block which declares one of each time of parameter: required condition, optional condition, required value, optional value, and constant.
 
-    define thingWithParams
+We are wrapping this in parentheses because there is no good invocation syntax which does not use some sort of bracketing.
+
+    define thingWithParams(
       has reqCondition : timestamp
       has optCondition : timestamp default @1960 to @1970
       has reqValue timestamp
       has optValue timestamp default @2001-09-11
       has constValue @1969-07-20 12:56
-      is ('project.schema.tableName'
+    ) is ('project.schema.tableName'
         ...
       )
 
@@ -158,7 +160,7 @@ You could move the parameter declarations inside the explore, since they match t
 
       reqTime is required : timestamp
       optTime is optional : timestamp or @2003
-      reqVal is required timestamp
+      reqVal is required string
       optVal is optional timestamp
 
       : [ thingTme : reqTime ]
@@ -169,6 +171,13 @@ You could move the parameter declarations inside the explore, since they match t
 The problem with this is that in a quick scan of a file, it isn't easy to see the parameters if their declarations are hidden inside the explore body.
 
 ## Invocation
+
+See below, there needs to be bracketing around an invocation with values
+
+    thingWithParams(
+        reqTime is @2003
+        reqVal is "word"
+    ) | thingTUrtle
 
 ### No new syntax ...
 
@@ -192,7 +201,11 @@ This is problematic though because this syntax is not distinguishble from a simp
        reqValueParam is value
     | someTurtle
 
+This doesn't work if I want to extend and provide parameters, for the same reason the "no new syntax" doesn't work, there is no way to tell the end of the list of "is" statements. We don't need a syntax marker leading into the parameter value list we need one leading OUT of the parameter list.
+
 ### Some bracketing of the parameter list ...
+
+Brackets of any kind solve a lot of problems
 
     explore thingWithParams
      {
@@ -201,11 +214,13 @@ This is problematic though because this syntax is not distinguishble from a simp
      }
      | someTurtle
 
-Any bracketing would change the declaration syntax, they need to look kind of like each other.
+Any bracketing would change the declaration syntax, they need to look kind of like each other so all the "has" stuff would be off the table.
 
 ### bracketing, but something like : []
 
     explore flights : { dep_filter is @2003 } : [ arr_time : @2004 ]
+
+Super punctuation salad, do not like
 
 ### prefix before the explore
 
@@ -216,6 +231,10 @@ Any bracketing would change the declaration syntax, they need to look kind of li
         : [ some: Filter ]
     | thingTurtle
 
+    given dep_filter is @2003 explore flights | by_carrier
+
+Not a favorite, the `given` keyword opbscores the `explore` keyword, is this a "given" statement or an "explore" statement. The left most keyword of an explore needs to be explore.
+
 ### the "is" statements come after "explore" and before the exploreable
 
     explore
@@ -224,10 +243,33 @@ Any bracketing would change the declaration syntax, they need to look kind of li
     thingWithParams
     | thingTurtle
 
+Works ok with a keyword, totally breaks in a keywordless expression ...
+
     a is ..
     b is ...
-    explore thingWithParams
+    thingWithParams
     | thingTurtle
+
+## Logical Conclusion ...
+
+The entities are the exploreSource, paramList and the exploreDef
+
+    EXPLORE exploreSource exploreDef
+    exploreSource exploreDef
+
+    exploreSource(paramList)
+
+Any keyword based solution would have to look like this because the beginning has to "EXPLORE exploreSource" and there needs to be an indicator to mark that the paramlist is not a field list, and an indicator to end the param list before the field list ...
+
+    EXPLORE exploreSource KW paramList KW exploreDef
+
+I guess we could require, for someone who wants params and fields ...
+
+    (exploreSource KW paramList) exploreDef
+
+But that is never going to feel as natural as "all parameter blocks have
+the same grouping syntax around them"
+
 
 ## Parentheses around parameter lists ...
 

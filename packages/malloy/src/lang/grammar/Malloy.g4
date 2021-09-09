@@ -25,7 +25,7 @@ malloyStatement
   ;
 
 defineStatement
-  : EXPORT? DEFINE? id has* IS defineValue
+  : EXPORT? DEFINE? id (OPAREN has+ CPAREN)? IS defineValue
   ;
 
 has
