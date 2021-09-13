@@ -1,23 +1,32 @@
-# What is a "turtle"
+# What is a "Turtle?"
 
-In Malloy, an object which has a name and transforms a shape
-is called a "turtle". The word comes from the philosophical phrase
-[Turtles All The Way Down](https://en.wikipedia.org/wiki/Turtles_all_the_way_down).
+In Malloy, an object which has a name and transforms a shape is called a "turtle". The technical name for what a turtle is doing is "aggregating subgquery." This is a mouthful, so we call it a turtle. The word comes from the philosophical phrase [Turtles All The Way Down](https://en.wikipedia.org/wiki/Turtles_all_the_way_down).
 
-An example of a turtle might look like this
+A turtle utilizes a named query, which might look like this when defined in the model, or within a query:
 
 ```malloy
-   group_by_size is (reduce
-    size
-    object_count
-   )
+  airports_by_facility is (reduce
+    fac_type
+    airport_count
+    )
 ```
 
-This "turtle" could then be used to build out other computations,
-for example
+When a named query is nested inside of another query, this forms an aggregating subquery, or "turtle."
 
 ```malloy
-  sizes_in_ca is group_by_size [ state : 'CA' ]
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
+  explore airports | reduce
+    state
+    airports_by_facility is (reduce
+      fac_type
+      airport_count
+    )
+```
+
+This "turtle" can additionally  be used to build out other computations, for example
+
+```malloy
+  airports_in_ca is airports_by_facility [ state : 'CA' ]
 ```
 
 This is an unusual word, and it may be replaced once we figure out a better word
