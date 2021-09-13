@@ -57,3 +57,5 @@ explore flights : [dep_time : @2003-01, origin.code : 'SJC']
   aircraft_count is aircraft.count()
   aircraft_model_count is aircraft.aircraft_models.count()
 ```
+
+For more examples and how to reason about aggregation across joins, review [Foreign Sums](/documentation/patterns/foreign_sums.html)

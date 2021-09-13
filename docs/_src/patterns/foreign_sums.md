@@ -1,5 +1,5 @@
 # Foreign Sums
-Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model. 
+Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model.
 `aircraft_model` has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree.
 
 ```malloy
@@ -9,20 +9,20 @@ Malloy allows you to compute sums, averages correctly based on your join tree.  
 -- 'aircraft' is the plane that made the flight
 -- 'aircraft_models' is data about the kind of aircraft
 
-define aircraft_models is ('malloy-data.faa.aircraft_models' 
+define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
   primary key aircraft_model_code
 );
 
-define aircraft is ('malloy-data.faa.aircraft' 
-  primary key tail_num 
-  joins aircraft_models on aircraft_model_code
+define aircraft is (explore 'malloy-data.faa.aircraft'
+  primary key tail_num
+  aircraft_models is join on aircraft_model_code
 );
 
-define flights is ('malloy-data.faa.flights'
-  joins aircraft on tail_num
+define flights is (explore 'malloy-data.faa.flights'
+  aircraft is join on tail_num
 );
 
-explore flights : [dep_time : @2003-01] 
+explore flights : [dep_time : @2003-01]
 | reduce
   carrier
   -- number of flights
