@@ -41,8 +41,12 @@
           "link": "/language/order_by.md"
         },
         {
-          "title": "Joins",
+          "title": "Shape Definition",
           "link": "/language/shape.md"
+        },
+        {
+          "title": "Joins",
+          "link": "/language/join.md"
         },
         {
           "title": "Filters",
