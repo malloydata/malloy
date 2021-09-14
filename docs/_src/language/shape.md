@@ -24,4 +24,4 @@ the _dataSource_ to be included or excluded from the shape.
 
 ## Joins
 
-The tables joined to a shape are an important aspect of its definition. Read more about this [here](join.md).
+The tables joined to a shape are an important aspect of its definition. Read more about joins [here](join.md).
