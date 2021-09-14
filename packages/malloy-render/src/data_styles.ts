@@ -49,6 +49,10 @@ export interface DataRenderOptions {
   sheet?: DataStyles;
 }
 
+export type StyleDefaults = {
+  size?: ChartSize;
+};
+
 export interface TableRenderOptions extends DataRenderOptions {
   table?: {
     pivot?: string | string[];

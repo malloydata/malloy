@@ -16,6 +16,7 @@ import { FieldDef, QueryDataRow, QueryValue, StructDef } from "malloy";
 import { HtmlChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
 import { getColorScale } from "./utils";
+import { StyleDefaults } from "../data_styles";
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -352,8 +353,8 @@ export function isDataContainer(a: unknown): a is DataContainer {
 export class HtmlVegaSpecRenderer extends HtmlChartRenderer {
   spec: lite.TopLevelSpec;
 
-  constructor(spec: lite.TopLevelSpec) {
-    super();
+  constructor(styleDefaults: StyleDefaults, spec: lite.TopLevelSpec) {
+    super(styleDefaults);
     this.spec = spec;
   }
 
