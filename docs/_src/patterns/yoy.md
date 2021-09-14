@@ -9,8 +9,7 @@ In this Case, the X-Axis is `month_of_year`, the Y-Axis is `flight_count` and th
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"year_over_year":{"renderer":"line_chart"}}}
 explore 'malloy-data.faa.flights'
-  fields
-    flight_count is count(*)
+    flight_count is count()
 | reduce
   year_over_year is (reduce
     month_of_year is month(dep_time)
@@ -30,7 +29,7 @@ define flights is ('malloy-data.faa.flights'
 );
 
 explore flights
-| reduce
+| reduce top 10
   carrier
   flights_in_2002 is flight_count : [dep_time : @2003]
   flights_in_2003 is flight_count : [dep_time : @2002]
