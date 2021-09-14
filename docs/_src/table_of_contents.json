@@ -78,8 +78,8 @@
       "title": "Common Patterns",
       "items": [
         {
-          "title": "Trend Analysis",
-          "link": "/patterns/trends.md"
+          "title": "Year Over Year Analysis",
+          "link": "/patterns/yoy.md"
         },
         {
           "title": "Foreign Sums and Averages",
