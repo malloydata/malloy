@@ -29,7 +29,7 @@ import {
 import * as ast from "./ast";
 import { FieldSpace } from "./field-space";
 import { NeedSchemaData } from "./parse-malloy";
-import { isValueParameter } from "../model/malloy_types";
+import { isConditionParameter, isValueParameter } from "../model/malloy_types";
 import { cloneDeep } from "lodash";
 
 function findField(
@@ -1530,7 +1530,13 @@ describe("parameters", () => {
       aparam: {
         name: "aparam",
         type: "number",
-        condition: ["(", { type: "$" }, ">10)and(", { type: "$" }, "<100)"],
+        condition: [
+          "(",
+          { type: "applyVal" },
+          ">10)and(",
+          { type: "applyVal" },
+          "<100)",
+        ],
       },
     };
     expect(ap).toEqual(want);
@@ -1549,9 +1555,9 @@ describe("parameters", () => {
         type: "timestamp",
         condition: [
           "(",
-          { type: "$" },
+          { type: "applyVal" },
           ">='1960-01-01')and(",
-          { type: "$" },
+          { type: "applyVal" },
           "<'1970-01-01')",
         ],
       },
@@ -1572,9 +1578,9 @@ describe("parameters", () => {
         type: "timestamp",
         condition: [
           "(",
-          { type: "$" },
+          { type: "applyVal" },
           ">='1960-01-01')and(",
-          { type: "$" },
+          { type: "applyVal" },
           "<'1961-01-01')",
         ],
       },
@@ -1717,19 +1723,42 @@ describe("parameters", () => {
       const aparam = ap.parameters?.aparam;
       expect(aparam).toBeDefined();
       if (aparam) {
-        expect(isValueParameter(aparam)).toBeFalsy();
-        if (!isValueParameter(aparam)) {
+        expect(isConditionParameter(aparam)).toBeTruthy();
+        if (isConditionParameter(aparam)) {
           aparam.condition = [
             "(",
-            { type: "$" },
+            { type: "applyVal" },
             ">='2003-01-01')and(",
-            { type: "$" },
+            { type: "applyVal" },
             "<'2004-01-01')",
           ];
         }
         const want = mkQuery(ap);
         want.pipeline = [{ type: "reduce", fields: ["astring"] }];
         expect(q).toEqual(want);
+      }
+    }
+  });
+
+  test("use condition parameter in filter", () => {
+    const aModel = `
+      define ap(has aparam : timestamp) is (a : [ atimestamp : aparam]);
+      explore ap(aparam is @1960) | reduce astring
+    `;
+    const t = wellTranslated(aModel);
+    const q = t.queryList[0];
+    const qs = q.structRef;
+    expect(model.refIsStructDef(qs)).toBeTruthy();
+    if (model.refIsStructDef(qs)) {
+      expect(qs.filterList).toBeDefined();
+      if (qs.filterList) {
+        expect(qs.filterList[0].expression).toEqual([
+          {
+            type: "apply",
+            value: [{ type: "field", path: "atimestamp" }],
+            to: [{ type: "parameter", path: "aparam" }],
+          },
+        ]);
       }
     }
   });

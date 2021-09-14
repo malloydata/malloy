@@ -107,6 +107,7 @@ export class MalloyToAST
       pcx
     );
   }
+
   idReference(pcx: parse.IdReferenceContext): string {
     const fullRef = pcx
       .id()

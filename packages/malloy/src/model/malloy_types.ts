@@ -30,6 +30,9 @@ export type Parameter = ParamCondition | ParamValue;
 export function isValueParameter(p: Parameter): p is ParamValue {
   return (p as ParamValue).value !== undefined;
 }
+export function isConditionParameter(p: Parameter): p is ParamCondition {
+  return (p as ParamCondition).condition !== undefined;
+}
 export function paramHasValue(p: Parameter): boolean {
   return isValueParameter(p) || p.condition !== null;
 }
@@ -119,16 +122,23 @@ export function isParameterFragment(f: Fragment): f is ParameterFragment {
   return (f as ParameterFragment)?.type === "parameter";
 }
 
-export interface DollarFragment {
-  type: "$";
+export interface ApplyValueFragment {
+  type: "applyVal";
 }
-export function isDollarFragment(f: Fragment): f is DollarFragment {
-  return (f as DollarFragment)?.type === "$";
+export function isApplyValue(f: Fragment): f is ApplyValueFragment {
+  return (f as ApplyValueFragment)?.type === "applyVal";
+}
+
+export interface ApplyFragment {
+  type: "apply";
+  value: Expr;
+  to: Expr;
 }
 
 export type Fragment =
   | string
-  | DollarFragment
+  | ApplyFragment
+  | ApplyValueFragment
   | FieldFragment
   | ParameterFragment
   | FilterFragment

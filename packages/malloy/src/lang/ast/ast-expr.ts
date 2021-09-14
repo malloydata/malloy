@@ -22,6 +22,7 @@ import {
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
+  isConditionParameter,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
@@ -41,6 +42,7 @@ import {
   ExprCompare,
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
+import { SpaceParam } from "../space-field";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -122,7 +124,7 @@ class DollarReference extends ExpressionDef {
   getExpression(_fs: FieldSpace): ExprValue {
     return {
       dataType: this.refType,
-      value: [{ type: "$" }],
+      value: [{ type: "applyVal" }],
       aggregate: false,
     };
   }
@@ -378,6 +380,28 @@ export class ExprIdReference extends ExpressionDef {
     }
     this.log(`Reference to '${this.refString}' with no definition`);
     return errorFor(`undefined ${this.refString}`);
+  }
+
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+    const entry = fs.findEntry(this.refString);
+    if (entry instanceof SpaceParam) {
+      const cParam = entry.parameter();
+      if (isConditionParameter(cParam)) {
+        const lval = expr.getExpression(fs);
+        return {
+          dataType: "boolean",
+          aggregate: lval.aggregate,
+          value: [
+            {
+              type: "apply",
+              value: lval.value,
+              to: [{ type: "parameter", path: this.refString }],
+            },
+          ],
+        };
+      }
+    }
+    return super.apply(fs, op, expr);
   }
 }
 
