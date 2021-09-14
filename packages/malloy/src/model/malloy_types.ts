@@ -134,6 +134,9 @@ export interface ApplyFragment {
   value: Expr;
   to: Expr;
 }
+export function isApplyFragment(f: Fragment): f is ApplyFragment {
+  return (f as ApplyFragment)?.type === "apply";
+}
 
 export type Fragment =
   | string
