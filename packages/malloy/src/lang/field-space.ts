@@ -396,8 +396,6 @@ export abstract class PipeFieldSpace extends TranslationFieldSpace {
         } else {
           throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
-      } else {
-        throw new Error("Params lost in outputting queryFieldDefs");
       }
     }
     return fields;

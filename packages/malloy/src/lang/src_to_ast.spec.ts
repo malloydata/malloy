@@ -806,38 +806,47 @@ describe("parameters", () => {
   });
 
   test("optional value", () => {
-    const paramList = [
-      new ast.HasParameter({
-        name: "aparam",
-        isCondition: false,
-        type: "timestamp",
-        default: ast.ParameterValue.fromExpr(
-          ast.GranularLiteral.parse("@1960-06-30")
-        ),
-      }),
-    ];
-    const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-    expect("define ap(has aparam timestamp or @1960-06-30) is (a)").toMakeAst(
-      "defineStatement",
-      def
-    );
+    const when = ast.GranularLiteral.parse("@1960-06-30");
+    expect(when).toBeDefined();
+    if (when) {
+      const paramList = [
+        new ast.HasParameter({
+          name: "aparam",
+          isCondition: false,
+          type: "timestamp",
+          default: new ast.ConstantSubExpression(when),
+        }),
+      ];
+      const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
+      expect("define ap(has aparam timestamp or @1960-06-30) is (a)").toMakeAst(
+        "defineStatement",
+        def
+      );
+    }
   });
 
   test("constant value", () => {
-    const paramList = [
-      new ast.HasParameter({
-        name: "aparam",
-        isCondition: false,
-        type: "timestamp",
-        default: ast.ParameterValue.fromExpr(
-          ast.GranularLiteral.parse("@1960-06-30")
-        ),
-      }),
-    ];
-    const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-    expect("define ap(has aparam @1960-06-30) is (a)").toMakeAst(
-      "defineStatement",
-      def
+    const when = ast.GranularLiteral.parse("@1960-06-30");
+    expect(when).toBeDefined();
+    if (when) {
+      const cExpr = new ast.ConstantSubExpression(when);
+      const paramList = [new ast.ConstantParameter("aparam", cExpr)];
+      const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
+      expect("define ap(has aparam @1960-06-30) is (a)").toMakeAst(
+        "defineStatement",
+        def
+      );
+    }
+  });
+
+  test("provide value in reference", () => {
+    const ap = new ast.NamedSource("ap", {
+      aparam: new ast.ConstantSubExpression(new ast.ExprString("'a'")),
+      param2: new ast.ConstantSubExpression(new ast.ExprNumber("2")),
+    });
+    expect(`explore ap(aparam is 'a' param2 is 2)`).toMakeAst(
+      "namelessQuery",
+      new ast.DocumentQuery(new ast.Explore(ap), 0)
     );
   });
 });

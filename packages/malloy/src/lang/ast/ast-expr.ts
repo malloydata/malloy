@@ -18,14 +18,17 @@
 
 import {
   AggregateFragment,
+  AtomicFieldType,
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
-import { FieldName, Filter, MalloyElement } from "./ast-main";
 import {
+  FieldName,
+  Filter,
+  MalloyElement,
   compose,
   errorFor,
   ExprValue,
@@ -35,7 +38,8 @@ import {
   isGranularResult,
   compressExpr,
   TimeType,
-} from "./ast-types";
+  ExprCompare,
+} from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 
 /**
@@ -68,11 +72,6 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   requestExpression(fs: FieldSpace): ExprValue | undefined {
     return this.getExpression(fs);
-  }
-
-  constantExpression(): ExprValue | undefined {
-    this.log(`Expected constant expression for element '${this.elementType}'`);
-    return undefined;
   }
 
   defaultFieldName(): string | undefined {
@@ -115,34 +114,70 @@ export abstract class ExpressionDef extends MalloyElement {
   }
 }
 
-export class ParameterValue extends ExpressionDef {
-  elementType = "paramVal";
+class DollarReference extends ExpressionDef {
+  elementType = "$";
+  constructor(readonly refType: FieldValueType) {
+    super();
+  }
+  getExpression(_fs: FieldSpace): ExprValue {
+    return {
+      dataType: this.refType,
+      value: [{ type: "$" }],
+      aggregate: false,
+    };
+  }
+}
 
-  static validParamExpr(_expr: ExpressionDef): boolean {
-    // if (expr.constantExpression()) {
-    //   return true;
-    // }
-    // // TODO walk this expression to make sure it only has constants
-    // // and parameter references in it
-    return true;
+class ConstantFieldSpace extends FieldSpace {
+  constructor() {
+    super({
+      type: "struct",
+      name: "empty structdef",
+      structSource: { type: "table" },
+      structRelationship: { type: "basetable" },
+      fields: [],
+    });
+  }
+}
+
+export class ConstantSubExpression extends ExpressionDef {
+  elementType = "constantExpression";
+  private cfs?: ConstantFieldSpace;
+  constructor(readonly expr: ExpressionDef) {
+    super({ expr });
   }
 
-  static fromExpr(expr: ExpressionDef | undefined): ParameterValue | undefined {
-    if (expr && ParameterValue.validParamExpr(expr)) {
-      return new ParameterValue(expr);
+  getExpression(_fs: FieldSpace): ExprValue {
+    return this.constantValue();
+  }
+
+  private get constantFs(): ConstantFieldSpace {
+    if (!this.cfs) {
+      this.cfs = new ConstantFieldSpace();
     }
+    return this.cfs;
   }
 
-  protected constructor(readonly value: ExpressionDef) {
-    super({ value });
+  constantValue(): ExprValue {
+    return this.expr.getExpression(this.constantFs);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
-    return this.value.getExpression(fs);
+  constantCondition(type: AtomicFieldType): ExprValue {
+    const compareAndContrast = new ExprCompare(
+      new DollarReference(type),
+      "=",
+      this.expr
+    );
+    const application = compareAndContrast.getExpression(this.constantFs);
+    return { ...application, value: compressExpr(application.value) };
   }
 
-  constantExpression(): ExprValue | undefined {
-    return this.value.constantExpression();
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+    return this.expr.apply(fs, op, expr);
+  }
+
+  requestExpression(fs: FieldSpace): ExprValue | undefined {
+    return this.expr.requestExpression(fs);
   }
 }
 
@@ -200,10 +235,6 @@ export class ExprString extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    return this.constantExpression();
-  }
-
-  constantExpression(): ExprValue {
     return { ...FT.stringT, value: [this.value] };
   }
 }
@@ -378,10 +409,6 @@ export class ExprParens extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
     return { ...subExpr, value: ["(", ...subExpr.value, ")"] };
-  }
-
-  constantExpression(): ExprValue | undefined {
-    return this.expr.constantExpression();
   }
 }
 

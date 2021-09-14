@@ -68,9 +68,17 @@ explore
   ;
 
 exploreSource
-  : id                        # namedSource
-  | tableName                 # tableSource
-  | OPAREN explore CPAREN     # anonymousSource
+  : id (OPAREN isParam+ CPAREN)*   # namedSource
+  | tableName                      # tableSource
+  | OPAREN explore CPAREN          # anonymousSource
+  ;
+
+isParam
+  : id IS isExpr
+  ;
+
+isExpr
+  : partialAllowedFieldExpr
   ;
 
 primaryKey

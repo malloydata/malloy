@@ -25,8 +25,14 @@ import { TurtleField } from "../space-field";
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
-import { ExpressionFieldDef, By, ExpressionDef } from "./ast-expr";
-import { compressExpr, errorFor } from "./ast-types";
+import { toTimestampV } from "./time-utils";
+import {
+  By,
+  compressExpr,
+  ConstantSubExpression,
+  ExpressionFieldDef,
+  ExpressionDef,
+} from "./index";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -315,7 +321,6 @@ export class Explore extends Mallobj implements ExploreInterface {
   headNameSpace?: TranslationFieldSpace;
 
   private referenceName?: NamedSource;
-  private additionalParameters: HasParameter[] = [];
 
   constructor(readonly source: Mallobj, init: ExploreInterface = {}) {
     super({ source });
@@ -462,21 +467,91 @@ export class TableSource extends Mallobj {
   }
 }
 
+export class IsValueBlock extends MalloyElement {
+  elementType = "isValueBlock";
+
+  constructor(readonly isMap: Record<string, ConstantSubExpression>) {
+    super();
+    this.has(isMap);
+  }
+}
+
 export class NamedSource extends Mallobj {
   elementType = "namedSource";
+  protected isBlock?: IsValueBlock;
 
-  constructor(readonly name: string) {
+  constructor(
+    readonly name: string,
+    paramValues: Record<string, ConstantSubExpression> = {}
+  ) {
     super();
+    if (paramValues && Object.keys(paramValues).length > 0) {
+      this.isBlock = new IsValueBlock(paramValues);
+      this.has({ parameterValues: this.isBlock });
+    }
   }
 
   structDef(): model.StructDef {
-    // Defined in this document ast
+    /*
+      Can't really generate the callback list until after all the
+      things before me are translated, and that kinda screws up
+      the translation process, so that might be a better place
+      to start the next step, because how that gets done might
+      make any code I write which ignores the translation problem
+      kind of meaningless.
+
+      Maybe the output of a tranlsation is something which describes
+      all the missing data, and then there is a "link" step where you
+      can do other translations and link them into a partial translation
+      which might result in a full translation.
+    */
+
     const fromModel = this.modelEntry(this.name);
-    if (fromModel) {
-      return fromModel.struct;
+    if (!fromModel) {
+      this.log(`Undefined data source '${this.name}'`);
+      return ErrorFactory.structDef;
     }
-    this.log(`'${this.name}' undefined data source`);
-    return ErrorFactory.structDef;
+    const ret = { ...fromModel.struct };
+    const declared = { ...ret.parameters } || {};
+
+    const makeWith = this.isBlock?.isMap || {};
+    for (const [pName, pExpr] of Object.entries(makeWith)) {
+      const decl = declared[pName];
+      // const pVal = pExpr.constantValue();
+      if (!decl) {
+        this.log(`Value given for undeclared parameter '${pName}`);
+      } else {
+        if (model.isValueParameter(decl)) {
+          if (decl.constant) {
+            pExpr.log(`Cannot override constant parameter ${pName}`);
+          } else {
+            const pVal = pExpr.constantValue();
+            let value: model.Expr | null = pVal.value;
+            if (pVal.dataType !== decl.type) {
+              if (decl.type === "timestamp" && pVal.dataType === "date") {
+                value = toTimestampV(pVal).value;
+              } else {
+                pExpr.log(
+                  `Type mismatch for parameter '${pName}', expected '${decl.type}'`
+                );
+                value = null;
+              }
+            }
+            decl.value = value;
+          }
+        } else {
+          // TODO type checking here -- except I am still not sure what
+          // datatype half conditions have ..
+          decl.condition = pExpr.constantCondition(decl.type).value;
+        }
+      }
+    }
+    for (const checkDef in ret.parameters) {
+      if (!model.paramHasValue(declared[checkDef])) {
+        this.log(`Value not provided for required parameter ${checkDef}`);
+      }
+    }
+    return ret;
   }
 }
 
@@ -1045,7 +1120,7 @@ interface HasInit {
   name: string;
   isCondition: boolean;
   type?: string;
-  default?: ExpressionDef;
+  default?: ConstantSubExpression;
 }
 
 export class HasParameter extends MalloyElement {
@@ -1053,7 +1128,7 @@ export class HasParameter extends MalloyElement {
   readonly name: string;
   readonly isCondition: boolean;
   readonly type?: model.AtomicFieldType;
-  readonly default?: ExpressionDef;
+  readonly default?: ConstantSubExpression;
 
   constructor(init: HasInit) {
     super();
@@ -1069,26 +1144,48 @@ export class HasParameter extends MalloyElement {
   }
 
   parameter(): model.Parameter {
+    const name = this.name;
     const type = this.type || "string";
     if (this.isCondition) {
-      const defaultValue = this.default?.constantExpression()?.value;
+      const cCond = this.default?.constantCondition(type).value || null;
       return {
         type,
-        name: this.name,
-        condition: defaultValue || null,
-      };
-    } else if (this.default) {
-      const cVal =
-        this.default.constantExpression() ||
-        errorFor("constant expression expected");
-      // TODO type checking?
-      return {
-        value: cVal.value,
-        type,
-        name: this.name,
-        constant: false,
+        name,
+        condition: cCond,
       };
     }
-    throw new Error("Parameter translation NYI");
+    const cVal = this.default?.constantValue().value || null;
+    return {
+      value: cVal,
+      type,
+      name: this.name,
+      constant: false,
+    };
+  }
+}
+
+export class ConstantParameter extends HasParameter {
+  constructor(name: string, readonly value: ConstantSubExpression) {
+    super({ name, isCondition: false });
+    this.has({ value });
+  }
+
+  parameter(): model.Parameter {
+    const cVal = this.value.constantValue();
+    if (!model.isAtomicFieldType(cVal.dataType)) {
+      this.log(`Unexpected expression type '${cVal.dataType}'`);
+      return {
+        value: ["XXX-type-mismatch-error-XXX"],
+        type: "string",
+        name: this.name,
+        constant: true,
+      };
+    }
+    return {
+      value: cVal.value,
+      type: cVal.dataType,
+      name: this.name,
+      constant: true,
+    };
   }
 }

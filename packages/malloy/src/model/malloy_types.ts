@@ -13,20 +13,26 @@
 
 // clang-format off
 
-type ConstantExpr = Expr;
-type Condition = Expr;
-interface ParamCondition {
-  condition: Condition | null;
-}
-interface ParamValue {
-  value: ConstantExpr | null;
-  constant: boolean;
-}
 interface ParamBase {
   name: string;
   type: AtomicFieldType;
 }
-export type Parameter = ParamBase & (ParamCondition | ParamValue);
+type ConstantExpr = Expr;
+type Condition = Expr;
+interface ParamCondition extends ParamBase {
+  condition: Condition | null;
+}
+interface ParamValue extends ParamBase {
+  value: ConstantExpr | null;
+  constant: boolean;
+}
+export type Parameter = ParamCondition | ParamValue;
+export function isValueParameter(p: Parameter): p is ParamValue {
+  return (p as ParamValue).value !== undefined;
+}
+export function paramHasValue(p: Parameter): boolean {
+  return isValueParameter(p) || p.condition !== null;
+}
 
 /** put line number into the parse tree. */
 export interface LineNumber {

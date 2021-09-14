@@ -89,19 +89,6 @@ export class MalloyToAST
     return new ast.Boolean(pcx.TRUE() ? "true" : "false");
   }
 
-  hasExpression(cx: parse.HasExprContext): ast.ParameterValue {
-    const element = this.visit(cx);
-    if (element instanceof ast.ExpressionDef) {
-      const val = ast.ParameterValue.fromExpr(element);
-      if (val) {
-        return this.astAt(val, cx);
-      }
-    }
-    throw new Error(
-      `parameter value node unknown type '${element.elementType}`
-    );
-  }
-
   fieldExpression(cx: parse.FieldExprContext): ast.ExpressionDef {
     const element = this.visit(cx);
     if (element instanceof ast.ExpressionDef) {
@@ -624,7 +611,19 @@ export class MalloyToAST
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
     const exploreName = pcx.id();
     const name = this.idText(exploreName);
-    return this.astAt(new ast.NamedSource(name), pcx.id());
+    const paramListCx = pcx.isParam();
+    if (paramListCx) {
+      const paramInit: Record<string, ast.ConstantSubExpression> = {};
+      for (const cx of paramListCx) {
+        const pName = this.idText(cx.id());
+        const pVal = this.fieldExpression(
+          cx.isExpr().partialAllowedFieldExpr()
+        );
+        paramInit[pName] = new ast.ConstantSubExpression(pVal);
+      }
+      return this.astAt(new ast.NamedSource(name, paramInit), pcx);
+    }
+    return this.astAt(new ast.NamedSource(name), pcx);
   }
 
   visitAnonymousSource(pcx: parse.AnonymousSourceContext): ast.AnonymousSource {
@@ -917,16 +916,12 @@ export class MalloyToAST
   ): ast.HasParameter {
     const name = this.idText(pcx.id());
     const type = this.malloyType(pcx.malloyType());
-    const e = this.visit(pcx.hasCond());
-    if (!(e instanceof ast.ExpressionDef)) {
-      throw new Error("compiler error, param value not expression");
-    }
-    const pv = ast.ParameterConditionValue.condFromExpr(e, type);
+    const e = this.constantExpression(pcx.hasCond());
     const has = new ast.HasParameter({
       name,
       type,
       isCondition: true,
-      default: pv,
+      default: e,
     });
     return this.astAt(has, pcx);
   }
@@ -942,17 +937,29 @@ export class MalloyToAST
     return this.astAt(has, pcx);
   }
 
+  constantExpression(f: parse.FieldExprContext): ast.ConstantSubExpression {
+    const e = this.visit(f);
+    if (e instanceof ast.ExpressionDef) {
+      return this.astAt(new ast.ConstantSubExpression(e), f);
+    }
+    throw new Error(`CONSTANT EXPRESSION. '${e.elementType}' not expected`);
+  }
+
   visitOptionalValueParam(
     pcx: parse.OptionalValueParamContext
   ): ast.HasParameter {
-    const e = this.fieldExpression(pcx.hasExpr().fieldExpr());
-    const pv = ast.ParameterValue.fromExpr(e);
     const has = new ast.HasParameter({
       name: this.idText(pcx.id()),
       type: pcx.malloyType()?.text,
-      default: pv,
+      default: this.constantExpression(pcx.hasExpr().fieldExpr()),
       isCondition: false,
     });
+    return this.astAt(has, pcx);
+  }
+
+  visitConstantParam(pcx: parse.ConstantParamContext): ast.HasParameter {
+    const e = this.constantExpression(pcx.hasExpr().fieldExpr());
+    const has = new ast.ConstantParameter(this.idText(pcx.id()), e);
     return this.astAt(has, pcx);
   }
 }
