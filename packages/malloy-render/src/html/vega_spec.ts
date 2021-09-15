@@ -215,7 +215,6 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_NM_medium: { ...bar_NM, ...sizeMedium }, // just use the default runs long
   bar_NM_large: { ...bar_NM },
 
-
   bar_NMS,
   bar_NMS_small: { ...bar_NMS, ...sizeSmall },
   bar_NMS_medium: { ...bar_NMS, ...sizeMedium },
