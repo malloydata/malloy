@@ -1,10 +1,6 @@
 # Segment Maps
 
-malloy can create segment maps.  By currently it uses US maps and state names.
-
-Segement maps take as input a series take a table with 4 columns, lat, long, lat, long of the segment.
-
-The model and data styles for the subsequent examples is:
+The plugin currently supports US maps. Segement maps take as input 4 columns: start latitude , start longitude, end latitude, and  end longitude of the segment.  The model and data styles for the subsequent examples are:
 
 ```malloy
 define airports is (explore 'malloy-data.faa.airports'
@@ -14,9 +10,13 @@ define airports is (explore 'malloy-data.faa.airports'
 
 define flights is (explore 'malloy-data.faa.flights'
   primary key id2
+
   origin_code renames origin
   destination_code renames destination
-  flight_count is count(*)
+  origin is join airports on origin_code,
+  destination is join airports on destination_code
+
+  flight_count is count()
 
   routes_map is (reduce
     origin.latitude
@@ -26,9 +26,7 @@ define flights is (explore 'malloy-data.faa.flights'
     flight_count
   )
 
-  joins
-    origin is airports on origin_code,
-    destination is airports on destination_code
+
 );
 
 ```
@@ -39,42 +37,43 @@ and data styles are
   "routes_map": {
     "renderer": "segment_map"
   }
-} 
+}
 ```
-## Run as a simple query.
-Depararting from Chicago
+## Run as a simple query
+Departing from Chicago
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "medium" }
-explore flights : [dep_time : @2003-02, origin.code : 'ORD'] 
+explore flights : [dep_time : @2003-02, origin.code : 'ORD']
 | routes_map
 ```
 
-## Run as a turtle.
+## Run as a turtle
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "medium", "source": "faa/flights.malloy"}
-explore flights : [dep_time : @2003-02, origin.code : 'ORD'] 
+explore flights : [dep_time : @2003-02, origin.code : 'ORD']
 | reduce
   routes_map
 ```
 
-## Run as a trellis.
+## Run as a trellis
+By calling the configured map as a turtle, a trellis is formed.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/flights.malloy"}
-explore flights : [dep_time : @2003-02, origin.code : 'ORD'] 
+explore flights : [dep_time : @2003-02, origin.code : 'ORD']
 | reduce
   carrier
   flight_count
   routes_map
 ```
 
-## Run as a trellis repeated filtered
+## Run as a trellis, repeated with different filters
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/flights.malloy"}
-explore flights : [dep_time : @2003-02] 
+explore flights : [dep_time : @2003-02]
 | reduce : [origin.code : 'ORD'|'SFO'|'JFK']
   carrier
   flight_count
