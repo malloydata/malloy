@@ -49,6 +49,10 @@ import {
   Filtered,
   isApplyFragment,
   isApplyValue,
+  isParameterFragment,
+  ParameterFragment,
+  Parameter,
+  isValueParameter,
 } from "./malloy_types";
 
 import { generateSQLStringLiteral, indent, AndChain } from "./utils";
@@ -256,6 +260,34 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateParameterFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: ParameterFragment,
+    state: GenerateState
+  ): string {
+    // find the structDef and return the path to the field...
+    const param = context.parameters()[expr.path];
+    if (isValueParameter(param)) {
+      if (param.value) {
+        return this.generateExpressionFromExpr(
+          resultSet,
+          context,
+          param.value,
+          state
+        );
+      }
+    } else if (param.condition) {
+      return this.generateExpressionFromExpr(
+        resultSet,
+        context,
+        param.condition,
+        state
+      );
+    }
+    throw new Error(`Can't generate SQL, no value for ${expr.path}`);
+  }
+
   generateFilterFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -413,6 +445,8 @@ class QueryField extends QueryNode {
         s += expr;
       } else if (isFieldFragment(expr)) {
         s += this.generateFieldFragment(resultSet, context, expr, state);
+      } else if (isParameterFragment(expr)) {
+        s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
@@ -2436,6 +2470,10 @@ class QueryStruct extends QueryNode {
     // type script is missing a beat here.
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
+  }
+
+  parameters(): Record<string, Parameter> {
+    return this.fieldDef.parameters || {};
   }
 
   addFieldsFromFieldList(fields: FieldDef[]) {
