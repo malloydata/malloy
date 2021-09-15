@@ -16,6 +16,7 @@ import { FieldDef, QueryDataRow, QueryValue, StructDef } from "malloy";
 import { HtmlChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
 import { getColorScale } from "./utils";
+import { StyleDefaults } from "../data_styles";
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -47,138 +48,183 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
   },
 };
 
+const sizeSmall = {
+  height: 80,
+  width: 150,
+};
+
+const sizeMedium = {
+  height: 150,
+  width: 200,
+};
+
+const sizeLarge = {
+  // height: 350,
+  // width: 500,
+};
+
+// bar with text in the bars.
+const bar_SM: lite.TopLevelSpec = {
+  ...DEFAULT_SPEC,
+  encoding: {
+    y: { field: "#{1}", type: "nominal", axis: null },
+  },
+  layer: [
+    {
+      mark: { type: "bar", color: "#aec7e8" },
+      encoding: {
+        x: {
+          field: "#{2}",
+          type: "quantitative",
+        },
+        color: { value: "#4285F4" },
+      },
+    },
+    {
+      mark: { type: "text", align: "left", x: 5 },
+      encoding: {
+        text: { field: "#{1}" },
+      },
+    },
+  ],
+};
+
+const bar_SM_large: lite.TopLevelSpec = {
+  ...DEFAULT_SPEC,
+  mark: "bar",
+  data: [],
+  encoding: {
+    x: { field: "#{1}", type: "nominal" },
+    y: { field: "#{2}", type: "quantitative" },
+    color: { value: "#4285F4" },
+  },
+};
+
+const bar_SMM_large = {
+  ...bar_SM_large,
+  encoding: {
+    ...bar_SM_large.encoding,
+    color: {
+      field: "#{3}",
+      type: "quantitative",
+      scale: getColorScale("quantitative", true, true),
+    },
+  },
+} as lite.TopLevelSpec;
+
+const bar_SMS_large = {
+  ...bar_SM_large,
+  encoding: {
+    ...bar_SM_large.encoding,
+    color: {
+      field: "#{3}",
+      scale: getColorScale("nominal", true, true),
+    },
+  },
+} as lite.TopLevelSpec;
+
+const bar_SMS = {
+  ...bar_SM,
+  layer: [
+    {
+      ...bar_SM.layer[0],
+      encoding: {
+        ...bar_SM.layer[0].encoding,
+        color: {
+          field: "#{3}",
+          scale: getColorScale("nominal", true, true),
+        },
+      },
+    },
+    bar_SM.layer[1],
+  ],
+} as lite.TopLevelSpec;
+
+const bar_SMM = {
+  ...bar_SM,
+  layer: [
+    {
+      ...bar_SM.layer[0],
+      encoding: {
+        ...bar_SM.layer[0].encoding,
+        color: {
+          field: "#{3}",
+          type: "quantitative",
+          scale: getColorScale("quantitative", true, true),
+        },
+      },
+    },
+    bar_SM.layer[1],
+  ],
+} as lite.TopLevelSpec;
+
+// simple column chart
+const bar_NM: lite.TopLevelSpec = {
+  ...DEFAULT_SPEC,
+  mark: "bar",
+  data: [],
+  encoding: {
+    x: { field: "#{1}", type: "nominal" },
+    y: { field: "#{2}", type: "quantitative" },
+    color: { value: "#4285F4" },
+  },
+};
+
+const bar_NMS: lite.TopLevelSpec = {
+  ...bar_NM,
+  encoding: {
+    ...bar_NM.encoding,
+    color: {
+      field: "#{3}",
+      type: "nominal",
+      scale: getColorScale("nominal", true),
+    },
+  },
+};
+
+const bar_NMM: lite.TopLevelSpec = {
+  ...bar_NM,
+  encoding: {
+    ...bar_NM.encoding,
+    color: {
+      field: "#{3}",
+      type: "quantitative",
+      scale: getColorScale("quantitative", true),
+    },
+  },
+};
+
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
-  bar_SM: {
-    ...DEFAULT_SPEC,
-    encoding: {
-      y: { field: "#{1}", type: "nominal", axis: null },
-    },
-    layer: [
-      {
-        mark: { type: "bar", color: "#aec7e8" },
-        encoding: {
-          x: {
-            field: "#{2}",
-            type: "quantitative",
-          },
-          color: { value: "#4285F4" },
-        },
-      },
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          // detail: { aggregate: "count" },
-        },
-      },
-    ],
-  },
-  bar_NM: {
-    ...DEFAULT_SPEC,
-    mark: "bar",
-    data: [],
-    height: 150,
-    width: 200,
-    encoding: {
-      x: { field: "#{1}", type: "nominal" },
-      y: { field: "#{2}", type: "quantitative" },
-      color: { value: "#4285F4" },
-    },
-  },
-  bar_NMS: {
-    ...DEFAULT_SPEC,
-    mark: "bar",
-    data: [],
-    height: 150,
-    width: 200,
-    encoding: {
-      x: { field: "#{1}", type: "nominal" },
-      y: { field: "#{2}", type: "quantitative" },
-      color: {
-        field: "#{3}",
-        type: "nominal",
-        scale: getColorScale("nominal", true),
-      },
-    },
-  },
-  bar_NMM: {
-    ...DEFAULT_SPEC,
-    mark: "bar",
-    data: [],
-    height: 150,
-    width: 200,
-    encoding: {
-      x: { field: "#{1}", type: "nominal" },
-      y: { field: "#{2}", type: "quantitative" },
-      color: {
-        field: "#{3}",
-        type: "quantitative",
-        scale: getColorScale("quantitative", true),
-      },
-    },
-  },
-  bar_SMM: {
-    ...DEFAULT_SPEC,
-    encoding: {
-      y: { field: "#{1}", type: "nominal", axis: null },
-    },
-    layer: [
-      {
-        mark: {
-          type: "bar",
-        },
-        encoding: {
-          x: {
-            field: "#{2}",
-            type: "quantitative",
-          },
-          color: {
-            field: "#{3}",
-            type: "quantitative",
-            scale: getColorScale("quantitative", true, true),
-          },
-        },
-      },
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          detail: { aggregate: "count" },
-        },
-      },
-    ],
-  },
-  bar_SMS: {
-    ...DEFAULT_SPEC,
-    encoding: {
-      y: { field: "#{1}", type: "nominal", axis: null },
-    },
-    layer: [
-      {
-        mark: {
-          type: "bar",
-        },
-        encoding: {
-          x: {
-            field: "#{2}",
-            type: "quantitative",
-          },
-          color: {
-            field: "#{3}",
-            scale: getColorScale("nominal", true, true),
-            // scale: { range: backgroundColors },
-          },
-        },
-      },
-      {
-        mark: { type: "text", align: "left", x: 5 },
-        encoding: {
-          text: { field: "#{1}" },
-          detail: { aggregate: "count" },
-        },
-      },
-    ],
-  },
+  bar_SM,
+  bar_SM_small: { ...bar_SM, ...sizeSmall },
+  // bar_SM_medium: { ...bar_SM, ...sizeMedium }, // just use the default runs long
+  bar_SM_large,
+
+  bar_SMS,
+  bar_SMS_small: { ...bar_SMS, ...sizeSmall },
+  bar_SMS_medium: { ...bar_SMS, ...sizeMedium },
+  bar_SMS_large,
+
+  bar_SMM,
+  bar_SMM_small: { ...bar_SMM, ...sizeSmall },
+  bar_SMM_medium: { ...bar_SMM, ...sizeMedium },
+  bar_SMM_large,
+
+  bar_NM,
+  bar_NM_small: { ...bar_NM, ...sizeSmall },
+  bar_NM_medium: { ...bar_NM, ...sizeMedium }, // just use the default runs long
+  bar_NM_large: { ...bar_NM },
+
+  bar_NMS,
+  bar_NMS_small: { ...bar_NMS, ...sizeSmall },
+  bar_NMS_medium: { ...bar_NMS, ...sizeMedium },
+  bar_NMS_large: { ...bar_NMS, ...sizeLarge },
+
+  bar_NMM,
+  bar_NMM_small: { ...bar_NMM, ...sizeSmall },
+  bar_NMM_medium: { ...bar_NMM, ...sizeMedium },
+  bar_NMM_large: { ...bar_NMM, ...sizeLarge },
+
   bar_SSMMM: {
     ...DEFAULT_SPEC,
     repeat: ["#{3}", "#{4}", "#{5}"],
@@ -347,8 +393,8 @@ export function isDataContainer(a: unknown): a is DataContainer {
 export class HtmlVegaSpecRenderer extends HtmlChartRenderer {
   spec: lite.TopLevelSpec;
 
-  constructor(spec: lite.TopLevelSpec) {
-    super();
+  constructor(styleDefaults: StyleDefaults, spec: lite.TopLevelSpec) {
+    super(styleDefaults);
     this.spec = spec;
   }
 

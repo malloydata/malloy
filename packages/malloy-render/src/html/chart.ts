@@ -22,6 +22,7 @@ import {
 } from "malloy";
 import { Renderer } from "../renderer";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
+import { StyleDefaults } from "../data_styles";
 
 export abstract class HtmlChartRenderer implements Renderer {
   abstract getDataType(
@@ -56,6 +57,8 @@ export abstract class HtmlChartRenderer implements Renderer {
       return mappedRow;
     });
   }
+
+  constructor(protected styleDefaults: StyleDefaults) {}
 
   abstract getVegaLiteSpec(
     data: QueryData,

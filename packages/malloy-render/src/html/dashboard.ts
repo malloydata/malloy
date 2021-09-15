@@ -12,11 +12,16 @@
  */
 
 import { isDimensional, isMeasureLike } from "malloy";
+import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
-import { RenderTree } from "../renderer";
+import { ContainerRenderer } from "./container";
 import { HtmlTextRenderer } from "./text";
 
-export class HtmlDashboardRenderer extends RenderTree {
+export class HtmlDashboardRenderer extends ContainerRenderer {
+  protected childrenStyleDefaults: StyleDefaults = {
+    size: "medium",
+  };
+
   async render(table: DataValue, _ref: DataPointer): Promise<string> {
     if (!isDataTree(table)) {
       return "Invalid data for chart renderer.";

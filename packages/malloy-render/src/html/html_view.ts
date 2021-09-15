@@ -13,8 +13,8 @@
 
 import { FieldDef, StructDef } from "malloy";
 import { TopLevelSpec } from "vega-lite";
-import { DataStyles } from "../data_styles";
-import { ChildRenderers, Renderer } from "../renderer";
+import { DataStyles, StyleDefaults } from "../data_styles";
+import { Renderer } from "../renderer";
 import { HtmlBarChartRenderer } from "./bar_chart";
 import { HtmlBooleanRenderer } from "./boolean";
 import { HtmlJSONRenderer } from "./json";
@@ -35,10 +35,13 @@ import { HtmlTableRenderer } from "./table";
 import { HtmlTextRenderer } from "./text";
 import { HtmlVegaSpecRenderer } from "./vega_spec";
 import { DataTreeRoot } from "../data_table";
+import { ContainerRenderer } from "./container";
 
 export class HtmlView {
   async render(table: DataTreeRoot, dataStyles: DataStyles): Promise<string> {
-    const renderer = getRenderer(table.structDef, dataStyles);
+    const renderer = makeRenderer(table.structDef, dataStyles, {
+      size: "large",
+    });
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
       //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
@@ -48,17 +51,13 @@ export class HtmlView {
       //      `row`, and `end` as well).
       return await renderer.render(table, undefined);
     } catch (error) {
-      return error.toString();
+      if (error instanceof Error) {
+        return error.toString();
+      } else {
+        return "Internal error - Exception not an Error object.";
+      }
     }
   }
-}
-
-function getRenderers(metadata: StructDef, dataStyles: DataStyles) {
-  const result: ChildRenderers = {};
-  metadata.fields.forEach((field: FieldDef) => {
-    result[field.name] = getRenderer(field, dataStyles);
-  });
-  return result;
 }
 
 function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
@@ -73,53 +72,72 @@ function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
   return renderer;
 }
 
-function getRenderer(field: FieldDef, dataStyles: DataStyles): Renderer {
-  const children =
-    field.type === "struct" ? getRenderers(field, dataStyles) : {};
+function isContainer(field: FieldDef): StructDef {
+  if (field.type === "struct") {
+    return field;
+  } else {
+    throw new Error(
+      `${field.name} does not contain fields and cannot be rendered this way`
+    );
+  }
+}
+
+export function makeRenderer(
+  field: FieldDef,
+  dataStyles: DataStyles,
+  styleDefaults: StyleDefaults
+): Renderer {
   const renderDef = getRendererOptions(field, dataStyles) || {};
+
   if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
-    return new HtmlShapeMapRenderer();
+    return new HtmlShapeMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "point_map" ||
     field.name.endsWith("_point_map")
   ) {
-    return new HtmlPointMapRenderer();
+    return new HtmlPointMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "segment_map" ||
     field.name.endsWith("_segment_map")
   ) {
-    return new HtmlSegmentMapRenderer();
+    return new HtmlSegmentMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
   ) {
-    return new HtmlDashboardRenderer(children);
+    return ContainerRenderer.make(
+      HtmlDashboardRenderer,
+      isContainer(field),
+      dataStyles
+    );
   } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
     return new HtmlJSONRenderer();
   } else if (
     renderDef.renderer === "line_chart" ||
     field.name.endsWith("_line_chart")
   ) {
-    return new HtmlLineChartRenderer();
+    return new HtmlLineChartRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "scatter_chart" ||
     field.name.endsWith("_scatter_chart")
   ) {
-    return new HtmlScatterChartRenderer();
-  } else if (
-    renderDef.renderer === "bar_chart" ||
-    field.name.endsWith("_bar_chart")
-  ) {
-    return new HtmlBarChartRenderer();
+    return new HtmlScatterChartRenderer(styleDefaults);
+  } else if (renderDef.renderer === "bar_chart") {
+    return new HtmlBarChartRenderer(styleDefaults, renderDef);
+  } else if (field.name.endsWith("_bar_chart")) {
+    return new HtmlBarChartRenderer(styleDefaults, {});
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
     if (spec) {
-      return new HtmlVegaSpecRenderer(spec as TopLevelSpec);
+      return new HtmlVegaSpecRenderer(styleDefaults, spec as TopLevelSpec);
     } else if (renderDef.spec_name) {
       const vegaRenderer = dataStyles[renderDef.spec_name];
       if (vegaRenderer !== undefined && vegaRenderer.renderer === "vega") {
         if (vegaRenderer.spec) {
-          return new HtmlVegaSpecRenderer(vegaRenderer.spec as TopLevelSpec);
+          return new HtmlVegaSpecRenderer(
+            styleDefaults,
+            vegaRenderer.spec as TopLevelSpec
+          );
         } else {
           throw new Error(`No spec defined on ${renderDef.spec_name}`);
         }
@@ -147,11 +165,23 @@ function getRenderer(field: FieldDef, dataStyles: DataStyles): Renderer {
     } else if (renderDef.renderer === "link") {
       return new HtmlLinkRenderer();
     } else if (renderDef.renderer === "list") {
-      return new HtmlListRenderer(children);
+      return ContainerRenderer.make(
+        HtmlListRenderer,
+        isContainer(field),
+        dataStyles
+      );
     } else if (renderDef.renderer === "list_detail") {
-      return new HtmlListDetailRenderer(children);
+      return ContainerRenderer.make(
+        HtmlListDetailRenderer,
+        isContainer(field),
+        dataStyles
+      );
     } else if (renderDef.renderer === "table" || field.type === "struct") {
-      return new HtmlTableRenderer(children);
+      return ContainerRenderer.make(
+        HtmlTableRenderer,
+        isContainer(field),
+        dataStyles
+      );
     } else {
       return new HtmlTextRenderer();
     }

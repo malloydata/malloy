@@ -12,10 +12,15 @@
  */
 
 import { FieldDef, StructDef } from "malloy";
+import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
-import { RenderTree } from "../renderer";
+import { ContainerRenderer } from "./container";
 
-export class HtmlListRenderer extends RenderTree {
+export class HtmlListRenderer extends ContainerRenderer {
+  protected childrenStyleDefaults: StyleDefaults = {
+    size: "small",
+  };
+
   getValueField(struct: StructDef): FieldDef {
     return struct.fields[0];
   }
