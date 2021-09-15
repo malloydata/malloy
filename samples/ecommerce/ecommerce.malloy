@@ -19,7 +19,7 @@ define ii is (explore 'malloy-data.ecomm.inventory_items'
 );
 
 define user_order_facts is (
-  'malloy-data.ecomm.order_items' | 
+  'malloy-data.ecomm.order_items' |
   reduce
     user_id
     lifetime_orders is count()
@@ -36,10 +36,10 @@ define order_items_base is (explore 'malloy-data.ecomm.order_items'
   -- measures
   order_count is count(distinct order_id)
   item_count is count(*)
-  total_revenue is sum(sale_price)
+  total_sales is sale_price.sum()
 );
 
---brand synergy / affinity analysis; extends base order_items 
+--brand synergy / affinity analysis; extends base order_items
 export define brand_synergy is (
   order_items_base
   | reduce
@@ -73,29 +73,46 @@ export define order_items is (explore order_items_base
   -- turtles
   top_brands is (reduce top 5
     ii.product.brand
-    total_revenue
+    total_sales
     ii.product.product_count
   )
   top_products is (reduce top 5
     ii.product.name
-    total_revenue
+    total_sales
   )
   by_year is (reduce
     created_year is created_at.year
-    total_revenue
+    total_sales
   )
   by_month is (reduce
     created_month is created_at.month
-    total_revenue
+    total_sales
   )
+
+  sales_by_state_2020 is (reduce: [created_at: @2020]
+    users.state
+    total_sales
+  )
+
+  sales_by_month_2020 is (reduce : [created_at : @2020]
+   order_month is created_at.month
+   total_sales
+ )
+
+  orders_by_status is (reduce
+    status
+    order_count is count(distinct order_id)
+  )
+
   order_by_category_and_day is (reduce
     created_month is created_at.month
     order_count
     ii.product.category
   )
+
   brand_dashboard is (reduce top 10
     ii.product.brand
-    total_revenue
+    total_sales
     order_count
     item_count
     ii.product.product_count

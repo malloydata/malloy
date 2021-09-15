@@ -11,12 +11,17 @@
  * GNU General Public License for more details.
  */
 
+import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 // import { getDrillPath, getDrillQuery } from "../drill";
-import { RenderTree } from "../renderer";
+import { ContainerRenderer } from "./container";
 import { HtmlNumberRenderer } from "./number";
 
-export class HtmlTableRenderer extends RenderTree {
+export class HtmlTableRenderer extends ContainerRenderer {
+  protected childrenStyleDefaults: StyleDefaults = {
+    size: "small",
+  };
+
   async render(table: DataValue, _ref: DataPointer): Promise<string> {
     if (!isDataTree(table)) {
       throw new Error("Invalid type for Table Renderer");

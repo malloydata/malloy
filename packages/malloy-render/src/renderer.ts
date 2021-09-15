@@ -20,7 +20,7 @@ export interface Renderer {
 }
 
 export abstract class RenderTree implements Renderer {
-  constructor(protected childRenderers: ChildRenderers) {}
+  protected abstract get childRenderers(): ChildRenderers;
 
   // abstract render(data: QueryValue, metadata: FieldDef): Promise<string>;
   abstract render(

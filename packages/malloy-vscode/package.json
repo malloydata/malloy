@@ -98,13 +98,6 @@
 				"configuration": "language.json"
 			}
 		],
-		"keybindings": [
-			{
-				"command": "malloy.runQueryFile",
-				"key": "ctrl+enter",
-				"mac": "cmd+enter"
-			}
-		],
 		"views": {
 			"explorer": [
 				{

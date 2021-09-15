@@ -14,6 +14,7 @@
 import * as lite from "vega-lite";
 
 export type DataStyles = { [fieldName: string]: RenderDef };
+export type ChartSize = "small" | "medium" | "large";
 
 export type RenderDef =
   | ({ renderer?: undefined } & DataRenderOptions)
@@ -47,6 +48,10 @@ export interface DataRenderOptions {
   };
   sheet?: DataStyles;
 }
+
+export type StyleDefaults = {
+  size?: ChartSize;
+};
 
 export interface TableRenderOptions extends DataRenderOptions {
   table?: {
@@ -122,7 +127,7 @@ export interface ListDetailRenderOptions extends DataRenderOptions {
 export interface ChartRenderOptions extends DataRenderOptions {
   chart?: {
     color?: string;
-    size?: string;
+    size?: ChartSize;
     shape?: string;
   };
 }
@@ -135,15 +140,14 @@ export interface CartesianChartRenderOptions extends ChartRenderOptions {
     // eslint-disable-next-line camelcase
     y_axis?: string;
     color?: string;
-    size?: string;
+    size?: ChartSize;
     shape?: string;
     spark_line?: boolean;
   };
 }
 
-export interface BarChartRenderOptions extends CartesianChartRenderOptions {
-  // eslint-disable-next-line camelcase
-  bar_chart?: Record<string, unknown>;
+export interface BarChartRenderOptions {
+  size?: ChartSize;
 }
 
 export interface ScatterChartRenderOptions extends CartesianChartRenderOptions {
@@ -166,7 +170,7 @@ export interface PointMapRenderOptions extends ChartRenderOptions {
     latitude?: string;
     longitude?: string;
     color?: string;
-    size?: string;
+    size?: ChartSize;
     shape?: string;
   };
 }
@@ -178,7 +182,7 @@ export interface SegmentMapRenderOptions extends ChartRenderOptions {
     latitude2?: string;
     longitude2?: string;
     color?: string;
-    size?: string;
+    size?: ChartSize;
     shape?: string;
   };
 }
@@ -187,7 +191,7 @@ export interface ShapeMapRenderOptions extends ChartRenderOptions {
   chart?: {
     region?: string;
     color?: string;
-    size?: string;
+    size?: ChartSize;
     shape?: string;
   };
 }
