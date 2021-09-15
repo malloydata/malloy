@@ -53,14 +53,14 @@ const sizeSmall = {
   width: 150,
 };
 
-// const sizeMedium = {
-//   height: 150,
-//   width: 200,
-// };
+const sizeMedium = {
+  height: 150,
+  width: 200,
+};
 
 const sizeLarge = {
-  height: 350,
-  width: 500,
+  // height: 350,
+  // width: 500,
 };
 
 // bar with text in the bars.
@@ -89,41 +89,64 @@ const bar_SM: lite.TopLevelSpec = {
   ],
 };
 
-const bar_SMS: lite.TopLevelSpec = {
+const bar_SM_large: lite.TopLevelSpec = {
+  ...DEFAULT_SPEC,
+  mark: "bar",
+  data: [],
+  encoding: {
+    x: { field: "#{1}", type: "nominal" },
+    y: { field: "#{2}", type: "quantitative" },
+    color: { value: "#4285F4" },
+  },
+};
+
+const bar_SMM_large = {
+  ...bar_SM_large,
+  encoding: {
+    ...bar_SM_large.encoding,
+    color: {
+      field: "#{3}",
+      type: "quantitative",
+      scale: getColorScale("quantitative", true, true),
+    },
+  },
+} as lite.TopLevelSpec;
+
+const bar_SMS_large = {
+  ...bar_SM_large,
+  encoding: {
+    ...bar_SM_large.encoding,
+    color: {
+      field: "#{3}",
+      scale: getColorScale("nominal", true, true),
+    },
+  },
+} as lite.TopLevelSpec;
+
+const bar_SMS = {
   ...bar_SM,
   layer: [
     {
       ...bar_SM.layer[0],
       encoding: {
-        // LTNOTE: I have no idea why this won't work.
-        // ...bar_SM.layer[1].encoding,
-        x: {
-          field: "#{2}",
-          type: "quantitative",
-        },
+        ...bar_SM.layer[0].encoding,
         color: {
           field: "#{3}",
           scale: getColorScale("nominal", true, true),
-          // scale: { range: backgroundColors },
         },
       },
     },
     bar_SM.layer[1],
   ],
-};
+} as lite.TopLevelSpec;
 
-const bar_SMM: lite.TopLevelSpec = {
+const bar_SMM = {
   ...bar_SM,
   layer: [
     {
       ...bar_SM.layer[0],
       encoding: {
-        // LTNOTE: I have no idea why this won't work.
-        // ...bar_SM.layer[1].encoding,
-        x: {
-          field: "#{2}",
-          type: "quantitative",
-        },
+        ...bar_SM.layer[0].encoding,
         color: {
           field: "#{3}",
           type: "quantitative",
@@ -133,15 +156,13 @@ const bar_SMM: lite.TopLevelSpec = {
     },
     bar_SM.layer[1],
   ],
-};
+} as lite.TopLevelSpec;
 
 // simple column chart
 const bar_NM: lite.TopLevelSpec = {
   ...DEFAULT_SPEC,
   mark: "bar",
   data: [],
-  height: 150,
-  width: 200,
   encoding: {
     x: { field: "#{1}", type: "nominal" },
     y: { field: "#{2}", type: "quantitative" },
@@ -175,16 +196,36 @@ const bar_NMM: lite.TopLevelSpec = {
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM,
-
   bar_SM_small: { ...bar_SM, ...sizeSmall },
-  // bar_SM_medium: { ...bar_SM, ...sizeMedium }, // just use the default
-  bar_SM_large: { ...bar_SM, ...sizeLarge },
+  // bar_SM_medium: { ...bar_SM, ...sizeMedium }, // just use the default runs long
+  bar_SM_large,
 
   bar_SMS,
-  bar_NM,
-  bar_NMS,
-  bar_NMM,
+  bar_SMS_small: { ...bar_SMS, ...sizeSmall },
+  bar_SMS_medium: { ...bar_SMS, ...sizeMedium },
+  bar_SMS_large,
+
   bar_SMM,
+  bar_SMM_small: { ...bar_SMM, ...sizeSmall },
+  bar_SMM_medium: { ...bar_SMM, ...sizeMedium },
+  bar_SMM_large,
+
+  bar_NM,
+  bar_NM_small: { ...bar_NM, ...sizeSmall },
+  bar_NM_medium: { ...bar_NM, ...sizeMedium }, // just use the default runs long
+  bar_NM_large: { ...bar_NM },
+
+
+  bar_NMS,
+  bar_NMS_small: { ...bar_NMS, ...sizeSmall },
+  bar_NMS_medium: { ...bar_NMS, ...sizeMedium },
+  bar_NMS_large: { ...bar_NMS, ...sizeLarge },
+
+  bar_NMM,
+  bar_NMM_small: { ...bar_NMM, ...sizeSmall },
+  bar_NMM_medium: { ...bar_NMM, ...sizeMedium },
+  bar_NMM_large: { ...bar_NMM, ...sizeLarge },
+
   bar_SSMMM: {
     ...DEFAULT_SPEC,
     repeat: ["#{3}", "#{4}", "#{5}"],
