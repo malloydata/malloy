@@ -1,7 +1,6 @@
 # NTSB Flight Database examples
 
-The follow examples all run against the model at the bottom of this page.  Click the arrow 
-to run the query in Malloy
+The follow examples all run against the model at the bottom of this page.
 
 ## Airport Dashboard
 Where can you fly from SJC? For each destination; Which carriers?  How long have they been flying there?
@@ -9,20 +8,20 @@ Are they ontime?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights : [origin.code : 'SJC'] 
+explore flights : [origin.code : 'SJC']
 | airport_dashboard
 ```
 
 
 ## Carrier Dashboard
-Tell me everything about a carrier.  How many destinations?, flights? hubs?  
-What kind of planes to they use? How many flights over time?  What are 
-the major hubs?  For each destionation, How many flights? Where can you? Have they been 
+Tell me everything about a carrier.  How many destinations?, flights? hubs?
+What kind of planes to they use? How many flights over time?  What are
+the major hubs?  For each destionation, How many flights? Where can you? Have they been
 flying there long?  Increasing or decresing year by year?  Any seasonality?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights : [carriers.nickname : 'Jetblue'] 
+explore flights : [carriers.nickname : 'Jetblue']
 | carrier_dashboard
 ```
 
@@ -35,25 +34,44 @@ to render a Kayak page in a singe query.
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 explore flights : [
-  origin.code : 'SJC', 
-  destination.code : 'LAX'|'BUR', 
+  origin.code : 'SJC',
+  destination.code : 'LAX'|'BUR',
   dep_time : @2004-01-01
-] 
+]
 | kayak
 ```
 
 ## Sessionizing Flight Data.
-You can think of flight data as event data.  The query below is a classic map/reduce roll up the filght data by  carrier and day, plane and day and individual events for each plane.
+You can think of flight data as event data.  The below is a classic map/reduce roll up of the filght data by carrier and day, plane and day, and individual events for each plane.
+
+```malloy
+  sessionize is (reduce : [carrier:'WN', dep_time: @2002-03-03]
+    dep_time.`date`
+    carrier
+    flight_count
+    plane is (reduce top 20
+      tail_num
+      flight_count
+      flights is (reduce order by 2
+        tail_num
+        dep_minute is dep_time.minute
+        origin_code
+        destination_code
+      )
+    )
+  )
+```
+
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights 
+explore flights
 | sessionize
 ```
 
 ## The Malloy Model
 
-The queries above, are executed against the model below.
+All of the queries above are executed against the following model:
 
 ```malloy
 define airports is (explore 'malloy-data.faa.airports'
@@ -96,8 +114,6 @@ export define flights is (explore 'malloy-data.faa.flights'
   total_distance is sum(distance)
   seats_for_sale is sum(aircraft.aircraft_models.seats)
   seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
-  -- average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
-  -- average_seats is aircraft.aircraft_models.seats.avg()
 
   -- queries
   measures is (reduce
@@ -141,11 +157,9 @@ export define flights is (explore 'malloy-data.faa.flights'
   )
 
   seats_by_distance is (reduce
-    -- seats rounded to 5
-    seats is floor(aircraft.aircraft_models.seats/5)*5
+    seats is floor(aircraft.aircraft_models.seats/5)*5 -- rounded to 5
     flight_count
-    -- distance rounded to 20
-    distance is floor(distance/20)*20
+    distance is floor(distance/20)*20 -- rounded to 20
   )
 
   routes_map is (reduce
@@ -202,7 +216,7 @@ export define flights is (explore 'malloy-data.faa.flights'
   )
 
   -- query that you might run for to build a flight search interface
-  --   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
+  -- explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
   kayak is (reduce
     carriers is (reduce
       carriers.nickname
