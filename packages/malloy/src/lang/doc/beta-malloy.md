@@ -27,11 +27,11 @@ The thing which is a query, is called a "query".
 
 The word "space" which we started throwing around to distinguish between and explore that was a query and and explore which was something which could be queried is now superfluous.
 
-A "turtle" meaning a query declared in an explore, is now is just "a query decalred in an explore".
+A "turtle", meaning a query declared in an explore, is now is just "a query declared in an explore".
 
-A "turtle" meaning a query nested in a query, is now just a "nested query".
+A "turtle", meaning a query nested in a query, is now just a "nested query".
 
-## Basic Declrartion Form
+## Basic Declaration Form
 
 The basic declaration form on alpha-malloy was evolving into
 
@@ -85,7 +85,7 @@ As an example ... this ...
       join: carrier is 'malloydata.faa.carriers' { primary key: id } on carrier_id
     }
 
-This is similar to how alpha-malloy works, except this syntax is more regular and less dependant on fortunate quirks in the parser.
+This is similar to how alpha-malloy works, except this syntax is more regular and less dependant on special case exceptions in the grammar.
 
 ## Declaration vs. Invocation
 
@@ -111,7 +111,7 @@ A query is either a grouping/aggregating gesture, which would look like this ...
         project carrier.nickname, flight_num, dep_time, arr_time
     }
 
-A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
+A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha-malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
 
 ## Farewell `|`
 
@@ -121,7 +121,9 @@ The pipe symbols is removed from the language. In an explore definition, there c
 
 The magic `: []` syntax for filters is gone. An explore can have a `where:` property and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
-    explore: flights_21st_century is flights { where: [ dep_time >= @2001 ] }
+    explore: flights_21st_century is flights {
+      where: [ dep_time >= @2001 ]
+    }
 
 ## Query syntax
 
@@ -144,7 +146,7 @@ There is an operator `->` which as a left hand side takes en explore and for the
     }
 ```
 ```
-    -- save redined query as a top level item
+    -- Save redefined query as a top level item
     query: long_flights_by_carrier is flights->by_carrier {
         aggregate: long_flights is flight_count { where: arr_time > dep_time + 1 hour }
     }
@@ -168,6 +170,9 @@ Because filtering is ubiquitous, there is a shorthand for filtering. We expect a
     -- short form
     flights {? dep_time: @2003}->by_carrier
 
+    -- filtered measures
+    measure: pct_in_ca is (count() {? state: 'CA'}) / count()
+
 ## What about turtles ...
 
 Nested queries are declared in an explore with the `query:` keyword ...
@@ -180,7 +185,7 @@ explore: flights is 'malloydata.faa.flights' {
     }
 }
 
-And to include nexted query in a result set, much like the `aggregate:` keyword accepts existing names measures, or allows new measures, there is a `nest:` keyword to nest a query ...
+And to include a nested query in a result set, much like the `aggregate:` keyword accepts existing names measures, or allows new measures, there is a `nest:` keyword to nest a query ...
 
     explore: flights is 'malloydata.faa.flights' {
         ...
