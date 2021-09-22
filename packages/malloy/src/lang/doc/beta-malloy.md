@@ -64,12 +64,12 @@ which will allow grouped blocks of dimensions or joins where that adds readabili
 ## Refinement gesture
 
 Creation of explores in malloy is always a gesture of refinement based on existing object where the simplest object is a table. For example we want `flights` to mean the `malloydta.faa.flights` table ...
-
+```
    explore: flights is 'malloydata.faa.flights' {
        primary key: id
        ... other flights stuff
    }
-
+```
 In beta-malloy any time you name a refineable object you can create an enhanced or extended version of the object simply by following the name with the `{}` enclosed set of additional properties.
 
 As an example ... this ...
