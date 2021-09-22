@@ -6,7 +6,7 @@ The structure free word salad that is alpha-malloy is designed to be as free of 
 
 This experiment has produced a lovely small language, but when presented to experience SQL users, there are a few bumps.
 
-1. SQL people looke for hints in the SQL to reveal structure, for example the explicit "group by" helps define the query space and the implicit group by in malloy hides and important detail
+1. SQL people look for hints in the SQL to reveal structure, for example the explicit "group by" helps define the query space and the implicit group by in malloy hides an important detail.
 1. (similar to the above) clear distinction between aggregates and grouping
 1. filter syntax, while short and readable, is also problematic
 1. pipes aren't quite right for expressing the "activate query" gesture
@@ -119,15 +119,15 @@ The pipe symbols is removed from the language. In an explore definition, there c
 
 ## Filters are `where:` and `having:`
 
-The magic `: []` syntax for filters is gone. An explore can have a `where:` property and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
+The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
     explore: flights_21st_century is flights {
       where: [ dep_time >= @2001 ]
     }
 
-## Query syntax
+## Query syntax (the `->`)
 
-There is an operator `->` which as a left hand side takes en explore and for the right hand side takes a query definition ...
+There is an operator, `->`, which as a left hand side takes en explore and for the right hand side takes a query definition ...
 ```
     -- Invent a new query ... by running it ...
     flights->{
@@ -199,4 +199,26 @@ And to include a nested query in a result set, much like the `aggregate:` keywor
           nest:
             carriers_by_month, routes_map, delay_by_hour_of_day
         }
+    }
+
+## Explore from Query
+
+Because an explore can no longer have a `| reduce` in the definition, there needs to be a syntax meaning "the explore which starts with the result of this query". This would be indicated when, anywhere an explore name is legal, to use `(` _QUERY_ `)` for example.
+
+    -- given this explore ...
+    explore: users is 'schema.users' {
+        ...
+        join: orders on orders.user_id
+        query: user_order_facts is {
+            group by: user_id
+            aggregate:
+                lifetime_value is sum(orders.value)
+                orders.order_count
+        }
+    }
+
+    -- ... make user->user_order_facts a top level entity for joins etc
+    -- but add new dimension
+    explore: user_order_facts is (users->user_order_facts) {
+        dimension: super_user is lifetime_value > 1000
     }
