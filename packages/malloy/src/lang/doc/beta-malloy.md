@@ -27,7 +27,9 @@ The thing which is a query, is called a "query".
 
 The word "space" which we started throwing around to distinguish between and explore that was a query and and explore which was something which could be queried is now superfluous.
 
-A "turtle" meaning a query nested in an explore, is now is just "a query nested in an explore"
+A "turtle" meaning a query declared in an explore, is now is just "a query decalred in an explore".
+
+A "turtle" meaning a query nested in a query, is now just a "nested query".
 
 ## Basic Declrartion Form
 
@@ -191,13 +193,4 @@ And to include nexted query in a result set, much like the `aggregate:` keyword 
           nest:
             carriers_by_month, routes_map, delay_by_hour_of_day
         }
-    }
-
-## Define an explore based on a query
-
-Since in an explore can not have pipes in it, there needs to be a syntax which allows you to start an explore after a query. We use parens anyplace we are expected an explore name, to indicate we are basing this explore on the output structure of the query ...
-
-    explore: basedOnQuery (otherExplore->someQuery) {
-        dimension: manufactured_id is ... some expression
-        primary key: manufactured_id
     }
