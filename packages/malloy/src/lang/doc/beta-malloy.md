@@ -192,3 +192,12 @@ And to include nexted query in a result set, much like the `aggregate:` keyword 
             carriers_by_month, routes_map, delay_by_hour_of_day
         }
     }
+
+## Define an explore based on a query
+
+Since in an explore can not have pipes in it, there needs to be a syntax which allows you to start an explore after a query. We use parens anyplace we are expected an explore name, to indicate we are basing this explore on the output structure of the query ...
+
+    explore: basedOnQuery (otherExplore->someQuery) {
+        dimension: manufactured_id is ... some expression
+        primary key: manufactured_id
+    }
