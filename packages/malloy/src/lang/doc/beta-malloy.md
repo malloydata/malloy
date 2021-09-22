@@ -176,7 +176,7 @@ Because filtering is ubiquitous, there is a shorthand for filtering. We expect a
 ## What about turtles ...
 
 Nested queries are declared in an explore with the `query:` keyword ...
-
+```
 explore: flights is 'malloydata.faa.flights' {
     ...
     query: by_carrier is {
@@ -184,6 +184,7 @@ explore: flights is 'malloydata.faa.flights' {
         aggregate: flight_count
     }
 }
+```
 
 And to include a nested query in a result set, much like the `aggregate:` keyword accepts existing names measures, or allows new measures, there is a `nest:` keyword to nest a query ...
 
