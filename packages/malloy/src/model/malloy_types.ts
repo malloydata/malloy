@@ -248,21 +248,9 @@ export function isByExpression(by: By | undefined): by is ByExpression {
 }
 
 /** reference to a data source */
-export type StructRef = string | StructDef | AnonymousExploreDef;
+export type StructRef = string | StructDef;
 export function refIsStructDef(ref: StructRef): ref is StructDef {
   return typeof ref !== "string" && ref.type === "struct";
-}
-export interface ExploreDef extends AnonymousExploreDef, NamedObject {
-  type: "explore";
-}
-
-export interface AnonymousExploreDef {
-  type: "explore";
-  from: StructRef;
-  primaryKey?: string;
-  joins?: JoinedStruct[];
-  fields?: FieldDef[];
-  filterList?: FilterCondition[];
 }
 
 /** join pattern structs is a struct. */
@@ -291,6 +279,8 @@ export interface Query extends Pipeline, Filtered {
   type?: "query";
   structRef: StructRef;
 }
+
+export type NamedQuery = Query & AliasedName;
 
 export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
 
@@ -421,7 +411,7 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedMalloyObject = StructDef | ExploreDef;
+export type NamedMalloyObject = StructDef;
 
 /** Result of parsing a model file */
 export interface ModelDef {
