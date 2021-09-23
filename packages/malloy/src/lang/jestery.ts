@@ -130,6 +130,7 @@ expect.extend({
     const trans = new TestTranslator(source, astRule);
     expect(trans).toBeValidMalloy();
     const ast = trans.ast();
+    expect(trans).toBeErrorless();
     expect(ast).toBeDefined();
     if (ast === undefined) {
       throw new Error(

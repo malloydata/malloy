@@ -13,6 +13,30 @@
 
 // clang-format off
 
+interface ParamBase {
+  name: string;
+  type: AtomicFieldType;
+}
+type ConstantExpr = Expr;
+type Condition = Expr;
+interface ParamCondition extends ParamBase {
+  condition: Condition | null;
+}
+interface ParamValue extends ParamBase {
+  value: ConstantExpr | null;
+  constant: boolean;
+}
+export type Parameter = ParamCondition | ParamValue;
+export function isValueParameter(p: Parameter): p is ParamValue {
+  return (p as ParamValue).value !== undefined;
+}
+export function isConditionParameter(p: Parameter): p is ParamCondition {
+  return (p as ParamCondition).condition !== undefined;
+}
+export function paramHasValue(p: Parameter): boolean {
+  return isValueParameter(p) || p.condition !== null;
+}
+
 /** put line number into the parse tree. */
 export interface LineNumber {
   fileName?: string;
@@ -30,7 +54,7 @@ export interface TypedObject {
 }
 
 export interface FilteredAliasedName extends AliasedName {
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
 }
 export function isFilteredAliasedName(
   f: FieldTypeRef
@@ -52,7 +76,7 @@ export interface ResultMetadataDef {
   sourceField: string;
   sourceExpression?: string;
   sourceClasses: string[];
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
   fieldKind: "measure" | "dimension" | "struct";
 }
 
@@ -62,7 +86,7 @@ export interface ResultMetadata {
 
 export interface FilterFragment {
   type: "filterExpression";
-  filterList: FilterCondition[];
+  filterList: FilterExpression[];
   e: Expr;
 }
 export function isFilterFragment(f: Fragment): f is FilterFragment {
@@ -90,9 +114,36 @@ export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === "field";
 }
 
+export interface ParameterFragment {
+  type: "parameter";
+  path: string;
+}
+export function isParameterFragment(f: Fragment): f is ParameterFragment {
+  return (f as ParameterFragment)?.type === "parameter";
+}
+
+export interface ApplyValueFragment {
+  type: "applyVal";
+}
+export function isApplyValue(f: Fragment): f is ApplyValueFragment {
+  return (f as ApplyValueFragment)?.type === "applyVal";
+}
+
+export interface ApplyFragment {
+  type: "apply";
+  value: Expr;
+  to: Expr;
+}
+export function isApplyFragment(f: Fragment): f is ApplyFragment {
+  return (f as ApplyFragment)?.type === "apply";
+}
+
 export type Fragment =
   | string
+  | ApplyFragment
+  | ApplyValueFragment
   | FieldFragment
+  | ParameterFragment
   | FilterFragment
   | AggregateFragment;
 
@@ -261,7 +312,7 @@ export interface JoinedStruct {
 }
 
 export interface Filtered {
-  filterList?: FilterCondition[];
+  filterList?: FilterExpression[];
 }
 
 /**
@@ -344,6 +395,7 @@ export interface StructDef extends NamedObject, ResultMetadata, Filtered {
   structRelationship: StructRelationship;
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
+  parameters?: Record<string, Parameter>;
 }
 
 // /** the resulting structure of the query (and it's source) */
@@ -397,8 +449,8 @@ export type FieldRef = string | FieldDef;
 export type PrimaryKeyRef = string;
 
 /** filters */
-export interface FilterCondition {
-  condition: Expr;
+export interface FilterExpression {
+  expression: Expr;
   source: string;
   aggregate?: boolean;
 }
@@ -448,7 +500,7 @@ export type MalloyQueryData = {
 
 export interface DrillSource {
   sourceExplore: string;
-  sourceFilters?: FilterCondition[];
+  sourceFilters?: FilterExpression[];
 }
 
 export interface CompiledQuery extends DrillSource {

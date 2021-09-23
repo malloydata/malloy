@@ -18,7 +18,7 @@ import {
   Expr,
   FieldDef,
   StructRef,
-  FilterCondition,
+  FilterExpression,
   StructDef,
   Query,
   AtomicFieldType,
@@ -43,13 +43,13 @@ export function mkFieldRefs(...names: string[]): ast.FieldReferences {
 export function mkFieldName(s: string) {
   return new ast.FieldName(s);
 }
-export function mkExprField(s: string) {
-  return new ast.ExprField(mkFieldName(s));
+export function mkExprIdRef(s: string) {
+  return new ast.ExprIdReference(s);
 }
 export function mkFieldDef(expr: string) {
-  return new ast.ExpressionFieldDef(mkExprField(expr), mkFieldName("test"));
+  return new ast.ExpressionFieldDef(mkExprIdRef(expr), mkFieldName("test"));
 }
-export const aExpr = mkExprField("a");
+export const aExpr = mkExprIdRef("a");
 export function mkExprStringDef(str: string) {
   return new ast.ExpressionFieldDef(
     new ast.ExprString(str),
@@ -58,7 +58,7 @@ export function mkExprStringDef(str: string) {
 }
 export const caFilter = new ast.Filter([
   new ast.FilterElement(
-    new ast.Apply(mkExprField("state"), new ast.ExprString("'ca'")),
+    new ast.Apply(mkExprIdRef("state"), new ast.ExprString("'ca'")),
     "state:'ca'"
   ),
 ]);
@@ -101,17 +101,17 @@ export function mkQuery(struct: StructRef): Query {
   };
 }
 
-export function mkFilters(...pairs: string[]): FilterCondition[] {
-  const filters: FilterCondition[] = [];
+export function mkFilters(...pairs: string[]): FilterExpression[] {
+  const filters: FilterExpression[] = [];
   let i = 0;
   while (i <= pairs.length - 2) {
     const thing = pairs[i];
     const thingIs = `'${pairs[i + 1]}'`;
     const exprSrc = `${thing}:${thingIs}`;
-    const expr = new ast.Apply(mkExprField(thing), new ast.ExprString(thingIs));
+    const expr = new ast.Apply(mkExprIdRef(thing), new ast.ExprString(thingIs));
     const fs = new FieldSpace(aTableDef);
     filters.push({
-      condition: compressExpr(expr.translation(fs).value),
+      expression: compressExpr(expr.getExpression(fs).value),
       source: exprSrc,
     });
     i += 2;

@@ -25,7 +25,23 @@ malloyStatement
   ;
 
 defineStatement
-  : EXPORT? defineName defineValue
+  : EXPORT? DEFINE? id (OPAREN has+ CPAREN)? IS defineValue
+  ;
+
+has
+  : HAS id COLON malloyType            # requiredConditionParam
+  | HAS id COLON malloyType OR hasCond # optionalConditionParam
+  | HAS id malloyType                  # requiredValueParam
+  | HAS id malloyType OR hasExpr       # optionalValueParam
+  | HAS id hasExpr                     # constantParam
+  ;
+
+hasCond
+  : partialAllowedFieldExpr
+  ;
+
+hasExpr
+  : fieldExpr
   ;
 
 defineValue
@@ -52,9 +68,17 @@ explore
   ;
 
 exploreSource
-  : id                        # namedSource
-  | tableName                 # tableSource
-  | OPAREN explore CPAREN     # anonymousSource
+  : id (OPAREN isParam+ CPAREN)*   # namedSource
+  | tableName                      # tableSource
+  | OPAREN explore CPAREN          # anonymousSource
+  ;
+
+isParam
+  : id IS isExpr
+  ;
+
+isExpr
+  : partialAllowedFieldExpr
   ;
 
 primaryKey
@@ -159,7 +183,7 @@ defineName
   ;
 
 fieldExpr
-  : fieldName                                              # exprField
+  : idReference                                            # exprIdReference
   | fieldExpr filterList                                   # exprFilter
   | literal                                                # exprLiteral
   | MINUS fieldExpr                                        # exprMinus
@@ -240,6 +264,11 @@ collectionMember
   ;
 
 fieldName
+  : idReference
+  ;
+
+// Syntactically same as a field name, but semantically, might be a parameter
+idReference
   : id ( DOT id )*
   ;
 
@@ -300,7 +329,7 @@ BOOLEAN: B O O L E A N;
 BY: B Y ;
 CASE: C A S E ;
 CAST: C A S T ;
-COLLECT: C O L L E C T;
+CONDITION: C O N D I T I O N ;
 COUNT: C O U N T ;
 CROSS: C R O S S ;
 DATE: D A T E;
@@ -318,6 +347,7 @@ FIELDS: F I E L D S;
 FOREIGN: F O R E I G N ;
 FOR: F O R;
 FROM: F R O M ;
+HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;
 INDEX: I N D E X ;

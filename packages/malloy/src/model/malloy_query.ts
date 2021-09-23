@@ -19,7 +19,7 @@ import {
   FieldDef,
   FieldRef,
   FieldTimestampDef,
-  FilterCondition,
+  FilterExpression,
   getIdentifier,
   ModelDef,
   Query,
@@ -46,6 +46,12 @@ import {
   QuerySegment,
   IndexSegment,
   Filtered,
+  isApplyFragment,
+  isApplyValue,
+  isParameterFragment,
+  ParameterFragment,
+  Parameter,
+  isValueParameter,
 } from "./malloy_types";
 
 import { generateSQLStringLiteral, indent, AndChain } from "./utils";
@@ -155,6 +161,25 @@ type QuerySomething = QueryField | QueryStruct | QueryTurtle;
 //   | "turtle"
 //   | "struct";
 
+class GenerateState {
+  whereSQL?: string;
+  applyValue?: string;
+
+  withWhere(s?: string): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = s;
+    newState.applyValue = this.applyValue;
+    return newState;
+  }
+
+  withApply(s: string): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = s;
+    return newState;
+  }
+}
+
 abstract class QueryNode {
   fieldDef: FieldDef;
   constructor(fieldDef: FieldDef) {
@@ -217,7 +242,7 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: FieldFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
@@ -226,7 +251,7 @@ class QueryField extends QueryNode {
         resultSet,
         field.parent,
         field.fieldDef.e,
-        whereSQL
+        state
       );
     } else {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
@@ -234,20 +259,48 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateParameterFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: ParameterFragment,
+    state: GenerateState
+  ): string {
+    // find the structDef and return the path to the field...
+    const param = context.parameters()[expr.path];
+    if (isValueParameter(param)) {
+      if (param.value) {
+        return this.generateExpressionFromExpr(
+          resultSet,
+          context,
+          param.value,
+          state
+        );
+      }
+    } else if (param.condition) {
+      return this.generateExpressionFromExpr(
+        resultSet,
+        context,
+        param.condition,
+        state
+      );
+    }
+    throw new Error(`Can't generate SQL, no value for ${expr.path}`);
+  }
+
   generateFilterFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: FilterFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
-    const allWhere = new AndChain(whereSQL);
+    const allWhere = new AndChain(state.whereSQL);
     for (const cond of expr.filterList) {
       allWhere.add(
         this.generateExpressionFromExpr(
           resultSet,
           context,
-          cond.condition,
-          undefined
+          cond.expression,
+          state.withWhere()
         )
       );
     }
@@ -255,7 +308,7 @@ class QueryField extends QueryNode {
       resultSet,
       context,
       expr.e,
-      allWhere.sql()
+      state.withWhere(allWhere.sql())
     );
   }
 
@@ -263,16 +316,16 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: AggregateFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
     let dim = this.generateExpressionFromExpr(
       resultSet,
       context,
       expr.e,
-      whereSQL
+      state
     );
-    if (whereSQL) {
-      dim = `CASE WHEN ${whereSQL} THEN ${dim} END`;
+    if (state.whereSQL) {
+      dim = `CASE WHEN ${state.whereSQL} THEN ${dim} END`;
     }
     return dim;
   }
@@ -297,9 +350,9 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: AggregateFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, whereSQL);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
     const distinctKeySQL = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -316,9 +369,9 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: AggregateFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, whereSQL);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
     const f =
       expr.function === "count_distinct"
         ? "count(distinct "
@@ -330,10 +383,10 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: AggregateFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, whereSQL);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
     const distinctKeySQL = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -341,8 +394,8 @@ class QueryField extends QueryNode {
     );
     if (distinctKeySQL) {
       let countDistinctKeySQL = distinctKeySQL;
-      if (whereSQL) {
-        countDistinctKeySQL = `CASE WHEN ${whereSQL} THEN ${distinctKeySQL} END`;
+      if (state.whereSQL) {
+        countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
       return `${sqlSumDistinct(
         dimSQL,
@@ -357,7 +410,7 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: AggregateFragment,
-    whereSQL: string | undefined
+    state: GenerateState
   ): string {
     let func = "COUNT(";
     let thing = "1";
@@ -372,8 +425,8 @@ class QueryField extends QueryNode {
     }
 
     // find the structDef and return the path to the field...
-    if (whereSQL) {
-      return `${func} CASE WHEN ${whereSQL} THEN ${thing} END)`;
+    if (state.whereSQL) {
+      return `${func} CASE WHEN ${state.whereSQL} THEN ${thing} END)`;
     } else {
       return `${func} ${thing})`;
     }
@@ -383,33 +436,51 @@ class QueryField extends QueryNode {
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     e: Expr,
-    whereSQL: string | undefined
+    state: GenerateState = new GenerateState()
   ): string {
     let s = "";
     for (const expr of e) {
       if (typeof expr === "string") {
         s += expr;
       } else if (isFieldFragment(expr)) {
-        s += this.generateFieldFragment(resultSet, context, expr, whereSQL);
+        s += this.generateFieldFragment(resultSet, context, expr, state);
+      } else if (isParameterFragment(expr)) {
+        s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
-        s += this.generateFilterFragment(resultSet, context, expr, whereSQL);
+        s += this.generateFilterFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         if (expr.function === "sum") {
-          s += this.generateSumFragment(resultSet, context, expr, whereSQL);
+          s += this.generateSumFragment(resultSet, context, expr, state);
         } else if (expr.function === "avg") {
-          s += this.generateAvgFragment(resultSet, context, expr, whereSQL);
+          s += this.generateAvgFragment(resultSet, context, expr, state);
         } else if (expr.function === "count") {
-          s += this.generateCountFragment(resultSet, context, expr, whereSQL);
+          s += this.generateCountFragment(resultSet, context, expr, state);
         } else if (["count_distinct", "min", "max"].includes(expr.function)) {
-          s += this.generateSymmetricFragment(
-            resultSet,
-            context,
-            expr,
-            whereSQL
-          );
+          s += this.generateSymmetricFragment(resultSet, context, expr, state);
         } else {
           throw new Error(
             `Internal Error: Unknown aggregate function ${expr.function}`
+          );
+        }
+      } else if (isApplyFragment(expr)) {
+        const applyVal = this.generateExpressionFromExpr(
+          resultSet,
+          context,
+          expr.value,
+          state
+        );
+        s += this.generateExpressionFromExpr(
+          resultSet,
+          context,
+          expr.to,
+          state.withApply(applyVal)
+        );
+      } else if (isApplyValue(expr)) {
+        if (state.applyValue) {
+          s += state.applyValue;
+        } else {
+          throw new Error(
+            `Internal Error: Partial application value referenced but not provided`
           );
         }
       } else {
@@ -430,8 +501,7 @@ class QueryField extends QueryNode {
       return this.generateExpressionFromExpr(
         resultSet,
         this.parent,
-        this.fieldDef.e,
-        undefined
+        this.fieldDef.e
       );
     }
     return (
@@ -462,7 +532,7 @@ class QueryAtomicField extends QueryField {
     );
   }
 
-  getFilterList(): FilterCondition[] {
+  getFilterList(): FilterExpression[] {
     return [];
   }
 }
@@ -982,7 +1052,7 @@ class JoinInstance {
           {
             type: "boolean",
             name: "ignoreme",
-            e: filter.condition,
+            e: filter.expression,
           },
           this.queryStruct
         );
@@ -1255,7 +1325,7 @@ class QueryQuery extends QueryField {
         }
       } else if (isFilterFragment(expr)) {
         for (const filterCond of expr.filterList) {
-          this.addDependantExpr(resultStruct, context, filterCond.condition);
+          this.addDependantExpr(resultStruct, context, filterCond.expression);
         }
       } else if (isAsymmetricFragment(expr)) {
         if (expr.structPath) {
@@ -1329,7 +1399,7 @@ class QueryQuery extends QueryField {
     // in the correct catgory.
     for (const cond of resultStruct.firstSegment.filterList || []) {
       const context = this.parent;
-      this.addDependantExpr(resultStruct, context, cond.condition);
+      this.addDependantExpr(resultStruct, context, cond.expression);
     }
     for (const join of resultStruct.root().joins.values() || []) {
       for (const qf of join.joinConditions || []) {
@@ -1343,7 +1413,7 @@ class QueryQuery extends QueryField {
   generateSQLFilters(
     resultStruct: FieldInstanceResult,
     which: "where" | "having",
-    filterList: FilterCondition[] | undefined = undefined
+    filterList: FilterExpression[] | undefined = undefined
   ): AndChain {
     const resultFilters = new AndChain();
     const list = filterList || resultStruct.firstSegment.filterList;
@@ -1363,7 +1433,7 @@ class QueryQuery extends QueryField {
         const sqlClause = this.generateExpressionFromExpr(
           resultStruct,
           context,
-          cond.condition,
+          cond.expression,
           undefined
         );
         resultFilters.add(sqlClause);
@@ -2399,6 +2469,10 @@ class QueryStruct extends QueryNode {
     // type script is missing a beat here.
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
+  }
+
+  parameters(): Record<string, Parameter> {
+    return this.fieldDef.parameters || {};
   }
 
   addFieldsFromFieldList(fields: FieldDef[]) {

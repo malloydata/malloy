@@ -21,6 +21,7 @@ import { LogMessage, MessageLogger } from "./parse-log";
 import * as Source from "./source-reference";
 import { isComparison, isFieldDefinition } from "./ast";
 import { ParseMalloy } from "./parse-malloy";
+import { AtomicFieldType, isAtomicFieldType } from "../model";
 /**
  * Parse tree visitor which generates an AST from the ANTLR parse tree
  */
@@ -101,13 +102,18 @@ export class MalloyToAST
   }
 
   visitFieldName(pcx: parse.FieldNameContext): ast.FieldName {
-    const fn = new ast.FieldName(
+    return this.astAt(
+      new ast.FieldName(this.idReference(pcx.idReference())),
       pcx
-        .id()
-        .map((idcx) => this.idText(idcx))
-        .join(".")
     );
-    return this.astAt(fn, pcx);
+  }
+
+  idReference(pcx: parse.IdReferenceContext): string {
+    const fullRef = pcx
+      .id()
+      .map((idcx) => this.idText(idcx))
+      .join(".");
+    return fullRef;
   }
 
   visitExprLogical(pcx: parse.ExprLogicalContext): ast.ExprLogicalOp {
@@ -165,8 +171,8 @@ export class MalloyToAST
     }
   }
 
-  visitExprField(pcx: parse.ExprFieldContext): ast.ExprField {
-    return new ast.ExprField(this.visitFieldName(pcx.fieldName()));
+  visitExprIdReference(pcx: parse.ExprIdReferenceContext): ast.ExprIdReference {
+    return new ast.ExprIdReference(this.idReference(pcx.idReference()));
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {
@@ -606,7 +612,19 @@ export class MalloyToAST
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
     const exploreName = pcx.id();
     const name = this.idText(exploreName);
-    return this.astAt(new ast.NamedSource(name), pcx.id());
+    const paramListCx = pcx.isParam();
+    if (paramListCx) {
+      const paramInit: Record<string, ast.ConstantSubExpression> = {};
+      for (const cx of paramListCx) {
+        const pName = this.idText(cx.id());
+        const pVal = this.fieldExpression(
+          cx.isExpr().partialAllowedFieldExpr()
+        );
+        paramInit[pName] = new ast.ConstantSubExpression(pVal);
+      }
+      return this.astAt(new ast.NamedSource(name, paramInit), pcx);
+    }
+    return this.astAt(new ast.NamedSource(name), pcx);
   }
 
   visitAnonymousSource(pcx: parse.AnonymousSourceContext): ast.AnonymousSource {
@@ -753,10 +771,13 @@ export class MalloyToAST
 
   visitDefineStatement(pcx: parse.DefineStatementContext): ast.Define {
     const exported = pcx.EXPORT() !== undefined;
-    const name = this.idText(pcx.defineName().id());
+    const name = this.idText(pcx.id());
     const value = this.visit(pcx.defineValue());
+    const has = pcx.has().map((cx) => this.visit(cx));
     if (value instanceof ast.Mallobj) {
-      return this.astAt(new ast.Define(name, value, exported), pcx);
+      const hasParams = has.length > 0 ? has : undefined;
+      const def = new ast.Define(name, value, exported, hasParams);
+      return this.astAt(def, pcx);
     }
     this.semanticError(pcx.defineValue(), "Expected exploreable object");
     throw new Error("define needs mallobj");
@@ -870,5 +891,76 @@ export class MalloyToAST
     const nq = this.astAt(new ast.DocumentQuery(explore, this.queryIndex), pcx);
     this.queryIndex += 1;
     return nq;
+  }
+
+  visitRequiredConditionParam(
+    pcx: parse.RequiredConditionParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType().text,
+      isCondition: true,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  malloyType(cx: parse.MalloyTypeContext): AtomicFieldType {
+    const type = cx.text;
+    if (isAtomicFieldType(type)) {
+      return type;
+    }
+    throw new Error("grammar for malloy type doesn't match atomic types");
+  }
+
+  visitOptionalConditionParam(
+    pcx: parse.OptionalConditionParamContext
+  ): ast.HasParameter {
+    const name = this.idText(pcx.id());
+    const type = this.malloyType(pcx.malloyType());
+    const e = this.constantExpression(pcx.hasCond());
+    const has = new ast.HasParameter({
+      name,
+      type,
+      isCondition: true,
+      default: e,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  visitRequiredValueParam(
+    pcx: parse.RequiredValueParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType().text,
+      isCondition: false,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  constantExpression(f: parse.FieldExprContext): ast.ConstantSubExpression {
+    const e = this.visit(f);
+    if (e instanceof ast.ExpressionDef) {
+      return this.astAt(new ast.ConstantSubExpression(e), f);
+    }
+    throw new Error(`CONSTANT EXPRESSION. '${e.elementType}' not expected`);
+  }
+
+  visitOptionalValueParam(
+    pcx: parse.OptionalValueParamContext
+  ): ast.HasParameter {
+    const has = new ast.HasParameter({
+      name: this.idText(pcx.id()),
+      type: pcx.malloyType()?.text,
+      default: this.constantExpression(pcx.hasExpr().fieldExpr()),
+      isCondition: false,
+    });
+    return this.astAt(has, pcx);
+  }
+
+  visitConstantParam(pcx: parse.ConstantParamContext): ast.HasParameter {
+    const e = this.constantExpression(pcx.hasExpr().fieldExpr());
+    const has = new ast.ConstantParameter(this.idText(pcx.id()), e);
+    return this.astAt(has, pcx);
   }
 }
