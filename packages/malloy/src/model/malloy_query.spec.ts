@@ -636,45 +636,45 @@ describe("expression tests", () => {
     expect(result.result[0].num_providers).toBe(296);
   });
 
-  it("merge_struct_test", async () => {
-    const result = await faa.runQuery({
-      pipeline: [
-        {
-          type: "reduce",
-          orderBy: [{ dir: "desc", field: 2 }],
-          fields: [
-            "state_facts.num_providers",
-            "provider_count",
-            {
-              type: "turtle",
-              name: "provider_state",
-              pipeline: [
-                {
-                  fields: ["provider_state"],
-                  type: "reduce",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      structRef: {
-        from: "medicare_test",
-        joins: [
-          {
-            as: "state_facts",
-            structRef: "medicare_state_facts",
-            structRelationship: {
-              foreignKey: "provider_state",
-              type: "foreignKey",
-            },
-          },
-        ],
-        type: "explore",
-      },
-    });
-    expect(result.result[0].num_providers).toBe(296);
-  });
+  // it("merge_struct_test", async () => {
+  //   const result = await faa.runQuery({
+  //     pipeline: [
+  //       {
+  //         type: "reduce",
+  //         orderBy: [{ dir: "desc", field: 2 }],
+  //         fields: [
+  //           "state_facts.num_providers",
+  //           "provider_count",
+  //           {
+  //             type: "turtle",
+  //             name: "provider_state",
+  //             pipeline: [
+  //               {
+  //                 fields: ["provider_state"],
+  //                 type: "reduce",
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     ],
+  //     structRef: {
+  //       from: "medicare_test",
+  //       joins: [
+  //         {
+  //           as: "state_facts",
+  //           structRef: "medicare_state_facts",
+  //           structRelationship: {
+  //             foreignKey: "provider_state",
+  //             type: "foreignKey",
+  //           },
+  //         },
+  //       ],
+  //       type: "explore",
+  //     },
+  //   });
+  //   expect(result.result[0].num_providers).toBe(296);
+  // });
 
   // const faa2: TestDeclaration[] = [
 

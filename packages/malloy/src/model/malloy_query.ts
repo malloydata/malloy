@@ -26,7 +26,6 @@ import {
   QueryFieldDef,
   StructDef,
   StructRef,
-  AnonymousExploreDef,
   OrderBy,
   QueryData,
   QueryResult,
@@ -2823,8 +2822,6 @@ export class QueryModel {
       let qs;
       if (s.type === "struct") {
         qs = new QueryStruct(s, { model: this });
-      } else if (s.type === "explore") {
-        qs = this.getStructFromExploreDef(s); // probably have some dependancy problems to work out.
       } else {
         throw new Error("Internal Error: Unknown structure type");
       }
@@ -2875,37 +2872,11 @@ export class QueryModel {
     }
   }
 
-  getStructFromExploreDef(exploreDef: AnonymousExploreDef): QueryStruct {
-    const fromStruct = this.getStructFromRef(exploreDef.from, true);
-    if (exploreDef.primaryKey) {
-      fromStruct.fieldDef.primaryKey = exploreDef.primaryKey;
-    }
-    let join;
-    for (join of exploreDef.joins || []) {
-      // this should probably be a method on a QueryStruct.
-      const joinedStruct = this.getStructFromRef(join.structRef);
-      joinedStruct.setParent({ struct: fromStruct });
-      joinedStruct.fieldDef.structRelationship = join.structRelationship;
-      fromStruct.fieldDef.fields.push(joinedStruct.fieldDef);
-      fromStruct.addFieldToNameMap(join.as, joinedStruct);
-    }
-
-    // need to figure out rename and conflicts, ingore nfor now.
-    if (exploreDef.fields) {
-      fromStruct.addFieldsFromFieldList(exploreDef.fields);
-    }
-    // Need to add the filter list.
-
-    return fromStruct;
-  }
-
   getStructFromRef(structRef: StructRef, makeNew = false): QueryStruct {
     if (typeof structRef === "string") {
       return this.getStructByName(structRef, makeNew);
     } else if (structRef.type === "struct") {
       return new QueryStruct(structRef, { model: this });
-    } else if (structRef.type === "explore") {
-      return this.getStructFromExploreDef(structRef);
     } else {
       throw new Error("Broken for now");
       // return new QueryStruct(
