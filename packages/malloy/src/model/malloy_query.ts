@@ -71,6 +71,11 @@ async function translatorFor(src: string): Promise<MalloyTranslator> {
   return parse;
 }
 
+// probably a dialect function at some point.
+function quoteTableName(name: string): string {
+  return `\`${name}\``;
+}
+
 class StageWriter {
   withs = new Map<string, string>();
   udfs = new Map<string, string>();
@@ -2512,18 +2517,30 @@ class QueryStruct extends QueryNode {
     }
   }
 
+  // generate unique string for the alias.
+  // return a string that can be used to represent the full
+  //  join path to a struct.
+  getSQLMungedIdentifier(): string {
+    // get the malloy name for this struct (will include a trailing dot)
+    return this.getFullOutputName().replace(/\.$/, "").replace(/\./g, "_o_");
+  }
+
   // return the name of the field in SQL
   getIdentifier(): string {
-    if (
-      this.fieldDef.as === undefined &&
-      this.fieldDef.structRelationship.type === "basetable"
-    ) {
-      return "base";
+    // if it is the root table, use provided alias if we have one.
+    if (this.fieldDef.structRelationship.type === "basetable") {
+      if (this.fieldDef.as === undefined) {
+        return "base";
+      } else {
+        return super.getIdentifier();
+      }
     }
+    // if this is an inline object, include the parents alias.
     if (this.fieldDef.structRelationship.type === "inline" && this.parent) {
       return this.parent.getIdentifier() + "." + super.getIdentifier();
     }
-    return super.getIdentifier();
+    // we are somewhere in the join tree.  Make sure the alias is unique.
+    return this.getSQLMungedIdentifier();
   }
 
   // return the name of the field in Malloy
@@ -2700,7 +2717,7 @@ class QueryStruct extends QueryNode {
       case "table":
         // 'name' is always the source table, even if it has been renamed
         // through 'as'
-        return this.fieldDef.name;
+        return quoteTableName(this.fieldDef.name);
       case "nested":
         // 'name' is always the source field even if has been renamed through
         // 'as'
