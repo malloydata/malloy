@@ -688,6 +688,26 @@ describe("expression tests", () => {
     expect(rows(result)[0].m_count).toBe(3496);
   });
 
+  it("query with aliasname used twice", async () => {
+    const result = await model.runQuery(`
+aircraft | reduce
+first is substring(city,1,1)
+aircraft_count is count()
+aircraft is (reduce
+  first_two is substring(city,1,2)
+  aircraft_count is count()
+  aircraft is (reduce
+    first_three is substring(city,1,3)
+    aircraft_count is count()
+  )
+)
+| project
+aircraft.aircraft.first_three
+aircraft_count
+    `);
+    expect(rows(result)[0].first_three).toBe("SAN");
+  });
+
   it("joined filtered explores", async () => {
     const result = await model.runQuery(`
     define a_models is (explore 'lookerdata.liquor.aircraft_models'
@@ -705,7 +725,7 @@ describe("expression tests", () => {
       model.model_count
       aircraft_count
         `);
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(rows(result)[0].model_count).toBe(5046);
     expect(rows(result)[0].aircraft_count).toBe(359928);
   });

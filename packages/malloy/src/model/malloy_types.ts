@@ -383,7 +383,8 @@ export type StructSource =
   | { type: "table" }
   | { type: "nested" }
   | { type: "inline" }
-  | { type: "query"; query: Query };
+  | { type: "query"; query: Query }
+  | { type: "sql" };
 
 // Inline and nested tables, cannot have a StructRelationship
 //  the relationshipo is implied

@@ -71,6 +71,11 @@ async function translatorFor(src: string): Promise<MalloyTranslator> {
   return parse;
 }
 
+// probably a dialect function at some point.
+function quoteTableName(name: string): string {
+  return `\`${name}\``;
+}
+
 class StageWriter {
   withs = new Map<string, string>();
   udfs = new Map<string, string>();
@@ -2232,6 +2237,7 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       structDef.name = "UNNEST(__param)";
+      structDef.structSource.type = "sql";
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2447,6 +2453,7 @@ class QueryStruct extends QueryNode {
   parent: QueryStruct | undefined;
   model: QueryModel;
   nameMap = new Map<string, QuerySomething>();
+  pathAliasMap: Map<string, string>;
 
   constructor(
     fieldDef: StructDef,
@@ -2461,8 +2468,10 @@ class QueryStruct extends QueryNode {
 
     if ("model" in parent) {
       this.model = parent.model;
+      this.pathAliasMap = new Map<string, string>();
     } else {
       this.model = this.getModel();
+      this.pathAliasMap = this.root().pathAliasMap;
     }
 
     this.fieldDef = fieldDef; // shouldn't have to do this, but
@@ -2512,18 +2521,53 @@ class QueryStruct extends QueryNode {
     }
   }
 
+  // generate unique string for the alias.
+  // return a string that can be used to represent the full
+  //  join path to a struct.
+  getAliasIdentifier(): string {
+    const path = this.getFullOutputName();
+    const ret: string | undefined = this.pathAliasMap.get(path);
+
+    // make a unique alias name
+    if (ret === undefined) {
+      const aliases = Array.from(this.pathAliasMap.values());
+      const base = getIdentifier(this.fieldDef);
+      let name = base;
+      let n = 1;
+      while (aliases.includes(name) && n < 1000) {
+        n++;
+        name = `${base}_${n}`;
+      }
+      if (n < 1000) {
+        this.pathAliasMap.set(path, name);
+        return name;
+      } else {
+        throw new Error("Internal Error: cannot create unique alias name");
+      }
+
+      // get the malloy name for this struct (will include a trailing dot)
+      // return this.getFullOutputName().replace(/\.$/, "").replace(/\./g, "_o_");
+    } else {
+      return ret;
+    }
+  }
+
   // return the name of the field in SQL
   getIdentifier(): string {
-    if (
-      this.fieldDef.as === undefined &&
-      this.fieldDef.structRelationship.type === "basetable"
-    ) {
-      return "base";
+    // if it is the root table, use provided alias if we have one.
+    if (this.fieldDef.structRelationship.type === "basetable") {
+      if (this.fieldDef.as === undefined) {
+        return "base";
+      } else {
+        return super.getIdentifier();
+      }
     }
+    // if this is an inline object, include the parents alias.
     if (this.fieldDef.structRelationship.type === "inline" && this.parent) {
       return this.parent.getIdentifier() + "." + super.getIdentifier();
     }
-    return super.getIdentifier();
+    // we are somewhere in the join tree.  Make sure the alias is unique.
+    return this.getAliasIdentifier();
   }
 
   // return the name of the field in Malloy
@@ -2700,6 +2744,8 @@ class QueryStruct extends QueryNode {
       case "table":
         // 'name' is always the source table, even if it has been renamed
         // through 'as'
+        return quoteTableName(this.fieldDef.name);
+      case "sql":
         return this.fieldDef.name;
       case "nested":
         // 'name' is always the source field even if has been renamed through
