@@ -2453,6 +2453,7 @@ class QueryStruct extends QueryNode {
   parent: QueryStruct | undefined;
   model: QueryModel;
   nameMap = new Map<string, QuerySomething>();
+  pathAliasMap: Map<string, string>;
 
   constructor(
     fieldDef: StructDef,
@@ -2467,8 +2468,10 @@ class QueryStruct extends QueryNode {
 
     if ("model" in parent) {
       this.model = parent.model;
+      this.pathAliasMap = new Map<string, string>();
     } else {
       this.model = this.getModel();
+      this.pathAliasMap = this.root().pathAliasMap;
     }
 
     this.fieldDef = fieldDef; // shouldn't have to do this, but
@@ -2521,9 +2524,32 @@ class QueryStruct extends QueryNode {
   // generate unique string for the alias.
   // return a string that can be used to represent the full
   //  join path to a struct.
-  getSQLMungedIdentifier(): string {
-    // get the malloy name for this struct (will include a trailing dot)
-    return this.getFullOutputName().replace(/\.$/, "").replace(/\./g, "_o_");
+  getAliasIdentifier(): string {
+    const path = this.getFullOutputName();
+    const ret: string | undefined = this.pathAliasMap.get(path);
+
+    // make a unique alias name
+    if (ret === undefined) {
+      const aliases = Array.from(this.pathAliasMap.values());
+      const base = getIdentifier(this.fieldDef);
+      let name = base;
+      let n = 1;
+      while (aliases.includes(name) && n < 1000) {
+        n++;
+        name = `${base}_${n}`;
+      }
+      if (n < 1000) {
+        this.pathAliasMap.set(path, name);
+        return name;
+      } else {
+        throw new Error("Internal Error: cannot create unique alias name");
+      }
+
+      // get the malloy name for this struct (will include a trailing dot)
+      // return this.getFullOutputName().replace(/\.$/, "").replace(/\./g, "_o_");
+    } else {
+      return ret;
+    }
   }
 
   // return the name of the field in SQL
@@ -2541,7 +2567,7 @@ class QueryStruct extends QueryNode {
       return this.parent.getIdentifier() + "." + super.getIdentifier();
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.
-    return this.getSQLMungedIdentifier();
+    return this.getAliasIdentifier();
   }
 
   // return the name of the field in Malloy
