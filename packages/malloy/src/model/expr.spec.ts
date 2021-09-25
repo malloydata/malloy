@@ -705,7 +705,7 @@ describe("expression tests", () => {
       model.model_count
       aircraft_count
         `);
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(rows(result)[0].model_count).toBe(5046);
     expect(rows(result)[0].aircraft_count).toBe(359928);
   });

@@ -2237,6 +2237,7 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       structDef.name = "UNNEST(__param)";
+      structDef.structSource.type = "sql";
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2718,6 +2719,8 @@ class QueryStruct extends QueryNode {
         // 'name' is always the source table, even if it has been renamed
         // through 'as'
         return quoteTableName(this.fieldDef.name);
+      case "sql":
+        return this.fieldDef.name;
       case "nested":
         // 'name' is always the source field even if has been renamed through
         // 'as'
