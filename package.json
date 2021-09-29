@@ -29,7 +29,8 @@
     "docs-preprocess": "ts-node docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
-    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev"
+    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev",
+    "third-party-licenses": "ts-node scripts/third_party_licenses"
   },
   "resolutions": {},
   "devDependencies": {
@@ -38,6 +39,7 @@
     "@typescript-eslint/eslint-plugin": "^4.9.1",
     "@typescript-eslint/parser": "^4.18.0",
     "concurrently": "^6.2.1",
+    "csv-stringify": "^5.6.5",
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
