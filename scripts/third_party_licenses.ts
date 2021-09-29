@@ -228,7 +228,6 @@ const getLicenses = async () => {
     }
     console.log(
       "Finished with errors. There may still be TODOs - search for 'TODO' in the output"
-      // TODO TODO exit with errors
     );
   } else {
     console.log(
