@@ -986,7 +986,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
       // first join is by default the
       if (leafiest === undefined) {
         leafiest = name;
-      } else if (join.queryStruct.parentRelationship() === "one_to_many") {
+      } else if (join.parentRelationship() === "one_to_many") {
         // check up the parent relationship until you find
         //  the current leafiest node.  If it isn't in the direct path
         //  we need symmetric aggregate for everything.
@@ -1064,6 +1064,23 @@ class JoinInstance {
         this.joinConditions.push(qf);
       }
     }
+  }
+
+  parentRelationship(): "root" | "one_to_many" | "many_to_one" | "one_to_one" {
+    if (this.queryStruct.parent === undefined) {
+      return "root";
+    } else if (
+      this.queryStruct.fieldDef.structRelationship.type === "foreignKey"
+    ) {
+      return "many_to_one";
+    } else if (this.queryStruct.fieldDef.structRelationship.type === "nested") {
+      return "one_to_many";
+    } else if (this.queryStruct.fieldDef.structRelationship.type === "inline") {
+      return "one_to_one";
+    }
+    throw new Error(
+      `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
+    );
   }
 }
 
@@ -2677,21 +2694,6 @@ class QueryStruct extends QueryNode {
     } else {
       this.model = this.getModel();
     }
-  }
-
-  parentRelationship(): "root" | "one_to_many" | "many_to_one" | "one_to_one" {
-    if (this.parent === undefined) {
-      return "root";
-    } else if (this.fieldDef.structRelationship.type === "foreignKey") {
-      return "many_to_one";
-    } else if (this.fieldDef.structRelationship.type === "nested") {
-      return "one_to_many";
-    } else if (this.fieldDef.structRelationship.type === "inline") {
-      return "one_to_one";
-    }
-    throw new Error(
-      `Internal error unknown relationship type to parent for ${this.fieldDef.name}`
-    );
   }
 
   /** makes a new queryable field object from a fieldDef */
