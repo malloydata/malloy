@@ -13,6 +13,7 @@
 	],
 	"activationEvents": [
 		"onCommand:malloy.runQueryFile",
+		"onCommand:malloy.showLicenses",
 		"onLanguage:malloy"
 	],
 	"main": "./dist/extension",
@@ -27,6 +28,10 @@
 	},
 	"contributes": {
 		"commands": [
+			{
+				"command": "malloy.showLicenses",
+				"title": "Malloy: Show Licenses"
+			},
 			{
 				"command": "malloy.runQueryFile",
 				"title": "Run Malloy Query File"
