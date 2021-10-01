@@ -56,7 +56,104 @@ export define aircraft is (
 
 `;
 
-export const aircraftHandStructDef: StructDef = {
+export const modelHandBase: StructDef = {
+  name: "lookerdata.liquor.aircraft_models",
+  as: "aircraft_models",
+  type: "struct",
+  structSource: { type: "table" },
+  structRelationship: { type: "basetable" },
+  fields: [
+    { type: "string", name: "aircraft_model_code" },
+    { type: "string", name: "manufacturer" },
+    { type: "string", name: "model" },
+    { type: "number", name: "aircraft_type_id", numberType: "integer" },
+    {
+      type: "number",
+      name: "aircraft_engine_type_id",
+      numberType: "integer",
+    },
+    { type: "number", name: "aircraft_category_id", numberType: "integer" },
+    { type: "number", name: "amateur", numberType: "integer" },
+    { type: "number", name: "engines", numberType: "integer" },
+    { type: "number", name: "seats", numberType: "integer" },
+    { type: "number", name: "weight", numberType: "integer" },
+    { type: "number", name: "speed", numberType: "integer" },
+    {
+      name: "model_count",
+      type: "number",
+      e: [{ type: "aggregate", function: "count", e: [] }],
+      aggregate: true,
+      numberType: "float",
+    },
+    {
+      name: "total_seats",
+      type: "number",
+      e: [
+        {
+          type: "aggregate",
+          function: "sum",
+          e: [{ type: "field", path: "seats" }],
+        },
+      ],
+      aggregate: true,
+      numberType: "float",
+    },
+    {
+      name: "boeing_seats",
+      type: "number",
+      e: [
+        {
+          type: "filterExpression",
+          e: [
+            {
+              type: "aggregate",
+              function: "sum",
+              e: [{ type: "field", path: "seats" }],
+            },
+          ],
+          filterList: [
+            {
+              aggregate: false,
+              source: "manufacturer='BOEING'",
+              expression: [
+                {
+                  type: "field",
+                  path: "manufacturer",
+                },
+                "='BOEING'",
+              ],
+            },
+          ],
+        },
+      ],
+      aggregate: true,
+      numberType: "float",
+    },
+    {
+      name: "percent_boeing",
+      type: "number",
+      e: [
+        "(",
+        { type: "field", path: "boeing_seats" },
+        "/",
+        { type: "field", path: "total_seats" },
+        ")*100",
+      ],
+      aggregate: true,
+      numberType: "float",
+    },
+    {
+      name: "percent_boeing_floor",
+      type: "number",
+      aggregate: true,
+      e: ["FLOOR(", { type: "field", path: "percent_boeing" }, ")"],
+      numberType: "float",
+    },
+  ],
+  primaryKey: "aircraft_model_code",
+};
+
+export const aircraftHandBase: StructDef = {
   type: "struct",
   name: "lookerdata.liquor.aircraft",
   structSource: { type: "table" },
@@ -106,114 +203,52 @@ export const aircraftHandStructDef: StructDef = {
         { type: "reduce", fields: ["a"] },
       ],
     },
-    {
-      name: "lookerdata.liquor.aircraft_models",
-      as: "aircraft_models",
-      type: "struct",
-      structSource: { type: "table" },
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: "aircraft_model_code",
-      },
-      fields: [
-        { type: "string", name: "aircraft_model_code" },
-        { type: "string", name: "manufacturer" },
-        { type: "string", name: "model" },
-        { type: "number", name: "aircraft_type_id", numberType: "integer" },
-        {
-          type: "number",
-          name: "aircraft_engine_type_id",
-          numberType: "integer",
-        },
-        { type: "number", name: "aircraft_category_id", numberType: "integer" },
-        { type: "number", name: "amateur", numberType: "integer" },
-        { type: "number", name: "engines", numberType: "integer" },
-        { type: "number", name: "seats", numberType: "integer" },
-        { type: "number", name: "weight", numberType: "integer" },
-        { type: "number", name: "speed", numberType: "integer" },
-        {
-          name: "airport_count",
-          type: "number",
-          e: [{ type: "aggregate", function: "count", e: [] }],
-          aggregate: true,
-          numberType: "float",
-        },
-        {
-          name: "total_seats",
-          type: "number",
-          e: [
-            {
-              type: "aggregate",
-              function: "sum",
-              e: [{ type: "field", path: "seats" }],
-            },
-          ],
-          aggregate: true,
-          numberType: "float",
-        },
-        {
-          name: "boeing_seats",
-          type: "number",
-          e: [
-            {
-              type: "filterExpression",
-              e: [
-                {
-                  type: "aggregate",
-                  function: "sum",
-                  e: [{ type: "field", path: "seats" }],
-                },
-              ],
-              filterList: [
-                {
-                  aggregate: false,
-                  source: "manufacturer='BOEING'",
-                  expression: [
-                    {
-                      type: "field",
-                      path: "manufacturer",
-                    },
-                    "='BOEING'",
-                  ],
-                },
-              ],
-            },
-          ],
-          aggregate: true,
-          numberType: "float",
-        },
-        {
-          name: "percent_boeing",
-          type: "number",
-          e: [
-            "(",
-            { type: "field", path: "boeing_seats" },
-            "/",
-            { type: "field", path: "total_seats" },
-            ")*100",
-          ],
-          aggregate: true,
-          numberType: "float",
-        },
-        {
-          name: "percent_boeing_floor",
-          type: "number",
-          aggregate: true,
-          e: ["FLOOR(", { type: "field", path: "percent_boeing" }, ")"],
-          numberType: "float",
-        },
-      ],
-      primaryKey: "aircraft_model_code",
-    },
   ],
   primaryKey: "tail_num",
   as: "aircraft",
 };
 
+export const aircraftHandStructDef: StructDef = {
+  ...aircraftHandBase,
+  fields: [
+    ...aircraftHandBase.fields,
+    {
+      ...modelHandBase,
+      structRelationship: {
+        type: "foreignKey",
+        foreignKey: "aircraft_model_code",
+      },
+    },
+  ],
+};
+
+export const modelAircraftHandStructDef: StructDef = {
+  ...modelHandBase,
+  fields: [
+    ...modelHandBase.fields,
+    {
+      ...aircraftHandBase,
+      structRelationship: {
+        type: "condition",
+        joinRelationship: "one_to_many",
+        onExpression: {
+          e: [
+            { type: "field", path: "aircraft_model_code" },
+            "=",
+            { type: "field", path: "aircraft.aircraft_model_code" },
+          ],
+        },
+      },
+    },
+  ],
+};
+
 const handCodedModel: ModelDef = {
   name: "Hand Coded Models",
   exports: ["aircraft"],
-  structs: { aircraft: aircraftHandStructDef },
+  structs: {
+    aircraft: aircraftHandStructDef,
+  },
 };
 
 /** Flight model */
@@ -708,6 +743,26 @@ aircraft_count
     expect(rows(result)[0].first_three).toBe("SAN");
   });
 
+  it("join foreign_key reverse", async () => {
+    const result = await model.runQuery(`
+  define a is('lookerdata.liquor.aircraft'
+    primary key tail_num
+    aircraft_count is count()
+  );
+  export define am is ('lookerdata.liquor.aircraft_models'
+    primary key aircraft_model_code
+    a is join on a.aircraft_model_code
+
+    some_measures is (reduce
+      am_count is count()
+      a.aircraft_count
+    )
+  );
+  am | some_measures
+    `);
+    expect(rows(result)[0].first_three).toBe("SAN");
+  });
+
   it("joined filtered explores", async () => {
     const result = await model.runQuery(`
     define a_models is (explore 'lookerdata.liquor.aircraft_models'
@@ -916,5 +971,53 @@ describe("order by tests", () => {
       explore f | foo
     `);
     await bqCompile(result.sql);
+  });
+});
+
+export const joinModelAircraftHandStructDef: StructDef = {
+  ...modelHandBase,
+  as: "model_aircraft",
+  fields: [
+    ...modelHandBase.fields,
+    {
+      ...aircraftHandBase,
+      structRelationship: {
+        type: "condition",
+        joinRelationship: "one_to_many",
+        onExpression: {
+          e: [
+            { type: "field", path: "aircraft_model_code" },
+            "=",
+            { type: "field", path: "aircraft.aircraft_model_code" },
+          ],
+        },
+      },
+    },
+  ],
+};
+
+const joinModel: ModelDef = {
+  name: "Hand Coded Join Models",
+  exports: ["model_aircraft"],
+  structs: {
+    model_aircraft: joinModelAircraftHandStructDef,
+  },
+};
+describe("join tests", () => {
+  const handJoinModel = new QueryModel(joinModel);
+
+  it("hand join ON", async () => {
+    const result = await handJoinModel.compileQuery({
+      structRef: "model_aircraft",
+      pipeline: [
+        {
+          type: "reduce",
+          fields: ["aircraft.state", "aircraft.aircraft_count", "model_count"],
+        },
+      ],
+    });
+    await bqCompile(result.sql);
+    console.log(result.sql);
+    // expect(result.result[0].total_seats).toBe(452415);
   });
 });
