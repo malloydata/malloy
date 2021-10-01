@@ -13,22 +13,16 @@
 
 import * as vscode from "vscode";
 import * as path from "path";
+import * as fs from "fs";
 
 export async function showLicensesCommand(): Promise<void> {
-  // Replace package.json with "licenses.txt" or whatever gets generated
-  const licenseFilePath = path.join(__dirname, "../package.json");
+  const licenseFilePath = path.join(__dirname, "../third_party_notices.txt");
 
-  // We could open a NEW text document with the content of the licenses
-  // If we did this, we could just fs.readFileSync the path and show it like so:
-  // const document = await vscode.workspace.openTextDocument({
-  //   language: "json",
-  //   content: `The license for Malloy are...`,
-  // });
+  const content = fs.readFileSync(licenseFilePath);
+  const document = await vscode.workspace.openTextDocument({
+    language: "text",
+    content: content.toString(),
+  });
 
-  // Or just open the license file directly
-  const doc = await vscode.workspace.openTextDocument(
-    vscode.Uri.parse(licenseFilePath)
-  );
-
-  await vscode.window.showTextDocument(doc, { preview: true });
+  await vscode.window.showTextDocument(document, { preview: true });
 }
