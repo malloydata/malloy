@@ -222,27 +222,6 @@ export const aircraftHandStructDef: StructDef = {
   ],
 };
 
-export const modelAircraftHandStructDef: StructDef = {
-  ...modelHandBase,
-  fields: [
-    ...modelHandBase.fields,
-    {
-      ...aircraftHandBase,
-      structRelationship: {
-        type: "condition",
-        joinRelationship: "one_to_many",
-        onExpression: {
-          e: [
-            { type: "field", path: "aircraft_model_code" },
-            "=",
-            { type: "field", path: "aircraft.aircraft_model_code" },
-          ],
-        },
-      },
-    },
-  ],
-};
-
 const handCodedModel: ModelDef = {
   name: "Hand Coded Models",
   exports: ["aircraft"],
@@ -743,7 +722,7 @@ aircraft_count
     expect(rows(result)[0].first_three).toBe("SAN");
   });
 
-  it("join foreign_key reverse", async () => {
+  it.skip("join foreign_key reverse", async () => {
     const result = await model.runQuery(`
   define a is('lookerdata.liquor.aircraft'
     primary key tail_num
@@ -996,11 +975,64 @@ export const joinModelAircraftHandStructDef: StructDef = {
   ],
 };
 
+// Join tests
+
+// airport_models filtered to 'B%' manufacturer
+export const modelB: StructDef = {
+  ...modelHandBase,
+  filterList: [
+    {
+      expression: [{ type: "field", path: "manufacturer" }, " LIKE 'B%'"],
+      source: "manufacturer ~ 'B%'",
+    },
+  ],
+};
+
+// one to many
+export const modelAircraftHandStructDef: StructDef = {
+  ...modelHandBase,
+  as: "model_aircraft",
+  fields: [
+    ...modelHandBase.fields,
+    {
+      ...aircraftHandBase,
+      structRelationship: {
+        type: "condition",
+        joinRelationship: "one_to_many",
+        onExpression: {
+          e: [
+            { type: "field", path: "aircraft_model_code" },
+            "=",
+            { type: "field", path: "aircraft.aircraft_model_code" },
+          ],
+        },
+      },
+    },
+  ],
+};
+
+export const aircraftBModelInner: StructDef = {
+  ...aircraftHandBase,
+  as: "aircraft_modelb_inner",
+  fields: [
+    ...aircraftHandBase.fields,
+    {
+      ...modelB,
+      structRelationship: {
+        type: "foreignKey",
+        foreignKey: "aircraft_model_code",
+        joinType: "inner",
+      },
+    },
+  ],
+};
+
 const joinModel: ModelDef = {
   name: "Hand Coded Join Models",
-  exports: ["model_aircraft"],
+  exports: ["model_aircraft", "aircraft_modelb_inner"],
   structs: {
     model_aircraft: joinModelAircraftHandStructDef,
+    aircraft_modelb_inner: aircraftBModelInner,
   },
 };
 describe("join tests", () => {
@@ -1017,7 +1049,41 @@ describe("join tests", () => {
       ],
     });
     await bqCompile(result.sql);
-    console.log(result.sql);
+    // console.log(result.sql);
     // expect(result.result[0].total_seats).toBe(452415);
+  });
+
+  it("hand join symmetric agg", async () => {
+    const result = await handJoinModel.runQuery({
+      structRef: "model_aircraft",
+      pipeline: [
+        {
+          type: "reduce",
+          fields: ["total_seats", "aircraft.aircraft_count"],
+        },
+      ],
+    });
+    await bqCompile(result.sql);
+    // console.log(result.sql);
+    // console.log(result.result);
+    expect(result.result[0].total_seats).toBe(452415);
+    expect(result.result[0].aircraft_count).toBe(373371);
+  });
+
+  it("hand join foreign key filtered inner", async () => {
+    const result = await handJoinModel.runQuery({
+      structRef: "aircraft_modelb_inner",
+      pipeline: [
+        {
+          type: "reduce",
+          fields: ["aircraft_models.total_seats", "aircraft_count"],
+        },
+      ],
+    });
+    await bqCompile(result.sql);
+    // console.log(result.sql);
+    // console.log(result.result);
+    expect(result.result[0].total_seats).toBe(108964);
+    expect(result.result[0].aircraft_count).toBe(52293);
   });
 });
