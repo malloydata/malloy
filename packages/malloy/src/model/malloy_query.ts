@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { cloneDeep } from "lodash";
+import { cloneDeep, upperCase } from "lodash";
 import { MalloyTranslator } from "../lang/parse-malloy";
 import { Malloy } from "../malloy";
 import {
@@ -52,6 +52,7 @@ import {
   ParameterFragment,
   Parameter,
   isValueParameter,
+  JoinRelationship,
 } from "./malloy_types";
 
 import { generateSQLStringLiteral, indent, AndChain } from "./utils";
@@ -986,7 +987,10 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
       // first join is by default the
       if (leafiest === undefined) {
         leafiest = name;
-      } else if (join.queryStruct.parentRelationship() === "one_to_many") {
+      } else if (
+        join.parentRelationship() === "one_to_many" ||
+        join.parentRelationship() === "many_to_many"
+      ) {
         // check up the parent relationship until you find
         //  the current leafiest node.  If it isn't in the direct path
         //  we need symmetric aggregate for everything.
@@ -1033,7 +1037,7 @@ class JoinInstance {
   leafiest = false;
   parent: JoinInstance | undefined;
   queryStruct: QueryStruct;
-  joinConditions?: QueryFieldBoolean[];
+  joinFilterConditions?: QueryFieldBoolean[];
   alias: string;
   children: JoinInstance[] = [];
   constructor(
@@ -1052,7 +1056,7 @@ class JoinInstance {
     //  generate dependancies and code for them.
     if (this.queryStruct.fieldDef.filterList) {
       for (const filter of this.queryStruct.fieldDef.filterList) {
-        this.joinConditions = [];
+        this.joinFilterConditions = [];
         const qf = new QueryFieldBoolean(
           {
             type: "boolean",
@@ -1061,9 +1065,30 @@ class JoinInstance {
           },
           this.queryStruct
         );
-        this.joinConditions.push(qf);
+        this.joinFilterConditions.push(qf);
       }
     }
+  }
+
+  parentRelationship(): "root" | JoinRelationship {
+    if (this.queryStruct.parent === undefined) {
+      return "root";
+    } else if (
+      this.queryStruct.fieldDef.structRelationship.type === "foreignKey"
+    ) {
+      return "many_to_one";
+    } else if (this.queryStruct.fieldDef.structRelationship.type === "nested") {
+      return "one_to_many";
+    } else if (this.queryStruct.fieldDef.structRelationship.type === "inline") {
+      return "one_to_one";
+    } else if (
+      this.queryStruct.fieldDef.structRelationship.type === "condition"
+    ) {
+      return this.queryStruct.fieldDef.structRelationship.joinRelationship;
+    }
+    throw new Error(
+      `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
+    );
   }
 }
 
@@ -1407,7 +1432,7 @@ class QueryQuery extends QueryField {
       this.addDependantExpr(resultStruct, context, cond.expression);
     }
     for (const join of resultStruct.root().joins.values() || []) {
-      for (const qf of join.joinConditions || []) {
+      for (const qf of join.joinFilterConditions || []) {
         if (qf.fieldDef.type === "boolean" && qf.fieldDef.e) {
           this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e);
         }
@@ -1630,23 +1655,42 @@ class QueryQuery extends QueryField {
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
     const structSQL = qs.structSourceSQL(stageWriter);
-    if (structRelationship.type === "foreignKey") {
+    if (
+      structRelationship.type === "foreignKey" ||
+      structRelationship.type === "condition"
+    ) {
+      let onCondition = "";
       if (qs.parent === undefined) {
         throw new Error("Expected joined struct to have a parent.");
       }
-      const fkDim = qs.parent.getOrMakeDimension(structRelationship.foreignKey);
-      const pkDim = qs.primaryKey();
-      if (!pkDim) {
-        throw new Error(
-          `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
+      if (structRelationship.type === "foreignKey") {
+        const fkDim = qs.parent.getOrMakeDimension(
+          structRelationship.foreignKey
         );
+        const pkDim = qs.primaryKey();
+        if (!pkDim) {
+          throw new Error(
+            `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
+          );
+        }
+        const fkSql = fkDim.generateExpression(this.rootResult);
+        const pkSql = pkDim.generateExpression(this.rootResult);
+        onCondition = `${fkSql} = ${pkSql}`;
+      } else {
+        // type == "conditionOn"
+        onCondition = new QueryFieldBoolean(
+          {
+            type: "boolean",
+            name: "ignoreme",
+            e: structRelationship.onExpression.e,
+          },
+          qs.parent
+        ).generateExpression(this.rootResult);
       }
-      const fkSql = fkDim.generateExpression(this.rootResult);
-      const pkSql = pkDim.generateExpression(this.rootResult);
       let filters = "";
       let conditions = undefined;
-      if (ji.joinConditions) {
-        conditions = ji.joinConditions.map((qf) =>
+      if (ji.joinFilterConditions) {
+        conditions = ji.joinFilterConditions.map((qf) =>
           qf.generateExpression(this.rootResult)
         );
       }
@@ -1654,7 +1698,9 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${fkSql} = ${pkSql}${filters}\n`;
+        s += `${upperCase(
+          structRelationship.joinType || "left"
+        )} JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
@@ -1667,7 +1713,7 @@ class QueryQuery extends QueryField {
         }\n${joins}\nWHERE ${conditions?.join(" AND ")}\n`;
         s += `LEFT JOIN (\n${indent(select)}) AS ${
           ji.alias
-        } ON ${fkSql} = ${pkSql}\n`;
+        } ON ${onCondition}\n`;
         return s;
       }
     } else if (structRelationship.type === "nested") {
@@ -2677,21 +2723,6 @@ class QueryStruct extends QueryNode {
     } else {
       this.model = this.getModel();
     }
-  }
-
-  parentRelationship(): "root" | "one_to_many" | "many_to_one" | "one_to_one" {
-    if (this.parent === undefined) {
-      return "root";
-    } else if (this.fieldDef.structRelationship.type === "foreignKey") {
-      return "many_to_one";
-    } else if (this.fieldDef.structRelationship.type === "nested") {
-      return "one_to_many";
-    } else if (this.fieldDef.structRelationship.type === "inline") {
-      return "one_to_one";
-    }
-    throw new Error(
-      `Internal error unknown relationship type to parent for ${this.fieldDef.name}`
-    );
   }
 
   /** makes a new queryable field object from a fieldDef */
