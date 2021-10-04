@@ -1970,9 +1970,9 @@ class QueryQuery extends QueryField {
             ","
           )}) THEN __delete__${
             result.groupSet
-          } END) OVER(partition by ${dimensions.join(",")}) as __shaving__${
-            result.groupSet
-          }`
+          } END) OVER(partition by ${dimensions
+            .map((x) => `CAST(${x} AS STRING) `)
+            .join(",")}) as __shaving__${result.groupSet}`
         );
       }
     }
