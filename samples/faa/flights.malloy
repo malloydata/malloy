@@ -23,7 +23,20 @@ define aircraft is (explore 'malloy-data.faa.aircraft'
   aircraft_models is join on aircraft_model_code
 );
 
-export define flights is (explore 'malloy-data.faa.flights'
+export define flights_base is (explore 'malloy-data.faa.flights'
+  primary key id2
+);
+
+define aircraft_facts is (explore
+  (explore flights_base | reduce
+    tail_num
+    lifetime_flights is count()
+    lifetime_distance is distance.sum()
+  )
+  lifetime_flights_bucketed is floor(lifetime_flights/1000)*1000
+);
+
+export define flights is (explore flights_base
   primary key id2
   -- rename some fields
   origin_code renames origin
@@ -34,6 +47,7 @@ export define flights is (explore 'malloy-data.faa.flights'
   origin is join airports on origin_code
   destination is join airports on destination_code,
   aircraft is join on tail_num
+  aircraft_facts is join on tail_num
 
   -- measures
   flight_count is count()
@@ -114,6 +128,14 @@ export define flights is (explore 'malloy-data.faa.flights'
     carriers_by_month
     routes_map
     delay_by_hour_of_day
+  )
+
+  plane_usage is (reduce order by 1 desc : [aircraft.aircraft_count > 1]
+    aircraft_facts.lifetime_flights_bucketed
+    aircraft.aircraft_count
+    flight_count
+    by_manufacturer
+    by_carrier
   )
 
   -- explore flights : [carriers.nickname : 'Southwest'] | carrier_dashboard

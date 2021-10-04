@@ -35,10 +35,12 @@ const expressionModelText = `
 export define aircraft_models is (explore 'lookerdata.liquor.aircraft_models'
   primary key aircraft_model_code
   airport_count is count(*),
+  aircraft_model_count is count(),
   total_seats is sum(seats),
   boeing_seats is sum(seats) : [manufacturer: 'BOEING'],
   percent_boeing is boeing_seats / total_seats * 100,
   percent_boeing_floor is FLOOR(boeing_seats / total_seats * 100),
+  seats_bucketed is FLOOR(seats/20)*20.0,
 );
 
 export define aircraft is (
@@ -591,6 +593,24 @@ describe("expression tests", () => {
     expect((result.result[0] as any).by_state[0].by_city[0].city).toBe(
       "ALBUQUERQUE"
     );
+  });
+
+  // bigquery doesn't like to partition by floats,
+  it("model: having float group by partition", async () => {
+    const result = await model.runQuery(`
+    -- hacking a null test for now
+    explore aircraft_models
+    | reduce order by 1 : [seats_bucketed > 0, aircraft_model_count > 400]
+        seats_bucketed
+        aircraft_model_count
+        foo is (reduce
+          engines
+          aircraft_model_count
+        )
+      `);
+    // console.log(result.sql);
+    // console.log(result.result);
+    expect(result.result[0].aircraft_model_count).toBe(448);
   });
 
   it("model: aggregate functions distinct min max", async () => {
