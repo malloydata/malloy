@@ -53,6 +53,17 @@ const sizeSmall = {
   width: 150,
 };
 
+const sizeSmallWidth = {
+  width: 150,
+};
+
+const sizeSmallHeightStep = {
+  height: { step: 13 },
+};
+
+const sizeSmallStep = { ...sizeSmallWidth, ...sizeSmallHeightStep };
+const sizeMediumStep = { ...sizeSmallWidth };
+
 const sizeMedium = {
   height: 150,
   width: 200,
@@ -196,18 +207,18 @@ const bar_NMM: lite.TopLevelSpec = {
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM,
-  bar_SM_small: { ...bar_SM, ...sizeSmall },
-  // bar_SM_medium: { ...bar_SM, ...sizeMedium }, // just use the default runs long
+  bar_SM_small: { ...bar_SM, ...sizeSmallStep },
+  bar_SM_medium: { ...bar_SM, ...sizeMediumStep }, // just use the default runs long
   bar_SM_large,
 
   bar_SMS,
-  bar_SMS_small: { ...bar_SMS, ...sizeSmall },
-  bar_SMS_medium: { ...bar_SMS, ...sizeMedium },
+  bar_SMS_small: { ...bar_SMS, ...sizeSmallStep },
+  bar_SMS_medium: { ...bar_SMS, ...sizeMediumStep },
   bar_SMS_large,
 
   bar_SMM,
-  bar_SMM_small: { ...bar_SMM, ...sizeSmall },
-  bar_SMM_medium: { ...bar_SMM, ...sizeMedium },
+  bar_SMM_small: { ...bar_SMM, ...sizeSmallStep },
+  bar_SMM_medium: { ...bar_SMM, ...sizeMediumStep },
   bar_SMM_large,
 
   bar_NM,
