@@ -217,7 +217,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SMS_large,
 
   bar_SMM,
-  bar_SMM_small: { ...bar_SMM, ...sizeSmallStep, height: { step: 13 } },
+  bar_SMM_small: { ...bar_SMM, ...sizeSmallStep },
   bar_SMM_medium: { ...bar_SMM, ...sizeMediumStep },
   bar_SMM_large,
 
