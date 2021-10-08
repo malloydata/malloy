@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "clean": "yarn workspace malloy clean && yarn tsc --build --clean",
-    "build": "yarn tsc --build",
+    "build": "yarn workspace malloy build-parser && yarn tsc --build",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn lint && yarn build && yarn workspaces run test",
     "test-fast": "yarn workspaces run test",
