@@ -220,7 +220,6 @@ export class BigQuery {
       .update(String(rowIndex))
       .digest("hex");
     let result;
-
     if ((result = this.resultCache.get(hash)) !== undefined) {
       return result;
     }
