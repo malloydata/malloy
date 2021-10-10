@@ -12,6 +12,9 @@
  */
 
 import { cloneDeep, upperCase } from "lodash";
+import { BigQueryDialect } from "../dialect/bigquery";
+import { Dialect, DialectFieldList } from "../dialect/dialect";
+import { PostgresDialect } from "../dialect/postgres";
 import { MalloyTranslator } from "../lang/parse-malloy";
 import { Malloy } from "../malloy";
 import {
@@ -72,10 +75,10 @@ async function translatorFor(src: string): Promise<MalloyTranslator> {
   return parse;
 }
 
-// probably a dialect function at some point.
-function quoteTableName(name: string): string {
-  return `\`${name}\``;
-}
+// // probably a dialect function at some point.
+// function quoteTableName(name: string): string {
+//   return `\`${name}\``;
+// }
 
 class StageWriter {
   withs = new Map<string, string>();
@@ -2022,7 +2025,9 @@ class QueryQuery extends QueryField {
     //
     // BigQuery will allocate more resources if we use a CROSS JOIN so we do that instead.
     //
-    from += `CROSS JOIN (SELECT row_number() OVER() -1  group_set FROM UNNEST(GENERATE_ARRAY(0,${this.maxGroupSet},1)))\n`;
+    from += `CROSS JOIN ${this.parent.model.dialect.sqlGroupSetTable(
+      this.maxGroupSet
+    )} as group_set\n`;
 
     s += indent(f.sql.join(",\n")) + "\n";
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
@@ -2054,10 +2059,10 @@ class QueryQuery extends QueryField {
             output.sql.push(`${exp} as ${sqlFieldName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            const exp = `ANY_VALUE(${this.caseGroup(
-              [resultSet.groupSet],
+            const exp = this.parent.model.dialect.sqlAnyValue(
+              resultSet.groupSet,
               sqlFieldName
-            )})`;
+            );
             output.sql.push(`${exp} as ${sqlFieldName}`);
             output.fieldIndex++;
           }
@@ -2171,13 +2176,10 @@ class QueryQuery extends QueryField {
     resultStruct: FieldInstanceResult,
     stageWriter: StageWriter
   ): string {
-    const fieldsSQL: string[] = [];
-    const outputFieldNames: string[] = [];
+    // let fieldsSQL: string[] = [];
+    const dialectFieldList: DialectFieldList = [];
     let orderBy = "";
-    let limit = "";
-    if (resultStruct.firstSegment.limit) {
-      limit = ` LIMIT ${resultStruct.firstSegment.limit}`;
-    }
+    const limit: number | undefined = resultStruct.firstSegment.limit;
 
     // If the turtle is a pipeline, generate a UDF to compute it.
     const newStageWriter = new StageWriter();
@@ -2233,42 +2235,55 @@ class QueryQuery extends QueryField {
           (field instanceof FieldInstanceField &&
             field.fieldUsage.type === "result"))
       ) {
-        fieldsSQL.push(`${name}__${resultStruct.groupSet} as ${sqlName}`);
-        outputFieldNames.push(name);
+        // fieldsSQL.push(`${name}__${resultStruct.groupSet} as ${sqlName}`);
+        // outputFieldNames.push(name);
+        dialectFieldList.push({
+          type: field.type,
+          sqlExpression: `${name}__${resultStruct.groupSet}`,
+          sqlOutputName: sqlName,
+        });
       } else if (
         resultStruct.firstSegment.type === "project" &&
         field instanceof FieldInstanceField &&
         field.fieldUsage.type === "result"
       ) {
-        fieldsSQL.push(
-          `${field.f.generateExpression(resultStruct)} as ${sqlName}`
-        );
+        // fieldsSQL.push(
+        //   `${field.f.generateExpression(resultStruct)} as ${sqlName}`
+        // );
+        dialectFieldList.push({
+          type: field.type,
+          sqlExpression: field.f.generateExpression(resultStruct),
+          sqlOutputName: sqlName,
+        });
       }
     }
 
-    let aggregateFunction = "ARRAY_AGG";
-    let tailSQL = ` IGNORE NULLS${orderBy}${limit}`;
-    if (udfName) {
-      aggregateFunction = `${udfName}(${aggregateFunction}`;
-      tailSQL += ")";
-    }
     let resultType;
+    let ret;
     if ((resultType = resultStruct.getRepeatedResultType()) !== "nested") {
       if (resultType === "inline_all_numbers") {
-        aggregateFunction = "COALESCE(ANY_VALUE";
-        const nullFields = outputFieldNames
-          .map((s) => `NULL as ${s}`)
-          .join(",");
-        tailSQL = `), STRUCT(${nullFields})`;
+        ret = this.parent.model.dialect.sqlCoaleseMeasuresInline(
+          resultStruct.groupSet,
+          dialectFieldList
+        );
       } else {
-        // inline
-        aggregateFunction = "ANY_VALUE";
-        tailSQL = "";
+        ret = this.parent.model.dialect.sqlAnyValueTurtle(
+          resultStruct.groupSet,
+          dialectFieldList
+        );
       }
+    } else {
+      ret = this.parent.model.dialect.sqlAggregateTurtle(
+        resultStruct.groupSet,
+        dialectFieldList,
+        orderBy,
+        limit
+      );
     }
-    return `${aggregateFunction}(CASE WHEN group_set=${
-      resultStruct.groupSet
-    } THEN STRUCT(${fieldsSQL.join(",\n")}) END${tailSQL})`;
+    return udfName ? `${udfName}(${ret})` : ret;
+    // return `${aggregateFunction}(CASE WHEN group_set=${
+    //   resultStruct.groupSet
+    // } THEN STRUCT(${fieldsSQL.join(",\n")}) END${tailSQL})`;
   }
 
   generateTurtlePipelineSQL(fi: FieldInstanceResult, stageWriter: StageWriter) {
@@ -2775,7 +2790,7 @@ class QueryStruct extends QueryNode {
       case "table":
         // 'name' is always the source table, even if it has been renamed
         // through 'as'
-        return quoteTableName(this.fieldDef.name);
+        return this.model.dialect.quoteTableName(this.fieldDef.name);
       case "sql":
         return this.fieldDef.name;
       case "nested":
@@ -2959,6 +2974,8 @@ const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
+  // dialect: Dialect = new BigQueryDialect();
+  dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {
