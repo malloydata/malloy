@@ -24,7 +24,6 @@
         "${workspaceFolder}/node_modules/malloy-render/**",
         "!**/node_modules/**"
       ],
-      "trace": true,
       "console": "integratedTerminal",
       "runtimeArgs": ["--preserve-symlinks"]
     },

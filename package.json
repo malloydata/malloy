@@ -5,9 +5,7 @@
   "name": "@looker-open-source/malloy",
   "workspaces": {
     "packages": [
-      "packages/malloy",
-      "packages/malloy-render",
-      "packages/malloy-vscode"
+      "packages/*"
     ]
   },
   "engines": {
