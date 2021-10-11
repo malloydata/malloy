@@ -2132,7 +2132,7 @@ class QueryQuery extends QueryField {
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
-              `ANY_VALUE(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`
+              this.parent.model.dialect.sqlAnyValueLastTurtle(name, sqlName)
             );
             fieldIndex++;
           }
@@ -2145,7 +2145,7 @@ class QueryQuery extends QueryField {
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
           fieldsSQL.push(
-            `ANY_VALUE(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`
+            this.parent.model.dialect.sqlAnyValueLastTurtle(name, sqlName)
           );
           fieldIndex++;
         }

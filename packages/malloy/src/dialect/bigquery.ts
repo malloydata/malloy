@@ -51,6 +51,10 @@ export class BigQueryDialect extends Dialect {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
 
+  sqlAnyValueLastTurtle(name: string, sqlName: string): string {
+    return `ANY_VALUE(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
+  }
+
   sqlCoaleseMeasuresInline(
     groupSet: number,
     fieldList: DialectFieldList

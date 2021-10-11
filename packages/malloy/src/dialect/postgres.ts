@@ -17,7 +17,7 @@ export class PostgresDialect extends Dialect {
   name = "postgres";
 
   quoteTableName(tableName: string): string {
-    return `'${tableName}'`;
+    return `${tableName}`;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -42,7 +42,7 @@ export class PostgresDialect extends Dialect {
       .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(", ");
     //return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END IGNORE NULLS ${tail})`;
-    return `ARRAY_AGG((SELECT __ FROM (SELECT ${fields}) as __) ${orderBy} ) FILTER (WHERE group_set=${groupSet})${tail}`;
+    return `(ARRAY_AGG((SELECT __ FROM (SELECT ${fields}) as __) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -52,17 +52,23 @@ export class PostgresDialect extends Dialect {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
 
+  sqlAnyValueLastTurtle(name: string, sqlName: string): string {
+    return `(ARRAY_AGG(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
+  }
+
   sqlCoaleseMeasuresInline(
     groupSet: number,
     fieldList: DialectFieldList
   ): string {
-    const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(", ");
-    const nullValues = fieldList
-      .map((f) => `NULL as ${f.sqlOutputName}`)
-      .join(", ");
+    // const nullValues = fieldList
+    //   .map((f) => `NULL as ${f.sqlOutputName}`)
+    //   .join(", ");
 
-    return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
+    return `(${this.sqlAggregateTurtle(
+      groupSet,
+      fieldList,
+      "",
+      undefined
+    )})[1]`;
   }
 }

@@ -44,6 +44,8 @@ export abstract class Dialect {
     fieldList: DialectFieldList
   ): string;
 
+  abstract sqlAnyValueLastTurtle(name: string, sqlName: string): string;
+
   abstract sqlCoaleseMeasuresInline(
     groupSet: number,
     fieldList: DialectFieldList
