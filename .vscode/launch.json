@@ -16,6 +16,7 @@
         "**/node_modules/malloy/**/dist/*.js",
         "${workspaceFolder}/packages/malloy-vscode/dist/*.js"
       ],
+      "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
       "sourceMaps": true,
       "resolveSourceMapLocations": [
