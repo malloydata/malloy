@@ -5,9 +5,7 @@
   "name": "@looker-open-source/malloy",
   "workspaces": {
     "packages": [
-      "packages/malloy",
-      "packages/malloy-render",
-      "packages/malloy-vscode"
+      "packages/*"
     ]
   },
   "engines": {
@@ -17,14 +15,13 @@
     "samples"
   ],
   "scripts": {
-    "clean": "yarn workspaces run clean",
-    "prebuild": "yarn clean",
-    "build": "yarn workspaces run build-without-dependencies",
+    "clean": "yarn workspace malloy clean && yarn tsc --build --clean",
+    "build": "yarn workspace malloy build-parser && yarn tsc --build",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn lint && yarn build && yarn workspaces run test",
     "test-fast": "yarn workspaces run test",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation",
-    "docs-prebuild": "yarn workspace malloy-render build && yarn docs-clean",
+    "docs-prebuild": "yarn build && yarn docs-clean",
     "docs-build": "yarn docs-prebuild && ts-node docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
     "docs-preprocess": "ts-node docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",

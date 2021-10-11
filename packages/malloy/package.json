@@ -6,17 +6,12 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
-    "prebuild": "yarn clean",
-    "build-watch": "yarn build-without-dependencies-watch",
-    "build": "yarn build-without-dependencies",
-    "build-without-dependencies": "yarn prebuild && yarn build-parser && tsc",
-    "build-without-dependencies-watch": "yarn prebuild && yarn build-parser && tsc --watch",
-    "build-local": "yarn clean && yarn build-without-dependencies",
     "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
     "testLang": "(cd src/lang ; yarn jest *.spec.ts)",
     "testModel": "(cd src/model ; yarn jest *.spec.ts)",
-    "clean": "rm -rf dist/ && rm -rf src/lang/lib && rm -f tsconfig.tsbuildinfo",
-    "malloyc": "ts-node src/lang/test/malloy-to-json.ts"
+    "clean": "rm -rf src/lang/lib",
+    "malloyc": "ts-node src/lang/test/malloy-to-json.ts",
+    "build": "yarn build-parser && yarn tsc --build"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^5.5.0",
@@ -39,9 +34,7 @@
     "md5": "^2.3.0",
     "path": "^0.12.7",
     "ts-jest": "^26.4.4",
-    "ts-node": "^9.1.1",
     "typedoc": "^0.20.27",
-    "typedoc-plugin-markdown": "^3.5.0",
-    "typescript": "4.3.5"
+    "typedoc-plugin-markdown": "^3.5.0"
   }
 }
