@@ -451,6 +451,10 @@ export function isFieldTimeBased(
   return f.type === "date" || f.type === "timestamp";
 }
 
+export function isFieldStructDef(f: FieldDef): f is StructDef {
+  return f.type === "struct";
+}
+
 // Queries
 
 /** field reference in a query */
@@ -558,8 +562,21 @@ export function isDimensional(field: FieldDef): boolean {
   return false;
 }
 
+export function isPhysical(field: FieldDef): boolean {
+  return (
+    (isFieldTypeDef(field) && field.e === undefined) ||
+    (isFieldStructDef(field) &&
+      (field.structSource.type === "nested" ||
+        field.structSource.type == "inline"))
+  );
+}
+
 export function getDimensions(structDef: StructDef): FieldAtomicDef[] {
   return structDef.fields.filter(isDimensional) as FieldAtomicDef[];
+}
+
+export function getPhysicalFields(structDef: StructDef): FieldDef[] {
+  return structDef.fields.filter(isPhysical) as FieldDef[];
 }
 
 export function isMeasureLike(field: FieldDef): boolean {

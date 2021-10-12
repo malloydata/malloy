@@ -21,6 +21,7 @@ export type DialectFieldList = DialectField[];
 
 export abstract class Dialect {
   abstract name: string;
+  abstract defaultNumberType: string;
 
   // return a quoted string for use as a table name.
   abstract quoteTableName(tableName: string): string;
@@ -50,4 +51,15 @@ export abstract class Dialect {
     groupSet: number,
     fieldList: DialectFieldList
   ): string;
+
+  abstract sqlUnnestAlias(
+    source: string,
+    alias: string,
+    fieldList: DialectFieldList,
+    needDistinctKey: boolean
+  ): string;
+
+  abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
+
+  abstract sqlGenerateUUID(): string;
 }

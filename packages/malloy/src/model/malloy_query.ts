@@ -56,6 +56,7 @@ import {
   Parameter,
   isValueParameter,
   JoinRelationship,
+  isPhysical,
 } from "./malloy_types";
 
 import { generateSQLStringLiteral, indent, AndChain } from "./utils";
@@ -368,7 +369,7 @@ class QueryField extends QueryNode {
       expr.structPath
     );
     if (distinctKeySQL) {
-      return sqlSumDistinct(dimSQL, distinctKeySQL);
+      return sqlSumDistinct(this.parent.model.dialect, dimSQL, distinctKeySQL);
     } else {
       return `SUM(${dimSQL})`;
     }
@@ -407,6 +408,7 @@ class QueryField extends QueryNode {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
       return `${sqlSumDistinct(
+        this.parent.model.dialect,
         dimSQL,
         distinctKeySQL
       )}/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
@@ -658,21 +660,13 @@ class QueryFieldDistinctKey extends QueryAtomicField {
 
 const NUMERIC_DECIMAL_PRECISION = 9;
 
-function sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-  sqlDistinctKey = `CAST(${sqlDistinctKey} AS STRING)`;
-  const upperPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 1, 15)) as int64) as numeric) * 4294967296`;
-  const lowerPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 16, 8)) as int64) as numeric)`;
-  // See the comment below on `sql_sum_distinct` for why we multiply by this decimal
-  const precisionShiftMultiplier = "0.000000001";
-  return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
-}
-
-// This is basically the same as the base `sql_sum_distinct`, but with the important difference that BigQuery's NUMERIC
-// is essentially a DECIMAL(29, 9). This means, to use all the available precision, we have to treat 10**-9
-// as the 'whole' numbers everything is rounded to.
-function sqlSumDistinctMD5(sqlExp: string, sqlDistintKey: string) {
+function sqlSumDistinct(
+  dialect: Dialect,
+  sqlExp: string,
+  sqlDistintKey: string
+) {
   const precision = 9;
-  const uniqueInt = sqlSumDistinctHashedKey(sqlDistintKey);
+  const uniqueInt = dialect.sqlSumDistinctHashedKey(sqlDistintKey);
   const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
   const sumSql = `
   (
@@ -683,15 +677,9 @@ function sqlSumDistinctMD5(sqlExp: string, sqlDistintKey: string) {
     -
      SUM(DISTINCT ${uniqueInt})
   )`;
-  // sum_sql.gsub!(/[\s\n]+/, ' ')
   let ret = `(${sumSql}/(${multiplier}*1.0))`;
-  ret = `CAST(${ret} as FLOAT64)`;
-  // ret = sql_round(ret, precision)
+  ret = `CAST(${ret} as ${dialect.defaultNumberType})`;
   return ret;
-}
-
-function sqlSumDistinct(sqlExp: string, sqlDistinctKey: string) {
-  return sqlSumDistinctMD5(sqlExp, sqlDistinctKey);
 }
 
 type FieldUsage =
@@ -1092,6 +1080,20 @@ class JoinInstance {
     throw new Error(
       `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
     );
+  }
+
+  // postgres unnest needs to know the names of the physical fields.
+  getDialectFieldList(): DialectFieldList {
+    const dialectFieldList: DialectFieldList = [];
+
+    for (const f of this.queryStruct.fieldDef.fields.filter(isPhysical)) {
+      dialectFieldList.push({
+        type: f.type,
+        sqlExpression: getIdentifier(f),
+        sqlOutputName: getIdentifier(f),
+      });
+    }
+    return dialectFieldList;
   }
 }
 
@@ -1724,21 +1726,13 @@ class QueryQuery extends QueryField {
       if (qs.parent) {
         prefix = qs.parent.getIdentifier() + ".";
       }
-      let sqlTableRef = `UNNEST(${prefix}${structRelationship.field})`;
       // we need to generate primary key.  If parent has a primary key combine
-      const qsParent = qs.parent?.getJoinableParent();
-
-      if (ji.makeUniqueKey && qsParent) {
-        const pkDim = qsParent.primaryKey();
-        let _parentPkSQL = qsParent.getIdentifier() + ".__distinct_key";
-        if (pkDim) {
-          _parentPkSQL = pkDim.generateExpression(this.rootResult);
-        }
-        // sqlTableRef = `UNNEST(ARRAY((SELECT AS STRUCT TO_HEX(MD5(CAST(${parentPkSQL} AS STRING) || 'x'|| CAST(row_number() OVER() AS STRING))) as __distinct_key, * FROM ${sqlTableRef})))`;
-        sqlTableRef = `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM ${sqlTableRef})))`;
-      }
-      s += `LEFT JOIN ${sqlTableRef} as ${ji.alias}\n`;
-      // s += `LEFT JOIN UNNEST(${structRelationship.field}) as ${ji.alias}\n`;
+      s += `, ${this.parent.model.dialect.sqlUnnestAlias(
+        `${prefix}${structRelationship.field}`,
+        ji.alias,
+        ji.getDialectFieldList(),
+        ji.makeUniqueKey
+      )}\n`;
     } else if (structRelationship.type === "inline") {
       throw new Error(
         "Internal Error: inline structs should never appear in join trees"
@@ -1767,7 +1761,7 @@ class QueryQuery extends QueryField {
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
         // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
-        structSQL = `(SELECT GENERATE_UUID() as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.model.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
@@ -2025,9 +2019,7 @@ class QueryQuery extends QueryField {
     //
     // BigQuery will allocate more resources if we use a CROSS JOIN so we do that instead.
     //
-    from += `CROSS JOIN ${this.parent.model.dialect.sqlGroupSetTable(
-      this.maxGroupSet
-    )} as group_set\n`;
+    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet);
 
     s += indent(f.sql.join(",\n")) + "\n";
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
@@ -2238,7 +2230,10 @@ class QueryQuery extends QueryField {
         // fieldsSQL.push(`${name}__${resultStruct.groupSet} as ${sqlName}`);
         // outputFieldNames.push(name);
         dialectFieldList.push({
-          type: field.type,
+          type:
+            field instanceof FieldInstanceField
+              ? field.f.fieldDef.type
+              : "struct",
           sqlExpression: `${name}__${resultStruct.groupSet}`,
           sqlOutputName: sqlName,
         });
@@ -2974,8 +2969,8 @@ const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  // dialect: Dialect = new BigQueryDialect();
-  dialect: Dialect = new PostgresDialect();
+  dialect: Dialect = new BigQueryDialect();
+  // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {
