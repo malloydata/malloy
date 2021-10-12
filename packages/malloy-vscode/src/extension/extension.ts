@@ -25,6 +25,7 @@ import {
 } from "./tree_views/schema_view";
 import {
   copyFieldPathCommand,
+  editConnectionsCommand,
   runNamedQuery,
   runQueryCommand,
   runQueryFileCommand,
@@ -34,6 +35,7 @@ import {
 import { BigQuery, Malloy } from "malloy";
 import { showResultJsonCommand } from "./commands/show_result_json";
 import { performance } from "perf_hooks";
+import { ConnectionsProvider } from "./tree_views/connections";
 
 Malloy.setDB(new BigQuery());
 
@@ -80,8 +82,26 @@ function registerTreeDataProviders(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(() => {
+      vscode.commands.executeCommand("malloy.refreshConnections");
+    })
+  );
+
+  context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(() =>
       vscode.commands.executeCommand("malloy.refreshSchema")
+    )
+  );
+
+  const connectionsTree = new ConnectionsProvider();
+
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("malloyConnections", connectionsTree)
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("malloy.refreshConnections", () =>
+      connectionsTree.refresh()
     )
   );
 }
@@ -132,6 +152,14 @@ function registerCommands(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "malloy.copyFieldPath",
       copyFieldPathCommand
+    )
+  );
+
+  // Edit Connections
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "malloy.editConnections",
+      editConnectionsCommand
     )
   );
 

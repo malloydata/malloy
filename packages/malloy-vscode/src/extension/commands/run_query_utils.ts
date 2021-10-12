@@ -121,50 +121,6 @@ export function runMalloyQuery(
   panelId: string,
   name: string
 ): void {
-  const otherPanel = vscode.window.createWebviewPanel(
-    "malloyQuery",
-    "Malloy Query Results 2",
-    vscode.ViewColumn.Two,
-    { enableScripts: true }
-  );
-
-  const onDiskPath = vscode.Uri.file(
-    path.join(__filename, "..", "query_web_view.js")
-  );
-
-  const entrySrc = otherPanel.webview.asWebviewUri(onDiskPath);
-
-  otherPanel.webview.html = getWebviewHtml(entrySrc.toString());
-
-  const config = vscode.workspace.getConfiguration("malloy");
-
-  otherPanel.webview.postMessage({
-    type: "config-set",
-    config: config.get("connections"),
-  });
-
-  otherPanel.webview.onDidReceiveMessage(
-    (message) => {
-      switch (message.type) {
-        case "config-set":
-          config.update("connections", message.connections);
-          break;
-        case "test-connection":
-          setTimeout(() => {
-            otherPanel.webview.postMessage({
-              type: "test-connection",
-              connection: message.connection,
-              status: "failure",
-              error: "Nobody has implemented the connection tester, oops!",
-            });
-          }, 1000);
-          break;
-      }
-    },
-    undefined,
-    [] // TODO actually add this to the context disposables
-  );
-
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,

@@ -69,6 +69,18 @@
         }
       },
       {
+        "command": "malloy.refreshConnections",
+        "title": "Refresh Connections",
+        "icon": {
+          "light": "src/media/refresh.svg",
+          "dark": "src/media/refresh.svg"
+        }
+      },
+      {
+        "command": "malloy.editConnections",
+        "title": "Edit Connections"
+      },
+      {
         "command": "malloy.showResultJson",
         "title": "Show Result JSON"
       }
@@ -78,6 +90,16 @@
         {
           "command": "malloy.refreshSchema",
           "when": "view == malloySchema",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.editConnections",
+          "when": "view == malloyConnections",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.refreshConnections",
+          "when": "view == malloyConnections",
           "group": "navigation"
         }
       ],
@@ -108,6 +130,10 @@
         {
           "id": "malloySchema",
           "name": "Schema"
+        },
+        {
+          "id": "malloyConnections",
+          "name": "Connections"
         }
       ]
     },
