@@ -19,6 +19,7 @@ import { DataStyles, HtmlView, DataTreeRoot } from "malloy-render";
 import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
 import { MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
+import { getWebviewHtml } from "../../webview";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -120,6 +121,38 @@ export function runMalloyQuery(
   panelId: string,
   name: string
 ): void {
+  const otherPanel = vscode.window.createWebviewPanel(
+    "malloyQuery",
+    "Malloy Query Results 2",
+    vscode.ViewColumn.Two,
+    { enableScripts: true }
+  );
+
+  const onDiskPath = vscode.Uri.file(
+    path.join(__filename, "..", "query_web_view.js")
+  );
+
+  const entrySrc = otherPanel.webview.asWebviewUri(onDiskPath);
+
+  otherPanel.webview.html = getWebviewHtml(entrySrc.toString());
+
+  const config = vscode.workspace.getConfiguration(
+    'malloy'
+  );
+
+  otherPanel.webview.postMessage({ type: "config-set", config });
+
+  otherPanel.webview.onDidReceiveMessage(
+    (message) => {
+      switch (message.command) {
+        case "test":
+          vscode.window.showErrorMessage(message.text);
+      }
+    },
+    undefined,
+    [] // TODO actually add this to the context disposables
+  );
+
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,

@@ -24,6 +24,7 @@ const config = {
   entry: {
     extension: "./src/extension/extension.ts",
     server: "./src/server/server.ts",
+    query_web_view: "./src/webview/query/webview.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),
@@ -36,12 +37,12 @@ const config = {
     vscode: "commonjs vscode",
   },
   resolve: {
-    extensions: [".ts", ".js", ".svg"],
+    extensions: [".ts", ".js", ".svg", ".tsx"],
   },
   module: {
     rules: [
       {
-        test: /\.ts$/,
+        test: /\.tsx?$/,
         exclude: /node_modules/,
         use: [
           {

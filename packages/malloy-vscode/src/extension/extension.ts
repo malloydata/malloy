@@ -33,6 +33,7 @@ import {
 } from "./commands";
 import { BigQuery, Malloy } from "malloy";
 import { showResultJsonCommand } from "./commands/show_result_json";
+import { performance } from "perf_hooks";
 
 Malloy.setDB(new BigQuery());
 
@@ -85,11 +86,26 @@ function registerTreeDataProviders(context: vscode.ExtensionContext): void {
   );
 }
 
+// async function sleep(t: number) {
+//   return Promise.resolve((resolve: () => void) => setTimeout(resolve, t));
+// }
+
+// async function testBreakpoints() {
+//   const done = false;
+//   const start = performance.now();
+//   while (!done) {
+//     const current = (performance.now() - start) / 1000;
+//     await sleep(200);
+//   }
+// }
+
 function registerCommands(context: vscode.ExtensionContext): void {
   // Show Licenses
   context.subscriptions.push(
     vscode.commands.registerCommand("malloy.showLicenses", showLicensesCommand)
   );
+
+  // testBreakpoints();
 
   // Run Query (whole file)
   context.subscriptions.push(

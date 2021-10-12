@@ -12,6 +12,7 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
+      "timeout": 6000,
       "outFiles": [
         "**/node_modules/malloy/**/dist/*.js",
         "${workspaceFolder}/packages/malloy-vscode/dist/*.js"
