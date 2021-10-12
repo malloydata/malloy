@@ -136,17 +136,29 @@ export function runMalloyQuery(
 
   otherPanel.webview.html = getWebviewHtml(entrySrc.toString());
 
-  const config = vscode.workspace.getConfiguration(
-    'malloy'
-  );
+  const config = vscode.workspace.getConfiguration("malloy");
 
-  otherPanel.webview.postMessage({ type: "config-set", config });
+  otherPanel.webview.postMessage({
+    type: "config-set",
+    config: config.get("connections"),
+  });
 
   otherPanel.webview.onDidReceiveMessage(
     (message) => {
-      switch (message.command) {
-        case "test":
-          vscode.window.showErrorMessage(message.text);
+      switch (message.type) {
+        case "config-set":
+          config.update("connections", message.connections);
+          break;
+        case "test-connection":
+          setTimeout(() => {
+            otherPanel.webview.postMessage({
+              type: "test-connection",
+              connection: message.connection,
+              status: "failure",
+              error: "Nobody has implemented the connection tester, oops!",
+            });
+          }, 1000);
+          break;
       }
     },
     undefined,

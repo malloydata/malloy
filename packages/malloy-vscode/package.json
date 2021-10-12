@@ -110,6 +110,54 @@
           "name": "Schema"
         }
       ]
+    },
+    "configuration": {
+      "title": "Malloy",
+      "properties": {
+        "malloy.connections": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "postgres"
+                  },
+                  "host": {
+                    "type": "string"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "bigquery"
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Connections for Malloy to use to access data when compiling and querying."
+        },
+        "typescript.tsdk": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null,
+          "description": "Specifies the folder path containing the tsserver and lib*.d.ts files to use."
+        }
+      }
     }
   },
   "scripts": {
@@ -127,6 +175,9 @@
     "malloy-render": "*",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-router": "^5.2.1",
+    "react-router-dom": "^5.3.0",
+    "styled-components": "^5.3.1",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
     "vega-lite": "4.17.0",
@@ -142,6 +193,9 @@
     "@types/node": "^12.19.8",
     "@types/react": "^17.0.28",
     "@types/react-dom": "^17.0.9",
+    "@types/react-router": "^5.1.17",
+    "@types/react-router-dom": "^5.3.1",
+    "@types/styled-components": "^5.1.15",
     "@types/vscode": "1.56.0",
     "@types/vscode-webview": "^1.57.0",
     "copy-webpack-plugin": "^9.0.1",

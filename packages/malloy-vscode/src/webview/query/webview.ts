@@ -19,6 +19,7 @@ import * as _webviewAPI from "vscode-webview";
 import ReactDOM from "react-dom";
 import React from "react";
 import { App } from "./app";
+import { VSCodeContext } from "./vscodeContext";
 
 (() => {
   // eslint-disable-next-line no-console
@@ -29,19 +30,10 @@ import { App } from "./app";
     text: "Foo!",
   });
 
-  window.addEventListener('message', event => {
-
-    const message = event.data; // The JSON data our extension sent
-
-    switch (message.type) {
-      case 'config-set':
-        console.log(message.config)
-        break;
-    }
-});
-
   ReactDOM.render(
-    React.createElement(App, {}, null),
+    React.createElement(VSCodeContext.Provider, { value: vscode }, [
+      React.createElement(App, {}, null),
+    ]),
     document.getElementById("app")
   );
 })();
