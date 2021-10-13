@@ -31,7 +31,7 @@ const config = {
     libraryTarget: "commonjs2",
     devtoolModuleFilenameTemplate: "../[resource-path]",
   },
-  devtool: "inline-source-map",
+  devtool: "inline-cheap-module-source-map",
   externals: {
     vscode: "commonjs vscode",
   },
@@ -60,12 +60,12 @@ const config = {
       },
       {
         test: /\.js$/,
+        exclude: /node_modules/,
         enforce: "pre",
         use: ["source-map-loader"],
       },
     ],
   },
-  ignoreWarnings: [/Failed to parse source map/],
   plugins: [
     new CopyPlugin({
       patterns: [
