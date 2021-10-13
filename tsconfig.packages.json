@@ -19,7 +19,6 @@
     "target": "es2019",
     "experimentalDecorators": true,
     "downlevelIteration": true,
-    "sourceMap": true,
-    "inlineSources": true
+    "sourceMap": true
   }
 }
