@@ -44,33 +44,5 @@ the <em>dataSource</em> to be included or excluded from the shape.</p>
           Joins
         </a>
       </h2>
-    <p>The <code class="language-malloy"><span class="token keyword">joins</span></code> section of a shape is the keyword <code class="language-malloy"><span class="token keyword">joins</span></code> followed by a list of
-join specifications..</p>
-<ul>
-<li><p>joins: <code class="language-malloy"><span class="token keyword">joins</span></code> <em>joinSpec</em> ...</p>
-</li></ul>
-
-      <h3>
-        <a id="join-keys" class="header-link anchor" href="#join-keys">
-          Join Keys
-        </a>
-      </h3>
-    <p>One of the entities being joined must have a primary key. If you
-specify a bare field name as a <em>keySpec</em> then the primary key
-for the join will come from the entity being joined. If you
-specify a field in the join, <code class="language-malloy">joinName<span class="token punctuation">.</span>some_id</code> then the
-primary key of the shape will be used to complete the join.</p>
-
-      <h3>
-        <a id="join-specifications" class="header-link anchor" href="#join-specifications">
-          Join Specifications
-        </a>
-      </h3>
-    <ul>
-<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">on</span></code> <em>keySpec</em></p>
-</li>
-<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">is</span></code> <em>existingName</em> on <em>keySpec</em></p>
-</li>
-<li><p><em>joinName</em> is <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span></code> on <em>keySpec</em></p>
-</li></ul>
+    <p>The tables joined to a shape are an important aspect of its definition. Read more about joins <a href="join.html">here</a>.</p>
 </div>

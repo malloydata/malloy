@@ -17,20 +17,20 @@ footer: /generated/footers/patterns/foreign_sums.html
 <span class="token comment">-- 'aircraft' is the plane that made the flight</span>
 <span class="token comment">-- 'aircraft_models' is data about the kind of aircraft</span>
 
-<span class="token keyword">define</span> aircraft_models <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span> 
+<span class="token keyword">define</span> aircraft_models <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft_models'</span>
   <span class="token keyword">primary</span> <span class="token keyword">key</span> aircraft_model_code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">define</span> aircraft <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span> 
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> tail_num 
-  <span class="token keyword">joins</span> aircraft_models <span class="token keyword">on</span> aircraft_model_code
+<span class="token keyword">define</span> aircraft <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft'</span>
+  <span class="token keyword">primary</span> <span class="token keyword">key</span> tail_num
+  aircraft_models <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> aircraft_model_code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span>
-  <span class="token keyword">joins</span> aircraft <span class="token keyword">on</span> tail_num
+<span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  aircraft <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> tail_num
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>dep_time : <span class="token date">@2003-01]</span> 
+<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>dep_time : <span class="token date">@2003-01]</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   carrier
   <span class="token comment">-- number of flights</span>
@@ -51,12 +51,12 @@ footer: /generated/footers/patterns/foreign_sums.html
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_model_count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">seats_for_sale</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">seats_on_all_planes</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_seats_per_model</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;model_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">seats_&#8203;for_&#8203;sale</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">seats_&#8203;on_&#8203;all_&#8203;planes</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats_&#8203;per_&#8203;model</th>
       </tr>
 		</thead>
 		<tbody>

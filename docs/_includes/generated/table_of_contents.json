@@ -41,8 +41,12 @@
           "link": "/language/order_by.md"
         },
         {
-          "title": "Joins",
+          "title": "Shape Definition",
           "link": "/language/shape.md"
+        },
+        {
+          "title": "Joins",
+          "link": "/language/join.md"
         },
         {
           "title": "Filters",
@@ -74,24 +78,16 @@
       "title": "Common Patterns",
       "items": [
         {
-          "title": "Trend Analysis",
-          "link": "/patterns/trends.md"
+          "title": "Year Over Year Analysis",
+          "link": "/patterns/yoy.md"
         },
         {
           "title": "Foreign Sums and Averages",
           "link": "/patterns/foreign_sums.md"
         },
         {
-          "title": "Turtles",
-          "link": "/patterns/turtles.md"
-        },
-        {
-          "title": "Calculating Percentage of Total",
+          "title": "Percent of Total",
           "link": "/patterns/percent_of_total.md"
-        },
-        {
-          "title": "Year over Year analysis",
-          "link": "/patterns/yearly_trends.md"
         },
         {
           "title": "Cohort Analysis",
@@ -136,6 +132,10 @@
       "title": "Examples",
       "items": [
         {
+          "title": "eCommerce Analysis",
+          "link": "/examples/ecommerce.md"
+        },
+        {
           "title": "NTSB Flight Database",
           "link": "/examples/faa.md"
         },
@@ -165,7 +165,7 @@
           "link": "/examples/iowa/step2.md"
         },
         {
-          "title": "First Analysis: Products and Brands",
+          "title": "Analysis: Products and Brands",
           "link": "/examples/iowa/step2a.md"
         },
         {
@@ -180,4 +180,3 @@
     }
   ]
 }
-

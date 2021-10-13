@@ -16,7 +16,8 @@ attributes or characteristics of that group as compared to the population in gen
 <p>To understand this, we're going to use Social Security Administrations birth/name data.</p>
 <p>We have a table with <code class="language-malloy">name</code>, <code class="language-malloy">gender</code>, <code class="language-malloy"><span class="token identifier">`year`</span></code>, <code class="language-malloy">state</code> and the <code class="language-malloy"><span class="token identifier">`number`</span></code> of people born with those
 characterisitics.</p>
-<p>In the simplelist form, a cohort calculation is a <a href="percet_of_total.html">percentage of total calculation</a>.<br/>For example, if we were interested in the name 'Billie' as it relates to location. We could look
+<p>In the simplelist form, a cohort calculation is a <a href="percent_of_total.html">percentage of total calculation</a>.
+For example, if we were interested in the name 'Billie' as it relates to location. We could look
 could filter on 'Billie' and look a states as it relates to total population.</p>
 <p>We can see that in the population of the the people named 'Billie', the cohort of the Billies born in
 Texas makes up 18% of the total population of Billies.</p>
@@ -37,8 +38,8 @@ Texas makes up 18% of the total population of Billies.</p>
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">state_as_percent_of_population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">state_&#8203;as_&#8203;percent_&#8203;of_&#8203;population</th>
       </tr>
 		</thead>
 		<tbody>
@@ -146,8 +147,8 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">decade</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">decade_as_percent_of_population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">decade_&#8203;as_&#8203;percent_&#8203;of_&#8203;population</th>
       </tr>
 		</thead>
 		<tbody>
@@ -227,8 +228,8 @@ to measure a little differently.  Instead of looking at a percentage, let's look
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -321,7 +322,7 @@ to measure a little differently.  Instead of looking at a percentage, let's look
 <p>First we calculate populations of cohorts (decade, state, gender) and then for
 every name in that cohort, we compute the population.</p>
 <p>Seconds, we group by arbitrary cohorts and compute the births per 100K for some arbitrary names.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span> 
+<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
     decade <span class="token keyword">is</span> floor<span class="token punctuation">(</span><span class="token identifier">`year`</span><span class="token operator">/</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10</span>
     state
@@ -348,7 +349,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">gender</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_cohort_population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;cohort_&#8203;population</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">names</th>
       </tr>
 		</thead>
@@ -361,7 +362,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -385,7 +386,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -409,7 +410,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -437,7 +438,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -461,7 +462,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -489,7 +490,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -517,7 +518,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -545,7 +546,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -569,7 +570,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -593,7 +594,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -617,7 +618,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -641,7 +642,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -665,7 +666,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -689,7 +690,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -713,7 +714,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -737,7 +738,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -761,7 +762,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -785,7 +786,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -809,7 +810,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
@@ -833,7 +834,7 @@ every name in that cohort, we compute the population.</p>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_per_100k</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
       </tr>
 		</thead>
 		<tbody>
