@@ -13,8 +13,8 @@
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
       "outFiles": [
-        "**/node_modules/malloy/**/dist/*.js",
-        "${workspaceFolder}/packages/malloy-vscode/dist/*.js"
+        "**/node_modules/malloy/**/dist/webpack/*.js",
+        "${workspaceFolder}/packages/malloy-vscode/dist/webpack/*.js"
       ],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
@@ -34,7 +34,7 @@
       "name": "Attach to VSCode Language Server",
       "port": 6009,
       "restart": true,
-      "outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/server.js"]
+      "outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/webpack/server.js"]
     }
   ]
 }

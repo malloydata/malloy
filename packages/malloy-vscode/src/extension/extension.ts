@@ -129,7 +129,7 @@ function registerCommands(context: vscode.ExtensionContext): void {
 }
 
 function setupLanguageServer(context: vscode.ExtensionContext): void {
-  const serverModule = context.asAbsolutePath("dist/server.js");
+  const serverModule = context.asAbsolutePath("dist/webpack/server.js");
   const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
 
   const serverOptions: ServerOptions = {

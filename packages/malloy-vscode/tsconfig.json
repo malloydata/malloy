@@ -1,11 +1,11 @@
 {
   "extends": "../../tsconfig.packages.json",
   "compilerOptions": {
-    "outDir": "out",
+    "outDir": "dist",
     "rootDir": "src"
   },
   "include": ["./src", "node_modules/us-atlas", "./webpack.config.js"],
-  "exclude": ["node_modules", ".vscode-test", "out"],
+  "exclude": ["node_modules", ".vscode-test", "dist"],
   "references": [
     {
       "path": "../malloy"

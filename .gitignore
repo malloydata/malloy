@@ -35,6 +35,5 @@ packages/malloy/.vscode/launch.json
 packages/.vscode/launch.json
 packages/malloy/src/lang/grammar/gen/
 gen/
-out/
 *.iml
 gems/

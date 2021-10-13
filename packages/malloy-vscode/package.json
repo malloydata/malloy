@@ -16,7 +16,7 @@
     "onCommand:malloy.showLicenses",
     "onLanguage:malloy"
   ],
-  "main": "./dist/extension",
+  "main": "./dist/webpack/extension",
   "configurationDefaults": {
     "malloy": {
       "editor.semanticHighlighting.enabled": true

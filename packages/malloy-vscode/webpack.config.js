@@ -26,7 +26,7 @@ const config = {
     server: "./src/server/server.ts",
   },
   output: {
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve(__dirname, "dist/webpack"),
     filename: "[name].js",
     libraryTarget: "commonjs2",
     devtoolModuleFilenameTemplate: "../[resource-path]",
