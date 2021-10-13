@@ -1,1 +1,1 @@
-export { getWebviewHtml } from "./query";
+export { getWebviewHtml } from "./connections";

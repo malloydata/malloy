@@ -1,40 +1,25 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Button, ConnectionEdit, ConnectionList, ConnectionTest } from "./components";
-import { Connection } from "./types";
-import { VSCodeContext } from "./vscodeContext";
-
-interface EditingState {
-  index: number;
-  connection: Connection;
-}
-
-interface TestingState {
-  connection: Connection;
-  status: "success" | "failure" | undefined;
-  error?: string;
-}
+import { QueryPanelMessage, QueryRunStatus } from "../../extension/types";
+import { VSCodeContext } from "../vscodeContext";
 
 export const App: React.FC = () => {
-  const [connections, setConnections] = useState<Connection[]>([]);
-  const [editing, setEditing] = useState<EditingState | undefined>();
-  const [testing, setTesting] = useState<TestingState | undefined>();
   const vscode = useContext(VSCodeContext);
+  const [status, setStatus] = useState<QueryRunStatus | undefined>();
+  const [blob, setBlob] = useState<any>();
+  const [times, setTimes] = useState<string[]>();
 
   useEffect(() => {
-    const listener = (event: MessageEvent<any>) => {
-
+    const listener = (event: MessageEvent<QueryPanelMessage>) => {
       const message = event.data; // The JSON data our extension sent
 
+      // eslint-disable-next-line no-empty
       switch (message.type) {
-        case 'config-set':
-          setConnections(message.config);
-          break;
-        case "test-connection":
-          setTesting({
-            connection: message.connection,
-            status: message.status,
-            error: message.error,
-          });
+        case "query-status":
+          setStatus(message.status);
+          if (message.status === QueryRunStatus.Done) {
+            setBlob(message.sizeTest.map((x) => x.length).toString());
+            setTimes([message.time, new Date().toLocaleTimeString()])
+          }
           break;
       }
     };
@@ -42,53 +27,5 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('message', listener);
   });
 
-  useEffect(() => {
-    vscode.postMessage({ type: "config-set", connections });
-  }, [connections]);
-
-  return (
-    <div>
-      <ConnectionList
-        connections={connections}
-        beginEdit={(index) =>
-          setEditing({ index, connection: connections[index] })
-        }
-        beginTest={(index) => {
-          vscode.postMessage({
-            type: "test-connection",
-            connection: connections[index],
-          });
-          setTesting({ connection: connections[index], status: undefined });
-        }}
-      />
-      <Button
-        onClick={() =>
-          setEditing({
-            index: connections.length,
-            connection: { name: "", type: "bigquery" },
-          })
-        }
-      >
-        New Connection
-      </Button>
-      {editing && (
-        <ConnectionEdit
-          connection={editing.connection}
-          setConnection={(connection) => {
-            const newConnections: Connection[] = [...connections];
-            setEditing(undefined);
-            newConnections[editing.index] = connection;
-            setConnections(newConnections);
-          }}
-        />
-      )}
-      {testing && (
-        <ConnectionTest
-          connection={testing.connection}
-          status={testing.status}
-          error={testing.error}
-        />
-      )}
-    </div>
-  );
+  return <div>Status: {status}, Times: {times}, Blob: {JSON.stringify(blob, null, 2)}</div>;
 };

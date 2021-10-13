@@ -24,7 +24,8 @@ const config = {
   entry: {
     extension: "./src/extension/extension.ts",
     server: "./src/server/server.ts",
-    query_web_view: "./src/webview/query/webview.ts",
+    connections: "./src/webview/connections/webview.ts",
+    query: "./src/webview/query/webview.ts",
   },
   output: {
     path: path.resolve(__dirname, "dist"),

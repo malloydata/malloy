@@ -20,6 +20,7 @@ import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
 import { MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
 import { getWebviewHtml } from "../../webview";
+import { QueryPanelMessage, QueryRunStatus } from "../types";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -190,6 +191,14 @@ export function runMalloyQuery(
         }
       });
 
+      const onDiskPath = vscode.Uri.file(
+        path.join(__filename, "..", "query.js")
+      );
+
+      const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
+
+      current.panel.webview.html = getWebviewHtml(entrySrc.toString());
+
       return (async () => {
         try {
           malloyLog.appendLine("");
@@ -197,9 +206,14 @@ export function runMalloyQuery(
           const compileBegin = allBegin;
           const malloy = new Malloy();
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Compiling")
-          );
+          // current.panel.webview.html = wrapHTMLSnippet(
+          //   loadingIndicator("Compiling")
+          // );
+          const message: QueryPanelMessage = {
+            type: "query-status",
+            status: QueryRunStatus.Compiling,
+          };
+          current.panel.webview.postMessage(message);
           progress.report({ increment: 20, message: "Compiling" });
 
           let compiledQuery;
@@ -287,9 +301,12 @@ export function runMalloyQuery(
           }
 
           if (!compiledQuery) {
-            current.panel.webview.html = renderErrorHtml(
-              new Error(error || "Something went wrong.")
-            );
+            const message: QueryPanelMessage = {
+              type: "query-status",
+              status: QueryRunStatus.Error,
+              error: error?.toString() || "Something went wrong.",
+            };
+            current.panel.webview.postMessage(message);
             return;
           }
 
@@ -301,9 +318,17 @@ export function runMalloyQuery(
 
           const runBegin = compileEnd;
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Running")
-          );
+          // current.panel.webview.html = wrapHTMLSnippet(
+          //   loadingIndicator("Running")
+          // );
+
+          {
+            const message: QueryPanelMessage = {
+              type: "query-status",
+              status: QueryRunStatus.Running,
+            };
+            current.panel.webview.postMessage(message);
+          }
           progress.report({ increment: 40, message: "Running" });
           const queryResult = await malloy.runCompiledQuery(compiledQuery, 50);
           if (canceled) return;
@@ -311,11 +336,22 @@ export function runMalloyQuery(
           const runEnd = performance.now();
           logTime("Run", runBegin, runEnd);
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Rendering")
-          );
+          // current.panel.webview.html = wrapHTMLSnippet(
+          //   loadingIndicator("Rendering")
+          // );
           current.result = queryResult;
           progress.report({ increment: 80, message: "Rendering" });
+
+          {
+            const message: QueryPanelMessage = {
+              type: "query-status",
+              status: QueryRunStatus.Done,
+              result: queryResult,
+              sizeTest: ["a".repeat(550_000_000)],
+              time: new Date().toLocaleTimeString(),
+            };
+            current.panel.webview.postMessage(message);
+          }
 
           return new Promise<void>((resolve) => {
             // This setTimeout is to allow the extension to set the HTML fully
@@ -342,9 +378,9 @@ export function runMalloyQuery(
                   queryResult.sourceExplore,
                   queryResult.sourceFilters || []
                 );
-                current.panel.webview.html = wrapHTMLSnippet(
-                  css + (await new HtmlView().render(table, styles))
-                );
+                // current.panel.webview.html = wrapHTMLSnippet(
+                //   css + (await new HtmlView().render(table, styles))
+                // );
 
                 const renderEnd = performance.now();
                 logTime("Render", renderBegin, renderEnd);

@@ -13,19 +13,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { Malloy, FieldDef, MalloyTranslator, NamedMalloyObject } from "malloy";
-import numberIcon from "../../media/number.svg";
-import numberAggregateIcon from "../../media/number-aggregate.svg";
-import booleanIcon from "../../media/boolean.svg";
-import timeIcon from "../../media/time.svg";
-import structIcon from "../../media/struct.svg";
-import turtleIcon from "../../media/turtle.svg";
-import stringIcon from "../../media/string.svg";
-import oneToManyIcon from "../../media/one_to_many.svg";
-import manyToOneIcon from "../../media/many_to_one.svg";
-import oneToOneIcon from "../../media/one_to_one.svg";
-import { MALLOY_EXTENSION_STATE } from "../state";
-import { Connection } from "../../webview/query/types";
+import { Connection } from "../../webview/connections/types";
 
 export class ConnectionsProvider
   implements vscode.TreeDataProvider<ConnectionItem>

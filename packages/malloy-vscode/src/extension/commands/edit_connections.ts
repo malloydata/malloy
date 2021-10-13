@@ -11,7 +11,7 @@ export function editConnectionsCommand(): void {
   );
 
   const onDiskPath = vscode.Uri.file(
-    path.join(__filename, "..", "query_web_view.js")
+    path.join(__filename, "..", "connections.js")
   );
 
   const entrySrc = otherPanel.webview.asWebviewUri(onDiskPath);

@@ -23,7 +23,7 @@ import { VSCodeContext } from "../vscodeContext";
 
 (() => {
   // eslint-disable-next-line no-console
-  console.log("Query WebView JavaScript loaded successfully.");
+  console.log("Connections WebView JavaScript loaded successfully.");
   const vscode = acquireVsCodeApi<string>();
   vscode.postMessage({
     command: "test",
