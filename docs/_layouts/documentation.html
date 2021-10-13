@@ -3,13 +3,13 @@
   <head>
     <meta charset="utf-8">
     <title>{{ page.title }}</title>
-    <link rel="stylesheet" href="/css/document.css">
+    <link rel="stylesheet" href="{{ site.baseurl }}/css/document.css">
     <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
   </head>
   <body>
     <div class="top">
       <div class="header">
-        <img src="/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <img src="{{ site.baseurl }}/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
       </div>
       <div class="main">
         {% include /generated/toc.html %}
