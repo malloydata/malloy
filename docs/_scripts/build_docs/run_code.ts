@@ -60,13 +60,21 @@ export async function dataStylesForFile(
   text: string
 ): Promise<DataStyles> {
   const PREFIX = "--! styles ";
-  if (text.startsWith(PREFIX)) {
-    const fileName = text.split("\n")[0].trimEnd().substring(PREFIX.length);
-    const stylesPath = path.join(uri.replace(/^file:\/\//, ""), "..", fileName);
-    const stylesText = await fetchFile(stylesPath);
-    return JSON.parse(stylesText);
+  let styles: DataStyles = {};
+  for (const line of text.split("\n")) {
+    if (line.startsWith(PREFIX)) {
+      const fileName = line.trimEnd().substring(PREFIX.length);
+      const stylesPath = path.join(
+        uri.replace(/^file:\/\//, ""),
+        "..",
+        fileName
+      );
+      const stylesText = await fetchFile(stylesPath);
+      styles = { ...styles, ...JSON.parse(stylesText) };
+    }
   }
-  return {};
+
+  return styles;
 }
 
 async function fetchFile(uri: string) {

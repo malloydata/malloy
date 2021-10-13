@@ -8,7 +8,7 @@ the data defined in the original shape is transformed by each stage.
 
 ## Pipeline
 
-A pipeline transforms a shape, and is made up of a series of stages. A [Turtle](turtles.md)), which has a pipeline
+A pipeline transforms a shape, and is made up of a series of stages. A [Turtle](turtle.md)), which has a pipeline
 inside of it, can be the first stage in a pipleline
 
 
@@ -28,7 +28,7 @@ Malloy expressions.
 
 * _field_ _name_ `is` _expression_
 
-You can also define a [turtle](turtles.md). Just as in a query,
+You can also define a [turtle](turtle.md). Just as in a query,
 only the first of a turtle pipeline can be the name of another turtle.
 The keyword `turtle` is optional,
 
@@ -40,4 +40,3 @@ Simple wildcard expressions `*`, `**`, and _joinName_.`*` are
 legal in these lists
 
 * _fieldNameOrWildCard_ [ `,` _fieldNameOrWildCard_ ... ]
-

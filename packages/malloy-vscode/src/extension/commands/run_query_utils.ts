@@ -36,21 +36,31 @@ export async function dataStylesForFile(
   text: string
 ): Promise<DataStyles> {
   const PREFIX = "--! styles ";
-  if (text.startsWith(PREFIX)) {
-    const fileName = text.split("\n")[0].trimEnd().substring(PREFIX.length);
-    const stylesPath = path.join(uri.replace(/^file:\/\//, ""), "..", fileName);
-    // TODO instead of failing silently when the file does not exist, perform this after the WebView has been
-    //      created, so that the error can be shown there.
-    let stylesText;
-    try {
-      stylesText = await fetchFile(stylesPath);
-    } catch (error) {
-      malloyLog.appendLine(`Error loading data style '${fileName}': ${error}`);
-      stylesText = "{}";
+  let styles: DataStyles = {};
+  for (const line of text.split("\n")) {
+    if (line.startsWith(PREFIX)) {
+      const fileName = line.trimEnd().substring(PREFIX.length);
+      const stylesPath = path.join(
+        uri.replace(/^file:\/\//, ""),
+        "..",
+        fileName
+      );
+      // TODO instead of failing silently when the file does not exist, perform this after the WebView has been
+      //      created, so that the error can be shown there.
+      let stylesText;
+      try {
+        stylesText = await fetchFile(stylesPath);
+      } catch (error) {
+        malloyLog.appendLine(
+          `Error loading data style '${fileName}': ${error}`
+        );
+        stylesText = "{}";
+      }
+      styles = { ...styles, ...compileDataStyles(stylesText) };
     }
-    return compileDataStyles(stylesText);
   }
-  return {};
+
+  return styles;
 }
 
 interface NamedQuerySpec {

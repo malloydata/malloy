@@ -16,7 +16,7 @@ import {
   QueryData,
   QueryScalar,
   FieldDef,
-  FilterCondition,
+  FilterExpression,
 } from "malloy";
 
 export type DataValue = QueryScalar | DataTree;
@@ -148,12 +148,12 @@ export class DataTree {
 
 export class DataTreeRoot extends DataTree {
   sourceExplore: string;
-  sourceFilterList: FilterCondition[];
+  sourceFilterList: FilterExpression[];
   constructor(
     data: QueryData,
     structDef: StructDef,
     sourceExplore: string,
-    sourceFilterList: FilterCondition[]
+    sourceFilterList: FilterExpression[]
   ) {
     super(data, structDef, undefined);
     this.sourceExplore = sourceExplore;

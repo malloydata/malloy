@@ -23,7 +23,20 @@ define aircraft is (explore 'malloy-data.faa.aircraft'
   aircraft_models is join on aircraft_model_code
 );
 
-export define flights is (explore 'malloy-data.faa.flights'
+export define flights_base is (explore 'malloy-data.faa.flights'
+  primary key id2
+);
+
+define aircraft_facts is (explore
+  (explore flights_base | reduce
+    tail_num
+    lifetime_flights is count()
+    lifetime_distance is distance.sum()
+  )
+  lifetime_flights_bucketed is floor(lifetime_flights/1000)*1000
+);
+
+export define flights is (explore flights_base
   primary key id2
   -- rename some fields
   origin_code renames origin
@@ -34,6 +47,7 @@ export define flights is (explore 'malloy-data.faa.flights'
   origin is join airports on origin_code
   destination is join airports on destination_code,
   aircraft is join on tail_num
+  aircraft_facts is join on tail_num
 
   -- measures
   flight_count is count()
@@ -106,56 +120,22 @@ export define flights is (explore 'malloy-data.faa.flights'
     destination.name
   )
 
-
-  -- by_dest is (reduce
-  --   destination_code
-  --   flight_count
-    x_vega_spec is (reduce top 10
-      carriers.nickname
-      flight_count
-      aircraft.aircraft_count
-    )
-
-    bar_SMS_vega_spec is (reduce : [origin.state: 'CA'|'TX'|'NY']
-      carriers.nickname
-      flight_count
-      origin.state
-    )
-
-    trellis is (reduce : [
-        origin.state: 'CA'|'TX'|'NY',
-        carrier: 'WN'|'DL'|'UA'|'AA'|'B8'
-      ]
-      dep_year is dep_time.year
-      bar_SSMMM_vega_spec  is (reduce
-        carriers.nickname
-        origin.state
-        flight_count
-        aircraft.aircraft_count
-        total_distance
-      )
-    )
-
-
-    year_bubble is (reduce : [origin_code: 'MRY']
-      dep_year is dep_time.year
-      bubble_DDM_vega_spec is (reduce
-        month_num is dep_time.month_of_year
-        dep_year is dep_time.day_of_month
-        flight_count
-      )
-    )
-
-  -- )
   -- explore flights : [origin.code : 'SJC'] | airport_dashboard
   airport_dashboard is ( reduce top 10
     code is destination_code
     destination is destination.full_name
     flight_count
-    x_vega_spec
     carriers_by_month
     routes_map
     delay_by_hour_of_day
+  )
+
+  plane_usage is (reduce order by 1 desc : [aircraft.aircraft_count > 1]
+    aircraft_facts.lifetime_flights_bucketed
+    aircraft.aircraft_count
+    flight_count
+    by_manufacturer
+    by_carrier
   )
 
   -- explore flights : [carriers.nickname : 'Southwest'] | carrier_dashboard
@@ -221,7 +201,7 @@ export define flights is (explore 'malloy-data.faa.flights'
         tail_num
         dep_minute is dep_time.minute
         origin_code
-        destination_code
+        dest_code is destination_code
         dep_delay
         arr_delay
         )

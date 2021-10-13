@@ -13,13 +13,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import {
-  Malloy,
-  ExploreDef,
-  FieldDef,
-  MalloyTranslator,
-  StructDef,
-} from "malloy";
+import { Malloy, FieldDef, MalloyTranslator, NamedMalloyObject } from "malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
@@ -118,7 +112,7 @@ async function fetchFile(uri: string): Promise<string> {
 
 async function getStructs(
   document: vscode.TextDocument
-): Promise<(StructDef | ExploreDef)[] | undefined> {
+): Promise<NamedMalloyObject[] | undefined> {
   const uri = document.uri.toString();
   const translator = new MalloyTranslator(uri, {
     URLs: {
@@ -152,7 +146,7 @@ async function getStructs(
 class StructItem extends vscode.TreeItem {
   constructor(
     public topLevelExplore: string,
-    public struct: StructDef | ExploreDef,
+    public struct: NamedMalloyObject,
     public accessPath: string[],
     open: boolean
   ) {
@@ -301,8 +295,8 @@ function kindOrd(field: FieldDef) {
 }
 
 function exploresByName(
-  struct1: StructDef | ExploreDef,
-  struct2: StructDef | ExploreDef
+  struct1: NamedMalloyObject,
+  struct2: NamedMalloyObject
 ) {
   if (struct1.name < struct2.name) {
     return -1;

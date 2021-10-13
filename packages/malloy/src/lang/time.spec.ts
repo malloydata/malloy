@@ -66,7 +66,7 @@ expect.extend({
     const fieldExpr = trans.ast();
     expect(fieldExpr).toBeDefined();
     if (fieldExpr instanceof ExpressionDef) {
-      const result = compressExpr(fieldExpr.translation(fs).value);
+      const result = compressExpr(fieldExpr.getExpression(fs).value);
       expect(result[0]).toBe(sql);
       return {
         message: () => `${src}  => ${sql}`,

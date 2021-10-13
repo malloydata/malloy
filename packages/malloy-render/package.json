@@ -5,25 +5,12 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "clean": "rm -rf dist && rm -f tsconfig.tsbuildinfo",
-    "prebuild": "yarn run clean",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "start": "nodemon -e ts src/server.ts",
     "test": "echo 'no tests for render yet'",
-    "build": "yarn build-dependencies && yarn build-without-dependencies",
-    "build-without-dependencies": "tsc",
-    "build-dependencies": "yarn workspace malloy build",
-    "build-watch": "yarn build-dependencies && yarn build-without-dependencies-watch",
-    "build-without-dependencies-watch": "tsc --watch",
-    "build-local": "yarn clean && yarn build-without-dependencies"
+    "build": "yarn tsc --build"
   },
   "dependencies": {
     "malloy": "*"
-  },
-  "devDependencies": {
-    "@types/node": "^14.14.10",
-    "ts-node": "^9.0.0",
-    "typescript": "^4.1.2"
   }
 }

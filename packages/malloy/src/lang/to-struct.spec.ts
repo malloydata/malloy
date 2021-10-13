@@ -10,6 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
+/* eslint-disable no-console */
 
 import "./jestery";
 import * as model from "../model/malloy_types";
@@ -28,6 +29,17 @@ import {
 import * as ast from "./ast";
 import { FieldSpace } from "./field-space";
 import { NeedSchemaData } from "./parse-malloy";
+import { isConditionParameter, isValueParameter } from "../model/malloy_types";
+import { cloneDeep } from "lodash";
+
+function findField(
+  struct: model.NamedMalloyObject | undefined,
+  fn: string
+): model.FieldDef | undefined {
+  if (struct && struct.type === "struct") {
+    return struct.fields.find((f) => (f.as || f.name) === fn);
+  }
+}
 
 function queryForExplore(exploreSource: string): model.Query {
   const x = new TestTranslator(exploreSource, "explore");
@@ -55,6 +67,16 @@ function sourceStructFromExplore(exploreSource: string): model.StructDef {
       `${exploreSource}\n\n` +
       `Expected source to parse to an explore => ${pretty(exploreAst)}`
   );
+}
+
+function wellTranslated(docSource: string) {
+  const x = new TestTranslator(docSource, "malloyDocument");
+  expect(x).toTranslate();
+  const tr = x.translate();
+  if (tr.translated) {
+    return tr.translated;
+  }
+  throw new Error("cannot get here");
 }
 
 function fieldDefFromExpression(expr: string): model.FieldTypeDef {
@@ -173,14 +195,12 @@ describe("explore", () => {
     `;
     const explore = queryForExplore(src);
     if (model.refIsStructDef(explore.structRef)) {
-      const join = explore.structRef.fields.find(
-        (f) => f.name === "string_and_count"
-      );
+      const join = findField(explore.structRef, "string_and_count");
       expect(join).toBeDefined();
       if (join && join.type === "struct") {
         expect(join.fields.length).toBe(2);
-        const astring = join.fields.find((f) => f.name === "astring");
-        const stringCount = join.fields.find((f) => f.name === "string_count");
+        const astring = findField(join, "astring");
+        const stringCount = findField(join, "string_count");
         expect(astring).toBeDefined();
         expect(stringCount).toBeDefined();
       }
@@ -198,9 +218,7 @@ describe("explore", () => {
     `;
     const explore = queryForExplore(src);
     if (model.refIsStructDef(explore.structRef)) {
-      const join = explore.structRef.fields.find(
-        (f) => f.as === "string_and_count"
-      );
+      const join = findField(explore.structRef, "string_and_count");
       expect(join).toBeDefined();
       if (join && join.type === "struct") {
         expect(join.fields.length).toBe(aTableDef.fields.length + 1);
@@ -209,23 +227,53 @@ describe("explore", () => {
     }
   });
 
-  test.skip("explore with define", () => {
-    const src =
-      "define ay is (a fields new_field is aninteger+afloat); explore ay | reduce astring, new_field";
-    const eq = queryForExplore(src);
-    const ay: model.Query = {
-      type: "query",
-      structRef: "ay",
-      filterList: [],
-      pipeline: [
+  test("explore with define", () => {
+    const src = `
+      export define ay is (a fields new_field is aninteger+afloat);
+      explore ay | reduce astring, new_field`;
+    const p = new TestTranslator(src);
+    expect(p).toTranslate();
+    const mr = p.translate();
+    if (mr.translated) {
+      const eq = mr.translated.queryList[0];
+      const ay: model.Query = {
+        type: "query",
+        structRef: "ay",
+        filterList: [],
+        pipeline: [
+          {
+            type: "reduce",
+            fields: ["astring", "new_field"],
+          },
+        ],
+      };
+      expect(eq).toEqual(ay);
+    }
+  });
+
+  test("explore with filter", () => {
+    const src = `define onlya is (a : [ astring: 'A' ])`;
+    const onlyaStruct = {
+      ...mkStruct("onlya"),
+      filterList: [
         {
-          type: "reduce",
-          fields: ["astring", "new_field"],
+          expression: [{ path: "astring", type: "field" }, "='A'"],
+          source: "astring:'A'",
         },
       ],
     };
-    expect(eq).toEqual(ay);
-    // expect(eq.updatedModel()).toBeTruthy();
+    const p = new TestTranslator(src);
+    expect(p).toTranslate();
+    const onlya = p.nameSpace.onlya;
+    expect(onlya).toEqual(onlyaStruct);
+  });
+
+  test("explore rejects measure filter", () => {
+    const src = `
+      define acounted is (explore a acount is count())
+      define onlya is (acounted : [ acount > 0])`;
+    const p = new TestTranslator(src);
+    expect(p).not.toTranslate();
   });
 });
 
@@ -1356,11 +1404,11 @@ describe("document", () => {
     expect(parentDoc).toTranslate();
     const parent = parentDoc.nameSpace.parent;
     expect(parent).toBeDefined();
-    expect(parent.fields).toBeDefined();
-    if (parent.fields) {
-      expect(parent.fields.find((f) => f.name === "astring")).toBeTruthy();
-      expect(parent.fields.find((f) => f.name === "new1")).toBeTruthy();
-      expect(parent.fields.find((f) => f.name === "new0")).toBeTruthy();
+    expect(parent.type === "struct");
+    if (parent && parent.type === "struct") {
+      expect(findField(parent, "astring")).toBeDefined();
+      expect(findField(parent, "new1")).toBeDefined();
+      expect(findField(parent, "new0")).toBeDefined();
     }
   });
 
@@ -1438,7 +1486,7 @@ describe("document", () => {
 describe("reasonable handling of undefined references", () => {
   test("field name in expression", () => {
     expect("define ax is (explore a thex is xyzzy + 1)").toHaveExploreErrors(
-      "Reference to undefined field"
+      "Reference to 'xyzzy' with no definition"
     );
   });
 
@@ -1451,4 +1499,267 @@ describe("reasonable handling of undefined references", () => {
 
 describe("semantic checks", () => {
   test.todo("name is name in an explore field list");
+});
+
+describe("parameters", () => {
+  test("declare required condition", () => {
+    const md = wellTranslated(
+      "define ap(has aparam : timestamp) is (a)"
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        condition: null,
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional numeric condition", () => {
+    const md = wellTranslated(
+      "define ap(has aparam : number or > 10 & < 100) is (a)"
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "number",
+        condition: [
+          "(",
+          { type: "applyVal" },
+          ">10)and(",
+          { type: "applyVal" },
+          "<100)",
+        ],
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional timestamp condition range", () => {
+    const md = wellTranslated(
+      "define ap(has aparam : timestamp or @1960 to @1970) is (a)"
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        condition: [
+          "(",
+          { type: "applyVal" },
+          ">='1960-01-01')and(",
+          { type: "applyVal" },
+          "<'1970-01-01')",
+        ],
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional timestamp condition literal", () => {
+    const md = wellTranslated(
+      "define ap(has aparam : timestamp or @1960) is (a)"
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        condition: [
+          "(",
+          { type: "applyVal" },
+          ">='1960-01-01')and(",
+          { type: "applyVal" },
+          "<'1961-01-01')",
+        ],
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test.skip("typecheck declared parameter type with actual type of expression", () => {
+    const _md = wellTranslated(
+      "define ap(has aparam : number or @1960 to @1970) is (a)"
+    ).modelDef;
+  });
+
+  test("declare optional timestamp value", () => {
+    const md = wellTranslated(
+      "define ap(has aparam timestamp or @1960-06-30) is (a)"
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "timestamp",
+        value: ["'1960-06-30'"],
+        constant: false,
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare optional string value", () => {
+    const md = wellTranslated(
+      `define ap(has aparam string or 'forty two') is (a)`
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "string",
+        value: ["'forty two'"],
+        constant: false,
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("declare constant string value", () => {
+    const md = wellTranslated(
+      `define ap(has aparam 'forty two') is (a)`
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    const want = mkStruct("ap");
+    want.parameters = {
+      aparam: {
+        name: "aparam",
+        type: "string",
+        value: ["'forty two'"],
+        constant: true,
+      },
+    };
+    expect(ap).toEqual(want);
+  });
+
+  test("reference only string value parameter", () => {
+    const md = wellTranslated(
+      `define ap(has aparam string or 'forty two') is (a
+        afield is aparam)
+      `
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    if (ap.type === "struct") {
+      const afield = findField(ap, "afield");
+      expect(afield).toEqual({
+        type: "string",
+        name: "afield",
+        e: [{ type: "parameter", path: "aparam" }],
+        aggregate: false,
+      });
+    }
+  });
+
+  test("reference number value parameter in expression", () => {
+    const md = wellTranslated(
+      `define ap(has aparam number or 41) is (a
+        afield is aparam + 1)
+      `
+    ).modelDef;
+    const ap = md.structs.ap;
+    expect(ap).toBeDefined();
+    if (ap.type === "struct") {
+      const afield = findField(ap, "afield");
+      expect(afield).toEqual({
+        name: "afield",
+        type: "number",
+        e: [{ type: "parameter", path: "aparam" }, "+1"],
+        source: "aparam+1",
+      });
+    }
+  });
+
+  test("provide param value in query", () => {
+    const model = `
+      define ap(has aparam timestamp) is (a);
+      explore ap(aparam is @2003) | reduce astring`;
+    const t = wellTranslated(model);
+    const q = t.queryList[0];
+    expect(q).toBeDefined();
+    const ap = cloneDeep(t.modelDef.structs.ap);
+    expect(ap.type === "struct");
+    if (ap.type === "struct") {
+      const aparam = ap.parameters?.aparam;
+      expect(aparam).toBeDefined();
+      if (aparam) {
+        expect(isValueParameter(aparam)).toBeTruthy();
+        if (isValueParameter(aparam)) {
+          aparam.value = ["TIMESTAMP('2003-01-01')"];
+        }
+        const want = mkQuery(ap);
+        want.pipeline = [{ type: "reduce", fields: ["astring"] }];
+        expect(q).toEqual(want);
+      }
+    }
+  });
+
+  test("provide filter value in query", () => {
+    const model = `
+    define ap(has aparam : timestamp) is (a);
+    explore ap(aparam is @2003) | reduce astring`;
+    const t = wellTranslated(model);
+    const q = t.queryList[0];
+    expect(q).toBeDefined();
+    const ap = cloneDeep(t.modelDef.structs.ap);
+    expect(ap.type === "struct");
+    if (ap.type === "struct") {
+      const aparam = ap.parameters?.aparam;
+      expect(aparam).toBeDefined();
+      if (aparam) {
+        expect(isConditionParameter(aparam)).toBeTruthy();
+        if (isConditionParameter(aparam)) {
+          aparam.condition = [
+            "(",
+            { type: "applyVal" },
+            ">='2003-01-01')and(",
+            { type: "applyVal" },
+            "<'2004-01-01')",
+          ];
+        }
+        const want = mkQuery(ap);
+        want.pipeline = [{ type: "reduce", fields: ["astring"] }];
+        expect(q).toEqual(want);
+      }
+    }
+  });
+
+  test("use condition parameter in filter", () => {
+    const aModel = `
+      define ap(has aparam : timestamp) is (a : [ atimestamp : aparam]);
+      explore ap(aparam is @1960) | reduce astring
+    `;
+    const t = wellTranslated(aModel);
+    const q = t.queryList[0];
+    const qs = q.structRef;
+    expect(model.refIsStructDef(qs)).toBeTruthy();
+    if (model.refIsStructDef(qs)) {
+      expect(qs.filterList).toBeDefined();
+      if (qs.filterList) {
+        expect(qs.filterList[0].expression).toEqual([
+          {
+            type: "apply",
+            value: [{ type: "field", path: "atimestamp" }],
+            to: [{ type: "parameter", path: "aparam" }],
+          },
+        ]);
+      }
+    }
+  });
 });

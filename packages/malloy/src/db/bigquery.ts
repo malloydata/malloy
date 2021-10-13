@@ -53,17 +53,22 @@ export class BigQueryAuthenticationError extends Error {
   }
 }
 
-const maybeRewriteError = (e: Error): Error => {
+const maybeRewriteError = (e: Error | unknown): Error => {
   // GaxiosError happens if credentials are revoked (for example, client.revokeCredentials()) or if
   // the refresh token is invalid
   // ApiErrors happen if token is revoked (for example, client.revokeToken(creds.access_token!))
 
-  if (
-    (e instanceof GaxiosError && e.code === "400") ||
-    (e instanceof googleCommon.ApiError && e.code === 401)
-  ) {
-    return new BigQueryAuthenticationError(e.message);
-  } else return e;
+  if (e instanceof Error) {
+    if (
+      (e instanceof GaxiosError && e.code === "400") ||
+      (e instanceof googleCommon.ApiError && e.code === 401)
+    ) {
+      return new BigQueryAuthenticationError(e.message);
+    } else return e;
+  } else {
+    // something throw a non-Error, and we didn't expect that
+    throw e;
+  }
 };
 
 // manage access to BQ, control costs, enforce global data/API limits

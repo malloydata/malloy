@@ -1,23 +1,66 @@
-# Malloy
+Note: This is not an officially supported Google product
 
-Malloy starts with the insight that all interactions of data are really
-transformations of data from one form to the next, and uses that
-to build a method for interacting with data which preserves the metadata
-needed to properly compose and connect these transformations while
-maintaining integrity of aggregate caclulations.
+# The Malloy Language
 
-> This is an Experimental prototype. Experiments are focused on validating a prototype and are not guaranteed to be released. They are not intended for production use or covered by any SLA, support obligation, or deprecation policy and might be subject to backward-incompatible changes.
+Malloy is a new experimental language for querying and modeling data.
+
+Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
+
+It is reusable and modular, allowing you to model as you go, yet without heavy up-front work before you can start answering complex questions.
+
+Malloy is for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient.
+
+This VSCode plugin is the first application of Malloy. It provides a rich environment to create Malloy models, query, and create simple visualizations and dashboards.
+
+### How it works
+
+- Queries **compile to SQL** and are issued directly to the database
+- The language is reusable and composable: everything can be defined once (joins, metrics, aggregations) and later reused and extended.
+- **Defaults are smart**, and Malloy is **concise** where SQL is verbose and often redundant.
+- Produces **rich metadata** about query results, as well as the originating column or field (think data lineage). This is ideal for building data applications, and enables construction of interfaces that allow the rewrite of queries to drill into row-level detail.
+- ‍ Works in _nested structures_ or “graphs” rather than in flat tables, which simplifies querying and aggregation at any nesting depth, and takes advantage of BigQuery’s strengths working with nested data.
+- Automatically **builds search indexes** for all the data. Search indexes greatly simplify filtering data and can also be used to understand the ‘shape’ of any given field (min, max, cardinality, most frequent occurring values).
+- Currently available on BigQuery, Malloy takes advantage of **BigQuery’s unique features**:
+  - Reading and writing large nested result sets extremely fast
+  - BI Engine & database-level caching
+
+### Why do we need another data language?
+
+SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to express; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn. It is usable in place of SQL to manipulate and explore data.
+
+Key features and advantages:
+
+- Query and model in the same language; everything is reusable and extensible.
+- Malloy reads the schema so you don’t need to model everything: Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
+- Pipelining: output one query into the next easily for powerful advanced analysis.
+- Aggregating Subqueries (AKA Turtles) let you delve deeper into data quickly, and nest data infinitely.
+- Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
+- Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
+- Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.
+- Malloy models are purely about data; visualization and “styles” configurations live separately, keeping the model clean and easy to read.
+- Aggregates are safe and accurate: Malloy generates distinct keys when they’re needed to ensure it never fans out your data.
+- Nested tables are made approachable: you don’t have to model or flatten them; specify a query path and Malloy handles the rest.
+- Compiler-based error checking: Malloy understands sql expressions so the compiler catches errors as you write, before the query is run.
+
+# Join the Community
+
+- Join the [**Malloy Slack Community!**](https://join.slack.com/t/malloy-community/shared_invite/zt-upi18gic-W2saeFu~VfaVM1~HIerJ7w) Use this community to ask questions, meet other Malloy users, and share ideas with one another.
+- Use [**GitHub issues**](https://github.com/looker-open-source/malloy/issues) in this Repo to provide feedback, suggest improvements, report bugs, and start new discussions.
+
+# Installation
 
 ## Building Malloy
 
-You will need to have BigQuery credentials available.
+You will need to have BigQuery credentials available, and the [gcloud CLI](https://cloud.google.com/sdk/gcloud) installed.
 
 ```
 gcloud auth login --update-adc
-gcloud config set project <project id> --installation
+gcloud config set project my_project_id --installation
 ```
 
-You will need to install [node.js](https://nodejs.org/en/download/), [yarn](https://classic.yarnpkg.com/en/docs/install/), and a [Java Runtime Environment](https://www.oracle.com/java/technologies/javase-jre8-downloads.html) (JRE 1.6 or higher, 1.8 recommended) on your system in order to build the Malloy project.
+_Replace `my_project_id` with the name of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
+
+You will need to have [node.js](https://nodejs.org/en/download/), [yarn](https://classic.yarnpkg.com/en/docs/install/), and a [Java Runtime Environment](https://www.oracle.com/java/technologies/javase-jre8-downloads.html) (JRE 1.6 or higher, 1.8 recommended) installed on your system in order to build the Malloy project.
 
 The following will install dependencies for the entire set of packages and compile both the Malloy language and the VSCode extension.
 
@@ -32,233 +75,74 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 
 ### Installation
 
-To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. Then run:
+To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
 yarn install
-yarn workspace malloy-vscode build
-yarn workspace malloy-vscode package
+yarn build
 ```
 
-Then, in VSCode, run the "Extensions: Install from VSIX" command, and navigate to and select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`.
+Next, in VSCode _EITHER_:
 
-Alternatively, open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
+1. Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
 
-### Development
+_OR_
 
-1. Open the `malloy-vscode` package root directory in VSCode.
-2. Select the "Run and Debug" panel.
-3. Click the green arrow run button for the "Run Extension" profile.
+2. Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
-To additionally debug the language server, run the "Attach to Language Server"
-launch profile.
+### Contributing
 
+If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
 
-## Documentation
+# Documentation
 
-Documentation is a static site built by [Jekyll](https://jekyllrb.com/) with 
-some custom preprocessing.
+[Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
 
-Source for documentation lives in the `/docs/_src` directory. Any `.md`
-files will be included in compiled documentation, `table_of_contents.json`
-specifies the sidebar, and any other files will be copied as static files.
+You can find Quick Start videos, below.
 
-Custom preprocessing is done in `/docs/_scripts/build_docs/index.ts`.
+- [eCommerce Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
+- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - docs introduction to the language
+- [FAA Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
-### Installation
+# Quick Start Videos
 
-Jekyll is a Ruby Gem, so you will need to have Ruby 2.5.0+, RubyGems, GCC, 
-Make, and Bundler installed. See [here](https://jekyllrb.com/docs/installation/)
-for more info on Jekyll's requirements.
+## Using the Malloy VSCode plugin
 
-To install Bundler, run
-```
-gem install bundler
-```
+https://user-images.githubusercontent.com/7178946/130858341-4e2a834a-ca51-44af-b035-584d6908873f.mov
 
-Once all that is installed, you can install Jekyll and its Ruby dependencies:
+https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-834a-579927b727cd.mov
 
-```
-bundle install
-```
+## Getting Started Video Series
 
-### Compile
+These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin.
 
-To compile the documentation, run `yarn docs-build`. Your system must be
-authenticated to a BigQuery instance with access to all tables referenced in the 
-`/samples` models. 
+**You will likely need to un-mute the audio.**
 
-### Develop
+### 1. Introduction
 
-For developing the documentation, run `yarn docs-serve` build the docs, watch for 
-file changes in any of the docs, static files, or sample models, and serve the result 
-at [http://127.0.0.1:4000](http://127.0.0.1:4000). Jekyll hot-reloading is 
-enabled, so pages should automatically refresh when changes are made. When initial 
-compilation is complete, a browser should open to the home page.
+https://user-images.githubusercontent.com/7178946/130884531-9f86d536-32b8-43fd-9e4e-17ed316658f1.mov
 
-Code blocks in the documentation may begin with a command string to indicate 
-whether the code should be run, and how the query should be compiled or the results
-formatted. This command string is JSON-formatted and must appear on the first
-line in a comment with an `!`, like: `--! { "isRunnable": true }`. For example,
+### 2. Visualizing Results
 
-~~~
-```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "size": "large"}
-explore flights | sessionize
-```
-~~~
+https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-82b6-a61b7371ac65.mov
 
-Currently, options include `isRunnable` (which must be `true` for the snippet
-to run), `project` (which refers to a directory in `/samples`), `model` (
-which refers to a file (not including the `.malloy` extension inside that 
-directory), and `size` (which adjusts the maximum scroll size of the results).
+### 3. Joining
 
-### Style
+https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
 
-The following list describes style conventions used in the docs.
+### 4. Aggregating Subqueries, AKA Turtles
 
-* Use headers (`# Foo`, `## Bar`, etc.) to organize document structure, not for
-  emphasis. If you want to show emphasis, do it with `**bold**` or `_italics_`.
-* Code spans (`` `explore flights` ``) are by default _Malloy_ syntax-highlighted. If
-  you are writing a code span with code in any other language, use an HTML code tag,
-  e.g. `<code>SELECT *</code>`
-  
-### Deploy
+https://user-images.githubusercontent.com/7178946/130885321-ba141168-2a50-423a-bf09-5a6a03ec57d8.mov
 
-To deploy the docs, use the following steps:
+### 5. Creating a Dashboard
 
-1. Merge any docs changes into `main`
-2. `git pull main`
-2. `git checkout docs-release-static`
-3. `git merge main`
-4. `yarn docs-build`   
-5. `git add docs`
-6. `git commit`
-7. `git push`
+https://user-images.githubusercontent.com/7178946/130885327-2866baae-e77c-4dc4-ab63-25cfff9f19c6.mov
 
-## Basic Syntax
+### 6. Custom Dimensions
 
-Queries in Malloy start with a data source, specified either `explore some_named_explore` or `explore 'some_table'`, followed by piped transformations on that data, e.g.
+https://user-images.githubusercontent.com/7178946/130884897-f2bb7f16-1c4f-4a4c-bf04-03849385c8fb.mov
 
-```malloy
-explore 'users' | ...
-```
+### 7. JSON Renderer
 
-Within such a transformation, fields may be referenced if they are defined in the data source:
-
-```malloy
-explore 'users' | project
-  first_name,
-  last_name,
-  last_login_date,
-  is_activated
-```
-
-Here, `project` is similar to `SELECT` in SQL. Expressions like those in BigQuery SQL are also allowed:
-
-```malloy
-explore 'products' | project
-  name,
-  discount_percentage * msrp
-```
-
-Fields used in queries may be named using the `is` keyword, which is similar to `AS` in SQL, but reversed:
-
-```malloy
-explore 'products' | project
-  name,
-  discounted_price is discount_percentage * msrp
-```
-
-In most cases, queries require aggregation. The `reduce` transformation is like a `SELECT` with a `GROUP BY` in SQL. The following query will yield each product brand name, the number of products with that brand name, and the average price of each product within the brand.
-
-```malloy
-explore 'products' | reduce
-  name,
-  product_count is count(),
-  average_price is sum(msrp) / count()
-```
-
-Queries can contain other nested structures, by including additional transformations as fields:
-
-```malloy
-explore 'flights' | reduce
-  carrier,
-  flights_by_origin is (reduce
-    origin_code,
-    flight_count is count()
-  )
-```
-
-Queries can be filtered at any level, by inserting filter expressions between square brackets. A filter after an explore applies to the whole explore; one before the fields in a `reduce` or `project` transformation applies to that transformation; and one after an aggregate field applies to that aggregate only. See Filters for more information on filter expressions.
-
-```malloy
-explore 'flights' [origin_state: 'CA'] | reduce
-  carrier,
-  flights_by_origin is (reduce [destination_code: 'ORD' | 'SFO' | 'JFK']
-    origin_code,
-    short_flight_count is count() [duration_minutes: '< 120']
-  )
-```
-
-Using filters produces `WHERE` clauses at various points in the output SQL.
-
-Every `reduce` or `project` transformation maintains metadata about the structure of the contained fields. This structure can be saved and given a name using the `define` keyword.
-
-```malloy
-define flights is (explore 'flights' | reduce
-    carrier,
-    flight_count is count()
-);
-```
-
-The resulting structure can then be `explore`d.
-
-```malloy
-define flights is (...)
-explore flights | reduce carrier, flight_count
-```
-
-To allow for reuse of such structures between queries, these definitions can be stored in a model file, and any exported structures can be used when querying against that model.
-
-```malloy
-export define flights is (explore 'flights' | reduce
-    carrier,
-    flight_count is count()
-);
-```
-
-Similar structures can also be defined as enhancements to a table, by leaving off the `reduce`.
-
-```malloy
-define flights is (explore 'flights'
-    carrier_code renames carrier,
-    flight_count is count()
-);
-
-explore flights | reduce tail_number, flight_count
-```
-
-Lines beginning with `--` are treated as comments.
-
-```malloy
--- Flights represents flights stored in the FAA registry
-define flights is (explore 'flights'
-    carrier_code renames carrier,
-    flight_count is count()
-);
-```
-
-Structures can be logically joined together in a structure definition:
-
-```malloy
-define carriers is (explore 'carriers'
-    primary key code
-    carrier_count is count()
-);
-
-define flights is (explore 'flights'
-    flight_count is count()
-    joins carriers on carrier
-);
-```
+https://user-images.githubusercontent.com/7178946/130884900-aad27a77-4b82-4856-8000-37f0b8410018.mov

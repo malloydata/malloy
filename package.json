@@ -5,9 +5,7 @@
   "name": "@looker-open-source/malloy",
   "workspaces": {
     "packages": [
-      "packages/malloy",
-      "packages/malloy-render",
-      "packages/malloy-vscode"
+      "packages/*"
     ]
   },
   "engines": {
@@ -17,19 +15,19 @@
     "samples"
   ],
   "scripts": {
-    "clean": "yarn workspaces run clean",
-    "prebuild": "yarn clean",
-    "build": "yarn workspaces run build-without-dependencies",
+    "clean": "yarn workspace malloy clean && yarn tsc --build --clean",
+    "build": "yarn workspace malloy build-parser && yarn tsc --build",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn lint && yarn build && yarn workspaces run test",
     "test-fast": "yarn workspaces run test",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation",
-    "docs-prebuild": "yarn workspace malloy-render build && yarn docs-clean",
+    "docs-prebuild": "yarn build && yarn docs-clean",
     "docs-build": "yarn docs-prebuild && ts-node docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
     "docs-preprocess": "ts-node docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
-    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev"
+    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev",
+    "third-party-licenses": "ts-node scripts/third_party_licenses"
   },
   "resolutions": {},
   "devDependencies": {
@@ -38,6 +36,7 @@
     "@typescript-eslint/eslint-plugin": "^4.9.1",
     "@typescript-eslint/parser": "^4.18.0",
     "concurrently": "^6.2.1",
+    "csv-stringify": "^5.6.5",
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
@@ -49,7 +48,7 @@
     "remark-gfm": "^1.0.0",
     "remark-parse": "^9.0.0",
     "ts-node": "^9.1.1",
-    "typescript": "^4.3.2",
+    "typescript": "4.3.5",
     "unified": "^9.2.1",
     "wait-on": "^6.0.0"
   },
