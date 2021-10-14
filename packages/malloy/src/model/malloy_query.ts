@@ -91,15 +91,16 @@ class StageWriter {
     return id;
   }
 
-  addUDF(stageWriter: StageWriter): string {
+  addUDF(stageWriter: StageWriter, dialect: Dialect): string {
     // eslint-disable-next-line prefer-const
     let { sql, lastStageName } = stageWriter.combineStages(undefined);
-    sql += `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+    if (lastStageName === undefined) {
+      throw new Error("Internal Error: no stage to combine");
+    }
+    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
 
-    const id = `__udf${this.udfs.size}`;
-    sql = `CREATE TEMPORARY FUNCTION ${id}(__param ANY TYPE) AS ((\n${indent(
-      sql
-    )}));\n`;
+    const id = `${dialect.udfPrefix}${this.udfs.size}`;
+    sql = dialect.sqlCreateFunction(id, sql);
     this.udfs.set(id, sql);
     return id;
   }
@@ -515,10 +516,14 @@ class QueryField extends QueryNode {
         this.fieldDef.e
       );
     }
-    return (
-      this.parent.getIdentifier() +
-      "." +
-      Malloy.db.sqlMaybeQuoteIdentifier(this.fieldDef.name)
+    return this.parent.model.dialect.sqlFieldReference(
+      this.parent.getIdentifier(),
+      this.fieldDef.name,
+      this.fieldDef.type,
+      this.parent.fieldDef.structSource.type === "nested" ||
+        this.parent.fieldDef.structSource.type === "inline" ||
+        (this.parent.fieldDef.structSource.type === "sql" &&
+          this.parent.fieldDef.structSource.nested === true)
     );
   }
 }
@@ -1727,7 +1732,7 @@ class QueryQuery extends QueryField {
         prefix = qs.parent.getIdentifier() + ".";
       }
       // we need to generate primary key.  If parent has a primary key combine
-      s += `, ${this.parent.model.dialect.sqlUnnestAlias(
+      s += `${this.parent.model.dialect.sqlUnnestAlias(
         `${prefix}${structRelationship.field}`,
         ji.alias,
         ji.getDialectFieldList(),
@@ -2012,14 +2017,7 @@ class QueryQuery extends QueryField {
     }
     const groupBy = "GROUP BY " + f.dimensionIndexes.join(",") + "\n";
 
-    //
-    // this code used to be:
-    //
-    //   from += `JOIN UNNEST(GENERATE_ARRAY(0,${this.maxGroupSet},1)) as group_set\n`;
-    //
-    // BigQuery will allocate more resources if we use a CROSS JOIN so we do that instead.
-    //
-    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet);
+    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
 
     s += indent(f.sql.join(",\n")) + "\n";
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
@@ -2181,7 +2179,7 @@ class QueryQuery extends QueryField {
     );
     let udfName;
     if (hasPipeline) {
-      udfName = stageWriter.addUDF(newStageWriter);
+      udfName = stageWriter.addUDF(newStageWriter, this.parent.model.dialect);
     }
 
     // calculate the ordering.
@@ -2292,8 +2290,8 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = "UNNEST(__param)";
-      structDef.structSource.type = "sql";
+      structDef.name = this.parent.model.dialect.sqlUnnestPipelineHead();
+      structDef.structSource = { type: "sql", nested: true };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2588,7 +2586,7 @@ class QueryStruct extends QueryNode {
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
       const base = getIdentifier(this.fieldDef);
-      let name = base;
+      let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
         n++;
