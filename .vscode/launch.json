@@ -14,6 +14,7 @@
       ],
       "outFiles": ["${workspaceFolder}/packages/**/dist/**"],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
+      "debugWebviews": true,
       "preLaunchTask": "${defaultBuildTask}",
       "sourceMaps": true,
       "console": "integratedTerminal",

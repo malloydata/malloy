@@ -18,73 +18,112 @@
 const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
 
-const config = {
-  target: "node",
+const config = [
+  {
+    target: "node",
 
-  entry: {
-    extension: "./src/extension/extension.ts",
-    server: "./src/server/server.ts",
-    connections: "./src/webview/connections/webview.ts",
-    query: "./src/webview/query/webview.ts",
-  },
-  output: {
-    path: path.resolve(__dirname, "dist"),
-    filename: "[name].js",
-    libraryTarget: "commonjs2",
-    devtoolModuleFilenameTemplate: "../[resource-path]",
-  },
-  devtool: "inline-cheap-module-source-map",
-  externals: {
-    vscode: "commonjs vscode",
-  },
-  resolve: {
-    extensions: [".ts", ".js", ".svg", ".tsx"],
-  },
-  module: {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: "ts-loader",
-            options: {
-              projectReferences: true,
+    entry: {
+      extension: "./src/extension/extension.ts",
+      server: "./src/server/server.ts",
+    },
+    output: {
+      path: path.resolve(__dirname, "dist"),
+      filename: "[name].js",
+      libraryTarget: "commonjs2",
+      devtoolModuleFilenameTemplate: "../[resource-path]",
+    },
+    devtool: "inline-cheap-module-source-map",
+    externals: {
+      vscode: "commonjs vscode",
+    },
+    resolve: {
+      extensions: [".ts", ".js", ".svg", ".tsx"],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                projectReferences: true,
+              },
             },
+          ],
+        },
+        {
+          test: /\.svg/,
+          use: {
+            loader: "file-loader",
           },
-        ],
-      },
-      {
-        test: /\.svg/,
-        use: {
-          loader: "file-loader",
-        },
-      },
-      {
-        test: /\.js$/,
-        exclude: /node_modules/,
-        enforce: "pre",
-        use: ["source-map-loader"],
-      },
-    ],
-  },
-  plugins: [
-    new CopyPlugin({
-      patterns: [
-        {
-          from: "language.json",
-          to: "language.json",
         },
         {
-          from: "src/media/refresh.svg",
-          to: "src/media/refresh.svg",
-        },
-        {
-          from: "src/media/play.svg",
-          to: "src/media/play.svg",
+          test: /\.js$/,
+          exclude: /node_modules/,
+          enforce: "pre",
+          use: ["source-map-loader"],
         },
       ],
-    }),
-  ],
-};
+    },
+    plugins: [
+      new CopyPlugin({
+        patterns: [
+          {
+            from: "language.json",
+            to: "language.json",
+          },
+          {
+            from: "src/media/refresh.svg",
+            to: "src/media/refresh.svg",
+          },
+          {
+            from: "src/media/play.svg",
+            to: "src/media/play.svg",
+          },
+        ],
+      }),
+    ],
+  },
+  {
+    target: "web",
+    entry: {
+      connections: "./src/webview/connections/webview.ts",
+      query: "./src/webview/query/webview.ts",
+    },
+    output: {
+      path: path.resolve(__dirname, "dist"),
+      filename: "[name].js",
+      libraryTarget: "commonjs2",
+      devtoolModuleFilenameTemplate: "../[resource-path]",
+    },
+    devtool: "inline-cheap-module-source-map",
+    resolve: {
+      extensions: [".ts", ".js", ".tsx"],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                projectReferences: true,
+              },
+            },
+          ],
+        },
+        {
+          test: /\.js$/,
+          exclude: /node_modules/,
+          enforce: "pre",
+          use: ["source-map-loader"],
+        },
+      ],
+    },
+  },
+];
 module.exports = config;

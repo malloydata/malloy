@@ -1,12 +1,21 @@
+import { StructDef } from "malloy";
+import { DataTreeRoot, HtmlView } from "malloy-render";
 import React, { useContext, useEffect, useState } from "react";
 import { QueryPanelMessage, QueryRunStatus } from "../../extension/types";
 import { VSCodeContext } from "../vscodeContext";
 
+const css = `<style>
+body {
+	background-color: transparent;
+  font-size: 11px;
+}
+</style>
+`;
+
 export const App: React.FC = () => {
   const vscode = useContext(VSCodeContext);
   const [status, setStatus] = useState<QueryRunStatus | undefined>();
-  const [blob, setBlob] = useState<any>();
-  const [times, setTimes] = useState<string[]>();
+  const [resultHtml, setResultHtml] = useState<string | undefined>();
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -17,8 +26,36 @@ export const App: React.FC = () => {
         case "query-status":
           setStatus(message.status);
           if (message.status === QueryRunStatus.Done) {
-            setBlob(message.sizeTest.map((x) => x.length).toString());
-            setTimes([message.time, new Date().toLocaleTimeString()]);
+            setStatus(QueryRunStatus.Rendering);
+
+            const data = message.result;
+            const field = data.structs.find(
+              (s) => s.name === data.lastStageName
+            );
+
+            // const namedQueryName =
+            //   query.type === "named" ? query.name : undefined;
+            if (field) {
+              const namedField: StructDef = {
+                ...field,
+                name: data.queryName || field.name,
+              };
+              const table = new DataTreeRoot(
+                data.result,
+                namedField,
+                data.sourceExplore,
+                data.sourceFilters || []
+              );
+
+
+              (async () => {
+                const html =
+                  // css + (await new HtmlView().render(table, message.styles));
+                  "foo";
+                setResultHtml(html);
+                console.log(html);
+              })();
+            }
           }
           break;
       }
@@ -29,7 +66,8 @@ export const App: React.FC = () => {
 
   return (
     <div>
-      Status: {status}, Times: {times}, Blob: {JSON.stringify(blob, null, 2)}
+      Status: {status}
+      <div dangerouslySetInnerHTML={{ __html: resultHtml || "" }} />
     </div>
   );
 };

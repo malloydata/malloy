@@ -1,10 +1,12 @@
 import { QueryResult } from "malloy";
+import { DataStyles } from "malloy-render";
 
 export enum QueryRunStatus {
   Compiling = "compiling",
   Running = "running",
   Error = "error",
   Done = "done",
+  Rendering = "rendering",
 }
 
 interface QueryMessageStatusCompiling {
@@ -27,8 +29,7 @@ interface QueryMessageStatusDone {
   type: "query-status";
   status: QueryRunStatus.Done;
   result: QueryResult;
-  sizeTest: string[];
-  time: string;
+  styles: DataStyles;
 }
 
 type QueryMessageStatus =
