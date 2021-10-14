@@ -1,5 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
-import { Button, ConnectionEdit, ConnectionList, ConnectionTest } from "./components";
+import {
+  Button,
+  ConnectionEdit,
+  ConnectionList,
+  ConnectionTest,
+} from "./components";
 import { Connection } from "./types";
 import { VSCodeContext } from "../vscodeContext";
 
@@ -22,11 +27,10 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const listener = (event: MessageEvent<any>) => {
-
       const message = event.data; // The JSON data our extension sent
 
       switch (message.type) {
-        case 'config-set':
+        case "config-set":
           setConnections(message.config);
           break;
         case "test-connection":
@@ -38,8 +42,8 @@ export const App: React.FC = () => {
           break;
       }
     };
-    window.addEventListener('message', listener);
-    return () => window.removeEventListener('message', listener);
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
   });
 
   useEffect(() => {

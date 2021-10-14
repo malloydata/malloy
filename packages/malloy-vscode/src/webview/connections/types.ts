@@ -1,5 +1,3 @@
-
-
 export interface BigQueryConnection {
   name: string;
   type: "bigquery";

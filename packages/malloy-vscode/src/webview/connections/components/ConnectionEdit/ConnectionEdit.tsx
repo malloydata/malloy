@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import styled from "styled-components";
-import { BigQueryConnection, Connection, PostgresConnection } from "../../types";
+import {
+  BigQueryConnection,
+  Connection,
+  PostgresConnection,
+} from "../../types";
 import { Button } from "../Button";
 
 interface ConnectionEditProps {
@@ -164,7 +168,9 @@ export const PostgresConnectionEdit: React.FC<PostgresConnectionEditProps> = ({
   return (
     <div>
       <FormRow>
-        <FormLabel><Required>Name</Required></FormLabel>
+        <FormLabel>
+          <Required>Name</Required>
+        </FormLabel>
         <Input value={name} setValue={setName}></Input>
       </FormRow>
       <FormRow>
