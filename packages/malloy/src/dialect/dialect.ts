@@ -23,6 +23,8 @@ export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
   abstract udfPrefix: string;
+  abstract hasFinalStage: boolean;
+  abstract stringTypeName: string;
 
   // return a quoted string for use as a table name.
   abstract quoteTableName(tableName: string): string;
@@ -76,4 +78,8 @@ export abstract class Dialect {
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
+
+  sqlFinalStage(lastStageName: string): string {
+    throw new Error("Dialect has no final Stage but called Anyway");
+  }
 }

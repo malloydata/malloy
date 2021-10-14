@@ -16,8 +16,10 @@ import { Dialect, DialectFieldList } from "./dialect";
 
 export class PostgresDialect extends Dialect {
   name = "postgres";
-  defaultNumberType = "double precision";
+  defaultNumberType = "DOUBLE PRECISION";
   udfPrefix = "pg_temp.__udf";
+  hasFinalStage = true;
+  stringTypeName = "VARCHAR";
 
   quoteTableName(tableName: string): string {
     return `${tableName}`;
@@ -170,5 +172,9 @@ export class PostgresDialect extends Dialect {
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
     return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+  }
+
+  sqlFinalStage(lastStageName: string): string {
+    return `SELECT json_agg(finalStage) as rows FROM ${lastStageName} finalStage`;
   }
 }

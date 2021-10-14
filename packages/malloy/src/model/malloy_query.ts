@@ -1973,7 +1973,10 @@ class QueryQuery extends QueryField {
           )}) THEN __delete__${
             result.groupSet
           } END) OVER(partition by ${dimensions
-            .map((x) => `CAST(${x} AS STRING) `)
+            .map(
+              (x) =>
+                `CAST(${x} AS ${this.parent.model.dialect.stringTypeName}) `
+            )
             .join(",")}) as __shaving__${result.groupSet}`
         );
       }
@@ -2967,8 +2970,8 @@ const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  dialect: Dialect = new BigQueryDialect();
-  // dialect: Dialect = new PostgresDialect();
+  // dialect: Dialect = new BigQueryDialect();
+  dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {
@@ -3140,6 +3143,12 @@ export class QueryModel {
         query.structRef.type === "struct"
         ? query.structRef.as || query.structRef.name
         : "(need to figure this out)";
+    if (this.dialect.hasFinalStage) {
+      ret.lastStageName = ret.stageWriter.addStage(
+        "__stage",
+        this.dialect.sqlFinalStage(ret.lastStageName)
+      );
+    }
     return {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,

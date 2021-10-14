@@ -18,6 +18,8 @@ export class BigQueryDialect extends Dialect {
   name = "bigquery";
   defaultNumberType = "FLOAT64";
   udfPrefix = "__udf";
+  hasFinalStage = false;
+  stringTypeName = "STRING";
 
   quoteTableName(tableName: string): string {
     return `\`${tableName}\``;
