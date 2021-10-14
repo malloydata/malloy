@@ -347,7 +347,7 @@ export function runMalloyQuery(
               type: "query-status",
               status: QueryRunStatus.Done,
               result: queryResult,
-              sizeTest: ["a".repeat(550_000_000)],
+              sizeTest: ["a"],
               time: new Date().toLocaleTimeString(),
             };
             current.panel.webview.postMessage(message);
