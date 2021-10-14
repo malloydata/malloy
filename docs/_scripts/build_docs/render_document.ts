@@ -250,7 +250,9 @@ class Renderer {
       return text;
     }
     href = href.replace(/\.md/, ".html");
-    let out = '<a href="' + href + '"';
+    let out = href.startsWith("/")
+      ? `<a href="{{ '${href}' | relative_url }}"`
+      : `<a href="${href}"`;
     if (title) {
       out += ' title="' + title + '"';
     }

@@ -96,14 +96,14 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 # Documentation
 
-[Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
+[Full documentation for Malloy]( https://looker-open-source.github.io/malloy/)
 
 You can find Quick Start videos, below.
 
-- [eCommerce Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
-- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - docs introduction to the language
-- [FAA Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
-- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
+- [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
+- [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
+- [FAA Example Analysis](https://looker-open-source.github.io/malloy/documentation/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Quick Start Videos
 

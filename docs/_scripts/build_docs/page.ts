@@ -36,8 +36,8 @@ export function renderSidebar(sections: Section[]): string {
             const compareLink =
               htmlLink === "/index.html" ? "/documentation/" : fullLink;
             return `<div class='sidebar-item {% if page.url == "${compareLink}" %}active{% endif %}'>
-            <a href="${fullLink}">
-              <img src="/img/docs-page.svg" alt="document"/>
+            <a href="{{ site.baseurl }}${fullLink}">
+              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
               ${item.title}
             </a>
           </div>`;
@@ -46,7 +46,7 @@ export function renderSidebar(sections: Section[]): string {
       </div>`;
       })
       .join("\n")}
-    
+
   </div>`;
 }
 
@@ -81,14 +81,14 @@ export function renderFooter(
     <div class="item">
       ${
         previous
-          ? `<a href="${previousRelative}"><img src="/img/previous.svg" alt="previous"/>${previous.title}</a>`
+          ? `<a href="${previousRelative}"><img src="{{ site.baseurl }}/img/previous.svg" alt="previous"/>${previous.title}</a>`
           : ""
       }
     </div>
     <div class="item">
       ${
         next
-          ? `<a href="${nextRelative}">${next.title}<img src="/img/next.svg" alt="next"/></a>`
+          ? `<a href="${nextRelative}">${next.title}<img src="{{ site.baseurl }}/img/next.svg" alt="next"/></a>`
           : ""
       }
     </div>

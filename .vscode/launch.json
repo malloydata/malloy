@@ -12,20 +12,14 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
-      "timeout": 6000,
       "outFiles": [
         "**/node_modules/malloy/**/dist/*.js",
         "${workspaceFolder}/packages/malloy-vscode/dist/*.js"
       ],
+      "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
       "sourceMaps": true,
-      "resolveSourceMapLocations": [
-        "${workspaceFolder}/**",
-        "${workspaceFolder}/node_modules/malloy/**",
-        "${workspaceFolder}/node_modules/malloy-render/**",
-        "!**/node_modules/**"
-      ],
-      "trace": true,
+      "resolveSourceMapLocations": ["${workspaceFolder}/packages/**/dist/**"],
       "console": "integratedTerminal",
       "runtimeArgs": ["--preserve-symlinks"]
     },
