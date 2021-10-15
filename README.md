@@ -6,7 +6,7 @@ The Malloy language began as the platform for refining the question "Can we make
 
 We are a very small team, developing this in the open for two reasons. First, because we believe in the general benfit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
 
-What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore data with it. The next steps are going to be determined to a large degree by the success of the language in making computatiom based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
+What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore and transform data with it. The next steps are going to be determined to a large degree by the success of the language in making computatiom based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
 
 # The Malloy Language
 
