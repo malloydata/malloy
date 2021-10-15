@@ -1,4 +1,12 @@
-Note: This is not an officially supported Google product
+# Welcome to Malloy
+
+Malloy is a language for describing data relationships and transformations.  Exploring data in Malloy eliminates the distinction between schema and query, tables and results, allowing you to keep your focus on the data and the insights you are trying to gain.
+
+The Malloy language began as the platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are contuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
+
+We are a very small team, developing this in the open for two reasons. First, because we believe in the general benfit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
+
+What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore data with it. The next steps are going to be determined to a large degree by the success of the language in making computatiom based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
 
 # The Malloy Language
 
