@@ -33,7 +33,7 @@ Key features and advantages:
 - Query and model in the same language; everything is reusable and extensible.
 - Malloy reads the schema so you don’t need to model everything: Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
 - Pipelining: output one query into the next easily for powerful advanced analysis.
-- Aggregating Subqueries (AKA Turtles) let you delve deeper into data quickly, and nest data infinitely.
+- Aggregating Subqueries let you delve deeper into data quickly, and nest data infinitely.
 - Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
 - Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
 - Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.
@@ -131,7 +131,7 @@ https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-8
 
 https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
 
-### 4. Aggregating Subqueries, AKA Turtles
+### 4. Aggregating Subqueries
 
 https://user-images.githubusercontent.com/7178946/130885321-ba141168-2a50-423a-bf09-5a6a03ec57d8.mov
 

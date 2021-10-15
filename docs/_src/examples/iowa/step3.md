@@ -24,7 +24,7 @@ explore iowa
 Malloy provides a simple way to map all these values, using `pick` expressions.  In the [Malloy Model for this Data Set](source.md), you will find the declaration below.  Each pick expression tests `category_name` for a regular expression.  If it matches, it returns the name pick'ed.
 
 ```malloy
-  category_class is category_name : 
+  category_class is category_name :
     pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BURBON|RYE)'
     pick 'VODKAS' when ~ r'VODKA'
     pick 'RUMS' when ~ r'RUM'
@@ -37,7 +37,7 @@ Malloy provides a simple way to map all these values, using `pick` expressions. 
 ```
 ## Testing the category map
 
-Let's take a look at each category class and see how many individual items it has.  We'll also build a turtle that shows the `category_name`s that map into that category class. 
+Let's take a look at each category class and see how many individual items it has.  We'll also build a nested query that shows the `category_name`s that map into that category class.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small", "dataStyles": { "names_list": { "renderer": "list_detail" } } }
@@ -79,7 +79,7 @@ explore iowa
   )
 ```
 
-Visualizing this query suggests that we might wish to create 3 distinct buckets to approximate small, medium and large bottles. 
+Visualizing this query suggests that we might wish to create 3 distinct buckets to approximate small, medium and large bottles.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium", "dataStyles": { "sizes": { "renderer": "bar_chart" } } }
@@ -105,7 +105,7 @@ Look at the data through the new mapping.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa 
+explore iowa
 | reduce order by 1
   bottle_size
   total_sale_dollars

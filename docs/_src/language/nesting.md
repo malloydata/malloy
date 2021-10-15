@@ -1,8 +1,8 @@
-# What is a "Turtle?"
+# What is an "Aggregating Subquery?"
 
-Turtles are queries nested in other queries. The technical name for what a turtle is doing is "aggregating subgquery--in Malloy, it is an object which has a name, and transforms a shape. "Aggregating subquery" is a bit of a mouthful, so we call it a turtle. The word comes from the philosophical phrase [Turtles All The Way Down](https://en.wikipedia.org/wiki/Turtles_all_the_way_down).
+Aggregating Subqueries are queries nested in other queries. In Malloy, it is an object which has a name, and transforms a shape. "Aggregating subquery" is a bit of a mouthful, so we often refer to it as "nesting a query."
 
-A turtle utilizes a named query, which might look like this when defined in the model, or within a query:
+An Aggregating Subquery utilizes a Named Query, which might look like this when defined in the model, or within a query:
 
 ```malloy
   airports_by_facility is (reduce
@@ -11,7 +11,7 @@ A turtle utilizes a named query, which might look like this when defined in the 
     )
 ```
 
-When a named query is nested inside of another query, this forms an aggregating subquery, or "turtle."
+When a Named Query is nested inside of another query, this forms an Aggregating Subquery.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
@@ -24,16 +24,14 @@ explore airports | reduce
   )
 ```
 
-This "turtle" can additionally  be used to build out other computations, for example
+This named query can additionally be used to build out other computations, for example:
 
 ```malloy
   airports_in_ca is airports_by_facility [ state : 'CA' ]
 ```
 
-This is an unusual word, and it may be replaced once we figure out a better word but right now, you will see the word "turtle" from time to time, and this is what it means.
-
-## Turtles in Turtles
-Turtles can be nested infinitely
+## Nesting Nested Queries
+Aggregating subqueries can be nested infinitely
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
@@ -51,8 +49,8 @@ explore airports
   )
 ```
 
-## Filters in Turtles
-Filters can be applied at any level within turtles.
+## Filter
+Filters can be applied at any level within Aggregating Subqueries.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}

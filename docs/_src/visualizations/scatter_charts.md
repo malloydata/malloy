@@ -10,7 +10,7 @@ Scatter charts compare two numeric values. The data styles for the subsequent ex
 }
 ```
 
-## Run as a turtle
+## Run as an aggregating subquery
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "medium", "source": "faa/flights.malloy"}

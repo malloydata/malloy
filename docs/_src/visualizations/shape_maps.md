@@ -41,7 +41,7 @@ explore airports
 ```
 
 ## Run as a trellis
-By calling the configured map as a turtle, a trellis is formed.
+By calling the configured map as a nested aggregating subquery, a trellis is formed.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/airports.malloy"}

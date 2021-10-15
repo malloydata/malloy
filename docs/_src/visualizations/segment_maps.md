@@ -48,7 +48,7 @@ explore flights : [dep_time : @2003-02, origin.code : 'ORD']
 | routes_map
 ```
 
-## Run as a turtle
+## Run as a aggregating subquery
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "medium", "source": "faa/flights.malloy"}
@@ -58,7 +58,7 @@ explore flights : [dep_time : @2003-02, origin.code : 'ORD']
 ```
 
 ## Run as a trellis
-By calling the configured map as a turtle, a trellis is formed.
+By calling the configured map as a nested query, a trellis is formed.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/flights.malloy"}
