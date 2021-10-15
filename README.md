@@ -33,7 +33,7 @@ Key features and advantages:
 - Query and model in the same language; everything is reusable and extensible.
 - Malloy reads the schema so you don’t need to model everything: Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
 - Pipelining: output one query into the next easily for powerful advanced analysis.
-- Aggregating Subqueries let you delve deeper into data quickly, and nest data infinitely.
+- Aggregating Subqueries let you build nested data sets to delve deeper into data quickly, and return complicated networks of data from single queries (like GraphQL).
 - Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
 - Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
 - Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.

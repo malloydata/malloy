@@ -26,7 +26,7 @@ of data lets you access and correctly perform comutations and any place in the g
 ### Reusable Queries
 Queries can be introduced into a Malloy model and accessed by name.  One benefit is that the
 queries are always accurate.  Think of a Malloy model as a data function library.
-Queries can also be used in other queries (we call this *Turtling*).
+Queries can also be used to create [nested subtables](nesting.md) in other queries.
 
 ### Aggregating Subueries
 Malloy easily produces nested results.  Entire dashboards can be fetched in a single query.

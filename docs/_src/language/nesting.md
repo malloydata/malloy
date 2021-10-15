@@ -1,6 +1,6 @@
 # What is an "Aggregating Subquery?"
 
-Aggregating Subqueries are queries nested in other queries. In Malloy, it is an object which has a name, and transforms a shape. "Aggregating subquery" is a bit of a mouthful, so we often refer to it as "nesting a query."
+Aggregating Subqueries are queries nested in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, it is an object which has a name, and transforms a shape. The technical term of "Aggregating Subquery" is a bit of a mouthful, so we more often refer to it as "nesting a query," or a "nested subtable."
 
 An Aggregating Subquery utilizes a Named Query, which might look like this when defined in the model, or within a query:
 
@@ -11,7 +11,7 @@ An Aggregating Subquery utilizes a Named Query, which might look like this when 
     )
 ```
 
-When a Named Query is nested inside of another query, this forms an Aggregating Subquery.
+When a Named Query is nested inside of another query, this forms a nested subtable.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
@@ -50,7 +50,7 @@ explore airports
 ```
 
 ## Filter
-Filters can be applied at any level within Aggregating Subqueries.
+Filters can be applied at any level within nested subtables.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}

@@ -23,7 +23,7 @@ explore flights
   flight_count
 ```
 
-## In Malloy, can make both caculations at once by nesting with an *Aggregating Subquery*.
+## In Malloy, can make both caculations at once with [*nested subtables*](nesting.md).
 The results are returned as a single row in a table with two columns, `flight_count` and `main_query`.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}

@@ -66,8 +66,8 @@ explore iowa : [category_name: ~ r'TEQUILA']
 
 Here we can see that *Patron Tequila Silver* is the most premium brand, followed by *Jose Cuervo* as a mid-tier  brand, with *Juarez Tequila Gold* more of an economy brand.
 
-## TURTLING: A deeper look at a Vendor offerings
-The magic happens when we call a named query in the same way we would use any other field (Turtling). In the below query, we can see our vendors (sorted automatically by amount purchased, as well as the top 5 items for each vendor.
+## Nested Subtables: A deeper look at a Vendor offerings
+The magic happens when we call a named query in the same way we would use any other field [nesting](nesting.md). In the below query, we can see our vendors (sorted automatically by amount purchased, as well as the top 5 items for each vendor.
 
 
 ```malloy
@@ -81,10 +81,10 @@ explore iowa : [category_name: ~ r'TEQUILA']
 
 ```
 
-These aggregating subqueries generate nested tables, allowing us to view both the high-level information of "who are our top vendors" as well as the supporting detail in one simple Malloy query.
+These nested subtables allow us to view both the high-level information of "who are our top vendors" as well as the supporting detail in one simple Malloy query.
 
 ## Bucketing the data
-The `price_per_100ml` calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket `price_per_100ml` into even dollar amounts, and nest `top_sellers_by_revenue`.
+The `price_per_100ml` calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket `price_per_100ml` into even dollar amounts, and nest our `top_sellers_by_revenue` query to create a subtable for each bucket.
 
 At the top we see our lowest cost options at under $1/mL, with the more pricey bevarages appearing as we scroll down.
 

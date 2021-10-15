@@ -165,7 +165,7 @@ explore 'malloy-data.faa.airports'
 Time is a big deal in data.  Malloy has built in contructs to easily handle time, relative time filtering, date ranges and time stamps.  We'll write more about this when the syntax is finalized.
 
 ## Aggregating Subqueries
-In malloy queries can nest in other queries.
+In malloy queries can be [nested](nesting.md) to produce subtables on each output row of a query.
 
 ### Examples use the following model.
 ```malloy

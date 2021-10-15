@@ -48,7 +48,7 @@ explore flights : [dep_time : @2003-02, origin.code : 'ORD']
 | routes_map
 ```
 
-## Run as a aggregating subquery
+## Run as a nested subtable
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "medium", "source": "faa/flights.malloy"}
