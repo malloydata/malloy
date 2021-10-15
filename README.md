@@ -28,7 +28,8 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
 - Produces **rich metadata** about query results, as well as the originating column or field (think data lineage). This is ideal for building data applications, and enables construction of interfaces that allow the rewrite of queries to drill into row-level detail.
 - ‍ Works in _nested structures_ or “graphs” rather than in flat tables, which simplifies querying and aggregation at any nesting depth, and takes advantage of BigQuery’s strengths working with nested data.
 - Automatically **builds search indexes** for all the data. Search indexes greatly simplify filtering data and can also be used to understand the ‘shape’ of any given field (min, max, cardinality, most frequent occurring values).
-- Currently available on BigQuery, Malloy takes advantage of **BigQuery’s unique features**:
+- Currently available on BigQuery and soon to be available on Postgres. 
+- Malloy takes advantage of **BigQuery’s unique features**:
   - Reading and writing large nested result sets extremely fast
   - BI Engine & database-level caching
 
