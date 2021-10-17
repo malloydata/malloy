@@ -164,8 +164,8 @@ explore 'malloy-data.faa.airports'
 ## Timeframes and Timezones.
 Time is a big deal in data.  Malloy has built in contructs to easily handle time, relative time filtering, date ranges and time stamps.  We'll write more about this when the syntax is finalized.
 
-## Turtles
-In malloy queries can nest in other queries.
+## Aggregating Subqueries
+In malloy queries can be [nested](nesting.md) to produce subtables on each output row of a query.
 
 ### Examples use the following model.
 ```malloy
@@ -175,7 +175,7 @@ define airports is (explore 'malloy-data.faa.airports'
 ```
 
 ### Aggregating Subqueries
-Aggregating Subqueries, we call them [Turtles](/documentation/language/turtle.html), are queries nested in other queries.
+[Aggregating Subqueries](/documentation/language/nesting.html) are queries nested in other queries.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
@@ -190,7 +190,7 @@ explore airports
   )
 ```
 
-## Turtles within Turtles
+## Nesting within Nested Queries
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
@@ -207,7 +207,7 @@ explore airports
     )
   )
 ```
-##   Turtles and Filters can be applied at any level, any number of Turtles
+##   Nested Queries and Filters can be applied at any level, any level of nesting.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
