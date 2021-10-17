@@ -10,7 +10,7 @@ What exists today is a language and a notebook-inspired vscode plugin which enab
 
 # The Malloy Language
 
-Malloy is a new experimental language for querying and modeling data.
+Malloy is a new experimental language for querying and modeling data ([Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html)).
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
