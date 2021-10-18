@@ -15,7 +15,7 @@ What exists today is a language and a notebook inspired vscode plugin which enab
 We are developing this in the open for two reasons. First, because we believe in the general benefit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
 # The Malloy Language
 
-See the [Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html).
+**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
@@ -112,11 +112,9 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 [Full documentation for Malloy]( https://looker-open-source.github.io/malloy/)
 
-You can find Quick Start videos, below.
-
 - [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
 - [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
-- [FAA Example Analysis](https://looker-open-source.github.io/malloy/documentation/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
 - [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Quick Start Videos
