@@ -73,7 +73,7 @@ To deploy the docs, use the following steps:
 
 1. Merge any docs changes into `main`
 2. `git pull main`
-2. `git checkout docs-release-static`
+2. `git checkout docs-release`
 3. `git merge main`
 4. `yarn docs-build`
 5. `git add docs`

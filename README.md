@@ -1,16 +1,21 @@
 # Welcome to Malloy
 
-Malloy is a language for describing data relationships and transformations.  Exploring data in Malloy eliminates the distinction between schema and query, tables and results, allowing you to keep your focus on the data and the insights you are trying to gain.
+This is not an officially supported Google product.
 
-The Malloy language began as the platform for refining the question: "Can we make a language which describes the actual computations needed to derive useful information from data stored in a relational database?" While we are contuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
+Malloy is a language for describing data relationships and transformations.  This results in an exploration experience which is not hindered by the distinctions between schema and query, or tables and results. Data is always data, which allows you to keep your focus on the data, and the insights you are trying to gain.
 
-We are a very small team, developing this in the open for two reasons. First, because we believe in the general benefit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
+The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing  to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
 
-What exists today is a language and a notebook-inspired vscode plugin which enables people to learn the language and explore and transform data with it. The next steps are going to be determined to a large degree by the success of the language in making computations based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
+What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore data with it. The next steps are going to be determined to a large degree by the success of the language in making computation based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
 
+# FAQ
+
+## Why Open Source
+
+We are developing this in the open for two reasons. First, because we believe in the general benefit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
 # The Malloy Language
 
-Malloy is a new experimental language for querying and modeling data ([Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html)).
+**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
@@ -28,7 +33,7 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
 - Produces **rich metadata** about query results, as well as the originating column or field (think data lineage). This is ideal for building data applications, and enables construction of interfaces that allow the rewrite of queries to drill into row-level detail.
 - ‍ Works in _nested structures_ or “graphs” rather than in flat tables, which simplifies querying and aggregation at any nesting depth, and takes advantage of BigQuery’s strengths working with nested data.
 - Automatically **builds search indexes** for all the data. Search indexes greatly simplify filtering data and can also be used to understand the ‘shape’ of any given field (min, max, cardinality, most frequent occurring values).
-- Currently available on BigQuery and soon to be available on Postgres. 
+- Currently available on BigQuery and soon to be available on Postgres.
 - Malloy takes advantage of **BigQuery’s unique features**:
   - Reading and writing large nested result sets extremely fast
   - BI Engine & database-level caching
@@ -107,11 +112,9 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 [Full documentation for Malloy]( https://looker-open-source.github.io/malloy/)
 
-You can find Quick Start videos, below.
-
 - [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
 - [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
-- [FAA Example Analysis](https://looker-open-source.github.io/malloy/documentation/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
 - [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Quick Start Videos
