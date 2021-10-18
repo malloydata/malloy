@@ -22,12 +22,12 @@ the data defined in the original shape is transformed by each stage.</p>
           Pipeline
         </a>
       </h2>
-    <p>A pipeline transforms a shape, and is made up of a series of stages. A <a href="turtle.html">Turtle</a>), which has a pipeline
+    <p>A pipeline transforms a shape, and is made up of a series of stages. A <a href="nesting.html">Named Query</a>), which has a pipeline
 inside of it, can be the first stage in a pipleline</p>
 <ul>
-<li><p>stage: <em>turtleStage</em> | <em>normalStage</em></p>
+<li><p>stage: <em>namedQuery</em> | <em>normalStage</em></p>
 </li>
-<li><p>turtleStage : <em>turtleName</em> <a href="filters.html"><em>filters</em></a></p>
+<li><p>namedStage : <em>namedQuery</em> <a href="filters.html"><em>filters</em></a></p>
 </li>
 <li><p>normalStage : ( <code class="language-malloy"><span class="token keyword">reduce</span></code> | <code class="language-malloy"><span class="token keyword">project</span></code> | <code class="language-malloy"><span class="token keyword">index</span></code> ) <a href="filters.html"><em>filters</em></a> <em>ordering</em> <em>fields</em></p>
 </li></ul>
@@ -47,11 +47,10 @@ Malloy expressions.</p>
 <ul>
 <li><p><em>field</em> <em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <em>expression</em></p>
 </li></ul>
-<p>You can also define a <a href="turtle.html">turtle</a>. Just as in a query,
-only the first of a turtle pipeline can be the name of another turtle.
-The keyword <code class="language-malloy"><span class="token keyword">turtle</span></code> is optional,</p>
+<p>You can also define a <a href="nesting.html">named query</a>. Just as in a query,
+only the first of a named query pipeline can be the name of another named query.</p>
 <ul>
-<li><p><em>turtleName</em> <code class="language-malloy"><span class="token keyword">is</span></code> <code class="language-malloy"><span class="token keyword">turtle</span></code> <code class="language-malloy"><span class="token punctuation">(</span></code> <em>normalStage</em>  <code class="language-malloy"><span class="token operator">|</span></code> <em>normalStage</em> ... <code class="language-malloy"><span class="token punctuation">)</span></code></p>
+<li><p><em>namedQuery</em> <code class="language-malloy"><span class="token keyword">is</span></code>  <code class="language-malloy"><span class="token punctuation">(</span></code> <em>normalStage</em>  <code class="language-malloy"><span class="token operator">|</span></code> <em>normalStage</em> ... <code class="language-malloy"><span class="token punctuation">)</span></code></p>
 </li></ul>
 <p>In a stage, it is also legal to simply list field names
 which should be passed on from the previous stage to the next one.

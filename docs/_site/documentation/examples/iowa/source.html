@@ -97,9 +97,9 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/turtle.html">
+            <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Turtles
+              Nesting
             </a>
           </div>
 <div class='sidebar-item '>
@@ -277,11 +277,11 @@
       </h1>
     <p>This is the malloy model used for the Analysis example.  It should be used as an reference when looking at the <a href="step2.html">following sections</a>.</p>
 <pre class="language-malloy"><span class="token keyword">export</span> <span class="token keyword">define</span> iowa <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'bigquery-public-data.iowa_liquor_sales.sales'</span>
-  
+
   <span class="token comment">-- dimensions</span>
-  gross_margin <span class="token keyword">is</span> <span class="token number">100</span> <span class="token operator">*</span> <span class="token punctuation">(</span>state_bottle_retail <span class="token operator">-</span> state_bottle_cost<span class="token punctuation">)</span> <span class="token operator">/</span> state_bottle_retail 
+  gross_margin <span class="token keyword">is</span> <span class="token number">100</span> <span class="token operator">*</span> <span class="token punctuation">(</span>state_bottle_retail <span class="token operator">-</span> state_bottle_cost<span class="token punctuation">)</span> <span class="token operator">/</span> state_bottle_retail
   price_per_100ml <span class="token keyword">is</span> state_bottle_retail<span class="token operator">/</span>NULLIF<span class="token punctuation">(</span>bottle_volume_ml<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">100</span>
-  category_class <span class="token keyword">is</span> category_name : 
+  category_class <span class="token keyword">is</span> category_name :
     <span class="token keyword">pick</span> <span class="token string">'WHISKIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(WHISK|SCOTCH|BOURBON|RYE)'</span>
     <span class="token keyword">pick</span> <span class="token string">'VODKAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'VODKA'</span>
     <span class="token keyword">pick</span> <span class="token string">'RUMS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'RUM'</span>
@@ -295,7 +295,7 @@
     <span class="token keyword">pick</span> <span class="token string">'jumbo (over 1000ml)'</span> <span class="token keyword">when</span> <span class="token operator">></span> <span class="token number">1001</span>
     <span class="token keyword">pick</span> <span class="token string">'liter-ish'</span> <span class="token keyword">when</span> <span class="token operator">>=</span> <span class="token number">750</span>
     <span class="token keyword">else</span> <span class="token string">'small or mini (under 750ml)'</span>
-  
+
   <span class="token comment">-- measures</span>
   total_sale_dollars <span class="token keyword">is</span> sale_dollars<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> item_number<span class="token punctuation">)</span>
@@ -303,21 +303,21 @@
   line_item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   avg_price_per_100ml <span class="token keyword">is</span> price_per_100ml<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
-  <span class="token comment">-- turtles</span>
+  <span class="token comment">-- named queries</span>
   by_month <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">1</span>
     purchase_month <span class="token keyword">is</span> <span class="token identifier">`date`</span><span class="token punctuation">.</span><span class="token timeframe">week</span>
     total_sale_dollars
   <span class="token punctuation">)</span>
 
-  top_sellers_by_revenue <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> 
+  top_sellers_by_revenue <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span>
     vendor_name
     item_description
     total_sale_dollars
     total_bottles
     avg_price_per_100ml
   <span class="token punctuation">)</span>
-  
-  most_expensive_products <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> 
+
+  most_expensive_products <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
       <span class="token keyword">top</span> <span class="token number">10</span> <span class="token keyword">order</span> <span class="token keyword">by</span> avg_price_per_100ml <span class="token keyword">desc</span>
     vendor_name
     item_description
@@ -331,7 +331,7 @@
     total_sale_dollars
     total_bottles
   <span class="token punctuation">)</span>
-  
+
   by_class <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">10</span>
     category_class
     total_sale_dollars
@@ -354,7 +354,7 @@
     vendor_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> vendor_number<span class="token punctuation">)</span>
     total_sale_dollars
     total_bottles
-    by_month 
+    by_month
     by_class
     by_vendor_bar_chart
     top_sellers_by_revenue
@@ -362,7 +362,7 @@
     by_vendor_dashboard <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">10</span>
       vendor_name
       total_sale_dollars
-      by_month 
+      by_month
       top_sellers_by_revenue
        most_expensive_products
     <span class="token punctuation">)</span>

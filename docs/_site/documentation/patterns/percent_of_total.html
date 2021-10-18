@@ -97,9 +97,9 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/turtle.html">
+            <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Turtles
+              Nesting
             </a>
           </div>
 <div class='sidebar-item '>
@@ -286,7 +286,7 @@ flight performed by a particular carrier.</p>
           Query for all flights ever made
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">explore</span> flights 
+    <pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   flight_count</pre><div class="result-outer small">
       <div class="result-middle">
@@ -311,7 +311,7 @@ flight performed by a particular carrier.</p>
           Query for Flights By Carrier
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">explore</span> flights 
+    <pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   carriers<span class="token punctuation">.</span>nickname
   flight_count</pre><div class="result-outer medium">
@@ -398,12 +398,12 @@ flight performed by a particular carrier.</p>
       </div>
     </div>
       <h2>
-        <a id="in-malloy-can-make-both-caculations-together-using-a-em-turtle-em-" class="header-link anchor" href="#in-malloy-can-make-both-caculations-together-using-a-em-turtle-em-">
-          In Malloy, can make both caculations together using a <em>Turtle</em>.
+        <a id="in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-" class="header-link anchor" href="#in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-">
+          In Malloy, can make both caculations at once with <a href="nesting.html"><em>nested subtables</em></a>.
         </a>
       </h2>
     <p>The results are returned as a single row in a table with two columns, <code class="language-malloy">flight_count</code> and <code class="language-malloy">main_query</code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   flight_count
   main_query <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
@@ -510,8 +510,9 @@ flight performed by a particular carrier.</p>
           Use <em>project</em> to flatten the table and cross join
         </a>
       </h2>
-    <p>Using a pipeline with a <code class="language-malloy"><span class="token keyword">project</span></code> calculation to combine (essentially cross joining) the queries back into a single table.<br/>We also add an additional column, the percentage of total calculation.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+    <p>Using a pipeline with a <code class="language-malloy"><span class="token keyword">project</span></code> calculation to combine (essentially cross joining) the queries back into a single table.
+We also add an additional column, the percentage of total calculation.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   flight_count
   main_query <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
@@ -629,12 +630,12 @@ flight performed by a particular carrier.</p>
       </div>
     </div>
       <h2>
-        <a id="using-a-em-wildcard-em-against-the-turtle" class="header-link anchor" href="#using-a-em-wildcard-em-against-the-turtle">
-          Using a <em>wildcard</em> against the Turtle
+        <a id="using-a-em-wildcard-em-against-the-nested-query" class="header-link anchor" href="#using-a-em-wildcard-em-against-the-nested-query">
+          Using a <em>wildcard</em> against the Nested Query
         </a>
       </h2>
-    <p>We can use a wildcard against the turtle to to make this pattern easier to write.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights 
+    <p>We can use a wildcard against the nested query to to make this pattern easier to write.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   flight_count
   main_query <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>

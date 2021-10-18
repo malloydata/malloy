@@ -10,7 +10,7 @@ footer: /generated/footers/examples/iowa/step2a.html
           First Analysis, What are the top Brands and Price Points?
         </a>
       </h2>
-    <p><strong>TLDR;</strong> We'll use the measures we defined in the last section to write some basic queries to understand the Vodka market, and answer a few questions:  <em>What are the most popular brands?  Which is the most expensive?  Does a particular county favor expensive or cheap Vodka?</em>  We will then learn how to save a named query and use it as a basic <strong>Turtle</strong>.</p>
+    <p><strong>TLDR;</strong> We'll use the measures we defined in the last section to write some basic queries to understand the Vodka market, and answer a few questions:  <em>What are the most popular brands?  Which is the most expensive?  Does a particular county favor expensive or cheap Vodka?</em>  We will then learn how to save a named query and use it as a basic <strong>Nested Query</strong>.</p>
 
       <h2>
         <a id="definitions" class="header-link anchor" href="#definitions">
@@ -39,7 +39,7 @@ section</a>.</p>
   total_sale_dollars
   total_bottles
   avg_price_per_100ml
-  </pre><div class="result-outer large">
+</pre><div class="result-outer large">
       <div class="result-middle">
         <div class="result-inner">
           <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -101,7 +101,7 @@ section</a>.</p>
   price_per_100ml <span class="token keyword">is</span> state_bottle_retail <span class="token operator">/</span> nullif<span class="token punctuation">(</span>bottle_volume_ml<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">100</span>
   avg_price_per_100ml <span class="token keyword">is</span> price_per_100ml<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token comment">-- add the query to the model</span>
-  top_sellers_by_revenue <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> 
+  top_sellers_by_revenue <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span>
     vendor_name
     item_description
     total_sale_dollars
@@ -117,7 +117,7 @@ section</a>.</p>
     <p>Once the query is in the model we can simply call it by name, adjusting our filtering to ask questions about Tequila instead:</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> iowa : <span class="token punctuation">[</span>category_name: <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span><span class="token punctuation">]</span>
 <span class="token operator">|</span> top_sellers_by_revenue
-  </pre><div class="result-outer medium">
+</pre><div class="result-outer medium">
       <div class="result-middle">
         <div class="result-inner">
           <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -169,18 +169,18 @@ section</a>.</p>
     </div><p>Here we can see that <em>Patron Tequila Silver</em> is the most premium brand, followed by <em>Jose Cuervo</em> as a mid-tier  brand, with <em>Juarez Tequila Gold</em> more of an economy brand.</p>
 
       <h2>
-        <a id="turtling-a-deeper-look-at-a-vendor-offerings" class="header-link anchor" href="#turtling-a-deeper-look-at-a-vendor-offerings">
-          TURTLING: A deeper look at a Vendor offerings
+        <a id="nested-subtables-a-deeper-look-at-a-vendor-offerings" class="header-link anchor" href="#nested-subtables-a-deeper-look-at-a-vendor-offerings">
+          Nested Subtables: A deeper look at a Vendor offerings
         </a>
       </h2>
-    <p>The magic happens when we call a named query in the same way we would use any other field (Turtling). In the below query, we can see our vendors (sorted automatically by amount purchased, as well as the top 5 items for each vendor.</p>
+    <p>The magic happens when we call a named query in the same way we would use any other field <a href="nesting.html">nesting</a>. In the below query, we can see our vendors (sorted automatically by amount purchased, as well as the top 5 items for each vendor.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> iowa : <span class="token punctuation">[</span>category_name: <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span><span class="token punctuation">]</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   vendor_name
   total_sale_dollars
   avg_price_per_100ml
   top_sellers_by_revenue <span class="token comment">-- entire query is a field</span>
-  </pre><div class="result-outer medium">
+</pre><div class="result-outer medium">
       <div class="result-middle">
         <div class="result-inner">
           <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -3300,20 +3300,20 @@ section</a>.</p>
 	</table>
         </div>
       </div>
-    </div><p>These turtles generate nested tables, allowing us to view both the high-level information of "who are our top vendors" as well as the supporting detail in one simple Malloy query.</p>
+    </div><p>These nested subtables allow us to view both the high-level information of "who are our top vendors" as well as the supporting detail in one simple Malloy query.</p>
 
       <h2>
         <a id="bucketing-the-data" class="header-link anchor" href="#bucketing-the-data">
           Bucketing the data
         </a>
       </h2>
-    <p>The <code class="language-malloy">price_per_100ml</code> calculation, defined in the previous section, combines with our new Turtle to allows for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket <code class="language-malloy">price_per_100ml</code> into even dollar amounts, and turtle <code class="language-malloy">top_sellers_by_revenue</code>.</p>
+    <p>The <code class="language-malloy">price_per_100ml</code> calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket <code class="language-malloy">price_per_100ml</code> into even dollar amounts, and nest our <code class="language-malloy">top_sellers_by_revenue</code> query to create a subtable for each bucket.</p>
 <p>At the top we see our lowest cost options at under $1/mL, with the more pricey bevarages appearing as we scroll down.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> iowa : <span class="token punctuation">[</span>category_name: <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span><span class="token punctuation">]</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   price_per_100ml_bucket <span class="token keyword">is</span> floor<span class="token punctuation">(</span>price_per_100ml<span class="token punctuation">)</span><span class="token punctuation">,</span>
   top_sellers_by_revenue
-  </pre><div class="result-outer medium">
+</pre><div class="result-outer medium">
       <div class="result-middle">
         <div class="result-inner">
           <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
