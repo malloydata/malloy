@@ -12,11 +12,11 @@ explore things | reduce type, thing_count is count()
 
 ## Model Files
 
-If a file does not contain a query, then you may use the "Run" and "Edit and Run" code lenses to run turtles defined in the model.
+If a file does not contain a query, then you may use the "Run" and "Edit and Run" code lenses to run named queries defined in the model.
 
 ## Data Styles
 
-For the time being, data styles may be included with a comment like `--! styles ./path/to/styles.json` on the first line of a 
+For the time being, data styles may be included with a comment like `--! styles ./path/to/styles.json` on the first line of a
 query or model file, e.g.
 
 ```malloy
@@ -46,7 +46,7 @@ Currently, the following renderers are supported:
 - `bytes`
 - `boolean`
 
-Currently no renderers support any additional options (e.g. `{ "data": { "color": "red" }, "text": { "italic": true } }`). 
+Currently no renderers support any additional options (e.g. `{ "data": { "color": "red" }, "text": { "italic": true } }`).
 
 Example data styles:
 
@@ -66,7 +66,7 @@ Example data styles:
 
 ## Outline View
 
-The Outline view in the Explorer panel shows fields defined in the current file. 
+The Outline view in the Explorer panel shows fields defined in the current file.
 
 ## Schema View
 

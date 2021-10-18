@@ -1,5 +1,7 @@
 # Welcome to Malloy
 
+This is not an officially supported Google product.
+
 Malloy is a language for describing data relationships and transformations.  This results in an exploration experience which is not hindered by the distinctions between schema and query, or tables and results. Data is always data, which allows you to keep your focus on the data, and the insights you are trying to gain.
 
 The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing  to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
@@ -11,10 +13,9 @@ What exists today is a language and a notebook inspired vscode plugin which enab
 ## Why Open Source
 
 We are developing this in the open for two reasons. First, because we believe in the general benefit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
-
 # The Malloy Language
 
-Malloy is a new experimental language for querying and modeling data.
+See the [Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html).
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
@@ -32,7 +33,8 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
 - Produces **rich metadata** about query results, as well as the originating column or field (think data lineage). This is ideal for building data applications, and enables construction of interfaces that allow the rewrite of queries to drill into row-level detail.
 - ‍ Works in _nested structures_ or “graphs” rather than in flat tables, which simplifies querying and aggregation at any nesting depth, and takes advantage of BigQuery’s strengths working with nested data.
 - Automatically **builds search indexes** for all the data. Search indexes greatly simplify filtering data and can also be used to understand the ‘shape’ of any given field (min, max, cardinality, most frequent occurring values).
-- Currently available on BigQuery, Malloy takes advantage of **BigQuery’s unique features**:
+- Currently available on BigQuery and soon to be available on Postgres.
+- Malloy takes advantage of **BigQuery’s unique features**:
   - Reading and writing large nested result sets extremely fast
   - BI Engine & database-level caching
 
@@ -45,7 +47,7 @@ Key features and advantages:
 - Query and model in the same language; everything is reusable and extensible.
 - Malloy reads the schema so you don’t need to model everything: Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
 - Pipelining: output one query into the next easily for powerful advanced analysis.
-- Aggregating Subqueries (AKA Turtles) let you delve deeper into data quickly, and nest data infinitely.
+- Aggregating Subqueries let you build nested data sets to delve deeper into data quickly, and return complicated networks of data from single queries (like GraphQL).
 - Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
 - Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
 - Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.
@@ -143,7 +145,7 @@ https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-8
 
 https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
 
-### 4. Aggregating Subqueries, AKA Turtles
+### 4. Aggregating Subqueries
 
 https://user-images.githubusercontent.com/7178946/130885321-ba141168-2a50-423a-bf09-5a6a03ec57d8.mov
 
