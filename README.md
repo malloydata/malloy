@@ -1,6 +1,6 @@
 # Welcome to Malloy
 
-Malloy is a language for describing data relationships and transformations.  Exploring data in Malloy eliminates the distinction between schema and query, tables and results, allowing you to keep your focus on the data and the insights you are trying to gain.
+Malloy is an new experimental language for describing data relationships and transformations.  Exploring data in Malloy eliminates the distinction between schema and query, tables and results, allowing you to keep your focus on the data and the insights you are trying to gain.
 
 The Malloy language began as the platform for refining the question: "Can we make a language which describes the actual computations needed to derive useful information from data stored in a relational database?" While we are contuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
 
@@ -10,7 +10,7 @@ What exists today is a language and a notebook-inspired vscode plugin which enab
 
 # The Malloy Language
 
-Malloy is a new experimental language for querying and modeling data ([Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html)).
+See the [Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html).
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
