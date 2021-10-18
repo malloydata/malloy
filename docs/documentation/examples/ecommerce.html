@@ -10,7 +10,7 @@ footer: /generated/footers/examples/ecommerce.html
           eCommerce Walkthrough: An Intro to Malloy Syntax & the VSCode Plugin
         </a>
       </h1>
-    <p><em>The following walk-through covers similar concepts to the <a href="https://github.com/looker-open-source/malloy/#quick-start-videos">Quick Start</a> videos in the README.</em></p>
+    <p><em>The following walk-through covers similar concepts to the <a href="https://github.com/looker-open-source/malloy/#quick-start-videos">Quick Start</a> videos in the README. You can find the complete source code for this model <a href="https://github.com/looker-open-source/malloy/blob/docs-release/samples/ecommerce/ecommerce.malloy">here</a>.</em></p>
 <p>Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.</p>
 <p>A couple of key concepts: Queries in Malloy start with a data source, specified either <code class="language-malloy"><span class="token keyword">explore</span> some_named_explore</code> or <code class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'some_table'</span></code>, followed by piped transformations on that data. Fields used in queries may be named using the <code class="language-malloy"><span class="token keyword">is</span></code> keyword, which is similar to <code class="language-malloy"><span class="token keyword">AS</span></code> in SQL, but reversed.</p>
 <p>Let’s illustrate this by asking a straightforward question of a simple ecommerce dataset - how many order items have we sold, broken down by their current status?</p>
