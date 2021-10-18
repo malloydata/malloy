@@ -1,6 +1,8 @@
-# Google Analytics.
+# Google Analytics
 
-Simple Model.
+_You can find the complete source code for this model [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/ga_sessions/ga_sessions.malloy)._
+
+Start with a simple model
 
 ```malloy
 export define ga_sessions is (explore 'bigquery-public-data.google_analytics_sample.ga_sessions_20170801'
@@ -16,11 +18,11 @@ export define ga_sessions is (explore 'bigquery-public-data.google_analytics_sam
 ```
 
 
-## By Source 
+## By Source
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true}
-explore ga_sessions 
+explore ga_sessions
 | reduce
   by_source is (reduce top 10 : [trafficSource.source: != '(direct)']
     trafficSource.source
@@ -32,9 +34,9 @@ explore ga_sessions
 
 ```malloy
 --! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"medium"}
-explore ga_sessions 
+explore ga_sessions
 | reduce
-  by_device is (reduce 
+  by_device is (reduce
     device.browser
     user_count
     device.deviceCategory
@@ -45,9 +47,9 @@ explore ga_sessions
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true}
-explore ga_sessions 
+explore ga_sessions
 | reduce
-  by_region is (reduce top 10 : [geoNetwork.region !~ '%demo%'] 
+  by_region is (reduce top 10 : [geoNetwork.region !~ '%demo%']
     geoNetwork.region
     user_count
   )
@@ -57,18 +59,18 @@ explore ga_sessions
 
 ```malloy
 --! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large"}
-explore ga_sessions 
+explore ga_sessions
 | reduce
   by_region is (reduce top 10 : [geoNetwork.region !~ '%demo%']
     geoNetwork.region
     user_count
   )
-  by_device is (reduce 
+  by_device is (reduce
     device.browser
     user_count
     device.deviceCategory
   )
-  by_source is (reduce top 10 : [trafficSource.source !~ '(direct)'] 
+  by_source is (reduce top 10 : [trafficSource.source !~ '(direct)']
     trafficSource.source
     hits_count is hits.count()
   )

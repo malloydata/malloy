@@ -1,6 +1,6 @@
 # NTSB Flight Database examples
 
-The follow examples all run against the model at the bottom of this page.
+_The follow examples all run against the model at the bottom of this page OR you can find the source code [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)._
 
 ## Airport Dashboard
 Where can you fly from SJC? For each destination; Which carriers?  How long have they been flying there?
@@ -65,7 +65,7 @@ You can think of flight data as event data.  The below is a classic map/reduce r
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights
+explore flights : [carrier:'WN', dep_time: @2002-03-03]
 | sessionize
 ```
 

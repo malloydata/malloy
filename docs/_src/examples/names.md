@@ -1,12 +1,13 @@
 # Name Game
-Learning Malloy.
+
+_You can find the complete source code for this model [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/names/names.malloy)._
 
 The Data set consits of name, gender, state and year with the number of people that
 were born with that name in that gender, state and year.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": false, "pageSize": 100}
-explore 'bigquery-public-data.usa_names.usa_1910_2013' 
+explore 'bigquery-public-data.usa_names.usa_1910_2013'
 | project * limit 10
 ```
 
@@ -22,7 +23,7 @@ is a reserved word, we have to quote the name with back-tics.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore 'bigquery-public-data.usa_names.usa_1910_2013' 
+explore 'bigquery-public-data.usa_names.usa_1910_2013'
 | reduce top 10
   name
   population is sum(`number`)
@@ -45,7 +46,7 @@ calculation against the year.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore 'bigquery-public-data.usa_names.usa_1910_2013' 
+explore 'bigquery-public-data.usa_names.usa_1910_2013'
 | reduce top 10
   decade is FLOOR(`year`/10)*10
   population is sum(`number`)
@@ -55,7 +56,7 @@ explore 'bigquery-public-data.usa_names.usa_1910_2013'
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "pageSize":20, "size":"large" }
-define names is ((explore 'bigquery-public-data.usa_names.usa_1910_2013' 
+define names is ((explore 'bigquery-public-data.usa_names.usa_1910_2013'
   | reduce
     decade is floor(`year`/10)*10
     state
@@ -71,7 +72,7 @@ define names is ((explore 'bigquery-public-data.usa_names.usa_1910_2013'
     name is concat(by_name.name,'') -- bug
 );
 
-explore names 
+explore names
 | reduce
   state
   gender
@@ -96,7 +97,7 @@ Compute and sort by a ratio to figure out relative popularity.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "names/names.malloy", "isPaginationEnabled": false, "pageSize": 100, "size":"large"}
-explore names : [decade < 1970] 
+explore names : [decade < 1970]
 | reduce
   name,
   gender

@@ -12,7 +12,7 @@ What exists today is a language and a notebook-inspired vscode plugin which enab
 
 # The Malloy Language
 
-See the [Language Documentation](https://looker-open-source.github.io/malloy/documentation/index.html).
+**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
@@ -30,7 +30,7 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
 - Produces **rich metadata** about query results, as well as the originating column or field (think data lineage). This is ideal for building data applications, and enables construction of interfaces that allow the rewrite of queries to drill into row-level detail.
 - ‍ Works in _nested structures_ or “graphs” rather than in flat tables, which simplifies querying and aggregation at any nesting depth, and takes advantage of BigQuery’s strengths working with nested data.
 - Automatically **builds search indexes** for all the data. Search indexes greatly simplify filtering data and can also be used to understand the ‘shape’ of any given field (min, max, cardinality, most frequent occurring values).
-- Currently available on BigQuery and soon to be available on Postgres. 
+- Currently available on BigQuery and soon to be available on Postgres.
 - Malloy takes advantage of **BigQuery’s unique features**:
   - Reading and writing large nested result sets extremely fast
   - BI Engine & database-level caching
@@ -109,11 +109,9 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 [Full documentation for Malloy]( https://looker-open-source.github.io/malloy/)
 
-You can find Quick Start videos, below.
-
 - [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
 - [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
-- [FAA Example Analysis](https://looker-open-source.github.io/malloy/documentation/documentation/examples/faa.html) - examples built on the FAA public dataset
+- [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
 - [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Quick Start Videos
