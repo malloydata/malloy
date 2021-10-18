@@ -1,6 +1,6 @@
 # Welcome to Malloy
 
-Malloy is an new experimental language for describing data relationships and transformations.  Exploring data in Malloy eliminates the distinction between schema and query, tables and results, allowing you to keep your focus on the data and the insights you are trying to gain.
+Malloy is an new experimental language for describing data relationships and transformations.  Exploring data in Malloy eliminates the distinction between schema and query, tables and results, allowing you to keep your focus on the data and the insights you are trying to gain or the shape of data you are trying to produce.
 
 The Malloy language began as the platform for refining the question: "Can we make a language which describes the actual computations needed to derive useful information from data stored in a relational database?" While we are contuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
 
