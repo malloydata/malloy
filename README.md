@@ -2,7 +2,7 @@
 
 This is not an officially supported Google product.
 
-Malloy is a language for describing data relationships and transformations.  This results in an exploration experience which is not hindered by the distinctions between schema and query, or tables and results. Data is always data, which allows you to keep your focus on the data, and the insights you are trying to gain.
+Malloy is an experimental language for describing data relationships and transformations.  This results in an exploration experience which is not hindered by the distinctions between schema and query, or tables and results. Data is always data, which allows you to keep your focus on the data, and the insights you are trying to gain.
 
 The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing  to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
 
