@@ -16,7 +16,7 @@ explore 'malloy-data.faa.airports'
 
 ## FROM before everything
 
-In Malloy, the source for a query can be either a physical table, or a modeled shape (a table or set of tables with  relationships and/or calculations built in--more on modeling later).  In Malloy, to reference a physical table in the database, simply put the path and name of the table in a quoted string.
+In Malloy, the source for a query can be either a physical table, or a modeled explore (a table or set of tables with  relationships and/or calculations built in--more on modeling later).  In Malloy, to reference a physical table in the database, simply put the path and name of the table in a quoted string.
 
 The below indicates to query the physical table `'malloy-data.faa.airports'`
 

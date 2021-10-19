@@ -1,10 +1,10 @@
 # Queries in malloy
 
-The basic syntax for a query in Malloy consists of a [_shape_](shape.md)
+The basic syntax for a query in Malloy consists of a [_explore_](explore.md)
 and a "pipeline" of or more _stages_ seperated by a vertical bar,
 the data defined in the original shape is transformed by each stage.
 
-* query: `explore` [_shape_](shape.md) | _stage_ [ | _stage_ ... ]
+* query: `explore` [_explorename_](explore.md) | _stage_ [ | _stage_ ... ]
 
 ## Pipeline
 
