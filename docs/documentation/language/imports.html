@@ -10,7 +10,7 @@ footer: /generated/footers/language/imports.html
           Imports and Exports
         </a>
       </h1>
-    <p>Malloy allows for shapes to be reused between files, or for a set of shapes
+    <p>Malloy allows for explores to be reused between files, or for a set of explores
 to simply be split up among multiple files by using <code class="language-malloy"><span class="token keyword">import</span></code> and <code class="language-malloy"><span class="token keyword">export</span></code>.</p>
 
       <h2>
@@ -18,7 +18,7 @@ to simply be split up among multiple files by using <code class="language-malloy
           Exports
         </a>
       </h2>
-    <p>Before a shape definition, the <code class="language-malloy"><span class="token keyword">export</span></code> keyword means that the shape should
+    <p>Before an explore definition, the <code class="language-malloy"><span class="token keyword">export</span></code> keyword means that the explore should
 be included in the file's <em>public namespace</em>.</p>
 <p>Consider a file <code>samples/faa/flights.malloy</code>:</p>
 <pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
@@ -39,10 +39,10 @@ only <code class="language-malloy">flights</code> is part of the file's public n
           Imports
         </a>
       </h2>
-    <p>In order to reuse or extend a shape from another file, you can include all the
-exported shapes from another file using <code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"path/to/some/file.malloy"</span></code>.</p>
+    <p>In order to reuse or extend a explore from another file, you can include all the
+exported explores from another file using <code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"path/to/some/file.malloy"</span></code>.</p>
 <p>For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the
-<code class="language-malloy">flights</code> shape, you could write:</p>
+<code class="language-malloy">flights</code> explore, you could write:</p>
 <pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
 
 flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> carrier<span class="token punctuation">,</span> flight_count</pre><div class="result-outer large">

@@ -67,9 +67,9 @@
             </a>
           </div>
 <div class='sidebar-item active'>
-            <a href="/malloy/documentation/language/shape.html">
+            <a href="/malloy/documentation/language/explore.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Shape Definition
+              Explore Definition
             </a>
           </div>
 <div class='sidebar-item '>
@@ -271,15 +271,15 @@
           <div class="document-outer">
             <div class="document">
       <h1>
-        <a id="shape-definition" class="header-link anchor" href="#shape-definition">
-          Shape Definition
+        <a id="explore-definition" class="header-link anchor" href="#explore-definition">
+          Explore Definition
         </a>
       </h1>
     <p>A shape is a data source and a list of additional properties which
 extend the original source in preparation for a
 passing it to a transformation stage.</p>
 <ul>
-<li><p>shape: <em>source</em> fields <em>joins</em></p>
+<li><p>explore: <em>source</em> fields <em>joins</em></p>
 </li></ul>
 
       <h2>
@@ -287,15 +287,15 @@ passing it to a transformation stage.</p>
           Source
         </a>
       </h2>
-    <p>A source can be an existing SQL table or view, or it can  be
+    <p>A explore can be an existing SQL table or view, or it can  be
 a Malloy query, which can either be defined in line,
 or referenced by name (see the <a href="statement.html">Models</a>
 section for more information on that)</p>
-<p>A shape can be filtered, it can be given a <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> so it can be
+<p>A explore can be filtered, it can be given a <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> so it can be
 used in a join, and a shape may select some or all of the fields in
 the <em>dataSource</em> to be included or excluded from the shape.</p>
 <ul>
-<li><p>source: <em>dataSource</em> <em>filters</em> <em>primaryKey</em> <em>fieldEdit</em></p>
+<li><p>explore: <em>dataSource</em> <em>filters</em> <em>primaryKey</em> <em>fieldEdit</em></p>
 </li>
 <li><p>dataSource: <code class="language-malloy">'</code> <em>table</em> <em>name</em> <code class="language-malloy">'</code> | <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span></code> | <em>query</em> <em>name</em></p>
 </li>
