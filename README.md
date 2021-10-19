@@ -126,9 +126,9 @@ https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-8
 
 ## Getting Started Video Series
 
-These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin.
+_You can watch these all together on Youtube, [here](https://www.youtube.com/watch?v=0Ck8CBa4qRo&t=3s)_ These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin.
 
-**You will likely need to un-mute the audio.**
+**You will need to un-mute the audio.**
 
 ### 1. Introduction
 
