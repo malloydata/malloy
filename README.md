@@ -1,12 +1,16 @@
 # Welcome to Malloy
 
-This is not an officially supported Google product.
+Malloy is an experimental language for describing data relationships and transformations. Malloy is not an officially supported Google product.
 
-Malloy is an experimental language for describing data relationships and transformations.  This results in an exploration experience which is not hindered by the distinctions between schema and query, or tables and results. Data is always data, which allows you to keep your focus on the data, and the insights you are trying to gain.
+* Malloy presents some new abstractions for data computation which provide astonishing power with a few simple concepts.
+* Malloy computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms.
+* Malloy sees data as a network of relationships, and generates network graphs with results, so it can ensure correctness of aggregate computations through multiple levels of transformation.
 
-The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing  to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
+Malloy also includes a VS Code IDE for writing and running models, queries, and transformations.
 
-What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore data with it. The next steps are going to be determined to a large degree by the success of the language in making computation based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
+The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
+
+The next steps are going to be determined to a large degree by the success of the language in making data computation simpler and easier to manage, and by the needs of those who pick this project up and incorporate it into their workflows.
 
 # The Malloy Language
 
