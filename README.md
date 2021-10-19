@@ -8,11 +8,6 @@ The Malloy language began as a platform for refining the question "Can we make a
 
 What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore data with it. The next steps are going to be determined to a large degree by the success of the language in making computation based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
 
-# FAQ
-
-## Why Open Source
-
-We are developing this in the open for two reasons. First, because we believe in the general benefit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
 # The Malloy Language
 
 **Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)
