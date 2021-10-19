@@ -19,11 +19,18 @@ export class HtmlTextRenderer implements Renderer {
     return `${value}`;
   }
 
-  async render(value: DataValue, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    value: DataValue,
+    _ref: DataPointer
+  ): Promise<Element> {
     const text = this.getText(value);
+    const element = dom.createElement("span");
     if (text === null) {
-      return `⌀`;
+      element.innerText = "⌀";
+    } else {
+      element.innerText = text;
     }
-    return text;
+    return element;
   }
 }

@@ -38,7 +38,12 @@ import { DataTreeRoot } from "../data_table";
 import { ContainerRenderer } from "./container";
 
 export class HtmlView {
-  async render(table: DataTreeRoot, dataStyles: DataStyles): Promise<string> {
+  async render(
+    table: DataTreeRoot,
+    dataStyles: DataStyles,
+    dom: Document,
+    onDrill: (drillQuery: string) => void
+  ): Promise<Element> {
     const renderer = makeRenderer(table.structDef, dataStyles, {
       size: "large",
     });
@@ -49,12 +54,16 @@ export class HtmlView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(table, undefined);
+      return await renderer.render(dom, table, undefined, onDrill);
     } catch (error) {
       if (error instanceof Error) {
-        return error.toString();
+        const element = dom.createElement("span");
+        element.innerText = error.toString();
+        return element;
       } else {
-        return "Internal error - Exception not an Error object.";
+        const element = dom.createElement("span");
+        element.innerText = "Internal error - Exception not an Error object.";
+        return element;
       }
     }
   }

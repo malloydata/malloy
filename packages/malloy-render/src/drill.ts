@@ -12,16 +12,99 @@
  */
 
 import {
-  getDimensions,
-  isValueBoolean,
-  isValueNumber,
-  isValueString,
-  isValueTimestamp,
-  isValueDate,
   TimeTimeframe,
-  isFieldTimeBased,
+  QueryValue,
+  FieldDef,
+  FieldAtomicDef,
+  StructDef,
+  FieldTypeDef,
+  FieldDateDef,
+  FieldTimestampDef,
 } from "malloy";
 import { DataPointer, DataTree, DataTreeRoot, isDataTree } from "./data_table";
+
+export function isDimensional(field: FieldDef): boolean {
+  if ("resultMetadata" in field) {
+    return field.resultMetadata?.fieldKind === "dimension";
+  }
+  return false;
+}
+
+export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
+  return (
+    f.type === "string" ||
+    f.type === "date" ||
+    f.type === "number" ||
+    f.type === "timestamp" ||
+    f.type === "boolean"
+  );
+}
+
+export function isFieldStructDef(f: FieldDef): f is StructDef {
+  return f.type === "struct";
+}
+
+export function isPhysical(field: FieldDef): boolean {
+  return (
+    (isFieldTypeDef(field) && field.e === undefined) ||
+    (isFieldStructDef(field) &&
+      (field.structSource.type === "nested" ||
+        field.structSource.type == "inline"))
+  );
+}
+
+export function getDimensions(structDef: StructDef): FieldAtomicDef[] {
+  return structDef.fields.filter(isDimensional) as FieldAtomicDef[];
+}
+
+export function getPhysicalFields(structDef: StructDef): FieldDef[] {
+  return structDef.fields.filter(isPhysical) as FieldDef[];
+}
+
+export function isMeasureLike(field: FieldDef): boolean {
+  if ("resultMetadata" in field) {
+    return (
+      field.resultMetadata?.fieldKind === "measure" ||
+      field.resultMetadata?.fieldKind === "struct"
+    );
+  }
+  return false;
+}
+
+export function isValueString(
+  value: QueryValue,
+  field: FieldDef
+): value is string | null {
+  return field.type === "string";
+}
+
+export function isValueNumber(
+  value: QueryValue,
+  field: FieldDef
+): value is number | null {
+  return field.type === "number";
+}
+
+export function isValueBoolean(
+  value: QueryValue,
+  field: FieldDef
+): value is boolean | null {
+  return field.type === "boolean";
+}
+
+export function isValueTimestamp(
+  value: QueryValue,
+  field: FieldDef
+): value is { value: string } | null {
+  return field.type === "timestamp";
+}
+
+export function isValueDate(
+  value: QueryValue,
+  field: FieldDef
+): value is { value: string } | null {
+  return field.type === "date";
+}
 
 type FilterItem = { key: string; value: string | undefined };
 
@@ -95,6 +178,12 @@ function timestampToDateFilter(
     }
   }
   return { key, value };
+}
+
+export function isFieldTimeBased(
+  f: FieldDef
+): f is FieldTimestampDef | FieldDateDef {
+  return f.type === "date" || f.type === "timestamp";
 }
 
 function getTableFilters(

@@ -29,37 +29,50 @@ export class HtmlListRenderer extends ContainerRenderer {
     return undefined;
   }
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    table: DataValue,
+    _ref: DataPointer,
+    onDrill: (drillQuery: string) => void
+  ): Promise<Element> {
     if (!isDataTree(table)) {
-      return "Invalid data for chart renderer.";
+      const element = document.createElement("span");
+      element.innerText = "Invalid data for chart renderer.";
+      return element;
     }
     if (table.rows.length === 0) {
-      return "⌀";
+      const element = document.createElement("span");
+      element.innerText = "⌀";
+      return element;
     }
     const metadata = table.structDef;
 
     const valueField = this.getValueField(metadata);
     const detailField = this.getDetailField(metadata);
 
-    const renderedItems = [];
+    const element = dom.createElement("span");
     for (let rowNum = 0; rowNum < table.rows.length; rowNum++) {
-      let renderedItem = "";
       const childRenderer = this.childRenderers[valueField.name];
       const rendered = await childRenderer.render(
+        dom,
         table.getValue(rowNum, valueField.name),
-        new DataPointer(table, rowNum, valueField.name)
+        new DataPointer(table, rowNum, valueField.name),
+        onDrill
       );
-      renderedItem += rendered;
+      element.appendChild(rendered);
       if (detailField) {
         const childRenderer = this.childRenderers[detailField.name];
         const rendered = await childRenderer.render(
+          dom,
           table.getValue(rowNum, detailField.name),
-          new DataPointer(table, rowNum, detailField.name)
+          new DataPointer(table, rowNum, detailField.name),
+          onDrill
         );
-        renderedItem += ` (${rendered})`;
+        element.appendChild(dom.createTextNode("("));
+        element.appendChild(rendered);
+        element.appendChild(dom.createTextNode(")"));
       }
-      renderedItems.push(renderedItem);
     }
-    return `<span>${renderedItems.join(", ")}</span>`;
+    return element;
   }
 }

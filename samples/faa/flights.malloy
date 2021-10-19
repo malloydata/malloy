@@ -260,3 +260,8 @@ sfo_dashboard is (
   flights |
   airport_dashboard : [origin.code: 'SFO']
 );
+
+
+foo is (flights | reduce top 5
+  carrier
+  flight_count)

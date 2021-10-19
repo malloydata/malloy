@@ -24,6 +24,7 @@ import fs from "fs";
 import { performance } from "perf_hooks";
 import { timeString } from "./utils";
 import { log } from "./log";
+import { JSDOM } from "jsdom";
 
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
 
@@ -183,6 +184,8 @@ export async function runCode(
       ...styles,
     };
 
+    const dom = new JSDOM().window.document;
+
     const result = await new HtmlView().render(
       new DataTreeRoot(
         data,
@@ -190,7 +193,8 @@ export async function runCode(
         queryResult.sourceExplore,
         queryResult.sourceFilters || []
       ),
-      dataStyles
+      dataStyles,
+      dom
     );
 
     return `<div class="result-outer ${options.size || "small"}">

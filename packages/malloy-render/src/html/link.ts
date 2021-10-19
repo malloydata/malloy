@@ -15,10 +15,20 @@ import { DataPointer, DataValue } from "../data_table";
 import { Renderer } from "../renderer";
 
 export class HtmlLinkRenderer implements Renderer {
-  async render(data: DataValue, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    data: DataValue,
+    _ref: DataPointer
+  ): Promise<Element> {
     if (data === null) {
-      return `⌀`;
+      const element = dom.createElement("span");
+      element.innerText = `⌀`;
+      return element;
     }
-    return `<a href="${data}">${data}</a>`;
+    const element = dom.createElement("a");
+    const stringData = `${data}`;
+    element.href = stringData;
+    element.innerText = stringData;
+    return element;
   }
 }

@@ -16,18 +16,26 @@ import { Renderer } from "../renderer";
 import { timeToString } from "./utils";
 
 export class HtmlDateRenderer implements Renderer {
-  async render(data: DataValue, ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    data: DataValue,
+    ref: DataPointer
+  ): Promise<Element> {
     const metadata = ref.getFieldDef();
+    const element = document.createElement("span");
     if (metadata.type !== "date" && metadata.type !== "timestamp") {
-      return "Invalid field for date renderer";
+      element.innerText = "Invalid field for date renderer";
+      return element;
     }
 
     if (data === null) {
-      return "∅";
+      element.innerText = "∅";
+      return element;
     }
 
     if (!(data instanceof Object && "value" in data)) {
-      return "Invalid data for date/timestamp field.";
+      element.innerText = "Invalid data for date/timestamp field.";
+      return element;
     }
 
     const typedData = data as { value: string };
@@ -35,6 +43,7 @@ export class HtmlDateRenderer implements Renderer {
     const timeframe =
       metadata.timeframe || (metadata.type === "timestamp" ? "second" : "date");
 
-    return timeToString(new Date(typedData.value), timeframe);
+    element.innerText = timeToString(new Date(typedData.value), timeframe);
+    return element;
   }
 }

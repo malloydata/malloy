@@ -11,92 +11,145 @@
  * GNU General Public License for more details.
  */
 
-import { isDimensional, isMeasureLike } from "malloy";
+import { FieldDef } from "malloy";
 import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
 import { HtmlTextRenderer } from "./text";
+
+export function isMeasureLike(field: FieldDef): boolean {
+  if ("resultMetadata" in field) {
+    return (
+      field.resultMetadata?.fieldKind === "measure" ||
+      field.resultMetadata?.fieldKind === "struct"
+    );
+  }
+  return false;
+}
+
+export function isDimensional(field: FieldDef): boolean {
+  if ("resultMetadata" in field) {
+    return field.resultMetadata?.fieldKind === "dimension";
+  }
+  return false;
+}
 
 export class HtmlDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "medium",
   };
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    table: DataValue,
+    _ref: DataPointer,
+    onDrill: (drillQuery: string) => void
+  ): Promise<Element> {
     if (!isDataTree(table)) {
-      return "Invalid data for chart renderer.";
+      const element = dom.createElement("div");
+      element.innerText = "Invalid data for chart renderer.";
+      return element;
     }
     const metadata = table.structDef;
 
     const dimensions = metadata.fields.filter(isDimensional);
     const measures = metadata.fields.filter(isMeasureLike);
 
-    let renderedBody = "";
+    const body = dom.createElement("div");
     for (let rowNum = 0; rowNum < table.rows.length; rowNum++) {
-      let renderedDimensions = "";
+      const dimensionsContainer = dom.createElement("div");
+      dimensionsContainer.classList.add("dimensions");
+      dimensionsContainer.style.display = "flex";
+      dimensionsContainer.style.flexWrap = "wrap";
+      const rowElement = dom.createElement("div");
       for (const field of dimensions) {
         const renderer = this.childRenderers[field.name];
         const rendered = await renderer.render(
+          dom,
           table.getValue(rowNum, field.name),
-          new DataPointer(table, rowNum, field.name)
+          new DataPointer(table, rowNum, field.name),
+          onDrill
         );
-        renderedDimensions += `<div style="${DIMENSION_BOX}"><div style="${DIMENSION_TITLE}">${field.name}</div><div style="${VERTICAL_CENTER}">${rendered}</div></div>\n`;
+        const renderedDimension = dom.createElement("div");
+        renderedDimension.style.cssText = DIMENSION_BOX;
+        const dimensionTitle = dom.createElement("div");
+        dimensionTitle.style.cssText = DIMENSION_TITLE;
+        dimensionTitle.innerText = field.name;
+        const dimensionInner = dom.createElement("div");
+        dimensionInner.style.cssText = VERTICAL_CENTER;
+        dimensionInner.appendChild(rendered);
+        renderedDimension.appendChild(dimensionTitle);
+        renderedDimension.appendChild(dimensionInner);
+        dimensionsContainer.appendChild(renderedDimension);
       }
-      let renderedMeasures = "";
+      if (dimensions.length > 0) {
+        const rowSeparatorOuter = dom.createElement("div");
+        rowSeparatorOuter.classList.add("row-separator-outer");
+        rowSeparatorOuter.style.cssText = ROW_SEPARATOR_OUTER;
+        const rowSeparator = dom.createElement("div");
+        rowSeparator.style.cssText = ROW_SEPARATOR;
+        rowSeparatorOuter.appendChild(rowSeparator);
+        dimensionsContainer.appendChild(rowSeparatorOuter);
+      }
+      const measuresContainer = dom.createElement("div");
+      measuresContainer.style.cssText = MEASURE_BOXES;
+
       for (const field of measures) {
         const childRenderer = this.childRenderers[field.name];
         const rendered = await childRenderer.render(
+          dom,
           table.getValue(rowNum, field.name),
-          new DataPointer(table, rowNum, field.name)
+          new DataPointer(table, rowNum, field.name),
+          onDrill
         );
         if (childRenderer instanceof HtmlDashboardRenderer) {
-          renderedMeasures += rendered;
+          measuresContainer.appendChild(rendered);
         } else if (childRenderer instanceof HtmlTextRenderer) {
-          renderedMeasures += `
-            <div style="${MEASURE_BOX}">
-              <div style="${TITLE}">${field.name}</div>
-              <div style="${VERTICAL_CENTER}">
-                <div style="${SINGLE_VALUE}">
-                  ${rendered}
-                </div>
-              </div>
-            </div>`;
+          const measureBox = dom.createElement("div");
+          measureBox.style.cssText = MEASURE_BOX;
+          const measureTitle = dom.createElement("div");
+          measureTitle.style.cssText = TITLE;
+          measureTitle.innerText = field.name;
+          const measureInner = dom.createElement("div");
+          measureInner.style.cssText = VERTICAL_CENTER;
+          const innerInner = dom.createElement("div");
+          innerInner.style.cssText = SINGLE_VALUE;
+          innerInner.appendChild(rendered);
+          measureInner.appendChild(innerInner);
+          measureBox.appendChild(measureTitle);
+          measureBox.appendChild(measureInner);
+          measuresContainer.appendChild(measureBox);
         } else {
-          renderedMeasures += `
-            <div style="${MEASURE_BOX}">
-              <div style="${TITLE}">${field.name}</div>
-              <div style="${VERTICAL_CENTER}">
-                <div style="${HORIZONTAL_CENTER}">
-                  ${rendered}
-                </div>
-              </div>
-            </div>`;
+          const measureBox = dom.createElement("div");
+          measureBox.style.cssText = MEASURE_BOX;
+          const measureTitle = dom.createElement("div");
+          measureTitle.style.cssText = TITLE;
+          measureTitle.innerText = field.name;
+          const measureInner = dom.createElement("div");
+          measureInner.style.cssText = VERTICAL_CENTER;
+          const innerInner = dom.createElement("div");
+          innerInner.style.cssText = HORIZONTAL_CENTER;
+          innerInner.appendChild(rendered);
+          measureInner.appendChild(innerInner);
+          measureBox.appendChild(measureTitle);
+          measureBox.appendChild(measureInner);
+          measuresContainer.appendChild(measureBox);
         }
       }
-      renderedBody += `
-          <div>
-            <div class="dimensions" style="display: flex; flex-wrap: wrap;">
-              ${renderedDimensions}
-              ${
-                dimensions.length > 0
-                  ? `<div class="row-separator-outer" style="${ROW_SEPARATOR_OUTER}"><div style="${ROW_SEPARATOR}"></div></div>`
-                  : ""
-              }
-            </div>
-            <div class="dashboard-outer" style="${DASHBOARD_OUTER}">
-              ${
-                dimensions.length > 0
-                  ? `<div class="nest-indicator" style="${NEST_INDICATOR}"></div>`
-                  : ""
-              }
-              <div style="${MEASURE_BOXES}">
-                ${renderedMeasures}
-              </div>
-            </div>
-          </div>
-      `;
+      rowElement.appendChild(dimensionsContainer);
+      const dashboardOuter = dom.createElement("div");
+      dashboardOuter.classList.add("dashboard-outer");
+      dashboardOuter.style.cssText = DASHBOARD_OUTER;
+      if (dimensions.length > 0) {
+        const nestIndicator = dom.createElement("div");
+        nestIndicator.style.cssText = NEST_INDICATOR;
+        dashboardOuter.appendChild(nestIndicator);
+      }
+      dashboardOuter.appendChild(measuresContainer);
+      rowElement.appendChild(dashboardOuter);
+      body.appendChild(rowElement);
     }
-    return `<div>${renderedBody}</div>`;
+    return body;
   }
 }
 

@@ -15,22 +15,18 @@ import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { Malloy, MalloyTranslator, ModelDef } from "malloy";
-import { DataStyles, HtmlView, DataTreeRoot } from "malloy-render";
-import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
-import { MALLOY_EXTENSION_STATE, RunState } from "../state";
+import { DataStyles, DataTreeRoot } from "malloy-render";
+import { renderErrorHtml } from "../html";
+import {
+  MALLOY_EXTENSION_STATE,
+  RunState,
+  WebviewMessageManager,
+} from "../state";
 import turtleIcon from "../../media/turtle.svg";
 import { getWebviewHtml } from "../../webview";
 import { QueryPanelMessage, QueryRunStatus } from "../types";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
-
-const css = `<style>
-body {
-	background-color: transparent;
-  font-size: 11px;
-}
-</style>
-`;
 
 // TODO replace this with actual JSON metadata import functionality, when it exists
 export async function dataStylesForFile(
@@ -155,19 +151,23 @@ export function runMalloyQuery(
           cancel,
           panelId,
           panel: previous.panel,
+          messages: previous.messages,
           document: previous.document,
         };
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
         previous.cancel();
         previous.panel.reveal();
+        console.log(`Extension: reusing webview @ ${new Date()}`);
       } else {
+        const panel = vscode.window.createWebviewPanel(
+          "malloyQuery",
+          name,
+          vscode.ViewColumn.Two,
+          { enableScripts: true }
+        );
         current = {
-          panel: vscode.window.createWebviewPanel(
-            "malloyQuery",
-            name,
-            vscode.ViewColumn.Two,
-            { enableScripts: true }
-          ),
+          panel,
+          messages: new WebviewMessageManager(panel.webview),
           panelId,
           cancel,
           document: query.file,
@@ -177,6 +177,15 @@ export function runMalloyQuery(
         );
         current.panel.title = name;
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
+
+        const onDiskPath = vscode.Uri.file(
+          path.join(__filename, "..", "query.js")
+        );
+
+        const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
+
+        console.log(`Extension: created webview @ ${new Date()}`);
+        current.panel.webview.html = getWebviewHtml(entrySrc.toString());
       }
 
       current.panel.onDidDispose(() => {
@@ -191,14 +200,6 @@ export function runMalloyQuery(
         }
       });
 
-      const onDiskPath = vscode.Uri.file(
-        path.join(__filename, "..", "query.js")
-      );
-
-      const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
-
-      current.panel.webview.html = getWebviewHtml(entrySrc.toString());
-
       return (async () => {
         try {
           malloyLog.appendLine("");
@@ -209,11 +210,12 @@ export function runMalloyQuery(
           // current.panel.webview.html = wrapHTMLSnippet(
           //   loadingIndicator("Compiling")
           // );
+          console.log(`Extension: compiling @ ${new Date()}`);
           const message: QueryPanelMessage = {
             type: "query-status",
             status: QueryRunStatus.Compiling,
           };
-          current.panel.webview.postMessage(message);
+          current.messages.postMessage(message);
           progress.report({ increment: 20, message: "Compiling" });
 
           let compiledQuery;
@@ -306,7 +308,7 @@ export function runMalloyQuery(
               status: QueryRunStatus.Error,
               error: error?.toString() || "Something went wrong.",
             };
-            current.panel.webview.postMessage(message);
+            current.messages.postMessage(message);
             return;
           }
 
@@ -322,12 +324,27 @@ export function runMalloyQuery(
           //   loadingIndicator("Running")
           // );
 
+          current.messages.onReceiveMessage((message) => {
+            switch (message.type) {
+              case "show_json":
+                vscode.commands.executeCommand("malloy.showResultJson");
+                break;
+              case "drill":
+                vscode.commands.executeCommand(
+                  "malloy.runQuery",
+                  message.query
+                );
+                break;
+            }
+          });
+
           {
+            console.log(`Extension: running @ ${new Date()}`);
             const message: QueryPanelMessage = {
               type: "query-status",
               status: QueryRunStatus.Running,
             };
-            current.panel.webview.postMessage(message);
+            current.messages.postMessage(message);
           }
           progress.report({ increment: 40, message: "Running" });
           const queryResult = await malloy.runCompiledQuery(compiledQuery, 50);
@@ -343,13 +360,14 @@ export function runMalloyQuery(
           progress.report({ increment: 80, message: "Rendering" });
 
           {
+            console.log(`Extension: done @ ${new Date()}`);
             const message: QueryPanelMessage = {
               type: "query-status",
               status: QueryRunStatus.Done,
               result: queryResult,
               styles,
             };
-            current.panel.webview.postMessage(message);
+            current.messages.postMessage(message);
           }
 
           return new Promise<void>((resolve) => {

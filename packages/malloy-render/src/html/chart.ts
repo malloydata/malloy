@@ -65,7 +65,11 @@ export abstract class HtmlChartRenderer implements Renderer {
     metadata: StructDef
   ): lite.TopLevelSpec;
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    table: DataValue,
+    _ref: DataPointer
+  ): Promise<Element> {
     if (!isDataTree(table)) {
       throw new Error("Invalid type for chart renderer");
     }
@@ -100,6 +104,8 @@ export abstract class HtmlChartRenderer implements Renderer {
       renderer: "none",
     });
     view.logger().level(-1);
-    return await view.toSVG();
+    const element = dom.createElement("div");
+    element.innerHTML = await view.toSVG();
+    return element;
   }
 }

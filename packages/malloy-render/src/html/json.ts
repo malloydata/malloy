@@ -15,10 +15,18 @@ import { DataPointer, DataTree, isDataTree } from "../data_table";
 import { Renderer } from "../renderer";
 
 export class HtmlJSONRenderer implements Renderer {
-  async render(table: DataTree, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    table: DataTree,
+    _ref: DataPointer
+  ): Promise<Element> {
     if (!isDataTree(table)) {
-      return "Invalid data for chart renderer.";
+      const element = dom.createElement("span");
+      element.innerText = "Invalid data for chart renderer.";
+      return element;
     }
-    return `<pre>${JSON.stringify(table.rows, undefined, 2)}</pre>`;
+    const element = dom.createElement("pre");
+    element.innerText = JSON.stringify(table.rows, undefined, 2);
+    return element;
   }
 }

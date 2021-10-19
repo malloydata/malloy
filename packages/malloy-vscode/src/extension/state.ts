@@ -11,12 +11,44 @@
  * GNU General Public License for more details.
  */
 
-import { TextDocument, WebviewPanel } from "vscode";
+import { TextDocument, Webview, WebviewPanel } from "vscode";
 import { QueryResult } from "malloy";
+import { QueryPanelMessage } from "./types";
+
+export class WebviewMessageManager<T> {
+  constructor(private webview: Webview) {
+    this.webview.onDidReceiveMessage((message: T) => {
+      if (!this.ready) {
+        this.ready = true;
+        this.pendingMessages.forEach((message) => webview.postMessage(message));
+      }
+      this.callback(message);
+    });
+  }
+
+  private pendingMessages: T[] = [];
+  private ready = false;
+  private callback: (message: T) => void = () => {
+    /* Do nothing by default */
+  };
+
+  public postMessage(message: T): void {
+    if (this.ready) {
+      this.webview.postMessage(message);
+    } else {
+      this.pendingMessages.push(message);
+    }
+  }
+
+  public onReceiveMessage(callback: (message: T) => void): void {
+    this.callback = callback;
+  }
+}
 
 export interface RunState {
   cancel: () => void;
   panel: WebviewPanel;
+  messages: WebviewMessageManager<QueryPanelMessage>;
   panelId: string;
   document: TextDocument;
   result?: QueryResult;

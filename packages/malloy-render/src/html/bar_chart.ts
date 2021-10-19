@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, isMeasureLike } from "malloy";
+import { FieldDef } from "malloy";
 import {
   BarChartRenderOptions,
   ChartSize,
@@ -24,6 +24,16 @@ function isOrdninal(f: FieldDef): boolean {
   return ["string", "date", "timestamp", "boolean"].includes(f.type);
 }
 
+export function isMeasureLike(field: FieldDef): boolean {
+  if ("resultMetadata" in field) {
+    return (
+      field.resultMetadata?.fieldKind === "measure" ||
+      field.resultMetadata?.fieldKind === "struct"
+    );
+  }
+  return false;
+}
+
 export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
   size: ChartSize;
   constructor(styleDefaults: StyleDefaults, options: BarChartRenderOptions) {
@@ -31,12 +41,18 @@ export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
     this.size = options.size || this.styleDefaults.size || "medium";
   }
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
+  async render(
+    dom: Document,
+    table: DataValue,
+    _ref: DataPointer
+  ): Promise<Element> {
     if (!isDataTree(table)) {
       throw new Error("Invalid type for chart renderer");
     }
     if (table.structDef.fields.length < 2) {
-      return "Need at least 2 fields for a bar chart.";
+      const element = dom.createElement("span");
+      element.innerText = "Need at least 2 fields for a bar chart.";
+      return element;
     }
     let specName = "bar_";
     if (isOrdninal(table.structDef.fields[0])) {
@@ -44,7 +60,9 @@ export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
     } else if (table.structDef.fields[0].type === "number") {
       specName += "N";
     } else {
-      return "Invalid type for first field of a bar_chart";
+      const element = dom.createElement("span");
+      element.innerText = "Invalid type for first field of a bar_chart";
+      return element;
     }
     specName += "M";
     if (table.structDef.fields.length >= 3) {
@@ -60,9 +78,11 @@ export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
       spec = vegaSpecs[specName];
     }
     if (spec === undefined) {
-      return `Unknown renderer ${specName}`;
+      const element = dom.createElement("span");
+      element.innerText = `Unknown renderer ${specName}`;
+      return element;
     }
     this.spec = spec;
-    return super.render(table, _ref);
+    return super.render(dom, table, _ref);
   }
 }

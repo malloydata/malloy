@@ -38,4 +38,16 @@ type QueryMessageStatus =
   | QueryMessageStatusRunning
   | QueryMessageStatusDone;
 
-export type QueryPanelMessage = QueryMessageStatus;
+interface QueryMessageShowJSON {
+  type: "show_json";
+}
+
+interface QueryMessageDrill {
+  type: "drill";
+  query: string;
+}
+
+export type QueryPanelMessage =
+  | QueryMessageStatus
+  | QueryMessageShowJSON
+  | QueryMessageDrill;

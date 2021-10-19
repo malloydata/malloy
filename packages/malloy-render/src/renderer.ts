@@ -16,7 +16,12 @@ import { DataValue, DataPointer } from "./data_table";
 export type ChildRenderers = { [fieldName: string]: Renderer };
 
 export interface Renderer {
-  render(value: DataValue, ref: DataPointer | undefined): Promise<string>;
+  render(
+    dom: Document,
+    value: DataValue,
+    ref: DataPointer | undefined,
+    onDrill: (drillQuery: string) => void
+  ): Promise<Element>;
 }
 
 export abstract class RenderTree implements Renderer {
@@ -24,7 +29,9 @@ export abstract class RenderTree implements Renderer {
 
   // abstract render(data: QueryValue, metadata: FieldDef): Promise<string>;
   abstract render(
+    dom: Document,
     value: DataValue,
-    ref: DataPointer | undefined
-  ): Promise<string>;
+    ref: DataPointer | undefined,
+    onDrill: (drillQuery: string) => void
+  ): Promise<Element>;
 }

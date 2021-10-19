@@ -23,17 +23,18 @@ import { VSCodeContext } from "../vscodeContext";
 
 (() => {
   // eslint-disable-next-line no-console
-  console.log("Query WebView JavaScript loaded successfully.");
+  console.log(`Webview: Javascript loaded @ ${new Date()}`);
   const vscode = acquireVsCodeApi<string>();
   vscode.postMessage({
     command: "test",
     text: "Foo!",
   });
 
-  ReactDOM.render(
-    React.createElement(VSCodeContext.Provider, { value: vscode }, [
-      React.createElement(App, {}, null),
-    ]),
-    document.getElementById("app")
-  );
+  console.log(`Webview: creating element @ ${new Date()}`);
+  const el = React.createElement(VSCodeContext.Provider, { value: vscode }, [
+    React.createElement(App, {}, null),
+  ]);
+  console.log(`Webview: rendering element @ ${new Date()}`);
+  ReactDOM.render(el, document.getElementById("app"));
+  console.log(`Webview: rendered element @ ${new Date()}`);
 })();

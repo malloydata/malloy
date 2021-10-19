@@ -95,12 +95,32 @@ const config = [
     output: {
       path: path.resolve(__dirname, "dist"),
       filename: "[name].js",
-      libraryTarget: "commonjs2",
+      libraryTarget: "umd",
       devtoolModuleFilenameTemplate: "../[resource-path]",
     },
     devtool: "inline-cheap-module-source-map",
     resolve: {
       extensions: [".ts", ".js", ".tsx"],
+      fallback: {
+        fs: false,
+        stream: false,
+        assert: false,
+        util: false,
+        events: false,
+        http: false,
+        https: false,
+        tls: false,
+        net: false,
+        crypto: false,
+        url: false,
+        buffer: false,
+        zlib: false,
+        querystring: false,
+        path: false,
+        os: false,
+        child_process: false,
+        process: false,
+      },
     },
     module: {
       rules: [
@@ -121,6 +141,20 @@ const config = [
           exclude: /node_modules/,
           enforce: "pre",
           use: ["source-map-loader"],
+        },
+        {
+          test: /\.svg$/,
+          use: [
+            {
+              loader: "babel-loader",
+            },
+            {
+              loader: "react-svg-loader",
+              options: {
+                jsx: true,
+              },
+            },
+          ],
         },
       ],
     },
