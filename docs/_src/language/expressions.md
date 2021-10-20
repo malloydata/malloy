@@ -4,6 +4,30 @@ Expressions in Malloy are much like expressions in any other computer
 language; they can have variables and operators and function calls in
 the same syntax users are familiar with.
 
+## Identifiers
+
+
+
+## Standard Operators
+
+
+
+## Advanced Expressions
+
+## SQL Functions
+
+Many functions available in SQL are available unchanged in Malloy, e.g. `floor(10.35)`, `concat(first_name, ' ', last_name)`, `sqrt(x)`, etc.. See [here](https://cloud.google.com/bigquery/docs/reference/standard-sql/syntax) for documentation on functions available in BigQuery.
+
+The intention is to be able to call from Malloy any function which
+you could call from Standard SQL. This is not well implemented at
+the moment. If you experience type check errors, use the `::type`
+typecast to work around the errors in typing.
+
+
+
+
+
+
 To support the task of data transformation and constructing a data model,
 Malloy expressions provide the below syntax:
 
@@ -26,8 +50,3 @@ _timeValue_._truncation_ | `eventTime.quarter` , `flightTime.year` | [Time Trunc
 <br>
 
 # SQL functions
-
-The intention is to be able to call from Malloy any function which
-you could call from Standard SQL. This is not well implemented at
-the moment. If you experience type check errors, use the `::type`
-typecast to work around the errors in typing.

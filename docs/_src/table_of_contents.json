@@ -29,8 +29,20 @@
           "link": "/language/statement.md"
         },
         {
+          "title": "Explores",
+          "link": "/language/explore.md"
+        },
+        {
           "title": "Queries",
           "link": "/language/query.md"
+        },
+        {
+          "title": "Fields",
+          "link": "/language/fields.md"
+        },
+        {
+          "title": "Types",
+          "link": "/language/types.md"
         },
         {
           "title": "Expressions",
@@ -39,10 +51,6 @@
         {
           "title": "Ordering and Limiting",
           "link": "/language/order_by.md"
-        },
-        {
-          "title": "Explore Definition",
-          "link": "/language/explore.md"
         },
         {
           "title": "Joins",
