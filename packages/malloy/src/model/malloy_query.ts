@@ -14,7 +14,6 @@
 import { cloneDeep, upperCase } from "lodash";
 import { BigQueryDialect } from "../dialect/bigquery";
 import { Dialect, DialectFieldList } from "../dialect/dialect";
-import { PostgresDialect } from "../dialect/postgres";
 import { MalloyTranslator } from "../lang/parse-malloy";
 import { Malloy } from "../malloy";
 import {
@@ -1817,7 +1816,7 @@ class QueryQuery extends QueryField {
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      const sqlName = Malloy.db.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.model.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === "result") {
         fields.push(
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
@@ -2119,7 +2118,7 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const dimensionIndexes = [];
     for (const [name, fi] of this.rootResult.allFields) {
-      const sqlName = Malloy.db.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.model.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
@@ -2222,7 +2221,7 @@ class QueryQuery extends QueryField {
     }
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = Malloy.db.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.model.dialect.sqlMaybeQuoteIdentifier(name);
       //
       if (
         resultStruct.firstSegment.type === "reduce" &&

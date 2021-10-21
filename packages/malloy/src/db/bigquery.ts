@@ -259,12 +259,6 @@ export class BigQuery {
     return job.getQueryResultsStream();
   }
 
-  public sqlMaybeQuoteIdentifier(identifier: string): string {
-    return this.keywords.indexOf(identifier.toUpperCase()) > 0
-      ? "`" + identifier + "`"
-      : identifier;
-  }
-
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
@@ -485,25 +479,6 @@ export class BigQuery {
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);
     return structDef;
-  }
-
-  public async getTableStructDefs(
-    tablePaths: string[]
-  ): Promise<Map<string, StructDef>> {
-    const tableStructDefs = new Map<string, StructDef>();
-
-    for (const tablePath of tablePaths) {
-      const cachedTableStruct = this.schemaCache.get(tablePath);
-      if (cachedTableStruct) {
-        tableStructDefs.set(tablePath, cachedTableStruct);
-      } else {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        const structDef = this.structDefFromSchema(tablePath, tableFieldSchema);
-        tableStructDefs.set(tablePath, structDef);
-        this.schemaCache.set(tablePath, structDef);
-      }
-    }
-    return tableStructDefs;
   }
 
   public async getSchemaForMissingTables(

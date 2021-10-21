@@ -41,8 +41,8 @@
           "link": "/language/order_by.md"
         },
         {
-          "title": "Shape Definition",
-          "link": "/language/shape.md"
+          "title": "Explore Definition",
+          "link": "/language/explore.md"
         },
         {
           "title": "Joins",
@@ -61,8 +61,8 @@
           "link": "/language/time-ranges.md"
         },
         {
-          "title": "Turtles",
-          "link": "/language/turtle.md"
+          "title": "Nesting",
+          "link": "/language/nesting.md"
         },
         {
           "title": "Imports and Exports",

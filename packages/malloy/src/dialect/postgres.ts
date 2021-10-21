@@ -181,4 +181,8 @@ export class PostgresDialect extends Dialect {
   sqlSelectAliasAsStruct(alias: string): string {
     return `ROW(${alias})`;
   }
+  // TODO
+  sqlMaybeQuoteIdentifier(identifier: string): string {
+    return identifier;
+  }
 }

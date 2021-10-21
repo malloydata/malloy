@@ -1,8 +1,20 @@
-Note: This is not an officially supported Google product
+# Welcome to Malloy
+
+Malloy is an experimental language for describing data relationships and transformations. Malloy is not an officially supported Google product.
+
+* Malloy presents some new abstractions for data computation which provide astonishing power with a few simple concepts.
+* Malloy computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms.
+* Malloy sees data as a network of relationships, and generates network graphs with results, so it can ensure correctness of aggregate computations through multiple levels of transformation.
+
+Malloy also includes a VS Code IDE for writing and running models, queries, and transformations.
+
+The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
+
+The next steps are going to be determined to a large degree by the success of the language in making data computation simpler and easier to manage, and by the needs of those who pick this project up and incorporate it into their workflows.
 
 # The Malloy Language
 
-Malloy is a new experimental language for querying and modeling data.
+**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://looker-open-source.github.io/malloy/documentation/examples/faa.html)
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
@@ -20,7 +32,8 @@ This VSCode plugin is the first application of Malloy. It provides a rich enviro
 - Produces **rich metadata** about query results, as well as the originating column or field (think data lineage). This is ideal for building data applications, and enables construction of interfaces that allow the rewrite of queries to drill into row-level detail.
 - ‍ Works in _nested structures_ or “graphs” rather than in flat tables, which simplifies querying and aggregation at any nesting depth, and takes advantage of BigQuery’s strengths working with nested data.
 - Automatically **builds search indexes** for all the data. Search indexes greatly simplify filtering data and can also be used to understand the ‘shape’ of any given field (min, max, cardinality, most frequent occurring values).
-- Currently available on BigQuery, Malloy takes advantage of **BigQuery’s unique features**:
+- Currently available on BigQuery and soon to be available on Postgres.
+- Malloy takes advantage of **BigQuery’s unique features**:
   - Reading and writing large nested result sets extremely fast
   - BI Engine & database-level caching
 
@@ -33,7 +46,7 @@ Key features and advantages:
 - Query and model in the same language; everything is reusable and extensible.
 - Malloy reads the schema so you don’t need to model everything: Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
 - Pipelining: output one query into the next easily for powerful advanced analysis.
-- Aggregating Subqueries (AKA Turtles) let you delve deeper into data quickly, and nest data infinitely.
+- Aggregating Subqueries let you build nested data sets to delve deeper into data quickly, and return complicated networks of data from single queries (like GraphQL).
 - Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
 - Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
 - Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.
@@ -96,14 +109,12 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 # Documentation
 
-[Full documentation for Malloy](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/index.html)
+[Full documentation for Malloy]( https://looker-open-source.github.io/malloy/)
 
-You can find Quick Start videos, below.
-
-- [eCommerce Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
-- [Basics](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/language/basic.html) - docs introduction to the language
-- [FAA Example Analysis](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/faa.html) - examples built on the FAA public dataset
-- [Modeling Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
+- [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
+- [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
+- [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
+- [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
 # Quick Start Videos
 
@@ -115,9 +126,9 @@ https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-8
 
 ## Getting Started Video Series
 
-These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin.
+ These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin. _You can also watch this as a single video on Youtube,_ [here](https://www.youtube.com/watch?v=0Ck8CBa4qRo&t=3s).
 
-**You will likely need to un-mute the audio.**
+**You will need to un-mute the audio.**
 
 ### 1. Introduction
 
@@ -131,7 +142,7 @@ https://user-images.githubusercontent.com/7178946/130884536-cda8fb91-4c7a-4089-8
 
 https://user-images.githubusercontent.com/7178946/130884543-8cd4e8ba-116c-441e-b968-c62588e395c3.mov
 
-### 4. Aggregating Subqueries, AKA Turtles
+### 4. Aggregating Subqueries
 
 https://user-images.githubusercontent.com/7178946/130885321-ba141168-2a50-423a-bf09-5a6a03ec57d8.mov
 

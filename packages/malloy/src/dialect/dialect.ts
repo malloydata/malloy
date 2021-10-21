@@ -89,4 +89,5 @@ export abstract class Dialect {
   sqlDateToString(sqlDateExp: string): string {
     return `CAST(DATE(${sqlDateExp}) AS ${this.stringTypeName} )`;
   }
+  abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 }
