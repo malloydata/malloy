@@ -14,7 +14,7 @@ The next steps are going to be determined to a large degree by the success of th
 
 # The Malloy Language
 
-**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)
+**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://looker-open-source.github.io/malloy/documentation/examples/faa.html)
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
