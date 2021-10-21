@@ -129,4 +129,8 @@ export class BigQueryDialect extends Dialect {
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
     return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
   }
+
+  sqlSelectAliasAsStruct(alias: string): string {
+    return `(SELECT AS STRUCT ${alias}.*)`;
+  }
 }

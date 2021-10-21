@@ -1716,7 +1716,9 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
-          select += `, (SELECT AS STRUCT ${childJoin.alias}.*) AS ${childJoin.alias}`;
+          select += `, ${this.parent.model.dialect.sqlSelectAliasAsStruct(
+            childJoin.alias
+          )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
           ji.alias
@@ -2997,8 +2999,8 @@ const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  // dialect: Dialect = new BigQueryDialect();
-  dialect: Dialect = new PostgresDialect();
+  dialect: Dialect = new BigQueryDialect();
+  // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {
