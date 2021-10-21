@@ -259,12 +259,6 @@ export class BigQuery {
     return job.getQueryResultsStream();
   }
 
-  public sqlMaybeQuoteIdentifier(identifier: string): string {
-    return this.keywords.indexOf(identifier.toUpperCase()) > 0
-      ? "`" + identifier + "`"
-      : identifier;
-  }
-
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({

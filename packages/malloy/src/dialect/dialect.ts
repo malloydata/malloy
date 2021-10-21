@@ -62,4 +62,6 @@ export abstract class Dialect {
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
 
   abstract sqlGenerateUUID(): string;
+
+  abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 }

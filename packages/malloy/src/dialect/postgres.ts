@@ -120,4 +120,9 @@ export class PostgresDialect extends Dialect {
   sqlGenerateUUID(): string {
     return `GEN_RANDOM_UUID()`;
   }
+
+  // TODO
+  sqlMaybeQuoteIdentifier(identifier: string): string {
+    return identifier;
+  }
 }
