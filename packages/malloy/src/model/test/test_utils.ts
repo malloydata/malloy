@@ -11,60 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Malloy } from "../../malloy";
 import { FilterExpression, Fragment } from "../malloy_types";
-
-export function makeSQLTestSuite(): {
-  addTest: (testSQL: string) => number;
-  getTestResult: (id: number) => boolean;
-  runTestSuite: () => void;
-} {
-  const collectedTestSQLs: Map<number, string> = new Map();
-  const collectedSQLResults: Map<number, boolean> = new Map();
-
-  function addTest(testSQL: string): number {
-    const id = collectedTestSQLs.size;
-    collectedTestSQLs.set(id, testSQL);
-    return id;
-  }
-
-  function getTestResult(id: number): boolean {
-    const result = collectedSQLResults.get(id);
-    if (result === undefined) {
-      throw new Error(
-        `Expected test ${id} to have been run. Is the \`beforeAll\` running?`
-      );
-    }
-    return result;
-  }
-
-  async function getSQLResults(
-    tests: Map<number, string>
-  ): Promise<Map<number, boolean>> {
-    const rows = await Malloy.db.runQuery(
-      [...tests.entries()]
-        .map(([testID, testSQL]) => {
-          return `SELECT ${testID} as id, IF(${testSQL}, 1, 0) as result`;
-        })
-        .join("\nUNION ALL\n")
-    );
-    return new Map(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      rows.map((row: any) => {
-        return [row.id as number, row.result === 1];
-      })
-    );
-  }
-
-  async function runTestSuite() {
-    const results = await getSQLResults(collectedTestSQLs);
-    results.forEach((result, testID) => {
-      collectedSQLResults.set(testID, result);
-    });
-  }
-
-  return { addTest, getTestResult, runTestSuite };
-}
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
