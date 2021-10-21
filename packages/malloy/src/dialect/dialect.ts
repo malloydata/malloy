@@ -79,7 +79,12 @@ export abstract class Dialect {
 
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
 
-  sqlFinalStage(lastStageName: string): string {
+  sqlFinalStage(_lastStageName: string): string {
     throw new Error("Dialect has no final Stage but called Anyway");
+  }
+
+  // default implementation will probably work most of the time
+  sqlDateToString(sqlDateExp: string): string {
+    return `CAST(DATE(${sqlDateExp}) AS ${this.stringTypeName} )`;
   }
 }

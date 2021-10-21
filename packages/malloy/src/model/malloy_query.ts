@@ -2427,47 +2427,74 @@ class QueryQueryIndex extends QueryQuery {
 
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = "COUNT(*)";
+    const dialect = this.parent.model.dialect;
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
         .getField(measureName)
         .f.generateExpression(this.rootResult);
     }
-    let s = `SELECT
-  __fv.field_name,
-  __fv.field_type,
-  CASE WHEN field_type = 'string' THEN __fv.field_value END field_value,
-  ${measureSQL} as weight,
-  CASE
-    WHEN field_type = 'timestamp' or field_type = 'date'
-      THEN MIN(field_value) || ' to ' || MAX(field_value)
-    WHEN field_type = 'number'
-      THEN CAST(MIN(SAFE_CAST(field_value AS FLOAT64)) AS STRING) || ' to ' || CAST(MAX(SAFE_CAST(field_value AS FLOAT64)) AS STRING)
-  ELSE NULL
-  END as field_range\n`;
-    s += this.generateSQLJoins(stageWriter);
 
     const fields = [];
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === "result" && isScalarField(fi.f)) {
-        let expression = fi.f.generateExpression(this.rootResult);
-        if (fi.f.fieldDef.type === "timestamp") {
-          expression = `CAST(${expression} AS DATE)`;
-        }
-        if (fi.f.fieldDef.type !== "string") {
-          expression = `CAST(${expression} AS STRING)`;
-        }
-        fields.push(
-          `STRUCT('${name}' as field_name, '${fi.f.fieldDef.type}' as field_type, ${expression} as field_value)`
-        );
+        const expression = fi.f.generateExpression(this.rootResult);
+        fields.push({ name, type: fi.f.fieldDef.type, expression });
       }
     }
-    s += `JOIN UNNEST([${indent(fields.join(",\n"))}]) as __fv\n`;
+
+    let s = `SELECT\n  group_set,\n`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
+    }
+    s += `  END as field_name,`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
+    }
+    s += `  END as field_type,`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === "string") {
+        s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+      }
+    }
+    s += `  END as field_value,\n`;
+    s += ` ${measureSQL} as weight,\n`;
+
+    // just in case we don't have any field types, force the case statement to have at least one value.
+    s += `  CASE group_set\n    WHEN 99999 THEN ""`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === "number") {
+        s += `    WHEN ${i} THEN CAST(MIN(${fields[i].expression}) AS ${dialect.stringTypeName}) || ' to ' || CAST(MAX(${fields[i].expression}) AS ${dialect.stringTypeName})\n`;
+      }
+      if (fields[i].type === "timestamp" || fields[i].type === "date") {
+        s += `    WHEN ${i} THEN MIN(${dialect.sqlDateToString(
+          fields[i].expression
+        )}) || ' to ' || MAX(${dialect.sqlDateToString(
+          fields[i].expression
+        )})\n`;
+      }
+    }
+    s += `  END as field_range\n`;
+
+    // CASE
+    //   WHEN field_type = 'timestamp' or field_type = 'date'
+    //     THEN MIN(field_value) || ' to ' || MAX(field_value)
+    //   WHEN field_type = 'number'
+    //     THEN
+    // ELSE NULL
+    // END as field_range\n`;
+
+    s += this.generateSQLJoins(stageWriter);
+
+    s += dialect.sqlGroupSetTable(fields.length);
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
-    s += "GROUP BY 1,2,3\nORDER BY 4 DESC\n";
+    s += "GROUP BY 1,2,3,4\nORDER BY 5 DESC\n";
 
     // limit
     if (this.firstSegment.limit) {
@@ -2970,8 +2997,8 @@ const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  // dialect: Dialect = new BigQueryDialect();
-  dialect: Dialect = new PostgresDialect();
+  dialect: Dialect = new BigQueryDialect();
+  // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {
