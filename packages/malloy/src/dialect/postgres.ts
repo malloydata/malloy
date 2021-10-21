@@ -175,6 +175,6 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlFinalStage(lastStageName: string): string {
-    return `SELECT json_agg(finalStage) as rows FROM ${lastStageName} finalStage`;
+    return `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
   }
 }

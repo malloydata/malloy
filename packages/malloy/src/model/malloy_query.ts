@@ -2465,7 +2465,7 @@ class QueryQueryIndex extends QueryQuery {
     s += ` ${measureSQL} as weight,\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
-    s += `  CASE group_set\n    WHEN 99999 THEN ""`;
+    s += `  CASE group_set\n    WHEN 99999 THEN ''`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === "number") {
         s += `    WHEN ${i} THEN CAST(MIN(${fields[i].expression}) AS ${dialect.stringTypeName}) || ' to ' || CAST(MAX(${fields[i].expression}) AS ${dialect.stringTypeName})\n`;
@@ -2490,7 +2490,7 @@ class QueryQueryIndex extends QueryQuery {
 
     s += this.generateSQLJoins(stageWriter);
 
-    s += dialect.sqlGroupSetTable(fields.length);
+    s += dialect.sqlGroupSetTable(fields.length) + "\n";
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
@@ -2997,8 +2997,8 @@ const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  dialect: Dialect = new BigQueryDialect();
-  // dialect: Dialect = new PostgresDialect();
+  // dialect: Dialect = new BigQueryDialect();
+  dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
   constructor(modelDef: ModelDef | undefined) {
