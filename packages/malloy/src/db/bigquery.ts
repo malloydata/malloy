@@ -487,25 +487,6 @@ export class BigQuery {
     return structDef;
   }
 
-  public async getTableStructDefs(
-    tablePaths: string[]
-  ): Promise<Map<string, StructDef>> {
-    const tableStructDefs = new Map<string, StructDef>();
-
-    for (const tablePath of tablePaths) {
-      const cachedTableStruct = this.schemaCache.get(tablePath);
-      if (cachedTableStruct) {
-        tableStructDefs.set(tablePath, cachedTableStruct);
-      } else {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        const structDef = this.structDefFromSchema(tablePath, tableFieldSchema);
-        tableStructDefs.set(tablePath, structDef);
-        this.schemaCache.set(tablePath, structDef);
-      }
-    }
-    return tableStructDefs;
-  }
-
   public async getSchemaForMissingTables(
     missing: string[]
   ): Promise<NamedStructDefs> {
