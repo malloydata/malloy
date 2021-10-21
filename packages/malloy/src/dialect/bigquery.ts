@@ -11,11 +11,15 @@
  * GNU General Public License for more details.
  */
 
+import { indent } from "../model/utils";
 import { Dialect, DialectFieldList } from "./dialect";
 
 export class BigQueryDialect extends Dialect {
   name = "bigquery";
   defaultNumberType = "FLOAT64";
+  udfPrefix = "__udf";
+  hasFinalStage = false;
+  stringTypeName = "STRING";
 
   quoteTableName(tableName: string): string {
     return `\`${tableName}\``;
@@ -70,6 +74,13 @@ export class BigQueryDialect extends Dialect {
     return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
   }
 
+  //
+  // this code used to be:
+  //
+  //   from += `JOIN UNNEST(GENERATE_ARRAY(0,${this.maxGroupSet},1)) as group_set\n`;
+  //
+  // BigQuery will allocate more resources if we use a CROSS JOIN so we do that instead.
+  //
   sqlUnnestAlias(
     source: string,
     alias: string,
@@ -77,9 +88,9 @@ export class BigQueryDialect extends Dialect {
     needDistinctKey: boolean
   ): string {
     if (needDistinctKey) {
-      return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
+      return `, UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
-      return `UNNEST(${source}) as ${alias}`;
+      return `, UNNEST(${source}) as ${alias}`;
     }
   }
 
@@ -94,6 +105,33 @@ export class BigQueryDialect extends Dialect {
 
   sqlGenerateUUID(): string {
     return `GENERATE_UUID()`;
+  }
+
+  sqlFieldReference(
+    alias: string,
+    fieldName: string,
+    _fieldType: string,
+    _isNested: boolean
+  ): string {
+    return `${alias}.${fieldName}`;
+  }
+
+  sqlUnnestPipelineHead(): string {
+    return "UNNEST(__param)";
+  }
+
+  sqlCreateFunction(id: string, funcText: string): string {
+    return `CREATE TEMPORARY FUNCTION ${id}(__param ANY TYPE) AS ((\n${indent(
+      funcText
+    )}));\n`;
+  }
+
+  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
+    return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+  }
+
+  sqlSelectAliasAsStruct(alias: string): string {
+    return `(SELECT AS STRUCT ${alias}.*)`;
   }
 
   keywords = `

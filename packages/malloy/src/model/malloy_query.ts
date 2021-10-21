@@ -90,15 +90,16 @@ class StageWriter {
     return id;
   }
 
-  addUDF(stageWriter: StageWriter): string {
+  addUDF(stageWriter: StageWriter, dialect: Dialect): string {
     // eslint-disable-next-line prefer-const
     let { sql, lastStageName } = stageWriter.combineStages(undefined);
-    sql += `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+    if (lastStageName === undefined) {
+      throw new Error("Internal Error: no stage to combine");
+    }
+    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
 
-    const id = `__udf${this.udfs.size}`;
-    sql = `CREATE TEMPORARY FUNCTION ${id}(__param ANY TYPE) AS ((\n${indent(
-      sql
-    )}));\n`;
+    const id = `${dialect.udfPrefix}${this.udfs.size}`;
+    sql = dialect.sqlCreateFunction(id, sql);
     this.udfs.set(id, sql);
     return id;
   }
@@ -514,10 +515,14 @@ class QueryField extends QueryNode {
         this.fieldDef.e
       );
     }
-    return (
-      this.parent.getIdentifier() +
-      "." +
-      this.parent.model.dialect.sqlMaybeQuoteIdentifier(this.fieldDef.name)
+    return this.parent.model.dialect.sqlFieldReference(
+      this.parent.getIdentifier(),
+      this.fieldDef.name,
+      this.fieldDef.type,
+      this.parent.fieldDef.structSource.type === "nested" ||
+        this.parent.fieldDef.structSource.type === "inline" ||
+        (this.parent.fieldDef.structSource.type === "sql" &&
+          this.parent.fieldDef.structSource.nested === true)
     );
   }
 }
@@ -1710,7 +1715,9 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
-          select += `, (SELECT AS STRUCT ${childJoin.alias}.*) AS ${childJoin.alias}`;
+          select += `, ${this.parent.model.dialect.sqlSelectAliasAsStruct(
+            childJoin.alias
+          )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
           ji.alias
@@ -1726,7 +1733,7 @@ class QueryQuery extends QueryField {
         prefix = qs.parent.getIdentifier() + ".";
       }
       // we need to generate primary key.  If parent has a primary key combine
-      s += `, ${this.parent.model.dialect.sqlUnnestAlias(
+      s += `${this.parent.model.dialect.sqlUnnestAlias(
         `${prefix}${structRelationship.field}`,
         ji.alias,
         ji.getDialectFieldList(),
@@ -1967,7 +1974,10 @@ class QueryQuery extends QueryField {
           )}) THEN __delete__${
             result.groupSet
           } END) OVER(partition by ${dimensions
-            .map((x) => `CAST(${x} AS STRING) `)
+            .map(
+              (x) =>
+                `CAST(${x} AS ${this.parent.model.dialect.stringTypeName}) `
+            )
             .join(",")}) as __shaving__${result.groupSet}`
         );
       }
@@ -2011,14 +2021,7 @@ class QueryQuery extends QueryField {
     }
     const groupBy = "GROUP BY " + f.dimensionIndexes.join(",") + "\n";
 
-    //
-    // this code used to be:
-    //
-    //   from += `JOIN UNNEST(GENERATE_ARRAY(0,${this.maxGroupSet},1)) as group_set\n`;
-    //
-    // BigQuery will allocate more resources if we use a CROSS JOIN so we do that instead.
-    //
-    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet);
+    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
 
     s += indent(f.sql.join(",\n")) + "\n";
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
@@ -2180,7 +2183,7 @@ class QueryQuery extends QueryField {
     );
     let udfName;
     if (hasPipeline) {
-      udfName = stageWriter.addUDF(newStageWriter);
+      udfName = stageWriter.addUDF(newStageWriter, this.parent.model.dialect);
     }
 
     // calculate the ordering.
@@ -2291,8 +2294,8 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = "UNNEST(__param)";
-      structDef.structSource.type = "sql";
+      structDef.name = this.parent.model.dialect.sqlUnnestPipelineHead();
+      structDef.structSource = { type: "sql", nested: true };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2425,47 +2428,74 @@ class QueryQueryIndex extends QueryQuery {
 
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = "COUNT(*)";
+    const dialect = this.parent.model.dialect;
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
         .getField(measureName)
         .f.generateExpression(this.rootResult);
     }
-    let s = `SELECT
-  __fv.field_name,
-  __fv.field_type,
-  CASE WHEN field_type = 'string' THEN __fv.field_value END field_value,
-  ${measureSQL} as weight,
-  CASE
-    WHEN field_type = 'timestamp' or field_type = 'date'
-      THEN MIN(field_value) || ' to ' || MAX(field_value)
-    WHEN field_type = 'number'
-      THEN CAST(MIN(SAFE_CAST(field_value AS FLOAT64)) AS STRING) || ' to ' || CAST(MAX(SAFE_CAST(field_value AS FLOAT64)) AS STRING)
-  ELSE NULL
-  END as field_range\n`;
-    s += this.generateSQLJoins(stageWriter);
 
     const fields = [];
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === "result" && isScalarField(fi.f)) {
-        let expression = fi.f.generateExpression(this.rootResult);
-        if (fi.f.fieldDef.type === "timestamp") {
-          expression = `CAST(${expression} AS DATE)`;
-        }
-        if (fi.f.fieldDef.type !== "string") {
-          expression = `CAST(${expression} AS STRING)`;
-        }
-        fields.push(
-          `STRUCT('${name}' as field_name, '${fi.f.fieldDef.type}' as field_type, ${expression} as field_value)`
-        );
+        const expression = fi.f.generateExpression(this.rootResult);
+        fields.push({ name, type: fi.f.fieldDef.type, expression });
       }
     }
-    s += `JOIN UNNEST([${indent(fields.join(",\n"))}]) as __fv\n`;
+
+    let s = `SELECT\n  group_set,\n`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
+    }
+    s += `  END as field_name,`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
+    }
+    s += `  END as field_type,`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === "string") {
+        s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+      }
+    }
+    s += `  END as field_value,\n`;
+    s += ` ${measureSQL} as weight,\n`;
+
+    // just in case we don't have any field types, force the case statement to have at least one value.
+    s += `  CASE group_set\n    WHEN 99999 THEN ''`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === "number") {
+        s += `    WHEN ${i} THEN CAST(MIN(${fields[i].expression}) AS ${dialect.stringTypeName}) || ' to ' || CAST(MAX(${fields[i].expression}) AS ${dialect.stringTypeName})\n`;
+      }
+      if (fields[i].type === "timestamp" || fields[i].type === "date") {
+        s += `    WHEN ${i} THEN MIN(${dialect.sqlDateToString(
+          fields[i].expression
+        )}) || ' to ' || MAX(${dialect.sqlDateToString(
+          fields[i].expression
+        )})\n`;
+      }
+    }
+    s += `  END as field_range\n`;
+
+    // CASE
+    //   WHEN field_type = 'timestamp' or field_type = 'date'
+    //     THEN MIN(field_value) || ' to ' || MAX(field_value)
+    //   WHEN field_type = 'number'
+    //     THEN
+    // ELSE NULL
+    // END as field_range\n`;
+
+    s += this.generateSQLJoins(stageWriter);
+
+    s += dialect.sqlGroupSetTable(fields.length) + "\n";
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
-    s += "GROUP BY 1,2,3\nORDER BY 4 DESC\n";
+    s += "GROUP BY 1,2,3,4\nORDER BY 5 DESC\n";
 
     // limit
     if (this.firstSegment.limit) {
@@ -2587,7 +2617,7 @@ class QueryStruct extends QueryNode {
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
       const base = getIdentifier(this.fieldDef);
-      let name = base;
+      let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
         n++;
@@ -3141,6 +3171,12 @@ export class QueryModel {
         query.structRef.type === "struct"
         ? query.structRef.as || query.structRef.name
         : "(need to figure this out)";
+    if (this.dialect.hasFinalStage) {
+      ret.lastStageName = ret.stageWriter.addStage(
+        "__stage",
+        this.dialect.sqlFinalStage(ret.lastStageName)
+      );
+    }
     return {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,

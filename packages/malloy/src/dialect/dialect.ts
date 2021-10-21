@@ -22,6 +22,9 @@ export type DialectFieldList = DialectField[];
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
+  abstract udfPrefix: string;
+  abstract hasFinalStage: boolean;
+  abstract stringTypeName: string;
 
   // return a quoted string for use as a table name.
   abstract quoteTableName(tableName: string): string;
@@ -63,5 +66,28 @@ export abstract class Dialect {
 
   abstract sqlGenerateUUID(): string;
 
+  abstract sqlFieldReference(
+    alias: string,
+    fieldName: string,
+    fieldType: string,
+    isNested: boolean
+  ): string;
+
+  abstract sqlUnnestPipelineHead(): string;
+
+  abstract sqlCreateFunction(id: string, funcText: string): string;
+
+  abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
+
+  abstract sqlSelectAliasAsStruct(alias: string): string;
+
+  sqlFinalStage(_lastStageName: string): string {
+    throw new Error("Dialect has no final Stage but called Anyway");
+  }
+
+  // default implementation will probably work most of the time
+  sqlDateToString(sqlDateExp: string): string {
+    return `CAST(DATE(${sqlDateExp}) AS ${this.stringTypeName} )`;
+  }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 }
