@@ -645,7 +645,7 @@ describe("expression tests", () => {
         name: "lookerdata.liquor.medicare_test",
         dialect: "standardsql",
         as: "mtest",
-        structRelationship: { type: "basetable" },
+        structRelationship: { type: "basetable", connectionName: "bigquery" },
         structSource: { type: "table" },
         fields: [
           {

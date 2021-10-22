@@ -476,7 +476,7 @@ export class BigQuery {
       name: tablePath,
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: { type: "basetable", connectionName: "bigquery" },
       fields: [],
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);

@@ -31,7 +31,7 @@ describe("structdef comprehension", () => {
       name: "test",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: { type: "basetable", connectionName: "bigquery" },
       fields: [field],
     };
   }

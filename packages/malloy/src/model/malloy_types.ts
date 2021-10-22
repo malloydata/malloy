@@ -392,7 +392,7 @@ export interface JoinCondition {
 
 /** types of joins. */
 export type StructRelationship =
-  | { type: "basetable" }
+  | { type: "basetable"; connectionName: string }
   | JoinForeignKey
   | JoinCondition
   | { type: "inline" }

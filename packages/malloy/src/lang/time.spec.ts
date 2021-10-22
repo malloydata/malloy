@@ -56,7 +56,7 @@ const fs = new FieldSpace({
   name: "empty",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   fields: [],
 });
 

@@ -64,7 +64,7 @@ export const modelHandBase: StructDef = {
   type: "struct",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   fields: [
     { type: "string", name: "aircraft_model_code" },
     { type: "string", name: "manufacturer" },
@@ -161,7 +161,7 @@ export const aircraftHandBase: StructDef = {
   name: "lookerdata.liquor.aircraft",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   fields: [
     { type: "string", name: "tail_num" },
     { type: "string", name: "aircraft_serial" },

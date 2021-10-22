@@ -137,7 +137,10 @@ class ConstantFieldSpace extends FieldSpace {
       name: "empty structdef",
       dialect: "empty dialect",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: "unknown connection",
+      },
       fields: [],
     });
   }

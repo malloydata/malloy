@@ -46,7 +46,10 @@ class ErrorFactory {
       name: "undefined_error_structdef",
       dialect: "undefined dialect",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: "unknown connection",
+      },
       fields: [],
     };
     return ret;

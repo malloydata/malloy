@@ -75,7 +75,7 @@ export const aTableDef: StructDef = {
   name: "aTable",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   fields: [
     { type: "string", name: "astring" },
     { type: "number", name: "afloat", numberType: "float" },

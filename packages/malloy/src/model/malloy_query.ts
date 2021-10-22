@@ -1649,9 +1649,12 @@ class QueryQuery extends QueryField {
     return {
       fields,
       name: this.resultStage || "result",
-      dialect: this.parent.fieldDef.dialect,
+      dialect: this.parent.dialect.name,
       primaryKey,
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.parent.connectionName,
+      },
       // structSource: {type: 'query', query: this.fieldDef}
       structSource: { type: "table" },
       resultMetadata: this.getResultMetadata(this.rootResult),
@@ -2524,7 +2527,10 @@ FROM ${resultStage}\n`
         { type: "string", name: "field_type" },
         { type: "number", name: "weight", numberType: "integer" },
       ],
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.parent.connectionName,
+      },
       structSource: { type: "table" },
     };
   }
@@ -2538,6 +2544,7 @@ class QueryStruct extends QueryNode {
   nameMap = new Map<string, QuerySomething>();
   pathAliasMap: Map<string, string>;
   dialect: Dialect;
+  connectionName: string;
 
   constructor(
     fieldDef: StructDef,
@@ -2553,9 +2560,15 @@ class QueryStruct extends QueryNode {
     if ("model" in parent) {
       this.model = parent.model;
       this.pathAliasMap = new Map<string, string>();
+      if (fieldDef.structRelationship.type === "basetable") {
+        this.connectionName = fieldDef.structRelationship.connectionName;
+      } else {
+        throw new Error("All root StructDefs should be a baseTable");
+      }
     } else {
       this.model = this.getModel();
       this.pathAliasMap = this.root().pathAliasMap;
+      this.connectionName = this.root().connectionName;
     }
 
     this.fieldDef = fieldDef; // shouldn't have to do this, but

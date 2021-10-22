@@ -175,7 +175,7 @@ export const medicareModel: StructDef = {
   ],
   name: "lookerdata.liquor.medicare_test",
   primaryKey: "id",
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   structSource: { type: "table" },
   type: "struct",
 };
@@ -183,7 +183,7 @@ export const medicareModel: StructDef = {
 export const medicareStateFacts: StructDef = {
   fields: [],
   name: "medicare_state_facts",
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   dialect: "standardsql",
   structSource: {
     query: {
