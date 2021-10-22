@@ -441,6 +441,7 @@ export class BigQuery {
         const innerStructDef: StructDef = {
           type: "struct",
           name,
+          dialect: "standardsql",
           structSource:
             field.mode === "REPEATED" ? { type: "nested" } : { type: "inline" },
           structRelationship:
@@ -473,6 +474,7 @@ export class BigQuery {
     const structDef: StructDef = {
       type: "struct",
       name: tablePath,
+      dialect: "standardsql",
       structSource: { type: "table" },
       structRelationship: { type: "basetable" },
       fields: [],

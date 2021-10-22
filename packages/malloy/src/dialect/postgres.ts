@@ -12,7 +12,7 @@
  */
 
 import { indent } from "../model/utils";
-import { Dialect, DialectFieldList } from "./dialect";
+import { Dialect, DialectFieldList, registerDialect } from "./dialect";
 
 export class PostgresDialect extends Dialect {
   name = "postgres";

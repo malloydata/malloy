@@ -417,6 +417,7 @@ export interface StructDef extends NamedObject, ResultMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
+  dialect: string;
 }
 
 // /** the resulting structure of the query (and it's source) */

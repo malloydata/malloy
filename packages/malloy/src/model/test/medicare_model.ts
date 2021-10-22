@@ -16,6 +16,7 @@ import { StructDef } from "../malloy_types";
 /** Medicare Model */
 export const medicareModel: StructDef = {
   as: "medicare_test",
+  dialect: "standardsql",
   fields: [
     // Fields in the flights table.
     { name: "id", numberType: "integer", type: "number" },
@@ -183,6 +184,7 @@ export const medicareStateFacts: StructDef = {
   fields: [],
   name: "medicare_state_facts",
   structRelationship: { type: "basetable" },
+  dialect: "standardsql",
   structSource: {
     query: {
       structRef: "medicare_test",

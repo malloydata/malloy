@@ -91,3 +91,23 @@ export abstract class Dialect {
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 }
+
+const dialectMap = new Map<string, Dialect>();
+
+export function getDialect(name: string): Dialect {
+  const d = dialectMap.get(name);
+  if (d === undefined) {
+    throw new Error(`Unknown Dialect ${name}`);
+  }
+  return d;
+}
+
+export function registerDialect(d: Dialect): void {
+  dialectMap.set(d.name, d);
+}
+
+import { PostgresDialect } from "./postgres";
+import { StandardSQLDialect } from "./standardsql";
+
+registerDialect(new PostgresDialect());
+registerDialect(new StandardSQLDialect());

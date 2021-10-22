@@ -62,6 +62,7 @@ export const modelHandBase: StructDef = {
   name: "lookerdata.liquor.aircraft_models",
   as: "aircraft_models",
   type: "struct",
+  dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable" },
   fields: [
@@ -158,6 +159,7 @@ export const modelHandBase: StructDef = {
 export const aircraftHandBase: StructDef = {
   type: "struct",
   name: "lookerdata.liquor.aircraft",
+  dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable" },
   fields: [

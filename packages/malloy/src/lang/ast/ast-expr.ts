@@ -135,6 +135,7 @@ class ConstantFieldSpace extends FieldSpace {
     super({
       type: "struct",
       name: "empty structdef",
+      dialect: "empty dialect",
       structSource: { type: "table" },
       structRelationship: { type: "basetable" },
       fields: [],

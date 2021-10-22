@@ -22,6 +22,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
   type: "struct",
   name: "lookerdata.liquor.flights",
   as: "flights",
+  dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable" },
   primaryKey: "id2",
@@ -65,6 +66,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     {
       type: "struct",
       name: "lookerdata.liquor.carriers",
+      dialect: "standardsql",
       as: "carriers",
       structSource: { type: "table" },
       structRelationship: { type: "foreignKey", foreignKey: "carrier" },
@@ -81,6 +83,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       type: "struct",
       name: "lookerdata.liquor.aircraft",
       as: "aircraft",
+      dialect: "standardsql",
       structSource: { type: "table" },
       structRelationship: { type: "foreignKey", foreignKey: "tail_num" },
       primaryKey: "tail_num",
@@ -134,6 +137,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           type: "struct",
           name: "lookerdata.liquor.aircraft_models",
           as: "aircraft_models",
+          dialect: "standardsql",
           primaryKey: "aircraft_model_code",
           structSource: { type: "table" },
           structRelationship: {
@@ -182,6 +186,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       type: "struct",
       name: "lookerdata.liquor.airports",
       as: "origin",
+      dialect: "standardsql",
       structSource: { type: "table" },
       structRelationship: { type: "foreignKey", foreignKey: "origin_code" },
       primaryKey: "code",
@@ -227,6 +232,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       type: "struct",
       name: "lookerdata.liquor.airports",
       as: "destination",
+      dialect: "standardsql",
       structSource: { type: "table" },
       structRelationship: {
         type: "foreignKey",
@@ -274,6 +280,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     {
       type: "struct",
       name: "aircraft_facts",
+      dialect: "standardsql",
       structSource: {
         type: "query",
         query: {
@@ -807,6 +814,7 @@ const tableAirports: StructDef = {
   type: "struct",
   name: "lookerdata.liquor.airports",
   as: "table_airports",
+  dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable" },
   primaryKey: "code",

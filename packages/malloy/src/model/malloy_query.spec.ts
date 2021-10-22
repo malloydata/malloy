@@ -643,6 +643,7 @@ describe("expression tests", () => {
       structRef: {
         type: "struct",
         name: "lookerdata.liquor.medicare_test",
+        dialect: "standardsql",
         as: "mtest",
         structRelationship: { type: "basetable" },
         structSource: { type: "table" },
