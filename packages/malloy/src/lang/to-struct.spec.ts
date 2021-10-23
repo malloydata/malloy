@@ -21,7 +21,6 @@ import {
   mkStruct,
   mkFilters,
   mkCountDef,
-  exploreFor,
   mkAgg,
   pretty,
   TestTranslator,
@@ -454,18 +453,18 @@ describe("field definition lists", () => {
   // tests which we don't need to run, leaving them herein case we change
   // our minds about that.
   test.skip("generated safe anonymous name for dotted sources", async () => {
-    const n =
-      "bigquery-public-data.google_analytics_sample.ga_sessions_20170801";
-    const parse = await exploreFor(
-      `explore '${n}' hits.latencyTracking.pageLoadTime + 1`
-    );
-    if (parse.schema && parse.explore) {
-      const s = parse.explore.structDef();
-      const lastField = s.fields[s.fields.length - 1];
-      expect(lastField.name).toBe("ga_sessions_20170801_anon_0");
-    } else {
-      fail(pretty(parse.errors));
-    }
+    // const n =
+    //   "bigquery-public-data.google_analytics_sample.ga_sessions_20170801";
+    // const parse = await exploreFor(
+    //   `explore '${n}' hits.latencyTracking.pageLoadTime + 1`
+    // );
+    // if (parse.schema && parse.explore) {
+    //   const s = parse.explore.structDef();
+    //   const lastField = s.fields[s.fields.length - 1];
+    //   expect(lastField.name).toBe("ga_sessions_20170801_anon_0");
+    // } else {
+    //   fail(pretty(parse.errors));
+    // }
   });
 
   test.skip("foo.bar.sum() is named total_bar", async () => {
