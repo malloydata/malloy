@@ -1,6 +1,7 @@
 {
   "references": [
     { "path": "packages/malloy" },
+    { "path": "packages/malloy-db-test" },
     { "path": "packages/malloy-render" },
     { "path": "packages/malloy-vscode" }
   ],

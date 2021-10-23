@@ -12,9 +12,8 @@
  * GNU General Public License for more details.
  */
 
-import { Malloy } from "../malloy";
-import { fStringEq, fStringLike } from "./test/test_utils";
-import { ModelDef, QueryModel, QueryResult, StructDef } from ".";
+import { Malloy, ModelDef, QueryModel, QueryResult, StructDef } from "malloy";
+import { fStringEq, fStringLike } from "./test_utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rows(qr: QueryResult): any[] {

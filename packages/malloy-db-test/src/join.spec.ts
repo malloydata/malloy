@@ -12,7 +12,7 @@
  */
 /* eslint-disable no-console */
 
-import { QueryModel } from ".";
+import { QueryModel } from "malloy";
 
 const joinModelText = `
 export define aircraft_models is ('lookerdata.liquor.aircraft_models'
