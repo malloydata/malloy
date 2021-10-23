@@ -40,6 +40,7 @@
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
+    "madge": "^5.0.1",
     "malloy": "*",
     "malloy-render": "*",
     "md5": "^2.3.0",

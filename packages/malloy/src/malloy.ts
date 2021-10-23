@@ -67,10 +67,6 @@ export class Malloy {
     Malloy._db = bq;
   }
 
-  public async parseAndLoadModel(model: string): Promise<void> {
-    await this.queryModel.parseModel(model);
-  }
-
   public get model(): ModelDef | undefined {
     return this.queryModel.modelDef;
   }
@@ -83,14 +79,6 @@ export class Malloy {
     }
   }
 
-  public async runQuery(
-    query: string,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<QueryResult> {
-    return this.queryModel.runQuery(query, pageSize, rowIndex);
-  }
-
   public async runCompiledQuery(
     query: CompiledQuery,
     pageSize?: number,
@@ -99,15 +87,7 @@ export class Malloy {
     return this.queryModel.runCompiledQuery(query, pageSize, rowIndex);
   }
 
-  public async compileQuery(query: Query | string): Promise<CompiledQuery> {
+  public async compileQuery(query: Query): Promise<CompiledQuery> {
     return await this.queryModel.compileQuery(query);
-  }
-
-  public async computeSql(query: string): Promise<string> {
-    return (await this.compileQuery(query)).sql;
-  }
-
-  async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
-    return this.queryModel.searchIndex(explore, searchValue);
   }
 }

@@ -14,8 +14,8 @@
 import { cloneDeep, upperCase } from "lodash";
 import { BigQueryDialect } from "../dialect/bigquery";
 import { Dialect, DialectFieldList } from "../dialect/dialect";
-import { MalloyTranslator } from "../lang/parse-malloy";
 import { Malloy } from "../malloy";
+import { MalloyTranslator } from "..";
 import {
   FieldDateDef,
   FieldDef,
@@ -62,23 +62,9 @@ import { generateSQLStringLiteral, indent, AndChain } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-let queryNumber = 0;
-async function translatorFor(src: string): Promise<MalloyTranslator> {
-  const queryURI = `internal://query/${queryNumber}`;
-  queryNumber += 1;
-  const parse = new MalloyTranslator(queryURI, { URLs: { [queryURI]: src } });
-  const needThese = parse.unresolved();
-  if (needThese?.tables) {
-    const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
-    parse.update({ tables });
-  }
-  return parse;
-}
-
-// // probably a dialect function at some point.
-// function quoteTableName(name: string): string {
-//   return `\`${name}\``;
-// }
+const parse = new MalloyTranslator("internal://query/1", {
+  URLs: { ["internal://query/1"]: "test" },
+});
 
 class StageWriter {
   withs = new Map<string, string>();
@@ -3022,20 +3008,6 @@ export class QueryModel {
     }
   }
 
-  async parseModel(srcText: string): Promise<void> {
-    const myDocumentParse = await translatorFor(srcText);
-    const getDoc = myDocumentParse.translate();
-    if (getDoc.translated) {
-      const newModel = getDoc.translated.modelDef;
-      this.loadModelFromDef({
-        ...newModel,
-        name: "parseModel Document",
-      });
-      return;
-    }
-    throw new Error(`parseDocument failed\n${myDocumentParse.prettyErrors()}`);
-  }
-
   parseQueryPath(name: string): { struct: QueryStruct; queryName: string } {
     const path = name.split(".");
     let struct;
@@ -3121,46 +3093,8 @@ export class QueryModel {
     return { lastStageName, malloy, stageWriter, structs: [outputStruct] };
   }
 
-  async malloyToQuery(queryString: string): Promise<Query> {
-    const parse = await translatorFor(queryString);
-    const gotQuery = parse.translate();
-    if (gotQuery.translated) {
-      return gotQuery.translated.queryList[0];
-    }
-    if (gotQuery.errors) {
-      throw new Error(
-        `Can't parse query: '${queryString}'\n${parse.prettyErrors()}`
-      );
-    }
-    throw new Error(`Query '${queryString}' -- not complete`);
-  }
-
-  async compileQuery(query: Query | string): Promise<CompiledQuery> {
+  async compileQuery(query: Query): Promise<CompiledQuery> {
     let newModel: QueryModel | undefined;
-    if (typeof query === "string") {
-      const parse = await translatorFor(query);
-
-      let modelsBefore = 0;
-      if (this.modelDef) {
-        modelsBefore = Object.keys(this.modelDef?.structs).length;
-      }
-
-      const getQuery = parse.translate(this.modelDef);
-      if (getQuery.translated) {
-        const newStructs = getQuery.translated.modelDef.structs;
-        if (Object.keys(newStructs).length > modelsBefore) {
-          newModel = new QueryModel({
-            ...getQuery.translated.modelDef,
-            name: query,
-          });
-        }
-        query = getQuery.translated.queryList[0];
-      } else {
-        throw new Error(
-          `Query string '${query}' did not compile\n${parse.prettyErrors()}`
-        );
-      }
-    }
     const m = newModel || this;
     const ret = m.loadQuery(query, undefined);
     const sourceExplore =
@@ -3191,22 +3125,6 @@ export class QueryModel {
     };
   }
 
-  /**
-   * Run a Malloy query in the context of this model.
-   *
-   * @param query The query to run, as a {@link Query} or plaintext string.
-   * @param pageSize Top-level row limit.
-   * @param rowIndex Offset into results.
-   */
-  async runQuery(
-    query: Query | string,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<QueryResult> {
-    const ret = await this.compileQuery(query);
-    return this.runCompiledQuery(ret, pageSize, rowIndex);
-  }
-
   async runCompiledQuery(
     query: CompiledQuery,
     pageSize?: number,
@@ -3219,33 +3137,5 @@ export class QueryModel {
     );
 
     return { ...query, result: result.rows, totalRows: result.totalRows };
-  }
-
-  async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
-    // make a search index if one isn't modelled.
-    const struct = this.getStructByName(explore);
-    let malloy;
-    if (!struct.nameMap.get("search_index")) {
-      malloy = `EXPLORE ${explore} | INDEX`;
-    } else {
-      malloy = `EXPLORE ${explore} | search_index`;
-    }
-
-    // if we've compiled the SQL before use it otherwise
-    let sqlPDT = exploreSearchSQLMap.get(explore);
-    if (sqlPDT === undefined) {
-      sqlPDT = (await this.compileQuery(malloy)).sql;
-      exploreSearchSQLMap.set(explore, sqlPDT);
-    }
-    const result = await Malloy.db.runQuery(
-      `SELECT field_name, field_value, weight \n` +
-        `FROM  \`${await Malloy.db.manifestTemporaryTable(sqlPDT)}\` \n` +
-        `WHERE lower(field_name || '|' || field_value) LIKE lower(${generateSQLStringLiteral(
-          "%" + searchValue + "%"
-        )})\n ` +
-        `ORDER BY 3 DESC\n` +
-        `LIMIT 1000\n`
-    );
-    return result;
   }
 }
