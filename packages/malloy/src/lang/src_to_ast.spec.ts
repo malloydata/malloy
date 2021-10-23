@@ -26,6 +26,7 @@ import {
 } from "./jest-factories";
 import * as ast from "./ast";
 import { MalloyTranslator } from "./parse-malloy";
+import { UpdateData } from ".";
 
 describe("translation api", () => {
   test("format an explore, looks correct", () => {
@@ -390,9 +391,48 @@ describe("field definitions", () => {
       fields
         foo renames \`date\`
     `;
-    const tables = await Malloy.db.getSchemaForMissingTables([countyData]);
+    const tables = {
+      "bigquery-public-data.covid19_nyt.us_counties": {
+        type: "struct",
+        name: "bigquery-public-data.covid19_nyt.us_counties",
+        structSource: {
+          type: "table",
+        },
+        structRelationship: {
+          type: "basetable",
+        },
+        fields: [
+          {
+            name: "date",
+            type: "date",
+          },
+          {
+            name: "county",
+            type: "string",
+          },
+          {
+            name: "state_name",
+            type: "string",
+          },
+          {
+            name: "county_fips_code",
+            type: "string",
+          },
+          {
+            name: "confirmed_cases",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "deaths",
+            type: "number",
+            numberType: "integer",
+          },
+        ],
+      },
+    };
     const trans = new TestTranslator(src, "explore");
-    trans.update({ tables });
+    trans.update({ tables } as Partial<UpdateData>);
     expect(trans).toBeValidMalloy();
   });
 
