@@ -8,9 +8,6 @@
   "references": [
     {
       "path": "../malloy"
-    },
-    {
-      "path": "../malloy-db-bigquery"
     }
   ]
 }

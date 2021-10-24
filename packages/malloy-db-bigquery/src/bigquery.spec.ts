@@ -1,11 +1,12 @@
-import { Malloy } from "../malloy";
-import { BigQuery } from "./bigquery";
+import { Malloy } from "malloy";
+import { BigQueryConnection } from "./bigquery_connection";
 import { BigQuery as BigQuerySDK, TableMetadata } from "@google-cloud/bigquery";
 
 describe("db:BigQuery", () => {
-  let bq: BigQuery;
+  let bq: BigQueryConnection;
   beforeAll(() => {
-    bq = new BigQuery();
+    bq = new BigQueryConnection("test");
+    Malloy.db = bq;
   });
 
   it("runs a SQL query", async () => {

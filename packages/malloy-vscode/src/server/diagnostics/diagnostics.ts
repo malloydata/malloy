@@ -16,11 +16,12 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { Malloy, MalloyTranslator, LogMessage, BigQuery } from "malloy";
+import { Malloy, MalloyTranslator, LogMessage } from "malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
+import { BigQueryConnection } from "malloy-db-bigquery";
 
-Malloy.setDB(new BigQuery());
+Malloy.db = new BigQueryConnection("vsCode");
 
 async function magicGetTheFile(
   documents: TextDocuments<TextDocument>,

@@ -11,9 +11,15 @@
  * GNU General Public License for more details.
  */
 
-// TODO tighten up exports
-export * from "./model";
-export * from "./lang";
-export { Malloy } from "./malloy";
-export { Connection } from "./connection";
-export type { Loggable } from "./malloy";
+module.exports = {
+  moduleDirectories: ["../../node_modules"],
+  moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
+  modulePathIgnorePatterns: ["<rootDir>/dist/"],
+  setupFilesAfterEnv: ["jest-expect-message"],
+  testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
+  transform: {
+    "^.+\\.(ts|tsx)$": "ts-jest",
+  },
+  testTimeout: 100000,
+  verbose: true,
+};

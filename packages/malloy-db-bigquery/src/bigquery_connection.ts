@@ -24,14 +24,15 @@ import bigquery from "@google-cloud/bigquery/build/src/types";
 import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
-import { Malloy } from "../malloy";
 import {
+  Malloy,
   QueryData,
   StructDef,
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
-} from "../model/malloy_types";
+  Connection,
+} from "malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -72,7 +73,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQuery {
+export class BigQueryConnection extends Connection {
   static DEFAULT_PAGE_SIZE = 10;
 
   private bigQuery: BigQuerySDK;
@@ -198,7 +199,8 @@ export class BigQuery {
   WITH
   WITHIN`.split(/\s/);
 
-  constructor() {
+  constructor(name: string) {
+    super(name);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
     });
@@ -208,9 +210,13 @@ export class BigQuery {
     this.projectID = this.bigQuery.projectId;
   }
 
+  get dialectName(): string {
+    return "standardSQL"; // TODO get this from list in Lloyd's branch
+  }
+
   public async runMalloyQuery(
     sqlCommand: string,
-    pageSize: number = BigQuery.DEFAULT_PAGE_SIZE,
+    pageSize: number = BigQueryConnection.DEFAULT_PAGE_SIZE,
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const hash = crypto

@@ -13,7 +13,6 @@
 
 import "./jestery";
 import { readFileSync, readdirSync } from "fs";
-import { Malloy } from "../malloy";
 import {
   aExpr,
   mkExprIdRef,

@@ -19,6 +19,9 @@ import { fStringEq } from "./test_utils";
 import "malloy/src/lang/jestery";
 import { TestTranslator } from "malloy/src/lang/jest-factories";
 import { FLIGHTS_EXPLORE } from "./models/faa_model";
+import { BigQueryConnection } from "malloy-db-bigquery";
+
+Malloy.db = new BigQueryConnection("test");
 
 test("simple pipeline", async () => {
   const parse = new TestTranslator("flights | flights_by_carrier");

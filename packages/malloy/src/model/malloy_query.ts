@@ -29,7 +29,6 @@ import {
   StructDef,
   StructRef,
   OrderBy,
-  QueryData,
   QueryResult,
   ResultMetadataDef,
   FieldAtomicDef,
@@ -58,7 +57,7 @@ import {
   isPhysical,
 } from "./malloy_types";
 
-import { generateSQLStringLiteral, indent, AndChain } from "./utils";
+import { indent, AndChain } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -2994,7 +2993,7 @@ interface QueryResults {
   malloy: string;
 }
 
-const exploreSearchSQLMap = new Map<string, string>();
+// const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
@@ -3221,31 +3220,31 @@ export class QueryModel {
     return { ...query, result: result.rows, totalRows: result.totalRows };
   }
 
-  async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
-    // make a search index if one isn't modelled.
-    const struct = this.getStructByName(explore);
-    let malloy;
-    if (!struct.nameMap.get("search_index")) {
-      malloy = `EXPLORE ${explore} | INDEX`;
-    } else {
-      malloy = `EXPLORE ${explore} | search_index`;
-    }
+  // async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
+  //   // make a search index if one isn't modelled.
+  //   const struct = this.getStructByName(explore);
+  //   let malloy;
+  //   if (!struct.nameMap.get("search_index")) {
+  //     malloy = `EXPLORE ${explore} | INDEX`;
+  //   } else {
+  //     malloy = `EXPLORE ${explore} | search_index`;
+  //   }
 
-    // if we've compiled the SQL before use it otherwise
-    let sqlPDT = exploreSearchSQLMap.get(explore);
-    if (sqlPDT === undefined) {
-      sqlPDT = (await this.compileQuery(malloy)).sql;
-      exploreSearchSQLMap.set(explore, sqlPDT);
-    }
-    const result = await Malloy.db.runQuery(
-      `SELECT field_name, field_value, weight \n` +
-        `FROM  \`${await Malloy.db.manifestTemporaryTable(sqlPDT)}\` \n` +
-        `WHERE lower(field_name || '|' || field_value) LIKE lower(${generateSQLStringLiteral(
-          "%" + searchValue + "%"
-        )})\n ` +
-        `ORDER BY 3 DESC\n` +
-        `LIMIT 1000\n`
-    );
-    return result;
-  }
+  //   // if we've compiled the SQL before use it otherwise
+  //   let sqlPDT = exploreSearchSQLMap.get(explore);
+  //   if (sqlPDT === undefined) {
+  //     sqlPDT = (await this.compileQuery(malloy)).sql;
+  //     exploreSearchSQLMap.set(explore, sqlPDT);
+  //   }
+  //   const result = await Malloy.db.runQuery(
+  //     `SELECT field_name, field_value, weight \n` +
+  //       `FROM  \`${await Malloy.db.manifestTemporaryTable(sqlPDT)}\` \n` +
+  //       `WHERE lower(field_name || '|' || field_value) LIKE lower(${generateSQLStringLiteral(
+  //         "%" + searchValue + "%"
+  //       )})\n ` +
+  //       `ORDER BY 3 DESC\n` +
+  //       `LIMIT 1000\n`
+  //   );
+  //   return result;
+  // }
 }

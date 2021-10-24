@@ -31,10 +31,11 @@ import {
   runQueryWithEdit,
   showLicensesCommand,
 } from "./commands";
-import { BigQuery, Malloy } from "malloy";
+import { Malloy } from "malloy";
 import { showResultJsonCommand } from "./commands/show_result_json";
+import { BigQueryConnection } from "malloy-db-bigquery";
 
-Malloy.setDB(new BigQuery());
+Malloy.db = new BigQueryConnection("vsCode");
 
 let client: LanguageClient;
 

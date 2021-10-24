@@ -29,7 +29,6 @@ import { FieldSpace } from "./field-space";
 import { NeedSchemaData, UpdateData } from "./parse-malloy";
 import { isConditionParameter, isValueParameter } from "../model/malloy_types";
 import { cloneDeep } from "lodash";
-import { ZoneData } from "./zone";
 
 function findField(
   struct: model.NamedMalloyObject | undefined,
