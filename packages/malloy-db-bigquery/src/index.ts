@@ -11,9 +11,4 @@
  * GNU General Public License for more details.
  */
 
-// TODO tighten up exports
-export * from "./model";
-export * from "./lang";
-export { Malloy } from "./malloy";
-export { Connection } from "./connection";
-export type { Loggable } from "./malloy";
+export { BigQueryConnection } from "./bigquery_connection";

@@ -16,6 +16,9 @@ import fs from "fs";
 import path from "path";
 import { Malloy } from "malloy/src/malloy";
 import { MalloyTranslator, TranslateResponse } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
+
+Malloy.db = new BigQueryConnection("test");
 
 const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/");
 

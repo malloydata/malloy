@@ -21,6 +21,10 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { runCode } from "./run_code";
 import { log } from "./log";
+import { Malloy } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
+
+Malloy.db = new BigQueryConnection("docs");
 
 /*
  * A Renderer is capable of converting a parsed `Markdown` document into HTML,

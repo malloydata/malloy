@@ -13,7 +13,8 @@
 
 import path from "path";
 import fs from "fs";
-import { BigQuery, Malloy } from "malloy";
+import { Malloy } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
 import { performance } from "perf_hooks";
 import { renderDoc } from "./render_document";
 import { renderFooter, renderSidebar, Section } from "./page";
@@ -34,6 +35,8 @@ const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
 
 const WATCH_ENABLED = process.argv.includes("--watch");
+
+Malloy.db = new BigQueryConnection("docs");
 
 async function compileDoc(file: string) {
   const startTime = performance.now();
@@ -85,7 +88,6 @@ function rebuildSidebarAndFooters() {
 }
 
 (async () => {
-  Malloy.setDB(new BigQuery());
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);
   const staticFiles = allFiles.filter((file) => !isMarkdown(file));

@@ -13,12 +13,15 @@
  */
 
 import { Malloy, ModelDef, QueryModel, QueryResult, StructDef } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
 import { fStringEq, fStringLike } from "./test_utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rows(qr: QueryResult): any[] {
   return qr.result;
 }
+
+Malloy.db = new BigQueryConnection("test");
 
 async function bqCompile(sql: string): Promise<boolean> {
   try {
