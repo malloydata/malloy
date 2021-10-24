@@ -29,8 +29,9 @@ describe("structdef comprehension", () => {
     return {
       type: "struct",
       name: "test",
+      dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: { type: "basetable", connectionName: "test" },
       fields: [field],
     };
   }
@@ -129,6 +130,7 @@ describe("structdef comprehension", () => {
     const field: model.FieldDef = {
       name: "t",
       type: "struct",
+      dialect: "standardsql",
       structRelationship: { type: "nested", field: "a" },
       structSource: { type: "nested" },
       fields: [{ type: "string", name: "b" }],
@@ -144,6 +146,7 @@ describe("structdef comprehension", () => {
     const field: model.FieldDef = {
       name: "t",
       type: "struct",
+      dialect: "standardsql",
       structRelationship: { type: "inline" },
       structSource: { type: "inline" },
       fields: [{ type: "string", name: "a" }],
@@ -159,6 +162,7 @@ describe("structdef comprehension", () => {
     const field: model.FieldDef = {
       name: "t",
       type: "struct",
+      dialect: "standardsql",
       structRelationship: { type: "foreignKey", foreignKey: "b" },
       structSource: { type: "table" },
       fields: [{ type: "string", name: "a" }],

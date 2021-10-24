@@ -72,8 +72,9 @@ export function mkExploreOf(
 export const aTableDef: StructDef = {
   type: "struct",
   name: "aTable",
+  dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   fields: [
     { type: "string", name: "astring" },
     { type: "number", name: "afloat", numberType: "float" },
