@@ -11,11 +11,9 @@
  * GNU General Public License for more details.
  */
 
-// clang-format off
-
-import { ModelDef, StructDef } from "../malloy_types";
+import { ModelDef, StructDef } from "malloy/src/model/malloy_types";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
-import { fStringEq, fYearEq } from "./test_utils";
+import { fStringEq, fYearEq } from "../test_utils";
 
 /** Flight Model */
 export const FLIGHTS_EXPLORE: StructDef = {
