@@ -211,7 +211,7 @@ export class BigQueryConnection extends Connection {
   }
 
   get dialectName(): string {
-    return "standardSQL"; // TODO get this from list in Lloyd's branch
+    return "standardsql";
   }
 
   public async runMalloyQuery(
@@ -447,6 +447,7 @@ export class BigQueryConnection extends Connection {
         const innerStructDef: StructDef = {
           type: "struct",
           name,
+          dialect: this.dialectName,
           structSource:
             field.mode === "REPEATED" ? { type: "nested" } : { type: "inline" },
           structRelationship:
@@ -479,8 +480,9 @@ export class BigQueryConnection extends Connection {
     const structDef: StructDef = {
       type: "struct",
       name: tablePath,
+      dialect: this.dialectName,
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);

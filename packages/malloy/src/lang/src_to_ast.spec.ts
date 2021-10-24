@@ -394,6 +394,7 @@ describe("field definitions", () => {
       "bigquery-public-data.covid19_nyt.us_counties": {
         type: "struct",
         name: "bigquery-public-data.covid19_nyt.us_counties",
+        dialect: "standardsql",
         structSource: {
           type: "table",
         },

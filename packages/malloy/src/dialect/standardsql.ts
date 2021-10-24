@@ -11,11 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { indent } from "../model/utils";
+import { indent } from "malloy/src/model/utils";
 import { Dialect, DialectFieldList } from "./dialect";
 
-export class BigQueryDialect extends Dialect {
-  name = "bigquery";
+export class StandardSQLDialect extends Dialect {
+  name = "standardsql";
   defaultNumberType = "FLOAT64";
   udfPrefix = "__udf";
   hasFinalStage = false;

@@ -12,8 +12,8 @@
  */
 
 import { cloneDeep, upperCase } from "lodash";
-import { BigQueryDialect } from "../dialect/bigquery";
-import { Dialect, DialectFieldList } from "../dialect/dialect";
+import { StandardSQLDialect } from "../dialect/standardsql";
+import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import { MalloyTranslator } from "../lang/parse-malloy";
 import { Malloy } from "../malloy";
 import {
@@ -368,7 +368,7 @@ class QueryField extends QueryNode {
       expr.structPath
     );
     if (distinctKeySQL) {
-      return sqlSumDistinct(this.parent.model.dialect, dimSQL, distinctKeySQL);
+      return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
     } else {
       return `SUM(${dimSQL})`;
     }
@@ -407,7 +407,7 @@ class QueryField extends QueryNode {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
       return `${sqlSumDistinct(
-        this.parent.model.dialect,
+        this.parent.dialect,
         dimSQL,
         distinctKeySQL
       )}/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
@@ -514,7 +514,7 @@ class QueryField extends QueryNode {
         this.fieldDef.e
       );
     }
-    return this.parent.model.dialect.sqlFieldReference(
+    return this.parent.dialect.sqlFieldReference(
       this.parent.getIdentifier(),
       this.fieldDef.name,
       this.fieldDef.type,
@@ -1649,8 +1649,12 @@ class QueryQuery extends QueryField {
     return {
       fields,
       name: this.resultStage || "result",
+      dialect: this.parent.dialect.name,
       primaryKey,
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.parent.connectionName,
+      },
       // structSource: {type: 'query', query: this.fieldDef}
       structSource: { type: "table" },
       resultMetadata: this.getResultMetadata(this.rootResult),
@@ -1714,7 +1718,7 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
-          select += `, ${this.parent.model.dialect.sqlSelectAliasAsStruct(
+          select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias
           )} AS ${childJoin.alias}`;
         }
@@ -1732,7 +1736,7 @@ class QueryQuery extends QueryField {
         prefix = qs.parent.getIdentifier() + ".";
       }
       // we need to generate primary key.  If parent has a primary key combine
-      s += `${this.parent.model.dialect.sqlUnnestAlias(
+      s += `${this.parent.dialect.sqlUnnestAlias(
         `${prefix}${structRelationship.field}`,
         ji.alias,
         ji.getDialectFieldList(),
@@ -1766,7 +1770,7 @@ class QueryQuery extends QueryField {
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
         // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
-        structSQL = `(SELECT ${qs.model.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
@@ -1815,7 +1819,7 @@ class QueryQuery extends QueryField {
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      const sqlName = this.parent.model.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === "result") {
         fields.push(
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
@@ -1973,10 +1977,7 @@ class QueryQuery extends QueryField {
           )}) THEN __delete__${
             result.groupSet
           } END) OVER(partition by ${dimensions
-            .map(
-              (x) =>
-                `CAST(${x} AS ${this.parent.model.dialect.stringTypeName}) `
-            )
+            .map((x) => `CAST(${x} AS ${this.parent.dialect.stringTypeName}) `)
             .join(",")}) as __shaving__${result.groupSet}`
         );
       }
@@ -2020,7 +2021,7 @@ class QueryQuery extends QueryField {
     }
     const groupBy = "GROUP BY " + f.dimensionIndexes.join(",") + "\n";
 
-    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
+    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
 
     s += indent(f.sql.join(",\n")) + "\n";
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
@@ -2052,7 +2053,7 @@ class QueryQuery extends QueryField {
             output.sql.push(`${exp} as ${sqlFieldName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            const exp = this.parent.model.dialect.sqlAnyValue(
+            const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
               sqlFieldName
             );
@@ -2117,7 +2118,7 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const dimensionIndexes = [];
     for (const [name, fi] of this.rootResult.allFields) {
-      const sqlName = this.parent.model.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
@@ -2125,7 +2126,7 @@ class QueryQuery extends QueryField {
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
-              this.parent.model.dialect.sqlAnyValueLastTurtle(name, sqlName)
+              this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
             );
             fieldIndex++;
           }
@@ -2138,7 +2139,7 @@ class QueryQuery extends QueryField {
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
           fieldsSQL.push(
-            this.parent.model.dialect.sqlAnyValueLastTurtle(name, sqlName)
+            this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
           );
           fieldIndex++;
         }
@@ -2182,7 +2183,7 @@ class QueryQuery extends QueryField {
     );
     let udfName;
     if (hasPipeline) {
-      udfName = stageWriter.addUDF(newStageWriter, this.parent.model.dialect);
+      udfName = stageWriter.addUDF(newStageWriter, this.parent.dialect);
     }
 
     // calculate the ordering.
@@ -2220,7 +2221,7 @@ class QueryQuery extends QueryField {
     }
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = this.parent.model.dialect.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       //
       if (
         resultStruct.firstSegment.type === "reduce" &&
@@ -2258,18 +2259,18 @@ class QueryQuery extends QueryField {
     let ret;
     if ((resultType = resultStruct.getRepeatedResultType()) !== "nested") {
       if (resultType === "inline_all_numbers") {
-        ret = this.parent.model.dialect.sqlCoaleseMeasuresInline(
+        ret = this.parent.dialect.sqlCoaleseMeasuresInline(
           resultStruct.groupSet,
           dialectFieldList
         );
       } else {
-        ret = this.parent.model.dialect.sqlAnyValueTurtle(
+        ret = this.parent.dialect.sqlAnyValueTurtle(
           resultStruct.groupSet,
           dialectFieldList
         );
       }
     } else {
-      ret = this.parent.model.dialect.sqlAggregateTurtle(
+      ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,
         orderBy,
@@ -2293,7 +2294,7 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = this.parent.model.dialect.sqlUnnestPipelineHead();
+      structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
       structDef.structSource = { type: "sql", nested: true };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
@@ -2427,7 +2428,7 @@ class QueryQueryIndex extends QueryQuery {
 
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = "COUNT(*)";
-    const dialect = this.parent.model.dialect;
+    const dialect = this.parent.dialect;
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
@@ -2519,13 +2520,17 @@ FROM ${resultStage}\n`
     return {
       type: "struct",
       name: this.resultStage || "result",
+      dialect: this.parent.fieldDef.dialect,
       fields: [
         { type: "string", name: "field_name" },
         { type: "string", name: "field_value" },
         { type: "string", name: "field_type" },
         { type: "number", name: "weight", numberType: "integer" },
       ],
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.parent.connectionName,
+      },
       structSource: { type: "table" },
     };
   }
@@ -2538,6 +2543,8 @@ class QueryStruct extends QueryNode {
   model: QueryModel;
   nameMap = new Map<string, QuerySomething>();
   pathAliasMap: Map<string, string>;
+  dialect: Dialect;
+  connectionName: string;
 
   constructor(
     fieldDef: StructDef,
@@ -2553,13 +2560,21 @@ class QueryStruct extends QueryNode {
     if ("model" in parent) {
       this.model = parent.model;
       this.pathAliasMap = new Map<string, string>();
+      if (fieldDef.structRelationship.type === "basetable") {
+        this.connectionName = fieldDef.structRelationship.connectionName;
+      } else {
+        throw new Error("All root StructDefs should be a baseTable");
+      }
     } else {
       this.model = this.getModel();
       this.pathAliasMap = this.root().pathAliasMap;
+      this.connectionName = this.root().connectionName;
     }
 
     this.fieldDef = fieldDef; // shouldn't have to do this, but
     // type script is missing a beat here.
+
+    this.dialect = getDialect(this.fieldDef.dialect);
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
   }
@@ -2991,13 +3006,14 @@ interface QueryResults {
   stageWriter: StageWriter;
   structs: StructDef[];
   malloy: string;
+  connectionName: string;
 }
 
 // const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  dialect: Dialect = new BigQueryDialect();
+  dialect: Dialect = new StandardSQLDialect();
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
@@ -3096,7 +3112,11 @@ export class QueryModel {
   //   return QueryQuery.makeQuery(d, struct);
   // }
 
-  loadQuery(query: Query, stageWriter: StageWriter | undefined): QueryResults {
+  loadQuery(
+    query: Query,
+    stageWriter: StageWriter | undefined,
+    emitFinalStage = false
+  ): QueryResults {
     // const structs = [];
     // const malloy = ToMalloy.query(query);
     const malloy = "";
@@ -3115,9 +3135,21 @@ export class QueryModel {
 
     const struct = this.getStructFromRef(query.structRef);
     const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
-    const { lastStageName, outputStruct } =
-      q.generateSQLFromPipeline(stageWriter);
-    return { lastStageName, malloy, stageWriter, structs: [outputStruct] };
+
+    const ret = q.generateSQLFromPipeline(stageWriter);
+    if (emitFinalStage && struct.dialect.hasFinalStage) {
+      ret.lastStageName = stageWriter.addStage(
+        "__stage",
+        struct.dialect.sqlFinalStage(ret.lastStageName)
+      );
+    }
+    return {
+      lastStageName: ret.lastStageName,
+      malloy,
+      stageWriter,
+      structs: [ret.outputStruct],
+      connectionName: struct.connectionName,
+    };
   }
 
   async malloyToQuery(queryString: string): Promise<Query> {
@@ -3161,7 +3193,7 @@ export class QueryModel {
       }
     }
     const m = newModel || this;
-    const ret = m.loadQuery(query, undefined);
+    const ret = m.loadQuery(query, undefined, true);
     const sourceExplore =
       typeof query.structRef === "string"
         ? query.structRef
@@ -3187,6 +3219,7 @@ export class QueryModel {
         query.pipeHead && query.pipeline.length === 0
           ? query.pipeHead.name
           : undefined,
+      connectionName: ret.connectionName,
     };
   }
 

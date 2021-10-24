@@ -1363,6 +1363,7 @@ describe("document", () => {
       "lookerdata.liquor.aircraft_models": {
         type: "struct",
         name: "lookerdata.liquor.aircraft_models",
+        dialect: "standardsql",
         structSource: {
           type: "table",
         },
@@ -1426,6 +1427,7 @@ describe("document", () => {
       },
       "lookerdata.liquor.aircraft": {
         type: "struct",
+        dialect: "standardsql",
         name: "lookerdata.liquor.aircraft",
         structSource: {
           type: "table",
