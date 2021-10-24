@@ -11,6 +11,10 @@
  * GNU General Public License for more details.
  */
 
+import { Dialect } from "./dialect";
+import { PostgresDialect } from "./postgres";
+import { StandardSQLDialect } from "./standardsql";
+
 const dialectMap = new Map<string, Dialect>();
 
 export function getDialect(name: string): Dialect {
@@ -24,10 +28,6 @@ export function getDialect(name: string): Dialect {
 export function registerDialect(d: Dialect): void {
   dialectMap.set(d.name, d);
 }
-
-import { Dialect } from "./dialect";
-import { PostgresDialect } from "./postgres";
-import { StandardSQLDialect } from "./standardsql";
 
 registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
