@@ -39,7 +39,7 @@ describe("db:BigQuery", () => {
     const sql = await malloy.computeSql(
       "explore carriers | reduce carrier_count"
     );
-    const res = await bq.runMalloyQuery(sql);
+    const res = await bq.runMalloyQuery("bigquery", sql);
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 

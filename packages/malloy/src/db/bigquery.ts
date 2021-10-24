@@ -31,7 +31,9 @@ import {
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
+  AtomicFieldType,
 } from "../model/malloy_types";
+import { Client } from "pg";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -71,6 +73,12 @@ const maybeRewriteError = (e: Error | unknown): Error => {
   }
 };
 
+const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
+  "character varying": "string",
+  name: "string",
+  integer: "number",
+};
+
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQuery {
   static DEFAULT_PAGE_SIZE = 10;
@@ -81,6 +89,7 @@ export class BigQuery {
 
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private defaultConnectionName = "bigquery";
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -208,22 +217,12 @@ export class BigQuery {
     this.projectID = this.bigQuery.projectId;
   }
 
-  public async runMalloyQuery(
+  private async runBigQueryQuery(
     sqlCommand: string,
-    pageSize: number = BigQuery.DEFAULT_PAGE_SIZE,
-    rowIndex = 0
+    pageSize: number,
+    rowIndex: number
   ): Promise<MalloyQueryData> {
-    const hash = crypto
-      .createHash("md5")
-      .update(sqlCommand)
-      .update(String(pageSize))
-      .update(String(rowIndex))
-      .digest("hex");
     let result;
-    if ((result = this.resultCache.get(hash)) !== undefined) {
-      return result;
-    }
-
     try {
       const queryResultsOptions = {
         maxResults: pageSize,
@@ -242,11 +241,66 @@ export class BigQuery {
 
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
       result = { rows: jobResult[0], totalRows };
-      this.resultCache.set(hash, result);
       return result;
     } catch (e) {
       throw maybeRewriteError(e);
     }
+  }
+
+  private async runPostgresQuery(
+    sqlCommand: string,
+    _pageSize: number,
+    _rowIndex: number,
+    deJson: boolean
+  ): Promise<MalloyQueryData> {
+    const client = new Client();
+    await client.connect();
+
+    console.log(sqlCommand);
+
+    let result = await client.query(sqlCommand);
+    if (result instanceof Array) {
+      result = result.pop();
+    }
+    if (deJson) {
+      for (let i = 0; i < result.rows.length; i++) {
+        result.rows[i] = result.rows[i].row;
+      }
+    }
+    await client.end();
+    return { rows: result.rows as QueryData, totalRows: result.rows.length };
+  }
+
+  public async runMalloyQuery(
+    connectionName: string,
+    sqlCommand: string,
+    pageSize: number = BigQuery.DEFAULT_PAGE_SIZE,
+    rowIndex = 0
+  ): Promise<MalloyQueryData> {
+    const hash = crypto
+      .createHash("md5")
+      .update(sqlCommand)
+      .update(String(pageSize))
+      .update(String(rowIndex))
+      .digest("hex");
+    let result;
+    if ((result = this.resultCache.get(hash)) !== undefined) {
+      return result;
+    }
+    if (connectionName === "bigquery") {
+      result = await this.runBigQueryQuery(sqlCommand, pageSize, rowIndex);
+    } else if (connectionName === "postgres") {
+      result = await this.runPostgresQuery(
+        sqlCommand,
+        pageSize,
+        rowIndex,
+        true
+      );
+    } else {
+      throw new Error(`unknown connection named ${connectionName}`);
+    }
+    this.resultCache.set(hash, result);
+    return result;
   }
 
   public async downloadMalloyQuery(
@@ -476,10 +530,57 @@ export class BigQuery {
       name: tablePath,
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable", connectionName: "bigquery" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: "bigquery",
+      },
       fields: [],
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);
+    return structDef;
+  }
+
+  private async bigQueryGetTableSchema(tablePath: string): Promise<StructDef> {
+    const tableFieldSchema = await this.getTableFieldSchema(tablePath);
+    return this.structDefFromSchema(tablePath, tableFieldSchema);
+  }
+
+  private async postgresGetTableSchema(tablePath: string): Promise<StructDef> {
+    const structDef: StructDef = {
+      type: "struct",
+      name: tablePath,
+      dialect: "postgres",
+      structSource: { type: "table" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: "postgres",
+      },
+      fields: [],
+    };
+
+    const [schema, table] = tablePath.split(".");
+    if (table === undefined) {
+      throw new Error("Default schema not supported Yet in Postgres");
+    }
+    const result = await this.runPostgresQuery(
+      `
+      SELECT column_name, data_type FROM information_schema.columns
+      WHERE table_name = '${table}'
+        AND table_schema = '${schema}'
+      `,
+      1000,
+      0,
+      false
+    );
+    for (const row of result.rows) {
+      const malloyType = postgresToMalloyTypes[row["data_type"] as string];
+      if (malloyType !== undefined) {
+        structDef.fields.push({
+          type: malloyType,
+          name: row["column_name"] as string,
+        });
+      }
+    }
     return structDef;
   }
 
@@ -491,8 +592,23 @@ export class BigQuery {
     for (const tablePath of missing) {
       let inCache = this.schemaCache.get(tablePath);
       if (!inCache) {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        inCache = this.structDefFromSchema(tablePath, tableFieldSchema);
+        const connectionTable = tablePath.split(":");
+        let tableName;
+        let connectionName;
+        if (connectionTable.length > 1) {
+          connectionName = connectionTable[0];
+          tableName = connectionTable[1];
+        } else {
+          connectionName = this.defaultConnectionName;
+          tableName = connectionTable[0];
+        }
+        if (connectionName === "bigquery") {
+          inCache = await this.bigQueryGetTableSchema(tableName);
+        } else if (connectionName === "postgres") {
+          inCache = await this.postgresGetTableSchema(tableName);
+        } else {
+          throw new Error(`Unknown connection name '${connectionName}'`);
+        }
         this.schemaCache.set(tablePath, inCache);
       }
       tableStructDefs[tablePath] = inCache;

@@ -3005,6 +3005,7 @@ interface QueryResults {
   stageWriter: StageWriter;
   structs: StructDef[];
   malloy: string;
+  connectionName: string;
 }
 
 const exploreSearchSQLMap = new Map<string, string>();
@@ -3108,7 +3109,11 @@ export class QueryModel {
   //   return QueryQuery.makeQuery(d, struct);
   // }
 
-  loadQuery(query: Query, stageWriter: StageWriter | undefined): QueryResults {
+  loadQuery(
+    query: Query,
+    stageWriter: StageWriter | undefined,
+    emitFinalStage = false
+  ): QueryResults {
     // const structs = [];
     // const malloy = ToMalloy.query(query);
     const malloy = "";
@@ -3127,9 +3132,21 @@ export class QueryModel {
 
     const struct = this.getStructFromRef(query.structRef);
     const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
-    const { lastStageName, outputStruct } =
-      q.generateSQLFromPipeline(stageWriter);
-    return { lastStageName, malloy, stageWriter, structs: [outputStruct] };
+
+    const ret = q.generateSQLFromPipeline(stageWriter);
+    if (emitFinalStage && struct.dialect.hasFinalStage) {
+      ret.lastStageName = stageWriter.addStage(
+        "__stage",
+        struct.dialect.sqlFinalStage(ret.lastStageName)
+      );
+    }
+    return {
+      lastStageName: ret.lastStageName,
+      malloy,
+      stageWriter,
+      structs: [ret.outputStruct],
+      connectionName: struct.connectionName,
+    };
   }
 
   async malloyToQuery(queryString: string): Promise<Query> {
@@ -3173,7 +3190,7 @@ export class QueryModel {
       }
     }
     const m = newModel || this;
-    const ret = m.loadQuery(query, undefined);
+    const ret = m.loadQuery(query, undefined, true);
     const sourceExplore =
       typeof query.structRef === "string"
         ? query.structRef
@@ -3182,12 +3199,6 @@ export class QueryModel {
         query.structRef.type === "struct"
         ? query.structRef.as || query.structRef.name
         : "(need to figure this out)";
-    // if (query.parent.dialect.hasFinalStage) {
-    //   ret.lastStageName = ret.stageWriter.addStage(
-    //     "__stage",
-    //     this.dialect.sqlFinalStage(ret.lastStageName)
-    //   );
-    // }
     return {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
@@ -3199,6 +3210,7 @@ export class QueryModel {
         query.pipeHead && query.pipeline.length === 0
           ? query.pipeHead.name
           : undefined,
+      connectionName: ret.connectionName,
     };
   }
 
@@ -3224,6 +3236,7 @@ export class QueryModel {
     rowIndex?: number
   ): Promise<QueryResult> {
     const result = await Malloy.db.runMalloyQuery(
+      query.connectionName,
       query.sql,
       pageSize,
       rowIndex

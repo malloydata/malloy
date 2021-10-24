@@ -535,6 +535,7 @@ export interface CompiledQuery extends DrillSource {
   lastStageName: string;
   malloy: string;
   queryName?: string | undefined;
+  connectionName: string;
 }
 
 /** Result type for running a Malloy query. */
