@@ -125,6 +125,7 @@
     "@observablehq/plot": "^0.1.0",
     "malloy": "*",
     "malloy-db-bigquery": "*",
+    "malloy-db-postgres": "*",
     "malloy-render": "*",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
