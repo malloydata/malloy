@@ -43,13 +43,13 @@ export const MALLOY_GRAMMAR = {
   keyword:
     /\b(?:IMPORT|JOIN|RENAMES|TURTLE|PICK|WHEN|ELSE|TO|FOR|TOP|EXPORT|ACCEPT|AND|AS|ASC|BY|COUNT|CROSS|DESC|DEFINE|DISTINCT|ENHANCE|EXCEPT|EXPLORE|FOREIGN|FROM|IS|INDEX|JOINS|KEY|LIMIT|NOT|NULL|ORDER|ON|OR|PROJECT|PRIMARY|REDUCE|RENAME|SUM)\b/i,
   boolean: /\b(?:TRUE|FALSE|NULL)\b/i,
-  date: /@[0-9A-z-]*(\s[0-9A-z-][0-9A-z-](:[0-9A-z-][0-9A-z-])?(:[0-9A-z-][0-9A-z-])?)?/,
+  date: /@[0-9A-Z-]*(\s[0-9A-Z-][0-9A-Z-](:[0-9A-Z-][0-9A-Z-])?(:[0-9A-Z-][0-9A-Z-])?)?/,
   number: /\b0\b-?\d+(?:\.\d*)?|\B\.\d+\b/i,
   operator:
     /[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?|\b(?:AND|BETWEEN|IN|LIKE|NOT|OR|IS|DIV|REGEXP|RLIKE|SOUNDS LIKE|XOR)\b/i,
   punctuation: /[;[\]()`,.]/,
   timeframe:
-    /\b((year|quarter|month|week|day|hour|minute|second|day_of_year|day_of_month|day_of_week|week_of_year)s?)\b/i,
+    /\b((year|quarter|month|week|day|hour|minute|second|day_of_year|day_of_month)s?)\b/i,
   type: /\b((string|number|date|timestamp|boolean)s?)\b/i,
   variable: [],
 };

@@ -28,8 +28,8 @@ The right hand side of this kind of definition can be any
 field expression. See the [Expressions](expressions.md)
 section for more information.
 
-Query fields (see [below](#queries)) can also be defined as
-part of an explore or query stage. When a query field is defined in a query stage, it is known as a "nested query" or an "aggregating
+Named queries (see [below](#queries)) can also be defined as
+part of an explore or query stage. When a named query is defined in a query stage, it is known as a "nested query" or an "aggregating
 subquery." See the [Nesting](nesting.md) section for a
 detailed discussion of nested queries.
 
@@ -42,15 +42,9 @@ flights | reduce
   )
 ```
 
-Like in a top level query, a query field's pipeline may start with a named query.
+## Field Names
 
-```malloy
-define flights is (explore 'malloy-data.faa.flights'
-  flight_count is count()
-  by_carrier is (reduce carrier, flight_count)
-  top_carriers is (by_carrier | project carrier limit 5)
-);
-```
+Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in backticks, e.g. `` `year` is dep_time.year``.
 
 ## Kinds of Fields
 
@@ -61,7 +55,7 @@ Malloy includes three different _kinds_ of fields: _dimensions_, _measures_, and
 Dimensions are fields representing scalar values. All fields
 inherited directly from a table are dimensions.
 
-Dimensions are be defined using expressions that contain no
+Dimensions are defined using expressions that contain no
 aggregate functions.
 
 ```malloy
@@ -100,12 +94,8 @@ flights
 
 ### Queries
 
-Queries represent a pipelined data transformation including a source and one or more transformation stages. There are
-three places a query may be defined, but only two of these
-are considered "fields."
-
-When a query is defined as part of an explore, its source
-is implicity the explore itself.
+Queries represent a pipelined data transformation including a source and one or more transformation stages. When queries are defined as part of an explore or query stage,
+their source is implicit.
 
 ```malloy
 define flights is (explore 'malloy-data.faa.flights'
@@ -116,38 +106,15 @@ define flights is (explore 'malloy-data.faa.flights'
 );
 ```
 
-In this case, `by_carrier` implicitly has a source of `flights` and can only be used in queries against `flights`.
-
-Similarly, when a query is defined as part of a pipeline
-stage, its source is implicitly the same as that of the
-stage in which it is defined.
+A named query's pipeline can always begin with another named query.
 
 ```malloy
 define flights is (explore 'malloy-data.faa.flights'
-  flight_count is count()
-  carrier_dashboard is (reduce
-    carrier
-    by_year is (reduce
-      dep_time_year is dep_time.year
-      flight_count
-    )
-    by_origin is (reduce
-      origin_code
-      flight_count
-    )
-  )
-)
-```
-
-In this case, both `by_year` and `by_origin` have a source
-of `flights`.
-
-A query can also be defined outside of any explore, in which
-case it must specify its source. This kind of query is not considered a field.
-
-```malloy
-define flights_by_carrier is (flights | reduce
-  carrier
-  flight_count is count()
+  ...
+  top_carriers is (by_carrier | project carrier limit 5)
 );
 ```
+
+<!-- TODO this does not seem to work in a query stage, but it does work in an explore or model -->
+
+See the [Nesting](nesting.md) section for more details about named queries.
