@@ -11,14 +11,11 @@
  * GNU General Public License for more details.
  */
 
-// temporary interface to Malloy - this will change once we have
-// better handle on concepts/names
-import { BigQuery } from "./db/bigquery";
+import { Connection } from "./connection";
 import {
   CompiledQuery,
   ModelDef,
   Query,
-  QueryData,
   QueryModel,
   QueryResult,
 } from "./model";
@@ -40,14 +37,8 @@ export class Malloy {
     return "0.0.1";
   }
 
-  private static _db: BigQuery | undefined;
+  public static db: Connection;
   private static _log: Loggable;
-
-  public static get db(): BigQuery {
-    // TODO we may not want to do this by default but makes testing etc work for now. We'd prefer to always
-    // require that you set this up intentionally
-    return Malloy._db ? Malloy._db : new BigQuery();
-  }
 
   public static get log(): Loggable {
     return Malloy._log || console;
@@ -61,10 +52,6 @@ export class Malloy {
 
   public static setLogger(log: Loggable): void {
     Malloy._log = log;
-  }
-
-  public static setDB(bq: BigQuery): void {
-    Malloy._db = bq;
   }
 
   public async parseAndLoadModel(model: string): Promise<void> {
@@ -107,7 +94,7 @@ export class Malloy {
     return (await this.compileQuery(query)).sql;
   }
 
-  async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
-    return this.queryModel.searchIndex(explore, searchValue);
-  }
+  // async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
+  //   return this.queryModel.searchIndex(explore, searchValue);
+  // }
 }

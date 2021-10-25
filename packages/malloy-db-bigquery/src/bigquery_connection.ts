@@ -24,14 +24,15 @@ import bigquery from "@google-cloud/bigquery/build/src/types";
 import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
-import { Malloy } from "../malloy";
 import {
+  Malloy,
   QueryData,
   StructDef,
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
-} from "../model/malloy_types";
+  Connection,
+} from "malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -72,7 +73,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQuery {
+export class BigQueryConnection extends Connection {
   static DEFAULT_PAGE_SIZE = 10;
 
   private bigQuery: BigQuerySDK;
@@ -101,104 +102,8 @@ export class BigQuery {
     // BIGNUMERIC
   };
 
-  keywords = `
-  ALL
-  AND
-  ANY
-  ARRAY
-  AS
-  ASC
-  ASSERT_ROWS_MODIFIED
-  AT
-  BETWEEN
-  BY
-  CASE
-  CAST
-  COLLATE
-  CONTAINS
-  CREATE
-  CROSS
-  CUBE
-  CURRENT
-  DEFAULT
-  DEFINE
-  DESC
-  DISTINCT
-  ELSE
-  END
-  ENUM
-  ESCAPE
-  EXCEPT
-  EXCLUDE
-  EXISTS
-  EXTRACT
-  FALSE
-  FETCH
-  FOLLOWING
-  FOR
-  FROM
-  FULL
-  GROUP
-  GROUPING
-  GROUPS
-  HASH
-  HAVING
-  IF
-  IGNORE
-  IN
-  INNER
-  INTERSECT
-  INTERVAL
-  INTO
-  IS
-  JOIN
-  LATERAL
-  LEFT
-  LIKE
-  LIMIT
-  LOOKUP
-  MERGE
-  NATURAL
-  NEW
-  NO
-  NOT
-  NULL
-  NULLS
-  OF
-  ON
-  OR
-  ORDER
-  OUTER
-  OVER
-  PARTITION
-  PRECEDING
-  PROTO
-  RANGE
-  RECURSIVE
-  RESPECT
-  RIGHT
-  ROLLUP
-  ROWS
-  SELECT
-  SET
-  SOME
-  STRUCT
-  TABLESAMPLE
-  THEN
-  TO
-  TREAT
-  TRUE
-  UNBOUNDED
-  UNION
-  UNNEST
-  USING
-  WHEN
-  WHERE
-  WINDOW
-  WITH
-  WITHIN`.split(/\s/);
-
-  constructor() {
+  constructor(name: string) {
+    super(name);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
     });
@@ -208,9 +113,13 @@ export class BigQuery {
     this.projectID = this.bigQuery.projectId;
   }
 
+  get dialectName(): string {
+    return "standardsql";
+  }
+
   public async runMalloyQuery(
     sqlCommand: string,
-    pageSize: number = BigQuery.DEFAULT_PAGE_SIZE,
+    pageSize: number = BigQueryConnection.DEFAULT_PAGE_SIZE,
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const hash = crypto
@@ -257,12 +166,6 @@ export class BigQuery {
     });
 
     return job.getQueryResultsStream();
-  }
-
-  public sqlMaybeQuoteIdentifier(identifier: string): string {
-    return this.keywords.indexOf(identifier.toUpperCase()) > 0
-      ? "`" + identifier + "`"
-      : identifier;
   }
 
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
@@ -447,6 +350,7 @@ export class BigQuery {
         const innerStructDef: StructDef = {
           type: "struct",
           name,
+          dialect: this.dialectName,
           structSource:
             field.mode === "REPEATED" ? { type: "nested" } : { type: "inline" },
           structRelationship:
@@ -479,31 +383,13 @@ export class BigQuery {
     const structDef: StructDef = {
       type: "struct",
       name: tablePath,
+      dialect: this.dialectName,
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);
     return structDef;
-  }
-
-  public async getTableStructDefs(
-    tablePaths: string[]
-  ): Promise<Map<string, StructDef>> {
-    const tableStructDefs = new Map<string, StructDef>();
-
-    for (const tablePath of tablePaths) {
-      const cachedTableStruct = this.schemaCache.get(tablePath);
-      if (cachedTableStruct) {
-        tableStructDefs.set(tablePath, cachedTableStruct);
-      } else {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        const structDef = this.structDefFromSchema(tablePath, tableFieldSchema);
-        tableStructDefs.set(tablePath, structDef);
-        this.schemaCache.set(tablePath, structDef);
-      }
-    }
-    return tableStructDefs;
   }
 
   public async getSchemaForMissingTables(

@@ -11,13 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import "./jestery";
+import "malloy/src/lang/jestery";
 import fs from "fs";
 import path from "path";
-import { Malloy } from "../malloy";
-import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
+import { Malloy } from "malloy/src/malloy";
+import { MalloyTranslator, TranslateResponse } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
 
-const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../../samples");
+Malloy.db = new BigQueryConnection("test");
+
+const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/");
 
 describe(`compiling server models`, () => {
   let modelsFound = false;
@@ -35,7 +38,7 @@ describe(`compiling server models`, () => {
           };
           const trans = new MalloyTranslator(srcURI, src);
           expect(trans).toBeValidMalloy();
-          let tr: TranslateResponse;
+          let tr: Partial<TranslateResponse>;
           do {
             tr = trans.translate();
             if (tr.tables) {

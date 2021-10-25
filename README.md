@@ -1,21 +1,20 @@
 # Welcome to Malloy
 
-This is not an officially supported Google product.
+Malloy is an experimental language for describing data relationships and transformations. Malloy is not an officially supported Google product.
 
-Malloy is an experimental language for describing data relationships and transformations.  This results in an exploration experience which is not hindered by the distinctions between schema and query, or tables and results. Data is always data, which allows you to keep your focus on the data, and the insights you are trying to gain.
+* Malloy presents some new abstractions for data computation which provide astonishing power with a few simple concepts.
+* Malloy computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms.
+* Malloy sees data as a network of relationships, and generates network graphs with results, so it can ensure correctness of aggregate computations through multiple levels of transformation.
 
-The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing  to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
+Malloy also includes a VS Code IDE for writing and running models, queries, and transformations.
 
-What exists today is a language and a notebook inspired vscode plugin which enables people to learn the language and explore data with it. The next steps are going to be determined to a large degree by the success of the language in making computation based on data simpler and easier to manage, and by the needs of the people who pick this project up and incorporate it into their workflows.
+The Malloy language began as a platform for refining the question "Can we make a language which describes the actual computations need to derive useful information from data stored in a relational database?" While we are continuing to ask that question, and to refine the language as we gain experience, Malloy has reached a point where it can be useful to people engaged in the the task of making meaning from data.
 
-# FAQ
+The next steps are going to be determined to a large degree by the success of the language in making data computation simpler and easier to manage, and by the needs of those who pick this project up and incorporate it into their workflows.
 
-## Why Open Source
-
-We are developing this in the open for two reasons. First, because we believe in the general benefit of open source, that the questions we are asking and the solutions generated from those questions will be of higher quality when barriers to participation are removed. Second, because we believe that languages in particular benefit from a community-supported development model.
 # The Malloy Language
 
-**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)
+**Quick Links**: [language documentation](https://looker-open-source.github.io/malloy/documentation/index.html) | [example model](https://looker-open-source.github.io/malloy/documentation/examples/faa.html)
 
 Akin to a SQL “extension,” it is far easier to use and reason about than SQL, it is usable in place of SQL, and it is quick to pick up for SQL users.
 
@@ -127,9 +126,9 @@ https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-8
 
 ## Getting Started Video Series
 
-These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://automatic-giggle-2ed8ec13.pages.github.io/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin.
+ These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin. _You can also watch this as a single video on Youtube,_ [here](https://www.youtube.com/watch?v=0Ck8CBa4qRo&t=3s).
 
-**You will likely need to un-mute the audio.**
+**You will need to un-mute the audio.**
 
 ### 1. Introduction
 

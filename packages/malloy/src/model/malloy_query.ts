@@ -12,9 +12,8 @@
  */
 
 import { cloneDeep, upperCase } from "lodash";
-import { BigQueryDialect } from "../dialect/bigquery";
-import { Dialect, DialectFieldList } from "../dialect/dialect";
-import { PostgresDialect } from "../dialect/postgres";
+import { StandardSQLDialect } from "../dialect/standardsql";
+import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import { MalloyTranslator } from "../lang/parse-malloy";
 import { Malloy } from "../malloy";
 import {
@@ -30,7 +29,6 @@ import {
   StructDef,
   StructRef,
   OrderBy,
-  QueryData,
   QueryResult,
   ResultMetadataDef,
   FieldAtomicDef,
@@ -59,7 +57,7 @@ import {
   isPhysical,
 } from "./malloy_types";
 
-import { generateSQLStringLiteral, indent, AndChain } from "./utils";
+import { indent, AndChain } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -91,15 +89,16 @@ class StageWriter {
     return id;
   }
 
-  addUDF(stageWriter: StageWriter): string {
+  addUDF(stageWriter: StageWriter, dialect: Dialect): string {
     // eslint-disable-next-line prefer-const
     let { sql, lastStageName } = stageWriter.combineStages(undefined);
-    sql += `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
+    if (lastStageName === undefined) {
+      throw new Error("Internal Error: no stage to combine");
+    }
+    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
 
-    const id = `__udf${this.udfs.size}`;
-    sql = `CREATE TEMPORARY FUNCTION ${id}(__param ANY TYPE) AS ((\n${indent(
-      sql
-    )}));\n`;
+    const id = `${dialect.udfPrefix}${this.udfs.size}`;
+    sql = dialect.sqlCreateFunction(id, sql);
     this.udfs.set(id, sql);
     return id;
   }
@@ -369,7 +368,7 @@ class QueryField extends QueryNode {
       expr.structPath
     );
     if (distinctKeySQL) {
-      return sqlSumDistinct(this.parent.model.dialect, dimSQL, distinctKeySQL);
+      return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
     } else {
       return `SUM(${dimSQL})`;
     }
@@ -408,7 +407,7 @@ class QueryField extends QueryNode {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
       return `${sqlSumDistinct(
-        this.parent.model.dialect,
+        this.parent.dialect,
         dimSQL,
         distinctKeySQL
       )}/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
@@ -515,10 +514,14 @@ class QueryField extends QueryNode {
         this.fieldDef.e
       );
     }
-    return (
-      this.parent.getIdentifier() +
-      "." +
-      Malloy.db.sqlMaybeQuoteIdentifier(this.fieldDef.name)
+    return this.parent.dialect.sqlFieldReference(
+      this.parent.getIdentifier(),
+      this.fieldDef.name,
+      this.fieldDef.type,
+      this.parent.fieldDef.structSource.type === "nested" ||
+        this.parent.fieldDef.structSource.type === "inline" ||
+        (this.parent.fieldDef.structSource.type === "sql" &&
+          this.parent.fieldDef.structSource.nested === true)
     );
   }
 }
@@ -1646,8 +1649,12 @@ class QueryQuery extends QueryField {
     return {
       fields,
       name: this.resultStage || "result",
+      dialect: this.parent.dialect.name,
       primaryKey,
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.parent.connectionName,
+      },
       // structSource: {type: 'query', query: this.fieldDef}
       structSource: { type: "table" },
       resultMetadata: this.getResultMetadata(this.rootResult),
@@ -1711,7 +1718,9 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
-          select += `, (SELECT AS STRUCT ${childJoin.alias}.*) AS ${childJoin.alias}`;
+          select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
+            childJoin.alias
+          )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
           ji.alias
@@ -1727,7 +1736,7 @@ class QueryQuery extends QueryField {
         prefix = qs.parent.getIdentifier() + ".";
       }
       // we need to generate primary key.  If parent has a primary key combine
-      s += `, ${this.parent.model.dialect.sqlUnnestAlias(
+      s += `${this.parent.dialect.sqlUnnestAlias(
         `${prefix}${structRelationship.field}`,
         ji.alias,
         ji.getDialectFieldList(),
@@ -1761,7 +1770,7 @@ class QueryQuery extends QueryField {
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
         // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
-        structSQL = `(SELECT ${qs.model.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
@@ -1810,7 +1819,7 @@ class QueryQuery extends QueryField {
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
-      const sqlName = Malloy.db.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi.fieldUsage.type === "result") {
         fields.push(
           ` ${fi.f.generateExpression(this.rootResult)} as ${sqlName}`
@@ -1968,7 +1977,7 @@ class QueryQuery extends QueryField {
           )}) THEN __delete__${
             result.groupSet
           } END) OVER(partition by ${dimensions
-            .map((x) => `CAST(${x} AS STRING) `)
+            .map((x) => `CAST(${x} AS ${this.parent.dialect.stringTypeName}) `)
             .join(",")}) as __shaving__${result.groupSet}`
         );
       }
@@ -2012,14 +2021,7 @@ class QueryQuery extends QueryField {
     }
     const groupBy = "GROUP BY " + f.dimensionIndexes.join(",") + "\n";
 
-    //
-    // this code used to be:
-    //
-    //   from += `JOIN UNNEST(GENERATE_ARRAY(0,${this.maxGroupSet},1)) as group_set\n`;
-    //
-    // BigQuery will allocate more resources if we use a CROSS JOIN so we do that instead.
-    //
-    from += this.parent.model.dialect.sqlGroupSetTable(this.maxGroupSet);
+    from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
 
     s += indent(f.sql.join(",\n")) + "\n";
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
@@ -2051,7 +2053,7 @@ class QueryQuery extends QueryField {
             output.sql.push(`${exp} as ${sqlFieldName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            const exp = this.parent.model.dialect.sqlAnyValue(
+            const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
               sqlFieldName
             );
@@ -2116,7 +2118,7 @@ class QueryQuery extends QueryField {
     let fieldIndex = 1;
     const dimensionIndexes = [];
     for (const [name, fi] of this.rootResult.allFields) {
-      const sqlName = Malloy.db.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
@@ -2124,7 +2126,7 @@ class QueryQuery extends QueryField {
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
-              this.parent.model.dialect.sqlAnyValueLastTurtle(name, sqlName)
+              this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
             );
             fieldIndex++;
           }
@@ -2137,7 +2139,7 @@ class QueryQuery extends QueryField {
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
           fieldsSQL.push(
-            this.parent.model.dialect.sqlAnyValueLastTurtle(name, sqlName)
+            this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
           );
           fieldIndex++;
         }
@@ -2181,7 +2183,7 @@ class QueryQuery extends QueryField {
     );
     let udfName;
     if (hasPipeline) {
-      udfName = stageWriter.addUDF(newStageWriter);
+      udfName = stageWriter.addUDF(newStageWriter, this.parent.dialect);
     }
 
     // calculate the ordering.
@@ -2219,7 +2221,7 @@ class QueryQuery extends QueryField {
     }
 
     for (const [name, field] of resultStruct.allFields) {
-      const sqlName = Malloy.db.sqlMaybeQuoteIdentifier(name);
+      const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       //
       if (
         resultStruct.firstSegment.type === "reduce" &&
@@ -2257,18 +2259,18 @@ class QueryQuery extends QueryField {
     let ret;
     if ((resultType = resultStruct.getRepeatedResultType()) !== "nested") {
       if (resultType === "inline_all_numbers") {
-        ret = this.parent.model.dialect.sqlCoaleseMeasuresInline(
+        ret = this.parent.dialect.sqlCoaleseMeasuresInline(
           resultStruct.groupSet,
           dialectFieldList
         );
       } else {
-        ret = this.parent.model.dialect.sqlAnyValueTurtle(
+        ret = this.parent.dialect.sqlAnyValueTurtle(
           resultStruct.groupSet,
           dialectFieldList
         );
       }
     } else {
-      ret = this.parent.model.dialect.sqlAggregateTurtle(
+      ret = this.parent.dialect.sqlAggregateTurtle(
         resultStruct.groupSet,
         dialectFieldList,
         orderBy,
@@ -2292,8 +2294,8 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = "UNNEST(__param)";
-      structDef.structSource.type = "sql";
+      structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
+      structDef.structSource = { type: "sql", nested: true };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2426,47 +2428,74 @@ class QueryQueryIndex extends QueryQuery {
 
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = "COUNT(*)";
+    const dialect = this.parent.dialect;
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
         .getField(measureName)
         .f.generateExpression(this.rootResult);
     }
-    let s = `SELECT
-  __fv.field_name,
-  __fv.field_type,
-  CASE WHEN field_type = 'string' THEN __fv.field_value END field_value,
-  ${measureSQL} as weight,
-  CASE
-    WHEN field_type = 'timestamp' or field_type = 'date'
-      THEN MIN(field_value) || ' to ' || MAX(field_value)
-    WHEN field_type = 'number'
-      THEN CAST(MIN(SAFE_CAST(field_value AS FLOAT64)) AS STRING) || ' to ' || CAST(MAX(SAFE_CAST(field_value AS FLOAT64)) AS STRING)
-  ELSE NULL
-  END as field_range\n`;
-    s += this.generateSQLJoins(stageWriter);
 
     const fields = [];
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === "result" && isScalarField(fi.f)) {
-        let expression = fi.f.generateExpression(this.rootResult);
-        if (fi.f.fieldDef.type === "timestamp") {
-          expression = `CAST(${expression} AS DATE)`;
-        }
-        if (fi.f.fieldDef.type !== "string") {
-          expression = `CAST(${expression} AS STRING)`;
-        }
-        fields.push(
-          `STRUCT('${name}' as field_name, '${fi.f.fieldDef.type}' as field_type, ${expression} as field_value)`
-        );
+        const expression = fi.f.generateExpression(this.rootResult);
+        fields.push({ name, type: fi.f.fieldDef.type, expression });
       }
     }
-    s += `JOIN UNNEST([${indent(fields.join(",\n"))}]) as __fv\n`;
+
+    let s = `SELECT\n  group_set,\n`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
+    }
+    s += `  END as field_name,`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
+    }
+    s += `  END as field_type,`;
+    s += `  CASE group_set\n`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === "string") {
+        s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
+      }
+    }
+    s += `  END as field_value,\n`;
+    s += ` ${measureSQL} as weight,\n`;
+
+    // just in case we don't have any field types, force the case statement to have at least one value.
+    s += `  CASE group_set\n    WHEN 99999 THEN ''`;
+    for (let i = 0; i < fields.length; i++) {
+      if (fields[i].type === "number") {
+        s += `    WHEN ${i} THEN CAST(MIN(${fields[i].expression}) AS ${dialect.stringTypeName}) || ' to ' || CAST(MAX(${fields[i].expression}) AS ${dialect.stringTypeName})\n`;
+      }
+      if (fields[i].type === "timestamp" || fields[i].type === "date") {
+        s += `    WHEN ${i} THEN MIN(${dialect.sqlDateToString(
+          fields[i].expression
+        )}) || ' to ' || MAX(${dialect.sqlDateToString(
+          fields[i].expression
+        )})\n`;
+      }
+    }
+    s += `  END as field_range\n`;
+
+    // CASE
+    //   WHEN field_type = 'timestamp' or field_type = 'date'
+    //     THEN MIN(field_value) || ' to ' || MAX(field_value)
+    //   WHEN field_type = 'number'
+    //     THEN
+    // ELSE NULL
+    // END as field_range\n`;
+
+    s += this.generateSQLJoins(stageWriter);
+
+    s += dialect.sqlGroupSetTable(fields.length) + "\n";
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
-    s += "GROUP BY 1,2,3\nORDER BY 4 DESC\n";
+    s += "GROUP BY 1,2,3,4\nORDER BY 5 DESC\n";
 
     // limit
     if (this.firstSegment.limit) {
@@ -2491,13 +2520,17 @@ FROM ${resultStage}\n`
     return {
       type: "struct",
       name: this.resultStage || "result",
+      dialect: this.parent.fieldDef.dialect,
       fields: [
         { type: "string", name: "field_name" },
         { type: "string", name: "field_value" },
         { type: "string", name: "field_type" },
         { type: "number", name: "weight", numberType: "integer" },
       ],
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.parent.connectionName,
+      },
       structSource: { type: "table" },
     };
   }
@@ -2510,6 +2543,8 @@ class QueryStruct extends QueryNode {
   model: QueryModel;
   nameMap = new Map<string, QuerySomething>();
   pathAliasMap: Map<string, string>;
+  dialect: Dialect;
+  connectionName: string;
 
   constructor(
     fieldDef: StructDef,
@@ -2525,13 +2560,21 @@ class QueryStruct extends QueryNode {
     if ("model" in parent) {
       this.model = parent.model;
       this.pathAliasMap = new Map<string, string>();
+      if (fieldDef.structRelationship.type === "basetable") {
+        this.connectionName = fieldDef.structRelationship.connectionName;
+      } else {
+        throw new Error("All root StructDefs should be a baseTable");
+      }
     } else {
       this.model = this.getModel();
       this.pathAliasMap = this.root().pathAliasMap;
+      this.connectionName = this.root().connectionName;
     }
 
     this.fieldDef = fieldDef; // shouldn't have to do this, but
     // type script is missing a beat here.
+
+    this.dialect = getDialect(this.fieldDef.dialect);
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
   }
@@ -2588,7 +2631,7 @@ class QueryStruct extends QueryNode {
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
       const base = getIdentifier(this.fieldDef);
-      let name = base;
+      let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
         n++;
@@ -2963,13 +3006,14 @@ interface QueryResults {
   stageWriter: StageWriter;
   structs: StructDef[];
   malloy: string;
+  connectionName: string;
 }
 
-const exploreSearchSQLMap = new Map<string, string>();
+// const exploreSearchSQLMap = new Map<string, string>();
 
 /** start here */
 export class QueryModel {
-  dialect: Dialect = new BigQueryDialect();
+  dialect: Dialect = new StandardSQLDialect();
   // dialect: Dialect = new PostgresDialect();
   modelDef: ModelDef | undefined = undefined;
   structs = new Map<string, QueryStruct>();
@@ -3068,7 +3112,11 @@ export class QueryModel {
   //   return QueryQuery.makeQuery(d, struct);
   // }
 
-  loadQuery(query: Query, stageWriter: StageWriter | undefined): QueryResults {
+  loadQuery(
+    query: Query,
+    stageWriter: StageWriter | undefined,
+    emitFinalStage = false
+  ): QueryResults {
     // const structs = [];
     // const malloy = ToMalloy.query(query);
     const malloy = "";
@@ -3087,9 +3135,21 @@ export class QueryModel {
 
     const struct = this.getStructFromRef(query.structRef);
     const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
-    const { lastStageName, outputStruct } =
-      q.generateSQLFromPipeline(stageWriter);
-    return { lastStageName, malloy, stageWriter, structs: [outputStruct] };
+
+    const ret = q.generateSQLFromPipeline(stageWriter);
+    if (emitFinalStage && struct.dialect.hasFinalStage) {
+      ret.lastStageName = stageWriter.addStage(
+        "__stage",
+        struct.dialect.sqlFinalStage(ret.lastStageName)
+      );
+    }
+    return {
+      lastStageName: ret.lastStageName,
+      malloy,
+      stageWriter,
+      structs: [ret.outputStruct],
+      connectionName: struct.connectionName,
+    };
   }
 
   async malloyToQuery(queryString: string): Promise<Query> {
@@ -3133,7 +3193,7 @@ export class QueryModel {
       }
     }
     const m = newModel || this;
-    const ret = m.loadQuery(query, undefined);
+    const ret = m.loadQuery(query, undefined, true);
     const sourceExplore =
       typeof query.structRef === "string"
         ? query.structRef
@@ -3142,6 +3202,12 @@ export class QueryModel {
         query.structRef.type === "struct"
         ? query.structRef.as || query.structRef.name
         : "(need to figure this out)";
+    if (this.dialect.hasFinalStage) {
+      ret.lastStageName = ret.stageWriter.addStage(
+        "__stage",
+        this.dialect.sqlFinalStage(ret.lastStageName)
+      );
+    }
     return {
       lastStageName: ret.lastStageName,
       malloy: ret.malloy,
@@ -3153,6 +3219,7 @@ export class QueryModel {
         query.pipeHead && query.pipeline.length === 0
           ? query.pipeHead.name
           : undefined,
+      connectionName: ret.connectionName,
     };
   }
 
@@ -3186,31 +3253,31 @@ export class QueryModel {
     return { ...query, result: result.rows, totalRows: result.totalRows };
   }
 
-  async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
-    // make a search index if one isn't modelled.
-    const struct = this.getStructByName(explore);
-    let malloy;
-    if (!struct.nameMap.get("search_index")) {
-      malloy = `EXPLORE ${explore} | INDEX`;
-    } else {
-      malloy = `EXPLORE ${explore} | search_index`;
-    }
+  // async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
+  //   // make a search index if one isn't modelled.
+  //   const struct = this.getStructByName(explore);
+  //   let malloy;
+  //   if (!struct.nameMap.get("search_index")) {
+  //     malloy = `EXPLORE ${explore} | INDEX`;
+  //   } else {
+  //     malloy = `EXPLORE ${explore} | search_index`;
+  //   }
 
-    // if we've compiled the SQL before use it otherwise
-    let sqlPDT = exploreSearchSQLMap.get(explore);
-    if (sqlPDT === undefined) {
-      sqlPDT = (await this.compileQuery(malloy)).sql;
-      exploreSearchSQLMap.set(explore, sqlPDT);
-    }
-    const result = await Malloy.db.runQuery(
-      `SELECT field_name, field_value, weight \n` +
-        `FROM  \`${await Malloy.db.manifestTemporaryTable(sqlPDT)}\` \n` +
-        `WHERE lower(field_name || '|' || field_value) LIKE lower(${generateSQLStringLiteral(
-          "%" + searchValue + "%"
-        )})\n ` +
-        `ORDER BY 3 DESC\n` +
-        `LIMIT 1000\n`
-    );
-    return result;
-  }
+  //   // if we've compiled the SQL before use it otherwise
+  //   let sqlPDT = exploreSearchSQLMap.get(explore);
+  //   if (sqlPDT === undefined) {
+  //     sqlPDT = (await this.compileQuery(malloy)).sql;
+  //     exploreSearchSQLMap.set(explore, sqlPDT);
+  //   }
+  //   const result = await Malloy.db.runQuery(
+  //     `SELECT field_name, field_value, weight \n` +
+  //       `FROM  \`${await Malloy.db.manifestTemporaryTable(sqlPDT)}\` \n` +
+  //       `WHERE lower(field_name || '|' || field_value) LIKE lower(${generateSQLStringLiteral(
+  //         "%" + searchValue + "%"
+  //       )})\n ` +
+  //       `ORDER BY 3 DESC\n` +
+  //       `LIMIT 1000\n`
+  //   );
+  //   return result;
+  // }
 }

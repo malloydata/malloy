@@ -42,6 +42,7 @@
     "eslint-plugin-prettier": "^3.4.0",
     "malloy": "*",
     "malloy-render": "*",
+    "malloy-db-bigquery": "*",
     "md5": "^2.3.0",
     "prettier": "^2.3.2",
     "prismjs": "^1.24.1",

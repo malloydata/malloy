@@ -1,0 +1,19 @@
+{
+  "name": "malloy-db-bigquery",
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest",
+    "build": "yarn tsc --build"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^5.5.0",
+    "@google-cloud/common": "^3.6.0",
+    "gaxios": "^4.2.0",
+    "malloy": "*"
+  }
+}

@@ -14,21 +14,19 @@
 
 import "./jestery";
 import * as model from "../model/malloy_types";
-import { Malloy } from "../malloy";
 import {
   aTableDef,
   mkQuery,
   mkStruct,
   mkFilters,
   mkCountDef,
-  exploreFor,
   mkAgg,
   pretty,
   TestTranslator,
 } from "./jest-factories";
 import * as ast from "./ast";
 import { FieldSpace } from "./field-space";
-import { NeedSchemaData } from "./parse-malloy";
+import { NeedSchemaData, UpdateData } from "./parse-malloy";
 import { isConditionParameter, isValueParameter } from "../model/malloy_types";
 import { cloneDeep } from "lodash";
 
@@ -453,19 +451,21 @@ describe("field definition lists", () => {
   // At the moment, anonymous expressions are not legal, wo we have some older
   // tests which we don't need to run, leaving them herein case we change
   // our minds about that.
+
+  // additionally, this is commented out because we are removing database access from language tests
   test.skip("generated safe anonymous name for dotted sources", async () => {
-    const n =
-      "bigquery-public-data.google_analytics_sample.ga_sessions_20170801";
-    const parse = await exploreFor(
-      `explore '${n}' hits.latencyTracking.pageLoadTime + 1`
-    );
-    if (parse.schema && parse.explore) {
-      const s = parse.explore.structDef();
-      const lastField = s.fields[s.fields.length - 1];
-      expect(lastField.name).toBe("ga_sessions_20170801_anon_0");
-    } else {
-      fail(pretty(parse.errors));
-    }
+    // const n =
+    //   "bigquery-public-data.google_analytics_sample.ga_sessions_20170801";
+    // const parse = await exploreFor(
+    //   `explore '${n}' hits.latencyTracking.pageLoadTime + 1`
+    // );
+    // if (parse.schema && parse.explore) {
+    //   const s = parse.explore.structDef();
+    //   const lastField = s.fields[s.fields.length - 1];
+    //   expect(lastField.name).toBe("ga_sessions_20170801_anon_0");
+    // } else {
+    //   fail(pretty(parse.errors));
+    // }
   });
 
   test.skip("foo.bar.sum() is named total_bar", async () => {
@@ -1358,8 +1358,188 @@ describe("document", () => {
     expect(letsParse).toBeValidMalloy();
     const xr = letsParse.translate();
     expect(xr).toEqual(needThese);
-    const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
-    letsParse.update({ tables });
+    //const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
+    const tables = {
+      "lookerdata.liquor.aircraft_models": {
+        type: "struct",
+        name: "lookerdata.liquor.aircraft_models",
+        dialect: "standardsql",
+        structSource: {
+          type: "table",
+        },
+        structRelationship: {
+          type: "basetable",
+        },
+        fields: [
+          {
+            name: "aircraft_model_code",
+            type: "string",
+          },
+          {
+            name: "manufacturer",
+            type: "string",
+          },
+          {
+            name: "model",
+            type: "string",
+          },
+          {
+            name: "aircraft_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_engine_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_category_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "amateur",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "engines",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "seats",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "weight",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "speed",
+            type: "number",
+            numberType: "integer",
+          },
+        ],
+      },
+      "lookerdata.liquor.aircraft": {
+        type: "struct",
+        dialect: "standardsql",
+        name: "lookerdata.liquor.aircraft",
+        structSource: {
+          type: "table",
+        },
+        structRelationship: {
+          type: "basetable",
+        },
+        fields: [
+          {
+            name: "tail_num",
+            type: "string",
+          },
+          {
+            name: "aircraft_serial",
+            type: "string",
+          },
+          {
+            name: "aircraft_model_code",
+            type: "string",
+          },
+          {
+            name: "aircraft_engine_code",
+            type: "string",
+          },
+          {
+            name: "year_built",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_engine_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "registrant_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "name",
+            type: "string",
+          },
+          {
+            name: "address1",
+            type: "string",
+          },
+          {
+            name: "address2",
+            type: "string",
+          },
+          {
+            name: "city",
+            type: "string",
+          },
+          {
+            name: "state",
+            type: "string",
+          },
+          {
+            name: "zip",
+            type: "string",
+          },
+          {
+            name: "region",
+            type: "string",
+          },
+          {
+            name: "county",
+            type: "string",
+          },
+          {
+            name: "country",
+            type: "string",
+          },
+          {
+            name: "certification",
+            type: "string",
+          },
+          {
+            name: "status_code",
+            type: "string",
+          },
+          {
+            name: "mode_s_code",
+            type: "string",
+          },
+          {
+            name: "fract_owner",
+            type: "string",
+          },
+          {
+            name: "last_action_date",
+            type: "date",
+          },
+          {
+            name: "cert_issue_date",
+            type: "date",
+          },
+          {
+            name: "air_worth_date",
+            type: "date",
+          },
+        ],
+      },
+    };
+    letsParse.update({ tables } as Partial<UpdateData>);
     expect(letsParse).toTranslate();
   });
 

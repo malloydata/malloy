@@ -11,11 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "../malloy_types";
+import { StructDef } from "malloy";
 
 /** Medicare Model */
 export const medicareModel: StructDef = {
   as: "medicare_test",
+  dialect: "standardsql",
   fields: [
     // Fields in the flights table.
     { name: "id", numberType: "integer", type: "number" },
@@ -174,7 +175,7 @@ export const medicareModel: StructDef = {
   ],
   name: "lookerdata.liquor.medicare_test",
   primaryKey: "id",
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   structSource: { type: "table" },
   type: "struct",
 };
@@ -182,7 +183,8 @@ export const medicareModel: StructDef = {
 export const medicareStateFacts: StructDef = {
   fields: [],
   name: "medicare_state_facts",
-  structRelationship: { type: "basetable" },
+  dialect: "standardsql",
+  structRelationship: { type: "basetable", connectionName: "test" },
   structSource: {
     query: {
       structRef: "medicare_test",

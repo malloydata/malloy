@@ -12,14 +12,16 @@
  * GNU General Public License for more details.
  */
 
-import { Malloy } from "../malloy";
-import { fStringEq, fStringLike } from "./test/test_utils";
-import { ModelDef, QueryModel, QueryResult, StructDef } from ".";
+import { Malloy, ModelDef, QueryModel, QueryResult, StructDef } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
+import { fStringEq, fStringLike } from "./test_utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rows(qr: QueryResult): any[] {
   return qr.result;
 }
+
+Malloy.db = new BigQueryConnection("test");
 
 async function bqCompile(sql: string): Promise<boolean> {
   try {
@@ -62,8 +64,9 @@ export const modelHandBase: StructDef = {
   name: "lookerdata.liquor.aircraft_models",
   as: "aircraft_models",
   type: "struct",
+  dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   fields: [
     { type: "string", name: "aircraft_model_code" },
     { type: "string", name: "manufacturer" },
@@ -158,8 +161,9 @@ export const modelHandBase: StructDef = {
 export const aircraftHandBase: StructDef = {
   type: "struct",
   name: "lookerdata.liquor.aircraft",
+  dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   fields: [
     { type: "string", name: "tail_num" },
     { type: "string", name: "aircraft_serial" },

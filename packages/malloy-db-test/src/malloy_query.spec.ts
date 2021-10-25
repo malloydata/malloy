@@ -12,14 +12,16 @@
  */
 
 import { test } from "@jest/globals";
-import { Malloy } from "../malloy";
-import { testModel } from "./test/faa_model";
-import { QueryModel } from "./malloy_query";
-import { fStringEq } from "./test/test_utils";
+import { Malloy, QueryModel } from "malloy";
+import { testModel } from "./models/faa_model";
+import { fStringEq } from "./test_utils";
 
-import "../lang/jestery";
-import { TestTranslator } from "../lang/jest-factories";
-import { FLIGHTS_EXPLORE } from "./test/faa_model";
+import "malloy/src/lang/jestery";
+import { TestTranslator } from "malloy/src/lang/jest-factories";
+import { FLIGHTS_EXPLORE } from "./models/faa_model";
+import { BigQueryConnection } from "malloy-db-bigquery";
+
+Malloy.db = new BigQueryConnection("test");
 
 test("simple pipeline", async () => {
   const parse = new TestTranslator("flights | flights_by_carrier");
@@ -643,8 +645,9 @@ describe("expression tests", () => {
       structRef: {
         type: "struct",
         name: "lookerdata.liquor.medicare_test",
+        dialect: "standardsql",
         as: "mtest",
-        structRelationship: { type: "basetable" },
+        structRelationship: { type: "basetable", connectionName: "test" },
         structSource: { type: "table" },
         fields: [
           {

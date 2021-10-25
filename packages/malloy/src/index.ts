@@ -14,6 +14,6 @@
 // TODO tighten up exports
 export * from "./model";
 export * from "./lang";
-export { BigQuery, BigQueryAuthenticationError } from "./db/bigquery";
 export { Malloy } from "./malloy";
+export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

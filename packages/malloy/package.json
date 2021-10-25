@@ -14,10 +14,7 @@
     "build": "yarn build-parser && yarn tsc --build"
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^5.5.0",
-    "@google-cloud/common": "^3.6.0",
     "antlr4ts": "^0.5.0-alpha.4",
-    "gaxios": "^4.2.0",
     "lodash": "^4.17.20",
     "luxon": "^1.26.0"
   },

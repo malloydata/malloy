@@ -12,7 +12,10 @@
  */
 /* eslint-disable no-console */
 
-import { QueryModel } from ".";
+import { Malloy, QueryModel } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
+
+Malloy.db = new BigQueryConnection("test");
 
 const joinModelText = `
 export define aircraft_models is ('lookerdata.liquor.aircraft_models'

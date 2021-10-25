@@ -13,6 +13,7 @@
 
 export {
   MalloyTranslator,
+  TranslateResponse,
   UpdateData,
   SchemaData,
   URLData,
