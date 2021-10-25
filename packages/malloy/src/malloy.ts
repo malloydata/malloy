@@ -38,17 +38,10 @@ export class Malloy {
     return "0.0.1";
   }
 
-  public static db: Connection;
   private static _log: Loggable;
 
   public static get log(): Loggable {
     return Malloy._log || console;
-  }
-
-  private queryModel: QueryModel;
-
-  constructor() {
-    this.queryModel = new QueryModel(undefined);
   }
 
   public static setLogger(log: Loggable): void {
@@ -90,6 +83,8 @@ export class MalloyRuntime {
     this.queryModel = new QueryModel(modelDefinition);
   }
 
+  // TODO uriToMally is a hack for now that assumes we already have all of the necessary referenced Malloy text,
+  // but in reality this won't exist.
   private async translate(
     uri: string,
     malloy: string,
@@ -115,27 +110,37 @@ export class MalloyRuntime {
             );
         }
       } else if (result.tables) {
-        // collect tables by connection name, as there may be multiple connections
+        // collect tables by connection name since there may be multiple connections
         const tablesByConnection: Map<string, Array<string>> = new Map();
         for (const connectionTableString in result.tables) {
-          const [connection, table] = connectionTableString.split(":");
+          let [connection, table] = connectionTableString.split(":");
 
-          let connectionToTableMap = tablesByConnection.get(connection);
-          if (!connectionToTableMap) {
-            connectionToTableMap = []
-            tablesByConnection.set(connection, connectionToTableMap)
+          // if there's no table, use the default connection
+          if (!table) {
+            if (!this.defaultConnectionName)
+              throw new Error(
+                "No connection name specified and there is no default connection"
+              );
+            table = connection; // the connection name was actually the table name in this case
+            connection = this.defaultConnectionName;
           }
 
-          if (table) {
-
-            if (connectionToTableMap) connectionToTableMap.push(table);
-            else
+          let connectionToTablesMap = tablesByConnection.get(connection);
+          if (!connectionToTablesMap) {
+            connectionToTablesMap = [table];
+          } else {
+            connectionToTablesMap.push(table);
           }
+          tablesByConnection.set(connection, connectionToTablesMap);
         }
-        const tables = await this.connection.getSchemaForMissingTables(
-          result.tables
-        );
-        translator.update({ tables });
+
+        // iterate over connections, fetching schema for all missing tables
+        for (const [connection, tableNames] of tablesByConnection) {
+          const tables = await this.getConnection(
+            connection
+          ).getSchemaForMissingTables(tableNames);
+          translator.update({ tables });
+        }
       }
       result = translator.translate();
     }

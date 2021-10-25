@@ -15,7 +15,6 @@ import { cloneDeep, upperCase } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import { MalloyTranslator } from "../lang/parse-malloy";
-import { Malloy } from "../malloy";
 import {
   FieldDateDef,
   FieldDef,
@@ -29,7 +28,6 @@ import {
   StructDef,
   StructRef,
   OrderBy,
-  QueryResult,
   ResultMetadataDef,
   FieldAtomicDef,
   Expr,
@@ -61,23 +59,10 @@ import { indent, AndChain } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-let queryNumber = 0;
-async function translatorFor(src: string): Promise<MalloyTranslator> {
-  const queryURI = `internal://query/${queryNumber}`;
-  queryNumber += 1;
-  const parse = new MalloyTranslator(queryURI, { URLs: { [queryURI]: src } });
-  const needThese = parse.unresolved();
-  if (needThese?.tables) {
-    const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
-    parse.update({ tables });
-  }
-  return parse;
-}
-
-// // probably a dialect function at some point.
-// function quoteTableName(name: string): string {
-//   return `\`${name}\``;
-// }
+// HACK! This enables us to get around #71, import order dependency issue
+const parse = new MalloyTranslator("internal://query/1", {
+  URLs: { ["internal://query/1"]: "test" },
+});
 
 class StageWriter {
   withs = new Map<string, string>();
@@ -3035,20 +3020,6 @@ export class QueryModel {
       this.structs.set(getIdentifier(s), qs);
       qs.resolveQueryFields();
     }
-  }
-
-  async parseModel(srcText: string): Promise<void> {
-    const myDocumentParse = await translatorFor(srcText);
-    const getDoc = myDocumentParse.translate();
-    if (getDoc.translated) {
-      const newModel = getDoc.translated.modelDef;
-      this.loadModelFromDef({
-        ...newModel,
-        name: "parseModel Document",
-      });
-      return;
-    }
-    throw new Error(`parseDocument failed\n${myDocumentParse.prettyErrors()}`);
   }
 
   parseQueryPath(name: string): { struct: QueryStruct; queryName: string } {
