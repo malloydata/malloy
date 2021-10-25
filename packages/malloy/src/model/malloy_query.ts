@@ -3093,32 +3093,11 @@ export class QueryModel {
     }
   }
 
-  // getQueryByName(name: string, stageWriter: StageWriter): QueryQuery {
-  //   const { struct, queryName } = this.parseQueryPath(name);
-  //   const query = struct.getQueryByName(queryName, stageWriter);
-  //   /** finds a named query in a and runs it */
-  //   const d = { ...query.fieldDef, from: getIdentifier(struct.fieldDef) };
-  //   // console.log(`\n-- == runQueryByName ==('${name}') `);
-  //   return this.getQueryFromDef(d, struct);
-  // }
-
-  // getQueryFromDef(
-  //   queryDef: AnonymousQueryDef,
-  //   struct: QueryStruct
-  // ): QueryQuery {
-  //   // copy the object and add the required name property.
-  //   const d = { ...queryDef, name: "ignoreme" };
-
-  //   return QueryQuery.makeQuery(d, struct);
-  // }
-
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
     emitFinalStage = false
   ): QueryResults {
-    // const structs = [];
-    // const malloy = ToMalloy.query(query);
     const malloy = "";
 
     if (!stageWriter) {
@@ -3152,46 +3131,8 @@ export class QueryModel {
     };
   }
 
-  async malloyToQuery(queryString: string): Promise<Query> {
-    const parse = await translatorFor(queryString);
-    const gotQuery = parse.translate();
-    if (gotQuery.translated) {
-      return gotQuery.translated.queryList[0];
-    }
-    if (gotQuery.errors) {
-      throw new Error(
-        `Can't parse query: '${queryString}'\n${parse.prettyErrors()}`
-      );
-    }
-    throw new Error(`Query '${queryString}' -- not complete`);
-  }
-
-  async compileQuery(query: Query | string): Promise<CompiledQuery> {
+  async compileQuery(query: Query): Promise<CompiledQuery> {
     let newModel: QueryModel | undefined;
-    if (typeof query === "string") {
-      const parse = await translatorFor(query);
-
-      let modelsBefore = 0;
-      if (this.modelDef) {
-        modelsBefore = Object.keys(this.modelDef?.structs).length;
-      }
-
-      const getQuery = parse.translate(this.modelDef);
-      if (getQuery.translated) {
-        const newStructs = getQuery.translated.modelDef.structs;
-        if (Object.keys(newStructs).length > modelsBefore) {
-          newModel = new QueryModel({
-            ...getQuery.translated.modelDef,
-            name: query,
-          });
-        }
-        query = getQuery.translated.queryList[0];
-      } else {
-        throw new Error(
-          `Query string '${query}' did not compile\n${parse.prettyErrors()}`
-        );
-      }
-    }
     const m = newModel || this;
     const ret = m.loadQuery(query, undefined, true);
     const sourceExplore =
@@ -3221,36 +3162,6 @@ export class QueryModel {
           : undefined,
       connectionName: ret.connectionName,
     };
-  }
-
-  /**
-   * Run a Malloy query in the context of this model.
-   *
-   * @param query The query to run, as a {@link Query} or plaintext string.
-   * @param pageSize Top-level row limit.
-   * @param rowIndex Offset into results.
-   */
-  async runQuery(
-    query: Query | string,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<QueryResult> {
-    const ret = await this.compileQuery(query);
-    return this.runCompiledQuery(ret, pageSize, rowIndex);
-  }
-
-  async runCompiledQuery(
-    query: CompiledQuery,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<QueryResult> {
-    const result = await Malloy.db.runMalloyQuery(
-      query.sql,
-      pageSize,
-      rowIndex
-    );
-
-    return { ...query, result: result.rows, totalRows: result.totalRows };
   }
 
   // async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
