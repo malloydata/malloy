@@ -9,8 +9,6 @@ mostly scalar, with a few notable exceptions.
 
 All numbers in Malloy are of type `number`, including BiqQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.
 
-The `number` type has subtypes `float` and `integer`.
-
 Literal `number`s consist of one or more digits optionally followed
 by a decimal point `.` and more digits, e.g. `42` or `3.14`.
 
