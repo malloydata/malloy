@@ -14,6 +14,13 @@
 // TODO tighten up exports
 export * from "./model";
 export * from "./lang";
-export { Malloy } from "./malloy";
+export {
+  Malloy,
+  Runtime,
+  NoFiles,
+  InMemoryFiles,
+  FixedConnections,
+} from "./malloy";
+export type { FileGetter, ConnectionMultiplexer } from "./malloy";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

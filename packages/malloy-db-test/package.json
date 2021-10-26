@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "malloy": "*",
-    "malloy-db-bigquery": "*"
+    "malloy-db-bigquery": "*",
+    "malloy-db-postgres": "*"
   }
 }

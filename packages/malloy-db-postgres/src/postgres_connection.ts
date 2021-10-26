@@ -85,7 +85,7 @@ export class PostgresConnection extends Connection {
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
-        connectionName: "postgres",
+        connectionName: this.name,
       },
       fields: [],
     };

@@ -59,11 +59,6 @@ import { indent, AndChain } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-// HACK! This enables us to get around #71, import order dependency issue
-const parse = new MalloyTranslator("internal://query/1", {
-  URLs: { ["internal://query/1"]: "test" },
-});
-
 class StageWriter {
   withs = new Map<string, string>();
   udfs = new Map<string, string>();
@@ -2813,7 +2808,7 @@ class QueryStruct extends QueryNode {
       case "table":
         // 'name' is always the source table, even if it has been renamed
         // through 'as'
-        return this.model.dialect.quoteTableName(this.fieldDef.name);
+        return this.dialect.quoteTableName(this.fieldDef.name);
       case "sql":
         return this.fieldDef.name;
       case "nested":
