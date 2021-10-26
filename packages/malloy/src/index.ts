@@ -20,6 +20,7 @@ export {
   NoFiles,
   InMemoryFiles,
   FixedConnections,
+  SingleConnection,
 } from "./malloy";
 export type { FileGetter, ConnectionMultiplexer } from "./malloy";
 export { Connection } from "./connection";

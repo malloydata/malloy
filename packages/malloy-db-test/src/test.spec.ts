@@ -11,14 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { Malloy, Runtime, NoFiles } from "malloy";
+import { Malloy, Runtime, NoFiles, SingleConnection } from "malloy";
 import { BigQueryConnection } from "malloy-db-bigquery";
 import { PostgresConnection } from "malloy-db-postgres";
-import { SingleConnection } from "malloy/src/malloy";
 
 it("runs Malloy against BQ connection", async () => {
   const files = new NoFiles();
-  // TODO they don't need their own name
+  // TODO should connections need to know their own name?
   const bqConnection = new BigQueryConnection("bigquery");
   const connections = new SingleConnection(bqConnection);
   const runtime = new Runtime(connections, files);
@@ -43,4 +42,21 @@ it("runs Malloy against Postgres connection", async () => {
     query: "'public.flights' | reduce flight_count is count()",
   });
   expect(result.result[0].flight_count).toBe(37561525);
+});
+
+const files = new NoFiles();
+const postgresConnection = new SingleConnection(
+  new PostgresConnection("postgres")
+);
+const bqConnection = new SingleConnection(new BigQueryConnection("bigquery"));
+const bqMalloy = new Malloy(new Runtime(bqConnection, files));
+const postgresMalloy = new Malloy(new Runtime(postgresConnection, files));
+
+it("runs Malloy against multiple connections", async () => {
+  for (const malloy of [bqMalloy, postgresMalloy]) {
+    const result = await malloy.runQuery({
+      query: "'public.flights' | reduce flight_count is count()",
+    });
+    expect(result.result[0].flight_count).toBe(37561525);
+  }
 });
