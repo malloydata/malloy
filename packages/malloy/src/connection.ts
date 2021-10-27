@@ -12,12 +12,24 @@
  */
 
 import {
+  SchemaFetcher,
+  SchemaFetcherGetter,
+  SqlQueryRunner,
+  SqlQueryRunnerGetter,
+} from "./malloy";
+import {
   MalloyQueryData,
   NamedStructDefs,
   QueryData,
 } from "./model/malloy_types";
 
-export abstract class Connection {
+export abstract class Connection
+  implements
+    SchemaFetcherGetter,
+    SchemaFetcher,
+    SqlQueryRunnerGetter,
+    SqlQueryRunner
+{
   _name: string;
 
   get name(): string {
@@ -34,13 +46,32 @@ export abstract class Connection {
   abstract runQuery(sqlCommand: string): Promise<QueryData>;
 
   // TODO not all dialects will page...
-  abstract runMalloyQuery(
+  abstract runSqlQuery(
     sqlCommand: string,
     pageSize?: number,
     rowIndex?: number
   ): Promise<MalloyQueryData>;
 
-  public abstract getSchemaForMissingTables(
+  public abstract fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs>;
+
+  /*
+   * Implement `SchemaFetcherGetter` and `SqlQueryRunnerGetter` so these can be
+   * passed directly into `Translator` and `Runner`
+   */
+
+  private getConnection(connectionName?: string): Promise<Connection> {
+    if (connectionName !== undefined && connectionName !== this.name) {
+      throw new Error("");
+    }
+    return Promise.resolve(this);
+  }
+
+  public getSqlQueryRunner(connectionName?: string): Promise<Connection> {
+    return this.getConnection(connectionName);
+  }
+  public getSchemaFetcher(connectionName?: string): Promise<Connection> {
+    return this.getConnection(connectionName);
+  }
 }

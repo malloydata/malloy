@@ -16,12 +16,19 @@ export * from "./model";
 export * from "./lang";
 export {
   Malloy,
-  Runtime,
-  NoFiles,
-  InMemoryFiles,
+  Translator,
+  Runner,
+  EmptyUriFetcher,
+  InMemoryUriFetcher,
   FixedConnections,
-  SingleConnection,
 } from "./malloy";
-export type { FileGetter, ConnectionMultiplexer, QuerySpec } from "./malloy";
+export type {
+  UriFetcher,
+  SchemaFetcher,
+  SchemaFetcherGetter,
+  SqlQueryRunner,
+  SqlQueryRunnerGetter,
+  QuerySpec,
+} from "./malloy";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

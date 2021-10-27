@@ -63,5 +63,5 @@ export async function run(
 
 export async function main(): Promise<void> {
   const files = new FileSystem();
-  await run(files, console, process.argv);
+  await run(files, console, process.argv.slice(2));
 }
