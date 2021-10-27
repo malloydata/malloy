@@ -1,0 +1,26 @@
+{
+  "name": "malloy-cli",
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "main": "dist/entry.js",
+  "bin": {
+    "malloy": "dist/entry.js"
+  },
+  "types": "dist/entry.d.ts",
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest",
+    "build": "yarn tsc --build",
+    "run": "ts-node src/entry.ts"
+  },
+  "dependencies": {
+    "argparse2": "npm:argparse@2.0.1",
+    "malloy": "*",
+    "malloy-db-bigquery": "*",
+    "malloy-db-postgres": "*"
+  },
+  "devDependencies": {
+    "@types/argparse2": "npm:@types/argparse@2.0.1"
+  }
+}

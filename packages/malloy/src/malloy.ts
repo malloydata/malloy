@@ -129,7 +129,15 @@ interface QueryString {
   query: string;
 }
 
-type QuerySpec = QueryString | QueryStringAgainstCompiledModel;
+interface QueryStringAgainstModelFile {
+  query: string;
+  modelUri: string;
+}
+
+export type QuerySpec =
+  | QueryString
+  | QueryStringAgainstCompiledModel
+  | QueryStringAgainstModelFile;
 
 function parseTableName(connectionTableString: string) {
   const [firstPart, secondPart] = connectionTableString.split(":");
@@ -222,8 +230,17 @@ export class Malloy {
     return new Model(translated.getModel());
   }
 
+  private async getModel(querySpec: QuerySpec): Promise<Model | undefined> {
+    if ("model" in querySpec) {
+      return querySpec.model;
+    } else if ("modelUri" in querySpec) {
+      const modelFile = await this.runtime.getFile(querySpec.modelUri);
+      return await this.compileModel(modelFile);
+    }
+  }
+
   public async compileQuery(rawQuery: QuerySpec): Promise<SqlQuery> {
-    const model = "model" in rawQuery ? rawQuery.model : undefined;
+    const model = await this.getModel(rawQuery);
     const translated = await this.translate(
       "internal://query",
       rawQuery.query,

@@ -6,7 +6,7 @@ describe("db:BigQuery", () => {
   let bq: BigQueryConnection;
   beforeAll(() => {
     bq = new BigQueryConnection("test");
-    Malloy.db = bq;
+    // Malloy.db = bq;
   });
 
   it("runs a SQL query", async () => {
@@ -32,35 +32,35 @@ describe("db:BigQuery", () => {
 
   it.todo("gets table structdefs");
 
-  it("runs a Malloy query", async () => {
-    const malloy = new Malloy();
-    await malloy.parseAndLoadModel(
-      "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
-    );
-    const sql = await malloy.computeSql(
-      "explore carriers | reduce carrier_count"
-    );
-    const res = await bq.runMalloyQuery(sql);
-    expect(res.rows[0]["carrier_count"]).toBe(21);
-  });
+  // it("runs a Malloy query", async () => {
+  //   const malloy = new Malloy();
+  //   await malloy.parseAndLoadModel(
+  //     "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
+  //   );
+  //   const sql = await malloy.computeSql(
+  //     "explore carriers | reduce carrier_count"
+  //   );
+  //   const res = await bq.runMalloyQuery(sql);
+  //   expect(res.rows[0]["carrier_count"]).toBe(21);
+  // });
 
-  it("streams a Malloy query for download", async () => {
-    const malloy = new Malloy();
-    await malloy.parseAndLoadModel(
-      "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
-    );
-    const sql = await malloy.computeSql("explore carriers | reduce name");
-    const res = await bq.downloadMalloyQuery(sql);
+  // it("streams a Malloy query for download", async () => {
+  //   const malloy = new Malloy();
+  //   await malloy.parseAndLoadModel(
+  //     "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
+  //   );
+  //   const sql = await malloy.computeSql("explore carriers | reduce name");
+  //   const res = await bq.downloadMalloyQuery(sql);
 
-    return new Promise((resolve) => {
-      let count = 0;
-      res.on("data", () => (count += 1));
-      res.on("end", () => {
-        expect(count).toBe(21);
-        resolve(true);
-      });
-    });
-  });
+  //   return new Promise((resolve) => {
+  //     let count = 0;
+  //     res.on("data", () => (count += 1));
+  //     res.on("end", () => {
+  //       expect(count).toBe(21);
+  //       resolve(true);
+  //     });
+  //   });
+  // });
 
   it("manifests a temporary table", async () => {
     const fullTempTableName = await bq.manifestTemporaryTable("SELECT 1 as t");
