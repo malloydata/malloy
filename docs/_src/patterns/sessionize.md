@@ -6,21 +6,22 @@ Retain the original flight events.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
-explore 'malloy-data.faa.flights'
-  fields
-    flight_count is count()
+explore ('malloy-data.faa.flights'
+    flight_count is count())
 | reduce:  [carrier : 'WN', dep_time : '2002-03-03']
-  dep_time.`date`
+  flight_date is dep_time.`date`
   carrier
-  flight_count
-  plane is (reduce top 20
+  daily_flight_count is flight_count
+  per_plane_data is (reduce top 20
     tail_num
-    flight_count
-    flights is (reduce order by 2
+    plane_flight_count is flight_count
+    flight_legs is (reduce order by 2
       tail_num
       dep_minute is dep_time.minute
       origin
       destination
+      dep_delay
+      arr_delay
     )
   )
 ```
