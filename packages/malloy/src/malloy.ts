@@ -213,6 +213,11 @@ export class Translator {
         return new Model(result);
       } else if (result.URLs) {
         for (const neededUri of result.URLs) {
+          if (neededUri.startsWith("internal://")) {
+            throw new Error(
+              "In order to use relative imports, you must compile a file via a URI."
+            );
+          }
           const neededText = await this.uriFetcher.fetchUriContents(neededUri);
           const URLs = { [neededUri]: neededText };
           translator.update({ URLs });
