@@ -32,23 +32,6 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
-// export class Malloy {
-//   // TODO load from file built during release
-//   public static get version(): string {
-//     return "0.0.1";
-//   }
-
-//   private static _log: Loggable;
-
-//   public static get log(): Loggable {
-//     return Malloy._log || console;
-//   }
-
-//   public static setLogger(log: Loggable): void {
-//     Malloy._log = log;
-//   }
-// }
-
 export interface ConnectionMultiplexer {
   getConnection: (connectionName?: string) => Promise<Connection>;
 }
