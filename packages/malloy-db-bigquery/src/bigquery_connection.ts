@@ -421,11 +421,24 @@ export class BigQueryConnection extends Connection {
         ...createQueryJobOptions,
       });
 
-      const result = await job.getQueryResults({
-        timeoutMs: 1000 * 60 * 10,
-        ...getQueryResultsOptions,
-      });
-      return result;
+      // We do a simple retry-loop here, as a temporary fix for a transient
+      // error in which sometimes requesting results from a job yields an
+      // access denied error. It seems that in these cases, simply trying again
+      // solves the problem. This is being currently investigated by
+      // @christopherswenson and @lloydtabb.
+      let lastFetchError;
+      for (let retries = 0; retries < 3; retries++) {
+        try {
+          return await job.getQueryResults({
+            timeoutMs: 1000 * 60 * 10,
+            ...getQueryResultsOptions,
+          });
+        } catch (fetchError) {
+          lastFetchError = fetchError;
+        }
+      }
+
+      throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);
     }
