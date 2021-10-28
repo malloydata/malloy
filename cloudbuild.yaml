@@ -1,0 +1,4 @@
+steps:
+  - name: 'bash''
+    args: ['./cloudbuild/build-test.sh']
+
