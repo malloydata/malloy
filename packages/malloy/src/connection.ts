@@ -43,14 +43,9 @@ export abstract class Connection
   // returns instance of Dialect class that works for this connection
   abstract get dialectName(): string;
 
-  abstract runQuery(sqlCommand: string): Promise<QueryData>;
+  abstract executeSqlRaw(sqlCommand: string): Promise<QueryData>;
 
-  // TODO not all dialects will page...
-  abstract runSqlQuery(
-    sqlCommand: string,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<MalloyQueryData>;
+  abstract executeSql(sqlCommand: string): Promise<MalloyQueryData>;
 
   public abstract fetchSchemaForTables(
     missing: string[]

@@ -13,7 +13,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { Malloy, FieldDef, MalloyTranslator, NamedMalloyObject } from "malloy";
+import { FieldDef, NamedMalloyObject, Runtime } from "malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
@@ -24,7 +24,8 @@ import stringIcon from "../../media/string.svg";
 import oneToManyIcon from "../../media/one_to_many.svg";
 import manyToOneIcon from "../../media/many_to_one.svg";
 import oneToOneIcon from "../../media/one_to_one.svg";
-import { MALLOY_EXTENSION_STATE } from "../state";
+import { BIGQUERY_CONNECTION, MALLOY_EXTENSION_STATE } from "../state";
+import { VscodeUriReader } from "../utils";
 
 export class SchemaProvider
   implements vscode.TreeDataProvider<StructItem | FieldItem>
@@ -104,43 +105,23 @@ export class SchemaProvider
   }
 }
 
-async function fetchFile(uri: string): Promise<string> {
-  return (
-    await vscode.workspace.openTextDocument(uri.replace(/^file:\/\//, ""))
-  ).getText();
-}
-
 async function getStructs(
   document: vscode.TextDocument
 ): Promise<NamedMalloyObject[] | undefined> {
-  const uri = document.uri.toString();
-  const translator = new MalloyTranslator(uri, {
-    URLs: {
-      [uri]: document.getText(),
-    },
-  });
-  let done = false;
-  let nameSpace;
-  while (!done) {
-    const result = translator.translate();
-    done = result.final || false;
-    if (result.translated) {
-      nameSpace = result.translated.modelDef.structs;
-    } else if (result.URLs) {
-      for (const neededUri of result.URLs) {
-        const URLs = { [neededUri]: await fetchFile(neededUri) };
-        translator.update({ URLs });
-      }
-    } else if (result.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-      translator.update({ tables });
-    }
-  }
+  const uri = "file://" + document.uri.fsPath;
+  const files = new VscodeUriReader();
+  try {
+    const runtime = new Runtime(
+      files,
+      BIGQUERY_CONNECTION,
+      BIGQUERY_CONNECTION
+    );
+    const model = await runtime.compileModel({ uri });
 
-  if (nameSpace) {
-    return Object.values(nameSpace).sort(exploresByName);
+    return Object.values(model._modelDef.structs).sort(exploresByName);
+  } catch (error) {
+    return undefined;
   }
-  return undefined;
 }
 
 class StructItem extends vscode.TreeItem {

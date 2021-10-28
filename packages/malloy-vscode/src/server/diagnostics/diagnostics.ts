@@ -16,12 +16,12 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { Malloy, MalloyTranslator, LogMessage } from "malloy";
+import { LogMessage, MalloyError, Runtime } from "malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import { BigQueryConnection } from "malloy-db-bigquery";
 
-Malloy.db = new BigQueryConnection("vsCode");
+const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery");
 
 async function magicGetTheFile(
   documents: TextDocuments<TextDocument>,
@@ -44,30 +44,20 @@ export async function getMalloyDiagnostics(
 
   try {
     const uri = document.uri.toString();
-    const translator = new MalloyTranslator(uri, {
-      URLs: {
-        [uri]: document.getText(),
-      },
-    });
-    let done = false;
+    const files = {
+      readUri: (uri: string) => magicGetTheFile(documents, uri),
+    };
+    const runtime = new Runtime(
+      files,
+      BIGQUERY_CONNECTION,
+      BIGQUERY_CONNECTION
+    );
     let errors: LogMessage[] = [];
-    while (!done) {
-      const result = translator.translate();
-      done = result.final || false;
-      if (result.errors) {
-        errors = result.errors;
-      }
-      if (result.translated) {
-        // result.translated.queryList has unnamed queries
-        // result.translated.modelDef has the model
-      } else if (result.URLs) {
-        for (const neededUri of result.URLs) {
-          const theNeeded = await magicGetTheFile(documents, neededUri);
-          translator.update({ URLs: { [neededUri]: theNeeded } });
-        }
-      } else if (result.tables) {
-        const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-        translator.update({ tables });
+    try {
+      await runtime.compileModel({ uri });
+    } catch (error) {
+      if (error instanceof MalloyError) {
+        errors = error.log;
       }
     }
 

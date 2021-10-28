@@ -19,12 +19,13 @@ export {
   Translator,
   Executor,
   Runtime,
-  EmptyUriFetcher,
-  InMemoryUriFetcher,
+  EmptyUriReader,
+  InMemoryUriReader,
   FixedConnections,
+  MalloyError,
 } from "./malloy";
 export type {
-  UriFetcher,
+  UriReader,
   SchemaReader,
   LookupSchemaReader,
   QueryExecutor,

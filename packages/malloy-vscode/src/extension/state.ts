@@ -13,6 +13,11 @@
 
 import { TextDocument, WebviewPanel } from "vscode";
 import { QueryResult } from "malloy";
+import { BigQueryConnection } from "malloy-db-bigquery";
+
+export const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
+  pageSize: 50,
+});
 
 export interface RunState {
   cancel: () => void;

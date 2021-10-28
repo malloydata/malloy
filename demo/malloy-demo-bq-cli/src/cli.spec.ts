@@ -1,4 +1,4 @@
-import { InMemoryUriFetcher } from "malloy";
+import { InMemoryUriReader } from "malloy";
 import { run } from "./index";
 
 const unModeledQuery = "'examples.flights' | reduce flight_count is count()";
@@ -9,7 +9,7 @@ const modelUri = "file:///flights.malloy";
 const modeledQueryUri = "file:///modeled_query.malloy";
 const unmodeledQueryUri = "file:///unmodeled_.malloy";
 
-const files = new InMemoryUriFetcher(
+const files = new InMemoryUriReader(
   new Map([
     [modelUri, model],
     [modeledQueryUri, modeledQuery],

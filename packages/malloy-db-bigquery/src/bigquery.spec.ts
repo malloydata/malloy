@@ -1,4 +1,3 @@
-import { Malloy } from "malloy";
 import { BigQueryConnection } from "./bigquery_connection";
 import { BigQuery as BigQuerySDK, TableMetadata } from "@google-cloud/bigquery";
 
@@ -10,7 +9,7 @@ describe("db:BigQuery", () => {
   });
 
   it("runs a SQL query", async () => {
-    const res = await bq.runQuery(`SELECT 1 as t`);
+    const res = await bq.executeSqlRaw(`SELECT 1 as t`);
     expect(res[0]["t"]).toBe(1);
   });
 

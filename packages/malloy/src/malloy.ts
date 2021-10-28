@@ -12,7 +12,7 @@
  */
 
 import { Connection } from "./connection";
-import { MalloyTranslator, TranslateResponse } from "./lang";
+import { LogMessage, MalloyTranslator, TranslateResponse } from "./lang";
 import {
   CompiledQuery,
   ModelDef,
@@ -23,7 +23,8 @@ import {
 import {
   LookupQueryExecutor,
   LookupSchemaReader,
-  UriFetcher,
+  QueryExecutor,
+  UriReader,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -55,37 +56,48 @@ export class Malloy {
   }
 }
 
+type SuccessfulTranslateResponse = TranslateResponse & {
+  translated: {
+    modelDef: ModelDef;
+    queryList: Query[];
+  };
+};
+
+export class MalloyError extends Error {
+  public readonly log: LogMessage[];
+  constructor(message: string, log: LogMessage[] = []) {
+    super(message);
+    this.log = log;
+  }
+}
+
 class Model {
-  private response: TranslateResponse;
+  private response: SuccessfulTranslateResponse;
 
   constructor(response: TranslateResponse) {
-    // TODO perhaps call `getSuccessfulTranslation` in constructor so that
-    //      an exception is raised immediately.
-    this.response = response;
+    this.response = Model.getSuccessfulTranslation(response);
   }
 
-  private getSuccessfulTranslation(reason: string): {
-    modelDef: ModelDef;
-    queryList: InternalQuery[];
-  } {
-    if (this.response.translated !== undefined) {
-      return this.response.translated;
+  private static getSuccessfulTranslation(
+    response: TranslateResponse
+  ): SuccessfulTranslateResponse {
+    if (response.translated !== undefined) {
+      return response as SuccessfulTranslateResponse;
     } else {
-      const error = (this.response.errors || [])[0];
-
-      throw new Error(
-        `Cannot ${reason} from failed translation: ${error.message}.`
+      const errors = response.errors || [];
+      throw new MalloyError(
+        `Error(s) compiling model: ${errors[0]?.message}.`,
+        errors
       );
     }
   }
 
   public getNamedQuery(queryName: string): Query {
-    const translated = this.getSuccessfulTranslation("extract query");
-    const struct = translated.modelDef.structs[queryName];
+    const struct = this.response.translated.modelDef.structs[queryName];
     if (struct.type === "struct") {
       const source = struct.structSource;
       if (source.type === "query") {
-        return new Query(source.query, translated.modelDef);
+        return new Query(source.query, this.response.translated.modelDef);
       }
     }
 
@@ -93,10 +105,12 @@ class Model {
   }
 
   public getUnnamedQuery(index = -1): Query {
-    const translated = this.getSuccessfulTranslation("extract query");
     const adjustedIndex =
-      index === -1 ? translated.queryList.length - 1 : index;
-    return new Query(translated.queryList[adjustedIndex], translated.modelDef);
+      index === -1 ? this.response.translated.queryList.length - 1 : index;
+    return new Query(
+      this.response.translated.queryList[adjustedIndex],
+      this.response.translated.modelDef
+    );
   }
 
   public getQuery(): Query {
@@ -104,8 +118,7 @@ class Model {
   }
 
   public get _modelDef(): ModelDef {
-    const translated = this.getSuccessfulTranslation("extract model");
-    return translated.modelDef;
+    return this.response.translated.modelDef;
   }
 }
 
@@ -169,11 +182,11 @@ function parseTableName(connectionTableString: string) {
 }
 
 export class Translator {
-  private uriFetcher: UriFetcher;
+  private uriReader: UriReader;
   private lookupSchemaReader: LookupSchemaReader;
 
-  constructor(uriFetcher: UriFetcher, lookupSchemaReader: LookupSchemaReader) {
-    this.uriFetcher = uriFetcher;
+  constructor(uriReader: UriReader, lookupSchemaReader: LookupSchemaReader) {
+    this.uriReader = uriReader;
     this.lookupSchemaReader = lookupSchemaReader;
   }
 
@@ -196,7 +209,7 @@ export class Translator {
               "In order to use relative imports, you must compile a file via a URI."
             );
           }
-          const neededText = await this.uriFetcher.fetchUriContents(neededUri);
+          const neededText = await this.uriReader.readUri(neededUri);
           const URLs = { [neededUri]: neededText };
           translator.update({ URLs });
         }
@@ -262,7 +275,7 @@ export class Translator {
         model?._modelDef
       );
     } else {
-      const string = await this.uriFetcher.fetchUriContents(primary.uri);
+      const string = await this.uriReader.readUri(primary.uri);
       return this._compile(primary.uri, string, model?._modelDef);
     }
   }
@@ -349,17 +362,19 @@ export class Executor {
   }
 
   public async execute(sqlQuery: SqlQuery): Promise<QueryResult> {
-    const sqlQueryRunner = await this.lookupQueryExecutor.lookupQueryExecutor(
-      sqlQuery.getConnectionName()
-    );
-    const result = await sqlQueryRunner.runSqlQuery(
-      sqlQuery._getRawQuery().sql
-    );
+    const sqlQueryRunner = await this.getExecutor(sqlQuery);
+    const result = await sqlQueryRunner.executeSql(sqlQuery._getRawQuery().sql);
     return {
       ...sqlQuery._getRawQuery(),
       result: result.rows,
       totalRows: result.totalRows,
     };
+  }
+
+  public getExecutor(sqlQuery: SqlQuery): Promise<QueryExecutor> {
+    return this.lookupQueryExecutor.lookupQueryExecutor(
+      sqlQuery.getConnectionName()
+    );
   }
 }
 
@@ -385,20 +400,20 @@ class SqlQuery {
   }
 }
 
-export class EmptyUriFetcher implements UriFetcher {
-  async fetchUriContents(_uri: string): Promise<string> {
+export class EmptyUriReader implements UriReader {
+  async readUri(_uri: string): Promise<string> {
     throw new Error("No files.");
   }
 }
 
-export class InMemoryUriFetcher implements UriFetcher {
+export class InMemoryUriReader implements UriReader {
   private files: Map<string, string>;
 
   constructor(files: Map<string, string>) {
     this.files = files;
   }
 
-  async fetchUriContents(uri: string): Promise<string> {
+  async readUri(uri: string): Promise<string> {
     const file = this.files.get(uri);
     if (file !== undefined) {
       return Promise.resolve(file);
@@ -452,11 +467,11 @@ export class Runtime {
   private executor: Executor;
 
   constructor(
-    uriFetcher: UriFetcher,
+    uriReader: UriReader,
     lookupSchemaReader: LookupSchemaReader,
     lookupQueryExecutor: LookupQueryExecutor
   ) {
-    this.translator = new Translator(uriFetcher, lookupSchemaReader);
+    this.translator = new Translator(uriReader, lookupSchemaReader);
     this.executor = new Executor(lookupQueryExecutor);
   }
 
@@ -549,5 +564,9 @@ export class Runtime {
     return this.executor.execute(
       await this.translateUnnamedQuery(model, index)
     );
+  }
+
+  public getExecutor(sqlQuery: SqlQuery): Promise<QueryExecutor> {
+    return this.executor.getExecutor(sqlQuery);
   }
 }

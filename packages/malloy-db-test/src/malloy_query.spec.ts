@@ -40,7 +40,7 @@ describe("expression tests", () => {
 
   async function bqCompile(sql: string): Promise<boolean> {
     try {
-      await Malloy.db.runQuery(`WITH test AS(\n${sql}) SELECT 1`);
+      await Malloy.db.executeSqlRaw(`WITH test AS(\n${sql}) SELECT 1`);
     } catch (e) {
       Malloy.log.error(`SQL: didn't compile\n=============\n${sql}`);
       throw e;

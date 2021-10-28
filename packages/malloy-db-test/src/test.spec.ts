@@ -11,12 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { Runtime, EmptyUriFetcher } from "malloy";
+import { Runtime, EmptyUriReader } from "malloy";
 import { BigQueryConnection } from "malloy-db-bigquery";
 import { PostgresConnection } from "malloy-db-postgres";
 
 it("runs Malloy against BQ connection", async () => {
-  const files = new EmptyUriFetcher();
+  const files = new EmptyUriReader();
   // TODO should connections need to know their own name?
   const bqConnection = new BigQueryConnection("bigquery");
   const runtime = new Runtime(files, bqConnection, bqConnection);
@@ -28,7 +28,7 @@ it("runs Malloy against BQ connection", async () => {
 });
 
 it("runs Malloy against Postgres connection", async () => {
-  const files = new EmptyUriFetcher();
+  const files = new EmptyUriReader();
   const postgresConnection = new PostgresConnection("postgres");
   const runtime = new Runtime(files, postgresConnection, postgresConnection);
   const result = await runtime.executeQuery({
@@ -37,7 +37,7 @@ it("runs Malloy against Postgres connection", async () => {
   expect(result.result[0].flight_count).toBe(37561525);
 });
 
-const files = new EmptyUriFetcher();
+const files = new EmptyUriReader();
 const postgresConnection = new PostgresConnection("postgres");
 const bqConnection = new BigQueryConnection("bigquery");
 const bigquery = new Runtime(files, bqConnection, bqConnection);

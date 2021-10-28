@@ -116,12 +116,12 @@ export class PostgresConnection extends Connection {
     return structDef;
   }
 
-  public async runQuery(query: string): Promise<QueryData> {
+  public async executeSqlRaw(query: string): Promise<QueryData> {
     const queryData = await this.runPostgresQuery(query, 1000, 0, false);
     return queryData.rows;
   }
 
-  public async runSqlQuery(
+  public async executeSql(
     sqlCommand: string,
     pageSize = 1000,
     rowIndex = 0

@@ -7,7 +7,7 @@ import { BigQueryConnection } from "malloy-db-bigquery";
 import { QueryResult } from "malloy";
 
 export function run(
-  files: malloy.UriFetcher,
+  files: malloy.UriReader,
   args: string[]
 ): Promise<QueryResult> {
   const connection = new BigQueryConnection("bigquery");
@@ -40,7 +40,7 @@ function getOptions(args: string[]) {
 
 export async function main(): Promise<void> {
   const files = {
-    fetchUriContents: async (uri: string) => {
+    readUri: async (uri: string) => {
       uri = uri.replace(/^file:\/\//, "");
       return await util.promisify(fs.readFile)(uri, "utf8");
     },

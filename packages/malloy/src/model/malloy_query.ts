@@ -14,7 +14,6 @@
 import { cloneDeep, upperCase } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
-import { MalloyTranslator } from "../lang/parse-malloy";
 import {
   FieldDateDef,
   FieldDef,

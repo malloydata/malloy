@@ -13,9 +13,8 @@
 
 import { MalloyQueryData, StructDef } from "./model";
 
-// TODO URI fetcher sounds like it is fetching uris
-export interface UriFetcher {
-  fetchUriContents: (uri: string) => Promise<string>;
+export interface UriReader {
+  readUri: (uri: string) => Promise<string>;
 }
 
 export interface SchemaReader {
@@ -29,7 +28,7 @@ export interface LookupSchemaReader {
 }
 
 export interface QueryExecutor {
-  runSqlQuery(sql: string): Promise<MalloyQueryData>;
+  executeSql(sql: string): Promise<MalloyQueryData>;
 }
 
 export interface LookupQueryExecutor {
