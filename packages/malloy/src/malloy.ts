@@ -14,7 +14,7 @@
 import { Connection } from "./connection";
 import { LogMessage, MalloyTranslator, TranslateResponse } from "./lang";
 import {
-  CompiledQuery,
+  CompiledQuery as TranslatedQuery,
   ModelDef,
   Query as InternalQuery,
   QueryModel,
@@ -336,8 +336,10 @@ export class Translator {
 
   public async translate(query: Query): Promise<SqlQuery> {
     const queryModel = new QueryModel(query._modelDef);
-    // TODO Weird that there's this last stage of computation that happens after the query is already "compiled"
-    const compiledQuery = await queryModel.compileQuery(query._query);
+    // TODO this is confusing because the names internal to Malloy are backwards
+    //      compared to the names this file exports. Here, "compile" means
+    //      what we're calling "translate"...
+    const translatedQuery = await queryModel.compileQuery(query._query);
     let connectionName;
     {
       const struct =
@@ -350,7 +352,7 @@ export class Translator {
         connectionName = struct.structRelationship.connectionName;
       }
     }
-    return new SqlQuery(compiledQuery, connectionName);
+    return new SqlQuery(translatedQuery, connectionName);
   }
 }
 
@@ -380,9 +382,9 @@ export class Executor {
 
 class SqlQuery {
   private connectionName: string;
-  private query: CompiledQuery;
+  private query: TranslatedQuery;
 
-  constructor(query: CompiledQuery, connectionName: string) {
+  constructor(query: TranslatedQuery, connectionName: string) {
     this.query = query;
     this.connectionName = connectionName;
   }
