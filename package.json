@@ -5,7 +5,8 @@
   "name": "@looker-open-source/malloy",
   "workspaces": {
     "packages": [
-      "packages/*"
+      "packages/*",
+      "demo/*"
     ]
   },
   "engines": {

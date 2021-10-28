@@ -17,18 +17,19 @@ export * from "./lang";
 export {
   Malloy,
   Translator,
-  Runner,
+  Executor,
+  Runtime,
   EmptyUriFetcher,
   InMemoryUriFetcher,
   FixedConnections,
 } from "./malloy";
 export type {
   UriFetcher,
-  SchemaFetcher,
-  SchemaFetcherGetter,
-  SqlQueryRunner,
-  SqlQueryRunnerGetter,
-  QuerySpec,
-} from "./malloy";
+  SchemaReader,
+  LookupSchemaReader,
+  QueryExecutor,
+  LookupQueryExecutor,
+} from "./runtime_types";
+export type { QuerySpecification, ModelSpecification } from "./malloy";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

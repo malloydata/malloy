@@ -117,7 +117,7 @@ export class BigQueryConnection extends Connection {
     return "standardsql";
   }
 
-  public async runMalloyQuery(
+  public async runSqlQuery(
     sqlCommand: string,
     pageSize: number = BigQueryConnection.DEFAULT_PAGE_SIZE,
     rowIndex = 0
@@ -392,7 +392,7 @@ export class BigQueryConnection extends Connection {
     return structDef;
   }
 
-  public async getSchemaForMissingTables(
+  public async fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};

@@ -12,11 +12,11 @@
  */
 
 import {
-  SchemaFetcher,
-  SchemaFetcherGetter,
-  SqlQueryRunner,
-  SqlQueryRunnerGetter,
-} from "./malloy";
+  SchemaReader,
+  LookupSchemaReader,
+  QueryExecutor,
+  LookupQueryExecutor,
+} from "./runtime_types";
 import {
   MalloyQueryData,
   NamedStructDefs,
@@ -25,10 +25,10 @@ import {
 
 export abstract class Connection
   implements
-    SchemaFetcherGetter,
-    SchemaFetcher,
-    SqlQueryRunnerGetter,
-    SqlQueryRunner
+    LookupSchemaReader,
+    SchemaReader,
+    LookupQueryExecutor,
+    QueryExecutor
 {
   _name: string;
 
@@ -68,10 +68,10 @@ export abstract class Connection
     return Promise.resolve(this);
   }
 
-  public getSqlQueryRunner(connectionName?: string): Promise<Connection> {
+  public lookupQueryExecutor(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
-  public getSchemaFetcher(connectionName?: string): Promise<Connection> {
+  public lookupSchemaReader(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 }

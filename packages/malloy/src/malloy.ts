@@ -15,13 +15,16 @@ import { Connection } from "./connection";
 import { MalloyTranslator, TranslateResponse } from "./lang";
 import {
   CompiledQuery,
-  MalloyQueryData,
   ModelDef,
   Query as InternalQuery,
   QueryModel,
   QueryResult,
-  StructDef,
 } from "./model";
+import {
+  LookupQueryExecutor,
+  LookupSchemaReader,
+  UriFetcher,
+} from "./runtime_types";
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,54 +55,48 @@ export class Malloy {
   }
 }
 
-// TODO URI fetcher sounds like it is fetching uris
-export interface UriFetcher {
-  fetchUriContents: (uri: string) => Promise<string>;
-}
-
-export interface SchemaFetcher {
-  // TODO should we really be exposing StructDef like this?
-  // TODO should this be a Map instead of a Record in the public interface?
-  fetchSchemaForTables(tables: string[]): Promise<Record<string, StructDef>>;
-}
-
-export interface SchemaFetcherGetter {
-  getSchemaFetcher(connectionName?: string): Promise<SchemaFetcher>;
-}
-
 class Model {
   private response: TranslateResponse;
 
   constructor(response: TranslateResponse) {
+    // TODO perhaps call `getSuccessfulTranslation` in constructor so that
+    //      an exception is raised immediately.
     this.response = response;
   }
 
-  public getNamedQuery(queryName: string): Query {
-    if (this.response.translated) {
-      const struct = this.response.translated.modelDef.structs[queryName];
-      if (struct.type === "struct") {
-        const source = struct.structSource;
-        if (source.type === "query") {
-          return new Query(source.query, this.response.translated.modelDef);
-        }
-      }
+  private getSuccessfulTranslation(reason: string): {
+    modelDef: ModelDef;
+    queryList: InternalQuery[];
+  } {
+    if (this.response.translated !== undefined) {
+      return this.response.translated;
+    } else {
+      const error = (this.response.errors || [])[0];
 
-      throw new Error("Given query name does not refer to a named query.");
+      throw new Error(
+        `Cannot ${reason} from failed translation: ${error.message}.`
+      );
     }
-    throw new Error("Cannot extract query from failed translation.");
+  }
+
+  public getNamedQuery(queryName: string): Query {
+    const translated = this.getSuccessfulTranslation("extract query");
+    const struct = translated.modelDef.structs[queryName];
+    if (struct.type === "struct") {
+      const source = struct.structSource;
+      if (source.type === "query") {
+        return new Query(source.query, translated.modelDef);
+      }
+    }
+
+    throw new Error("Given query name does not refer to a named query.");
   }
 
   public getUnnamedQuery(index = -1): Query {
-    if (this.response.translated) {
-      const adjustedIndex =
-        index === -1 ? this.response.translated.queryList.length - 1 : index;
-      return new Query(
-        this.response.translated.queryList[adjustedIndex],
-        this.response.translated.modelDef
-      );
-    }
-
-    throw new Error("Cannot extract query from failed translation.");
+    const translated = this.getSuccessfulTranslation("extract query");
+    const adjustedIndex =
+      index === -1 ? translated.queryList.length - 1 : index;
+    return new Query(translated.queryList[adjustedIndex], translated.modelDef);
   }
 
   public getQuery(): Query {
@@ -107,11 +104,8 @@ class Model {
   }
 
   public get _modelDef(): ModelDef {
-    if (this.response.translated) {
-      return this.response.translated.modelDef;
-    }
-
-    throw new Error("Cannot extract model from failed translation.");
+    const translated = this.getSuccessfulTranslation("extract model");
+    return translated.modelDef;
   }
 }
 
@@ -137,9 +131,12 @@ interface CompiledModelSpecification {
   compiled: Model;
 }
 
-export type ModelSpecification =
+type UncompiledModelSpecification =
   | StringModelSpecification
-  | UriModelSpecification
+  | UriModelSpecification;
+
+export type ModelSpecification =
+  | UncompiledModelSpecification
   | CompiledModelSpecification;
 
 interface StringQuerySpecification {
@@ -154,29 +151,13 @@ interface CompiledQuerySpecification {
   compiled: Query;
 }
 
-export type QuerySpecification =
+type UncompiledQuerySpecification =
   | StringQuerySpecification
-  | UriQuerySpecification
+  | UriQuerySpecification;
+
+export type QuerySpecification =
+  | UncompiledQuerySpecification
   | CompiledQuerySpecification;
-
-interface QueryStringAgainstCompiledModel {
-  query: string;
-  model: Model;
-}
-
-interface QueryString {
-  query: string;
-}
-
-interface QueryStringAgainstModelFile {
-  query: string;
-  modelUri: string;
-}
-
-export type QuerySpec =
-  | QueryString
-  | QueryStringAgainstCompiledModel
-  | QueryStringAgainstModelFile;
 
 function parseTableName(connectionTableString: string) {
   const [firstPart, secondPart] = connectionTableString.split(":");
@@ -189,14 +170,11 @@ function parseTableName(connectionTableString: string) {
 
 export class Translator {
   private uriFetcher: UriFetcher;
-  private schemaFetcherGetter: SchemaFetcherGetter;
+  private lookupSchemaReader: LookupSchemaReader;
 
-  constructor(
-    uriFetcher: UriFetcher,
-    schemaFetcherGetter: SchemaFetcherGetter
-  ) {
+  constructor(uriFetcher: UriFetcher, lookupSchemaReader: LookupSchemaReader) {
     this.uriFetcher = uriFetcher;
-    this.schemaFetcherGetter = schemaFetcherGetter;
+    this.lookupSchemaReader = lookupSchemaReader;
   }
 
   private async _compile(
@@ -244,9 +222,8 @@ export class Translator {
 
         // iterate over connections, fetching schema for all missing tables
         for (const [connectionName, tableNames] of tablesByConnection) {
-          const schemaFetcher = await this.schemaFetcherGetter.getSchemaFetcher(
-            connectionName
-          );
+          const schemaFetcher =
+            await this.lookupSchemaReader.lookupSchemaReader(connectionName);
           const tables = await schemaFetcher.fetchSchemaForTables(tableNames);
           translator.update({ tables });
         }
@@ -255,29 +232,17 @@ export class Translator {
   }
 
   public async compile(
-    model:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification
+    primary: ModelSpecification | UncompiledQuerySpecification,
+    base?: ModelSpecification
+  ): Promise<Model>;
+  public async compile(model: ModelSpecification): Promise<Model>;
+  public async compile(
+    query: UncompiledQuerySpecification,
+    model?: ModelSpecification
   ): Promise<Model>;
   public async compile(
-    query: StringQuerySpecification | UriQuerySpecification,
-    model?:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification
-  ): Promise<Model>;
-  public async compile(
-    primary:
-      | StringModelSpecification
-      | UriModelSpecification
-      | StringQuerySpecification
-      | UriQuerySpecification
-      | CompiledModelSpecification,
-    base?:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification
+    primary: ModelSpecification | UncompiledQuerySpecification,
+    base?: ModelSpecification
   ): Promise<Model> {
     let model: Model | undefined;
     if (base !== undefined) {
@@ -303,50 +268,35 @@ export class Translator {
   }
 
   public async compileModel(
-    model: StringModelSpecification | UriModelSpecification
+    model: UncompiledModelSpecification
   ): Promise<Model> {
     return await this.compile(model);
   }
 
   public async compileQuery(
-    query: StringQuerySpecification | UriQuerySpecification,
-    model?:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification
+    query: UncompiledQuerySpecification,
+    model?: ModelSpecification
   ): Promise<Query> {
     return (await this.compile(query, model)).getUnnamedQuery();
   }
 
   public async compileUnnamedQuery(
-    model:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification,
+    model: ModelSpecification,
     index: number
   ): Promise<Query> {
     return (await this.compile(model)).getUnnamedQuery(index);
   }
 
   public async compileNamedQuery(
-    model:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification,
+    model: ModelSpecification,
     name: string
   ): Promise<Query> {
     return (await this.compile(model)).getNamedQuery(name);
   }
 
   public async translateQuery(
-    query:
-      | StringQuerySpecification
-      | UriQuerySpecification
-      | CompiledQuerySpecification,
-    model?:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification
+    query: QuerySpecification,
+    model?: ModelSpecification
   ): Promise<SqlQuery> {
     if ("compiled" in query) {
       return this.translate(query.compiled);
@@ -358,23 +308,17 @@ export class Translator {
   }
 
   public async translateUnnamedQuery(
-    model:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification,
+    model: ModelSpecification,
     index: number
   ): Promise<SqlQuery> {
     return this.translate((await this.compile(model)).getUnnamedQuery(index));
   }
 
   public async translateNamedQuery(
-    model:
-      | StringModelSpecification
-      | UriModelSpecification
-      | CompiledModelSpecification,
-    index: number
+    model: ModelSpecification,
+    name: string
   ): Promise<SqlQuery> {
-    return this.translate((await this.compile(model)).getUnnamedQuery(index));
+    return this.translate((await this.compile(model)).getNamedQuery(name));
   }
 
   public async translate(query: Query): Promise<SqlQuery> {
@@ -397,23 +341,15 @@ export class Translator {
   }
 }
 
-export interface SqlQueryRunner {
-  runSqlQuery(sql: string): Promise<MalloyQueryData>;
-}
+export class Executor {
+  private lookupQueryExecutor: LookupQueryExecutor;
 
-export interface SqlQueryRunnerGetter {
-  getSqlQueryRunner(connectionName?: string): Promise<SqlQueryRunner>;
-}
-
-export class Runner {
-  private sqlQueryRunnerGetter: SqlQueryRunnerGetter;
-
-  constructor(sqlQueryRunnerGetter: SqlQueryRunnerGetter) {
-    this.sqlQueryRunnerGetter = sqlQueryRunnerGetter;
+  constructor(lookupQueryExecutor: LookupQueryExecutor) {
+    this.lookupQueryExecutor = lookupQueryExecutor;
   }
 
   public async execute(sqlQuery: SqlQuery): Promise<QueryResult> {
-    const sqlQueryRunner = await this.sqlQueryRunnerGetter.getSqlQueryRunner(
+    const sqlQueryRunner = await this.lookupQueryExecutor.lookupQueryExecutor(
       sqlQuery.getConnectionName()
     );
     const result = await sqlQueryRunner.runSqlQuery(
@@ -473,7 +409,7 @@ export class InMemoryUriFetcher implements UriFetcher {
 }
 
 export class FixedConnections
-  implements SchemaFetcherGetter, SqlQueryRunnerGetter
+  implements LookupSchemaReader, LookupQueryExecutor
 {
   private connections: Map<string, Connection>;
   private defaultConnectionName?: string;
@@ -502,11 +438,116 @@ export class FixedConnections
     }
   }
 
-  async getSchemaFetcher(connectionName?: string): Promise<Connection> {
+  async lookupSchemaReader(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 
-  async getSqlQueryRunner(connectionName?: string): Promise<Connection> {
+  async lookupQueryExecutor(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
+  }
+}
+
+export class Runtime {
+  private translator: Translator;
+  private executor: Executor;
+
+  constructor(
+    uriFetcher: UriFetcher,
+    lookupSchemaReader: LookupSchemaReader,
+    lookupQueryExecutor: LookupQueryExecutor
+  ) {
+    this.translator = new Translator(uriFetcher, lookupSchemaReader);
+    this.executor = new Executor(lookupQueryExecutor);
+  }
+
+  public async compile(model: ModelSpecification): Promise<Model>;
+  public async compile(
+    query: StringQuerySpecification | UriQuerySpecification,
+    model?: ModelSpecification
+  ): Promise<Model>;
+  public async compile(
+    primary: ModelSpecification | UncompiledQuerySpecification,
+    base?: ModelSpecification
+  ): Promise<Model> {
+    return this.translator.compile(primary, base);
+  }
+
+  public async compileModel(
+    model: StringModelSpecification | UriModelSpecification
+  ): Promise<Model> {
+    return await this.translator.compileModel(model);
+  }
+
+  public async compileQuery(
+    query: StringQuerySpecification | UriQuerySpecification,
+    model?: ModelSpecification
+  ): Promise<Query> {
+    return this.translator.compileQuery(query, model);
+  }
+
+  public async compileUnnamedQuery(
+    model: ModelSpecification,
+    index: number
+  ): Promise<Query> {
+    return this.translator.compileUnnamedQuery(model, index);
+  }
+
+  public async compileNamedQuery(
+    model: ModelSpecification,
+    name: string
+  ): Promise<Query> {
+    return this.translator.compileNamedQuery(model, name);
+  }
+
+  public async translateQuery(
+    query: QuerySpecification,
+    model?: ModelSpecification
+  ): Promise<SqlQuery> {
+    return this.translator.translateQuery(query, model);
+  }
+
+  public async translateUnnamedQuery(
+    model: ModelSpecification,
+    index: number
+  ): Promise<SqlQuery> {
+    return this.translator.translateUnnamedQuery(model, index);
+  }
+
+  public async translateNamedQuery(
+    model: ModelSpecification,
+    name: string
+  ): Promise<SqlQuery> {
+    return this.translator.translateNamedQuery(model, name);
+  }
+
+  public async translate(query: Query): Promise<SqlQuery> {
+    return this.translator.translate(query);
+  }
+
+  public async execute(sqlQuery: SqlQuery): Promise<QueryResult> {
+    return this.executor.execute(sqlQuery);
+  }
+
+  public async executeQuery(
+    query: QuerySpecification,
+    model?: ModelSpecification
+  ): Promise<QueryResult> {
+    return this.executor.execute(await this.translateQuery(query, model));
+  }
+
+  public async executeNamedQuery(
+    model: ModelSpecification,
+    name: string
+  ): Promise<QueryResult> {
+    return this.executor.execute(await this.translateNamedQuery(model, name));
+  }
+
+  public async executeUnnamedQuery(
+    model: ModelSpecification,
+    index: number
+  ): Promise<QueryResult> {
+    return this.executor.execute(
+      await this.translateUnnamedQuery(model, index)
+    );
   }
 }
