@@ -146,7 +146,7 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  public async executeSql(
+  public async runSql(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {}
   ): Promise<MalloyQueryData> {

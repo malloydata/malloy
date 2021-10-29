@@ -17,20 +17,25 @@ export * from "./lang";
 export {
   Malloy,
   Translator,
-  Executor,
+  Runner,
   Runtime,
   EmptyUriReader,
   InMemoryUriReader,
   FixedConnections,
   MalloyError,
 } from "./malloy";
+export type { PreparedQuery, PreparedSql } from "./malloy";
 export type {
   UriReader,
   SchemaReader,
   LookupSchemaReader,
-  QueryExecutor,
-  LookupQueryExecutor,
+  SqlRunner,
+  LookupSqlRunner,
+  QueryString,
+  ModelString,
+  QueryUri,
+  ModelUri,
 } from "./runtime_types";
-export type { QuerySpecification, ModelSpecification } from "./malloy";
+export { Uri } from "./runtime_types";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

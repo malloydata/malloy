@@ -121,7 +121,7 @@ export class PostgresConnection extends Connection {
     return queryData.rows;
   }
 
-  public async executeSql(
+  public async runSql(
     sqlCommand: string,
     pageSize = 1000,
     rowIndex = 0

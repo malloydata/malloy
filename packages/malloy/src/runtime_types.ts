@@ -13,8 +13,29 @@
 
 import { MalloyQueryData, StructDef } from "./model";
 
+export class Uri {
+  private _uri: string;
+
+  constructor(stringUri: string) {
+    this._uri = stringUri;
+  }
+
+  public toString(): string {
+    return this._uri;
+  }
+
+  public static fromString(stringUri: string): Uri {
+    return new Uri(stringUri);
+  }
+}
+
+export type QueryString = string;
+export type ModelString = string;
+export type ModelUri = Uri;
+export type QueryUri = Uri;
+
 export interface UriReader {
-  readUri: (uri: string) => Promise<string>;
+  readUri: (uri: Uri) => Promise<string>;
 }
 
 export interface SchemaReader {
@@ -27,10 +48,10 @@ export interface LookupSchemaReader {
   lookupSchemaReader(connectionName?: string): Promise<SchemaReader>;
 }
 
-export interface QueryExecutor {
-  executeSql(sql: string): Promise<MalloyQueryData>;
+export interface SqlRunner {
+  runSql(sql: string): Promise<MalloyQueryData>;
 }
 
-export interface LookupQueryExecutor {
-  lookupQueryExecutor(connectionName?: string): Promise<QueryExecutor>;
+export interface LookupSqlRunner {
+  lookupQueryRunner(connectionName?: string): Promise<SqlRunner>;
 }

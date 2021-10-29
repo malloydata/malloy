@@ -20,9 +20,9 @@ it("runs Malloy against BQ connection", async () => {
   // TODO should connections need to know their own name?
   const bqConnection = new BigQueryConnection("bigquery");
   const runtime = new Runtime(files, bqConnection, bqConnection);
-  const result = await runtime.executeQuery(
-    { string: "flights | reduce flight_count is count()" },
-    { string: "define flights is (explore 'examples.flights');" }
+  const result = await runtime.run(
+    "define flights is (explore 'examples.flights');",
+    "flights | reduce flight_count is count()"
   );
   expect(result.result[0].flight_count).toBe(37561525);
 });
@@ -31,9 +31,9 @@ it("runs Malloy against Postgres connection", async () => {
   const files = new EmptyUriReader();
   const postgresConnection = new PostgresConnection("postgres");
   const runtime = new Runtime(files, postgresConnection, postgresConnection);
-  const result = await runtime.executeQuery({
-    string: "'public.flights' | reduce flight_count is count()",
-  });
+  const result = await runtime.run(
+    "'public.flights' | reduce flight_count is count()"
+  );
   expect(result.result[0].flight_count).toBe(37561525);
 });
 
@@ -45,9 +45,9 @@ const postgres = new Runtime(files, postgresConnection, postgresConnection);
 
 it("runs Malloy against multiple connections", async () => {
   for (const runtime of [bigquery, postgres]) {
-    const result = await runtime.executeQuery({
-      string: "'examples.flights' | reduce flight_count is count()",
-    });
+    const result = await runtime.run(
+      "'examples.flights' | reduce flight_count is count()"
+    );
     expect(result.result[0].flight_count).toBe(37561525);
   }
 });

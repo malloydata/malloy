@@ -14,16 +14,21 @@
 import { Connection } from "./connection";
 import { LogMessage, MalloyTranslator, TranslateResponse } from "./lang";
 import {
-  CompiledQuery as TranslatedQuery,
+  CompiledQuery,
   ModelDef,
   Query as InternalQuery,
   QueryModel,
   QueryResult,
 } from "./model";
 import {
-  LookupQueryExecutor,
+  LookupSqlRunner as LookupSqlRunner,
   LookupSchemaReader,
-  QueryExecutor,
+  ModelString,
+  ModelUri,
+  SqlRunner,
+  QueryString,
+  QueryUri,
+  Uri,
   UriReader,
 } from "./runtime_types";
 
@@ -59,7 +64,7 @@ export class Malloy {
 type SuccessfulTranslateResponse = TranslateResponse & {
   translated: {
     modelDef: ModelDef;
-    queryList: Query[];
+    queryList: PreparedQuery[];
   };
 };
 
@@ -92,29 +97,32 @@ class Model {
     }
   }
 
-  public getNamedQuery(queryName: string): Query {
+  public getPreparedQueryByName(queryName: string): PreparedQuery {
     const struct = this.response.translated.modelDef.structs[queryName];
     if (struct.type === "struct") {
       const source = struct.structSource;
       if (source.type === "query") {
-        return new Query(source.query, this.response.translated.modelDef);
+        return new PreparedQuery(
+          source.query,
+          this.response.translated.modelDef
+        );
       }
     }
 
     throw new Error("Given query name does not refer to a named query.");
   }
 
-  public getUnnamedQuery(index = -1): Query {
+  public getPreparedQueryByIndex(index: number): PreparedQuery {
     const adjustedIndex =
       index === -1 ? this.response.translated.queryList.length - 1 : index;
-    return new Query(
+    return new PreparedQuery(
       this.response.translated.queryList[adjustedIndex],
       this.response.translated.modelDef
     );
   }
 
-  public getQuery(): Query {
-    return this.getUnnamedQuery();
+  public getPreparedQuery(): PreparedQuery {
+    return this.getPreparedQueryByIndex(-1);
   }
 
   public get _modelDef(): ModelDef {
@@ -122,7 +130,7 @@ class Model {
   }
 }
 
-class Query {
+export class PreparedQuery {
   _modelDef: ModelDef;
   _query: InternalQuery;
 
@@ -131,46 +139,6 @@ class Query {
     this._modelDef = model;
   }
 }
-
-interface StringModelSpecification {
-  string: string;
-}
-
-interface UriModelSpecification {
-  uri: string;
-}
-
-interface CompiledModelSpecification {
-  compiled: Model;
-}
-
-type UncompiledModelSpecification =
-  | StringModelSpecification
-  | UriModelSpecification;
-
-export type ModelSpecification =
-  | UncompiledModelSpecification
-  | CompiledModelSpecification;
-
-interface StringQuerySpecification {
-  string: string;
-}
-
-interface UriQuerySpecification {
-  uri: string;
-}
-
-interface CompiledQuerySpecification {
-  compiled: Query;
-}
-
-type UncompiledQuerySpecification =
-  | StringQuerySpecification
-  | UriQuerySpecification;
-
-export type QuerySpecification =
-  | UncompiledQuerySpecification
-  | CompiledQuerySpecification;
 
 function parseTableName(connectionTableString: string) {
   const [firstPart, secondPart] = connectionTableString.split(":");
@@ -191,11 +159,13 @@ export class Translator {
   }
 
   private async _compile(
-    uri: string,
+    uri: Uri,
     malloy: string,
     model?: ModelDef
   ): Promise<Model> {
-    const translator = new MalloyTranslator(uri, { URLs: { [uri]: malloy } });
+    const translator = new MalloyTranslator(uri.toString(), {
+      URLs: { [uri.toString()]: malloy },
+    });
     translator.translate(model);
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -209,7 +179,9 @@ export class Translator {
               "In order to use relative imports, you must compile a file via a URI."
             );
           }
-          const neededText = await this.uriReader.readUri(neededUri);
+          const neededText = await this.uriReader.readUri(
+            Uri.fromString(neededUri)
+          );
           const URLs = { [neededUri]: neededText };
           translator.update({ URLs });
         }
@@ -244,128 +216,188 @@ export class Translator {
     }
   }
 
-  public async compile(
-    primary: ModelSpecification | UncompiledQuerySpecification,
-    base?: ModelSpecification
+  public async toModel(
+    primaryOrBase: ModelString | ModelUri | Model,
+    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
   ): Promise<Model>;
-  public async compile(model: ModelSpecification): Promise<Model>;
-  public async compile(
-    query: UncompiledQuerySpecification,
-    model?: ModelSpecification
+  public async toModel(model: ModelString | ModelUri | Model): Promise<Model>;
+  public async toModel(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri
   ): Promise<Model>;
-  public async compile(
-    primary: ModelSpecification | UncompiledQuerySpecification,
-    base?: ModelSpecification
+  public async toModel(
+    primaryOrBase: ModelString | ModelUri | Model,
+    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
   ): Promise<Model> {
+    let primary: ModelString | ModelUri | Model | QueryString | QueryUri;
+    let base: ModelString | ModelUri | Model | undefined;
     let model: Model | undefined;
-    if (base !== undefined) {
-      if ("compiled" in base) {
-        model = base.compiled;
+    {
+      if (maybePrimary === undefined) {
+        if (primaryOrBase instanceof Model) {
+          throw new Error("Oops!"); // TODO crs
+        }
+        primary = primaryOrBase;
       } else {
-        model = await this.compile(base);
+        primary = maybePrimary;
+        base = primaryOrBase;
       }
     }
 
-    if ("compiled" in primary) {
-      return primary.compiled;
-    } else if ("string" in primary) {
+    if (base !== undefined) {
+      if (base instanceof Model) {
+        model = base;
+      } else {
+        model = await this.toModel(base);
+      }
+    }
+
+    if (primary instanceof Model) {
+      return primary;
+    } else if (primary instanceof Uri) {
+      const string = await this.uriReader.readUri(primary);
+      return this._compile(primary, string, model?._modelDef);
+    } else {
       return this._compile(
-        "internal://query",
-        primary.string,
+        Uri.fromString("internal://query"),
+        primary,
         model?._modelDef
       );
-    } else {
-      const string = await this.uriReader.readUri(primary.uri);
-      return this._compile(primary.uri, string, model?._modelDef);
     }
   }
 
-  public async compileModel(
-    model: UncompiledModelSpecification
-  ): Promise<Model> {
-    return await this.compile(model);
-  }
+  // TODO crs Maybe get rid of this function, and rename compile to toModel
+  // Or else, make compile private
+  // public async toModel(model: ModelString | ModelUri): Promise<Model> {
+  //   return await this.compile(model);
+  // }
 
-  public async compileQuery(
-    query: UncompiledQuerySpecification,
-    model?: ModelSpecification
-  ): Promise<Query> {
-    return (await this.compile(query, model)).getUnnamedQuery();
-  }
-
-  public async compileUnnamedQuery(
-    model: ModelSpecification,
-    index: number
-  ): Promise<Query> {
-    return (await this.compile(model)).getUnnamedQuery(index);
-  }
-
-  public async compileNamedQuery(
-    model: ModelSpecification,
-    name: string
-  ): Promise<Query> {
-    return (await this.compile(model)).getNamedQuery(name);
-  }
-
-  public async translateQuery(
-    query: QuerySpecification,
-    model?: ModelSpecification
-  ): Promise<SqlQuery> {
-    if ("compiled" in query) {
-      return this.translate(query.compiled);
+  public async toPreparedQuery(
+    queryOrModel: ModelString | ModelUri | Model | QueryString | QueryUri,
+    maybeQuery?: QueryString | QueryUri
+  ): Promise<PreparedQuery>;
+  public async toPreparedQuery(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri
+  ): Promise<PreparedQuery>;
+  public async toPreparedQuery(
+    query: QueryString | QueryUri
+  ): Promise<PreparedQuery>;
+  public async toPreparedQuery(
+    queryOrModel: ModelString | ModelUri | Model | QueryString | QueryUri,
+    maybeQuery?: QueryString | QueryUri
+  ): Promise<PreparedQuery> {
+    let model: ModelString | ModelUri | Model | undefined;
+    let query: QueryString | QueryUri | PreparedQuery;
+    if (maybeQuery === undefined) {
+      if (queryOrModel instanceof Model) {
+        throw new Error("Illegal invocation.!"); // TODO crs
+      }
+      query = queryOrModel;
     } else {
-      return this.translate(
-        (await this.compile(query, model)).getUnnamedQuery()
+      query = maybeQuery;
+      model = queryOrModel;
+    }
+    // TODO crs swap order in this function too
+    return (await this.toModel(query, model)).getPreparedQuery();
+  }
+
+  public async toPreparedQueryByIndex(
+    model: ModelString | ModelUri | Model,
+    index: number
+  ): Promise<PreparedQuery> {
+    return (await this.toModel(model)).getPreparedQueryByIndex(index);
+  }
+
+  public async toPreparedQueryByName(
+    model: ModelString | ModelUri | Model,
+    name: string
+  ): Promise<PreparedQuery> {
+    return (await this.toModel(model)).getPreparedQueryByName(name);
+  }
+
+  public async toPreparedSql(
+    queryOrModel:
+      | ModelString
+      | ModelUri
+      | Model
+      | QueryString
+      | QueryUri
+      | PreparedQuery,
+    maybeQuery?: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql>;
+  public async toPreparedSql(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql>;
+  public async toPreparedSql(
+    query: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql>;
+  public async toPreparedSql(
+    queryOrModel:
+      | ModelString
+      | ModelUri
+      | Model
+      | QueryString
+      | QueryUri
+      | PreparedQuery,
+    maybeQuery?: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql> {
+    let model: ModelString | ModelUri | Model | undefined;
+    let query: QueryString | QueryUri | PreparedQuery;
+    {
+      if (maybeQuery === undefined) {
+        if (queryOrModel instanceof Model) {
+          throw new Error("Illegal invocation.!"); // TODO crs
+        }
+        query = queryOrModel;
+      } else {
+        if (queryOrModel instanceof PreparedQuery) {
+          throw new Error("Illegal invocation."); // TODO crs
+        }
+        query = maybeQuery;
+        model = queryOrModel;
+      }
+    }
+    if (query instanceof PreparedQuery) {
+      const queryModel = new QueryModel(query._modelDef);
+      return new PreparedSql(await queryModel.compileQuery(query._query));
+    } else {
+      return this.toPreparedSql(
+        (await this.toModel(query, model)).getPreparedQuery()
       );
     }
   }
 
-  public async translateUnnamedQuery(
-    model: ModelSpecification,
+  public async toPreparedSqlByIndex(
+    model: ModelString | ModelUri | Model,
     index: number
-  ): Promise<SqlQuery> {
-    return this.translate((await this.compile(model)).getUnnamedQuery(index));
+  ): Promise<PreparedSql> {
+    return this.toPreparedSql(
+      (await this.toModel(model)).getPreparedQueryByIndex(index)
+    );
   }
 
-  public async translateNamedQuery(
-    model: ModelSpecification,
+  public async toPreparedSqlByName(
+    model: ModelString | ModelUri | Model,
     name: string
-  ): Promise<SqlQuery> {
-    return this.translate((await this.compile(model)).getNamedQuery(name));
-  }
-
-  public async translate(query: Query): Promise<SqlQuery> {
-    const queryModel = new QueryModel(query._modelDef);
-    // TODO this is confusing because the names internal to Malloy are backwards
-    //      compared to the names this file exports. Here, "compile" means
-    //      what we're calling "translate"...
-    const translatedQuery = await queryModel.compileQuery(query._query);
-    let connectionName;
-    {
-      const struct =
-        typeof query._query.structRef === "string"
-          ? query._modelDef.structs[query._query.structRef]
-          : query._query.structRef;
-      if (struct.structRelationship.type !== "basetable") {
-        throw new Error("Expected query to be against a table.");
-      } else {
-        connectionName = struct.structRelationship.connectionName;
-      }
-    }
-    return new SqlQuery(translatedQuery, connectionName);
+  ): Promise<PreparedSql> {
+    return this.toPreparedSql(
+      (await this.toModel(model)).getPreparedQueryByName(name)
+    );
   }
 }
 
-export class Executor {
-  private lookupQueryExecutor: LookupQueryExecutor;
+export class Runner {
+  private lookupQueryExecutor: LookupSqlRunner;
 
-  constructor(lookupQueryExecutor: LookupQueryExecutor) {
+  constructor(lookupQueryExecutor: LookupSqlRunner) {
     this.lookupQueryExecutor = lookupQueryExecutor;
   }
 
-  public async execute(sqlQuery: SqlQuery): Promise<QueryResult> {
-    const sqlQueryRunner = await this.getExecutor(sqlQuery);
-    const result = await sqlQueryRunner.executeSql(sqlQuery._getRawQuery().sql);
+  public async runPreparedSql(sqlQuery: PreparedSql): Promise<QueryResult> {
+    const sqlQueryRunner = await this.getSqlRunner(sqlQuery);
+    const result = await sqlQueryRunner.runSql(sqlQuery._getRawQuery().sql);
     return {
       ...sqlQuery._getRawQuery(),
       result: result.rows,
@@ -373,49 +405,48 @@ export class Executor {
     };
   }
 
-  public getExecutor(sqlQuery: SqlQuery): Promise<QueryExecutor> {
-    return this.lookupQueryExecutor.lookupQueryExecutor(
+  public getSqlRunner(sqlQuery: PreparedSql): Promise<SqlRunner> {
+    return this.lookupQueryExecutor.lookupQueryRunner(
       sqlQuery.getConnectionName()
     );
   }
 }
 
-class SqlQuery {
-  private connectionName: string;
-  private query: TranslatedQuery;
+export class PreparedSql {
+  private query: CompiledQuery;
+  // TODO crs compiledQuery already has .connectionName
 
-  constructor(query: TranslatedQuery, connectionName: string) {
+  constructor(query: CompiledQuery) {
     this.query = query;
-    this.connectionName = connectionName;
   }
 
-  public getConnectionName() {
-    return this.connectionName;
+  public getConnectionName(): string {
+    return this.query.connectionName;
   }
 
-  public _getRawQuery() {
+  public _getRawQuery(): CompiledQuery {
     return this.query;
   }
 
-  getSql() {
+  getSql(): string {
     return this.query.sql;
   }
 }
 
 export class EmptyUriReader implements UriReader {
-  async readUri(_uri: string): Promise<string> {
+  async readUri(_uri: Uri): Promise<string> {
     throw new Error("No files.");
   }
 }
 
 export class InMemoryUriReader implements UriReader {
-  private files: Map<string, string>;
+  private files: Map<Uri, string>;
 
-  constructor(files: Map<string, string>) {
+  constructor(files: Map<Uri, string>) {
     this.files = files;
   }
 
-  async readUri(uri: string): Promise<string> {
+  async readUri(uri: Uri): Promise<string> {
     const file = this.files.get(uri);
     if (file !== undefined) {
       return Promise.resolve(file);
@@ -425,9 +456,7 @@ export class InMemoryUriReader implements UriReader {
   }
 }
 
-export class FixedConnections
-  implements LookupSchemaReader, LookupQueryExecutor
-{
+export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
   private connections: Map<string, Connection>;
   private defaultConnectionName?: string;
   constructor(
@@ -459,116 +488,223 @@ export class FixedConnections
     return this.getConnection(connectionName);
   }
 
-  async lookupQueryExecutor(connectionName?: string): Promise<Connection> {
+  async lookupQueryRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 }
 
 export class Runtime {
   private translator: Translator;
-  private executor: Executor;
+  private runner: Runner;
 
   constructor(
     uriReader: UriReader,
     lookupSchemaReader: LookupSchemaReader,
-    lookupQueryExecutor: LookupQueryExecutor
+    lookupQueryExecutor: LookupSqlRunner
   ) {
     this.translator = new Translator(uriReader, lookupSchemaReader);
-    this.executor = new Executor(lookupQueryExecutor);
+    this.runner = new Runner(lookupQueryExecutor);
   }
 
-  public async compile(model: ModelSpecification): Promise<Model>;
-  public async compile(
-    query: StringQuerySpecification | UriQuerySpecification,
-    model?: ModelSpecification
+  public async toModel(
+    primaryOrBase: ModelString | ModelUri | Model,
+    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
   ): Promise<Model>;
-  public async compile(
-    primary: ModelSpecification | UncompiledQuerySpecification,
-    base?: ModelSpecification
+  public async toModel(model: ModelString | ModelUri | Model): Promise<Model>;
+  public async toModel(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri
+  ): Promise<Model>;
+  public async toModel(
+    primaryOrBase: ModelString | ModelUri | Model,
+    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
   ): Promise<Model> {
-    return this.translator.compile(primary, base);
+    return await this.translator.toModel(primaryOrBase, maybePrimary);
   }
 
-  public async compileModel(
-    model: StringModelSpecification | UriModelSpecification
-  ): Promise<Model> {
-    return await this.translator.compileModel(model);
+  // toPreparedQuery
+  public async toPreparedQuery(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri
+  ): Promise<PreparedQuery>;
+  public async toPreparedQuery(
+    query: QueryString | QueryUri
+  ): Promise<PreparedQuery>;
+  public async toPreparedQuery(
+    queryOrModel: ModelString | ModelUri | Model | QueryString | QueryUri,
+    maybeQuery?: QueryString | QueryUri
+  ): Promise<PreparedQuery> {
+    return this.translator.toPreparedQuery(queryOrModel, maybeQuery);
   }
 
-  public async compileQuery(
-    query: StringQuerySpecification | UriQuerySpecification,
-    model?: ModelSpecification
-  ): Promise<Query> {
-    return this.translator.compileQuery(query, model);
-  }
-
-  public async compileUnnamedQuery(
-    model: ModelSpecification,
+  public async toPreparedQueryByIndex(
+    model: ModelString | ModelUri | Model,
     index: number
-  ): Promise<Query> {
-    return this.translator.compileUnnamedQuery(model, index);
+  ): Promise<PreparedQuery> {
+    return this.translator.toPreparedQueryByIndex(model, index);
   }
 
-  public async compileNamedQuery(
-    model: ModelSpecification,
+  public async toPreparedQueryByName(
+    model: ModelString | ModelUri | Model,
     name: string
-  ): Promise<Query> {
-    return this.translator.compileNamedQuery(model, name);
+  ): Promise<PreparedQuery> {
+    return this.translator.toPreparedQueryByName(model, name);
   }
 
-  public async translateQuery(
-    query: QuerySpecification,
-    model?: ModelSpecification
-  ): Promise<SqlQuery> {
-    return this.translator.translateQuery(query, model);
+  public async toPreparedSql(
+    queryOrModel:
+      | ModelString
+      | ModelUri
+      | Model
+      | QueryString
+      | QueryUri
+      | PreparedQuery,
+    maybeQuery?: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql>;
+  public async toPreparedSql(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql>;
+  public async toPreparedSql(
+    query: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql>;
+  public async toPreparedSql(
+    queryOrModel:
+      | ModelString
+      | ModelUri
+      | Model
+      | QueryString
+      | QueryUri
+      | PreparedQuery,
+    maybeQuery?: QueryString | QueryUri | PreparedQuery
+  ): Promise<PreparedSql> {
+    return this.translator.toPreparedSql(queryOrModel, maybeQuery);
   }
 
-  public async translateUnnamedQuery(
-    model: ModelSpecification,
+  public async toPreparedSqlByIndex(
+    model: ModelString | ModelUri | Model,
     index: number
-  ): Promise<SqlQuery> {
-    return this.translator.translateUnnamedQuery(model, index);
+  ): Promise<PreparedSql> {
+    return this.translator.toPreparedSqlByIndex(model, index);
   }
 
-  public async translateNamedQuery(
-    model: ModelSpecification,
+  public async toPreparedSqlByName(
+    model: ModelString | ModelUri | Model,
     name: string
-  ): Promise<SqlQuery> {
-    return this.translator.translateNamedQuery(model, name);
+  ): Promise<PreparedSql> {
+    return this.translator.toPreparedSqlByName(model, name);
   }
 
-  public async translate(query: Query): Promise<SqlQuery> {
-    return this.translator.translate(query);
+  // run
+  public async runPreparedSql(sqlQuery: PreparedSql): Promise<QueryResult> {
+    return this.runner.runPreparedSql(sqlQuery);
   }
 
-  public async execute(sqlQuery: SqlQuery): Promise<QueryResult> {
-    return this.executor.execute(sqlQuery);
-  }
-
-  public async executeQuery(
-    query: QuerySpecification,
-    model?: ModelSpecification
+  // run
+  public async run(preparedSql: PreparedSql): Promise<QueryResult>;
+  public async run(
+    model: ModelString | ModelUri | Model,
+    query: QueryString | QueryUri | PreparedQuery
+  ): Promise<QueryResult>;
+  public async run(
+    query: QueryString | QueryUri | PreparedQuery
+  ): Promise<QueryResult>;
+  public async run(
+    queryOrModelOrSql:
+      | ModelString
+      | ModelUri
+      | Model
+      | QueryString
+      | QueryUri
+      | PreparedQuery
+      | PreparedSql,
+    maybeQuery?: QueryString | QueryUri | PreparedQuery
   ): Promise<QueryResult> {
-    return this.executor.execute(await this.translateQuery(query, model));
+    const preparedSql =
+      queryOrModelOrSql instanceof PreparedSql
+        ? queryOrModelOrSql
+        : await this.toPreparedSql(queryOrModelOrSql, maybeQuery);
+    return this.runner.runPreparedSql(preparedSql);
   }
 
-  public async executeNamedQuery(
-    model: ModelSpecification,
+  public async runByName(
+    model: ModelString | ModelUri | Model,
     name: string
   ): Promise<QueryResult> {
-    return this.executor.execute(await this.translateNamedQuery(model, name));
-  }
-
-  public async executeUnnamedQuery(
-    model: ModelSpecification,
-    index: number
-  ): Promise<QueryResult> {
-    return this.executor.execute(
-      await this.translateUnnamedQuery(model, index)
+    return this.runner.runPreparedSql(
+      await this.toPreparedSqlByName(model, name)
     );
   }
 
-  public getExecutor(sqlQuery: SqlQuery): Promise<QueryExecutor> {
-    return this.executor.getExecutor(sqlQuery);
+  public async runByIndex(
+    model: ModelString | ModelUri | Model,
+    index: number
+  ): Promise<QueryResult> {
+    return this.runner.runPreparedSql(
+      await this.toPreparedSqlByIndex(model, index)
+    );
+  }
+
+  public getSqlRunner(preparedSql: PreparedSql): Promise<SqlRunner> {
+    return this.runner.getSqlRunner(preparedSql);
   }
 }
+
+// interface Explore {
+//   getFields(): Field[];
+// }
+
+// interface Field {
+//   name(): string;
+// }
+
+// interface AtomicField extends Field {
+//   isAggregate(): this is Measure;
+// }
+
+// interface Dimension extends Field {
+
+// }
+
+// interface Measure extends Field {
+
+// }
+
+// interface Query extends Field {
+
+// }
+
+// class JoinedExplore extends Field, Explore {
+//   name();
+// }
+
+// class PreparedQuery {
+
+// }
+
+// renaming Executor to Runner
+// renaming Executor.execute to run
+// renameing Connection.executeSql to runSql
+// rename SqlQuery to PreparedSql
+// rename Query to PreparedQuery
+// model comes before query
+
+// const runtime = new Runtime();
+
+// const preparedSql = runtime.toPreparedSql("explore foo...");
+// const sql = preparedSql.getSql();
+// preparedSql.getExplore().getFields()
+// runtime.run(preparedSql);
+
+// runtime.run("explore foo");
+
+// const model = runtime.toModel("define flights is ('examples.flights' flight_count is count());");
+// const result = runtime.run("flights | reduce flight_count");
+// const result = runtime.run(model, "flights | reduce flight_count");
+// const result2 = runtime.runByName(model, "flights_by_carrier");
+
+// // A `malloy.Query` has some refs in it
+// // A `malloy.PreparedQuery` has a `malloy.Query` and the associated explore to get refs from.
+
+// // a Query is a structRef + pipeline + filters
+// // a PreparedQuery is a (stuctRef + pipeline + filters) + a modelDef

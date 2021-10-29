@@ -10,7 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { InMemoryUriReader } from "malloy";
+import { Uri, InMemoryUriReader } from "malloy";
 import { run } from "./index";
 
 const unModeledQuery = "'examples.flights' | reduce flight_count is count()";
@@ -23,9 +23,9 @@ const unmodeledQueryUri = "file:///unmodeled_.malloy";
 
 const files = new InMemoryUriReader(
   new Map([
-    [modelUri, model],
-    [modeledQueryUri, modeledQuery],
-    [unmodeledQueryUri, unModeledQuery],
+    [Uri.fromString(modelUri), model],
+    [Uri.fromString(modeledQueryUri), modeledQuery],
+    [Uri.fromString(unmodeledQueryUri), unModeledQuery],
   ])
 );
 

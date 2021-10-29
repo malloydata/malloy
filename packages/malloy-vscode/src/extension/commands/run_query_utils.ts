@@ -14,12 +14,15 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { Runtime, UriReader } from "malloy";
+import { Uri, Runtime, UriReader } from "malloy";
 import { DataStyles, HtmlView, DataTreeRoot } from "malloy-render";
 import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
-import { BIGQUERY_CONNECTION, MALLOY_EXTENSION_STATE, RunState } from "../state";
+import {
+  BIGQUERY_CONNECTION,
+  MALLOY_EXTENSION_STATE,
+  RunState,
+} from "../state";
 import turtleIcon from "../../media/turtle.svg";
-import { BigQueryConnection } from "malloy-db-bigquery";
 import { fetchFile, VscodeUriReader } from "../utils";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
@@ -93,11 +96,11 @@ class HackyDataStylesAccumulator implements UriReader {
     this.uriReader = uriReader;
   }
 
-  async readUri(uri: string): Promise<string> {
+  async readUri(uri: Uri): Promise<string> {
     const contents = await this.uriReader.readUri(uri);
     this.dataStyles = {
       ...this.dataStyles,
-      ...(await dataStylesForFile(uri, contents)),
+      ...(await dataStylesForFile(uri.toString(), contents)),
     };
 
     return contents;
@@ -202,27 +205,27 @@ export function runMalloyQuery(
           );
           progress.report({ increment: 20, message: "Compiling" });
 
-          let translatedQuery;
+          let preparedSql;
           let error;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            translatedQuery = await runtime.translateQuery(
-              { string: query.text },
-              { uri: "file://" + query.file.uri.fsPath }
+            preparedSql = await runtime.toPreparedSql(
+              Uri.fromString("file://" + query.file.uri.fsPath),
+              query.text
             );
           } else if (query.type === "named") {
-            translatedQuery = await runtime.translateNamedQuery(
-              { uri: "file://" + query.file.uri.fsPath },
+            preparedSql = await runtime.toPreparedSqlByName(
+              Uri.fromString("file://" + query.file.uri.fsPath),
               query.name
             );
           } else {
-            translatedQuery = await runtime.translateUnnamedQuery(
-              { uri: "file://" + query.file.uri.fsPath },
+            preparedSql = await runtime.toPreparedSqlByIndex(
+              Uri.fromString("file://" + query.file.uri.fsPath),
               query.index
             );
           }
 
-          if (!translatedQuery) {
+          if (!preparedSql) {
             current.panel.webview.html = renderErrorHtml(
               new Error(error || "Something went wrong.")
             );
@@ -232,7 +235,7 @@ export function runMalloyQuery(
           styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
           if (canceled) return;
-          malloyLog.appendLine(translatedQuery.getSql());
+          malloyLog.appendLine(preparedSql.getSql());
 
           const compileEnd = performance.now();
           logTime("Compile", compileBegin, compileEnd);
@@ -243,7 +246,7 @@ export function runMalloyQuery(
             loadingIndicator("Running")
           );
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await runtime.execute(translatedQuery);
+          const queryResult = await runtime.run(preparedSql);
           if (canceled) return;
 
           const runEnd = performance.now();

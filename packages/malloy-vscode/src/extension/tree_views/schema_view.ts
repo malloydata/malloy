@@ -13,7 +13,7 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { FieldDef, NamedMalloyObject, Runtime } from "malloy";
+import { FieldDef, NamedMalloyObject, Runtime, Uri } from "malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
@@ -108,7 +108,7 @@ export class SchemaProvider
 async function getStructs(
   document: vscode.TextDocument
 ): Promise<NamedMalloyObject[] | undefined> {
-  const uri = "file://" + document.uri.fsPath;
+  const uri = Uri.fromString("file://" + document.uri.fsPath);
   const files = new VscodeUriReader();
   try {
     const runtime = new Runtime(
@@ -116,7 +116,7 @@ async function getStructs(
       BIGQUERY_CONNECTION,
       BIGQUERY_CONNECTION
     );
-    const model = await runtime.compileModel({ uri });
+    const model = await runtime.toModel(uri);
 
     return Object.values(model._modelDef.structs).sort(exploresByName);
   } catch (error) {
