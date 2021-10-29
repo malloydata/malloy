@@ -395,26 +395,23 @@ export class Runner {
     this.lookupQueryExecutor = lookupQueryExecutor;
   }
 
-  public async runPreparedSql(sqlQuery: PreparedSql): Promise<QueryResult> {
-    const sqlQueryRunner = await this.getSqlRunner(sqlQuery);
-    const result = await sqlQueryRunner.runSql(sqlQuery._getRawQuery().sql);
+  public async runPreparedSql(preparedSql: PreparedSql): Promise<QueryResult> {
+    const sqlQueryRunner = await this.getSqlRunner(preparedSql);
+    const result = await sqlQueryRunner.runSql(preparedSql.getSql());
     return {
-      ...sqlQuery._getRawQuery(),
+      ...preparedSql._getRawQuery(),
       result: result.rows,
       totalRows: result.totalRows,
     };
   }
 
-  public getSqlRunner(sqlQuery: PreparedSql): Promise<SqlRunner> {
-    return this.lookupQueryExecutor.lookupQueryRunner(
-      sqlQuery.getConnectionName()
-    );
+  public getSqlRunner(connectionName: string): Promise<SqlRunner> {
+    return this.lookupQueryExecutor.lookupQueryRunner(connectionName);
   }
 }
 
 export class PreparedSql {
   private query: CompiledQuery;
-  // TODO crs compiledQuery already has .connectionName
 
   constructor(query: CompiledQuery) {
     this.query = query;
@@ -522,7 +519,6 @@ export class Runtime {
     return await this.translator.toModel(primaryOrBase, maybePrimary);
   }
 
-  // toPreparedQuery
   public async toPreparedQuery(
     model: ModelString | ModelUri | Model,
     query: QueryString | QueryUri
@@ -595,12 +591,10 @@ export class Runtime {
     return this.translator.toPreparedSqlByName(model, name);
   }
 
-  // run
   public async runPreparedSql(sqlQuery: PreparedSql): Promise<QueryResult> {
     return this.runner.runPreparedSql(sqlQuery);
   }
 
-  // run
   public async run(preparedSql: PreparedSql): Promise<QueryResult>;
   public async run(
     model: ModelString | ModelUri | Model,
@@ -645,66 +639,7 @@ export class Runtime {
     );
   }
 
-  public getSqlRunner(preparedSql: PreparedSql): Promise<SqlRunner> {
-    return this.runner.getSqlRunner(preparedSql);
+  public getSqlRunner(connectionName: string): Promise<SqlRunner> {
+    return this.runner.getSqlRunner(connectionName);
   }
 }
-
-// interface Explore {
-//   getFields(): Field[];
-// }
-
-// interface Field {
-//   name(): string;
-// }
-
-// interface AtomicField extends Field {
-//   isAggregate(): this is Measure;
-// }
-
-// interface Dimension extends Field {
-
-// }
-
-// interface Measure extends Field {
-
-// }
-
-// interface Query extends Field {
-
-// }
-
-// class JoinedExplore extends Field, Explore {
-//   name();
-// }
-
-// class PreparedQuery {
-
-// }
-
-// renaming Executor to Runner
-// renaming Executor.execute to run
-// renameing Connection.executeSql to runSql
-// rename SqlQuery to PreparedSql
-// rename Query to PreparedQuery
-// model comes before query
-
-// const runtime = new Runtime();
-
-// const preparedSql = runtime.toPreparedSql("explore foo...");
-// const sql = preparedSql.getSql();
-// preparedSql.getExplore().getFields()
-// runtime.run(preparedSql);
-
-// runtime.run("explore foo");
-
-// const model = runtime.toModel("define flights is ('examples.flights' flight_count is count());");
-// const result = runtime.run("flights | reduce flight_count");
-// const result = runtime.run(model, "flights | reduce flight_count");
-// const result2 = runtime.runByName(model, "flights_by_carrier");
-
-// // A `malloy.Query` has some refs in it
-// // A `malloy.PreparedQuery` has a `malloy.Query` and the associated explore to get refs from.
-
-// // a Query is a structRef + pipeline + filters
-// // a PreparedQuery is a (stuctRef + pipeline + filters) + a modelDef
