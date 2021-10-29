@@ -396,7 +396,9 @@ export class Runner {
   }
 
   public async runPreparedSql(preparedSql: PreparedSql): Promise<QueryResult> {
-    const sqlQueryRunner = await this.getSqlRunner(preparedSql);
+    const sqlQueryRunner = await this.getSqlRunner(
+      preparedSql.getConnectionName()
+    );
     const result = await sqlQueryRunner.runSql(preparedSql.getSql());
     return {
       ...preparedSql._getRawQuery(),
