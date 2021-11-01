@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, StructDef } from "malloy/src/model/malloy_types";
+import { ModelDef, StructDef } from "@malloy-lang/malloy";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
 import { fStringEq, fYearEq } from "../test_utils";
 

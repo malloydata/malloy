@@ -20,7 +20,7 @@ import {
   isValueDate,
   TimeTimeframe,
   isFieldTimeBased,
-} from "malloy";
+} from "@malloy-lang/malloy";
 import { DataPointer, DataTree, DataTreeRoot, isDataTree } from "./data_table";
 
 type FilterItem = { key: string; value: string | undefined };

@@ -12,7 +12,12 @@
  */
 
 import * as lite from "vega-lite";
-import { FieldDef, QueryDataRow, QueryValue, StructDef } from "malloy";
+import {
+  FieldDef,
+  QueryDataRow,
+  QueryValue,
+  StructDef,
+} from "@malloy-lang/malloy";
 import { HtmlChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
 import { getColorScale } from "./utils";

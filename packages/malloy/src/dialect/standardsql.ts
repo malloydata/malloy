@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { indent } from "malloy/src/model/utils";
+import { indent } from "../model/utils";
 import { Dialect, DialectFieldList } from "./dialect";
 
 export class StandardSQLDialect extends Dialect {

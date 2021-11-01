@@ -32,7 +32,7 @@ import {
   FieldTypeDef,
   NamedStructDefs,
   Connection,
-} from "malloy";
+} from "@malloy-lang/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {

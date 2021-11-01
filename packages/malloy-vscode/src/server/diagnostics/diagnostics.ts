@@ -16,10 +16,10 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { Malloy, MalloyTranslator, LogMessage } from "malloy";
+import { Malloy, MalloyTranslator, LogMessage } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
 
 Malloy.db = new BigQueryConnection("vsCode");
 

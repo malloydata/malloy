@@ -12,7 +12,7 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { QueryResult } from "malloy";
+import { QueryResult } from "@malloy-lang/malloy";
 
 export interface RunState {
   cancel: () => void;

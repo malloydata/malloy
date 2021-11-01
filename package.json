@@ -2,7 +2,7 @@
   "private": true,
   "version": "0.0.1",
   "license": "GPL-2.0",
-  "name": "@looker-open-source/malloy",
+  "name": "@malloy-lang/malloy",
   "workspaces": {
     "packages": [
       "packages/*"
@@ -15,8 +15,8 @@
     "samples"
   ],
   "scripts": {
-    "clean": "yarn workspace malloy clean && yarn tsc --build --clean",
-    "build": "yarn workspace malloy build-parser && yarn tsc --build",
+    "clean": "yarn workspace @malloy-lang/malloy clean && yarn tsc --build --clean",
+    "build": "yarn workspace @malloy-lang/malloy build-parser && yarn tsc --build",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn lint && yarn build && yarn workspaces run test",
     "test-fast": "yarn workspaces run test",
@@ -26,7 +26,7 @@
     "docs-preprocess": "ts-node docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
-    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev",
+    "vscode-webpack-dev": "yarn workspace @malloy-lang/malloy-vscode webpack-dev",
     "third-party-licenses": "ts-node scripts/third_party_licenses"
   },
   "resolutions": {},
@@ -45,9 +45,9 @@
     "jest": "26.6.0",
     "jest-diff": "^27.0.6",
     "jest-expect-message": "^1.0.2",
-    "malloy": "*",
-    "malloy-db-bigquery": "*",
-    "malloy-render": "*",
+    "@malloy-lang/malloy": "*",
+    "@malloy-lang/malloy-db-bigquery": "*",
+    "@malloy-lang/malloy-render": "*",
     "md5": "^2.3.0",
     "prettier": "^2.3.2",
     "prismjs": "^1.24.1",
