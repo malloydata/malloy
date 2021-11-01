@@ -12,8 +12,14 @@
  * GNU General Public License for more details.
  */
 
-import { Malloy, ModelDef, QueryModel, QueryResult, StructDef } from "malloy";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import {
+  Malloy,
+  ModelDef,
+  QueryModel,
+  QueryResult,
+  StructDef,
+} from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
 import { fStringEq, fStringLike } from "./test_utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

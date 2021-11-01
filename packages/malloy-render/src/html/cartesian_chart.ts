@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { QueryData, StructDef } from "malloy";
+import { QueryData, StructDef } from "@malloy-lang/malloy";
 import * as lite from "vega-lite";
 import { HtmlChartRenderer } from "./chart";
 import { getColorScale } from "./utils";

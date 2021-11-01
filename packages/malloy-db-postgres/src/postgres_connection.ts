@@ -19,7 +19,7 @@ import {
   NamedStructDefs,
   AtomicFieldType,
   QueryData,
-} from "malloy";
+} from "@malloy-lang/malloy";
 import { Client } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {

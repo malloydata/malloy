@@ -13,7 +13,12 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { Malloy, FieldDef, MalloyTranslator, NamedMalloyObject } from "malloy";
+import {
+  Malloy,
+  FieldDef,
+  MalloyTranslator,
+  NamedMalloyObject,
+} from "@malloy-lang/malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";

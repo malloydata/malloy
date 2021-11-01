@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "malloy";
+import { StructDef } from "@malloy-lang/malloy";
 
 /** Medicare Model */
 export const medicareModel: StructDef = {

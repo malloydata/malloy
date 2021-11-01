@@ -12,7 +12,7 @@
  */
 
 import { CodeLens } from "vscode-languageserver/node";
-import { MalloyTranslator } from "malloy";
+import { MalloyTranslator } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 const explain = `

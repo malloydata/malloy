@@ -11,12 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import "malloy/src/lang/jestery";
+import "@malloy-lang/malloy/src/lang/jestery";
 import fs from "fs";
 import path from "path";
-import { Malloy } from "malloy/src/malloy";
-import { MalloyTranslator, TranslateResponse } from "malloy";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import { Malloy } from "@malloy-lang/malloy/src/malloy";
+import { MalloyTranslator, TranslateResponse } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
 
 Malloy.db = new BigQueryConnection("test");
 

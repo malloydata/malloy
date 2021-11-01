@@ -12,8 +12,8 @@
  */
 /* eslint-disable no-console */
 import * as readline from "readline";
-import { Malloy, MalloyTranslator } from "malloy";
-import { pretty } from "malloy/src/lang/jest-factories";
+import { Malloy, MalloyTranslator } from "@malloy-lang/malloy";
+import { pretty } from "@malloy-lang/malloy/src/lang/jest-factories";
 import { readFileSync } from "fs";
 
 /*

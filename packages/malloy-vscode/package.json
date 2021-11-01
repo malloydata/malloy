@@ -1,6 +1,6 @@
 {
   "name": "malloy-vscode",
-  "publisher": "malloy",
+  "publisher": "malloy-lang",
   "displayName": "Malloy",
   "description": "",
   "version": "0.0.1",
@@ -123,10 +123,10 @@
   },
   "dependencies": {
     "@observablehq/plot": "^0.1.0",
-    "malloy": "*",
-    "malloy-db-bigquery": "*",
-    "malloy-db-postgres": "*",
-    "malloy-render": "*",
+    "@malloy-lang/malloy": "*",
+    "@malloy-lang/malloy-db-bigquery": "*",
+    "@malloy-lang/malloy-db-postgres": "*",
+    "@malloy-lang/malloy-render": "*",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
     "vega-lite": "4.17.0",

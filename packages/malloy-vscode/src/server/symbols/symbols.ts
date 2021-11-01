@@ -15,7 +15,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   DocumentSymbol as MalloyDocumentSymbol,
   MalloyTranslator,
-} from "malloy";
+} from "@malloy-lang/malloy";
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 
 function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
