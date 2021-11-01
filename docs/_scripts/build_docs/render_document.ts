@@ -21,8 +21,8 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { runCode } from "./run_code";
 import { log } from "./log";
-import { Malloy } from "malloy";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import { Malloy } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
 
 Malloy.db = new BigQueryConnection("docs");
 
