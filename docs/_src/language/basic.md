@@ -1,18 +1,14 @@
 # Malloy Quickstart
 
-This document will quickly get you up to speed on what
-Malloy looks like, how to write queries, and how to
-save metrics and other analysis in _explores_. For detailed
-information on any of the topics in this document, see the
-following several sections.
+This guide will introduce the basics of querying and modeling with Malloy.
 
 _Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there._
 
 ## Leading with the Source
 
-In Malloy, the source of a query is always first, and can be either a database table, a modeled explore (a table with relationships and calculations built-in), or even another query.
+In Malloy, the source of a query is always first, and can be either a raw table, a [modeled explore](explore.md), or even another query.
 
-To reference a table (or view) in the database, simply put the path and name of the table in a quoted string. Consider the simple Malloy query below.
+To reference a table (or view) in the database, simply put the path and name of the table in a quoted string.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
@@ -52,7 +48,7 @@ explore 'malloy-data.faa.airports'
 
 ## Everything has a Name
 
-In Malloy, all output fields are named. This means that any time a query includes a
+In Malloy, all output fields have names. This means that any time a query includes a
 calculation or agregation, it must be aliased.
 
 ```malloy
@@ -61,20 +57,20 @@ explore 'malloy-data.faa.airports' | reduce
   max_elevation is max(elevation)
 ```
 
-Malloy uses `name is value` instead of SQL's `value as name` so the object being named comes first. Having the output column name written first makes imagining the structure the output table easier.
+Malloy uses `name is value` instead of SQL's `value as name`, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.
 
 Columns from a table and fields defined in an explore already have names, and can be referenced directly.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
 explore 'malloy-data.faa.airports' | project
-  full_name,
+  full_name
   elevation
 ```
 
 ## Expressions
 
-Many SQL expressions will work unchanged in Malloy, and almost all functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand given a knowledge of SQL.
+Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand given a knowledge of SQL.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
@@ -86,7 +82,7 @@ explore 'malloy-data.faa.airports' | reduce
   avg_elevation is avg(elevation)
 ```
 
-Malloy has fewer variations of common data types than Standard SQL: `string`, `number`, `boolean`, `date`, and `timestamp` are the most common.
+The basic types of Malloy expressions are `string`, `number`, `boolean`, `date`, and `timestamp`.
 
 ## Modeling and Reuse
 
@@ -109,7 +105,7 @@ explore airports | reduce
 
 In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some [reasonable defaults](order_by.md).
 
-In the following query, `top` limits the number of rows returned, by default sorted by the first measure, `airport_count`, decending.
+The `top` statement limits the number of rows returned, sorted by default by the first measure decending—in this case, `airport_count`.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
@@ -131,11 +127,12 @@ explore 'malloy-data.faa.airports'
 
 ## Filtering
 
-When working with data, filtering is something you do in almost every query. Malloy's filtering is more powerful and expressive than that of SQL. When querying data, we first isolate the data we are interested in (filter it) and then perform aggregations and calculations on the data we've isolated (shape it). Malloy provides a consistent syntax for filtering in a variety of places within a query.
+When working with data, filtering is something you do in almost every query. Malloy's filtering is more powerful and expressive than that of SQL. When querying data, we first isolate the data we are interested in (filter it) and then perform aggregations and calculations on the data we've isolated (shape it). Malloy provides consistent syntax for filtering everywhere within a query.
 
 ### Filtering Tables
 
-A filter on a table limits the data coming out of the table.
+A filter on a table narrows down which data is included from that table. This translates
+to a <code>WHERE</code> clause in SQL.
 In this case, the data from the table is filtered to just airports in California.
 
 ```malloy
@@ -148,7 +145,7 @@ explore 'malloy-data.faa.airports' : [state = 'CA']
 
 ### Filtering Measures
 
-A filter on an aggregate calculation (or _measure_) limits the data used in that calculation. In the example below, the calculations for `airports` and `heliports` are limited by filters. Notice that different aggregate calculations can have different filters.
+A filter on an aggregate calculation (a _measure_) narrows down the data used in that specific calculation. In the example below, the calculations for `airports` and `heliports` are filtered separately.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
@@ -162,7 +159,7 @@ explore 'malloy-data.faa.airports'
 
 ### Filtering Query Stages
 
-Filters can also be applied to `reduce` and `project` commands. When using a filter in this way, it only limits
+Filters can also be applied to `reduce` and `project` commands. When using a filter in this way, it only applies to
 the data for that command alone. This will become more important later when we have more than one `reduce` in a query.
 
 ```malloy
@@ -177,7 +174,7 @@ explore 'malloy-data.faa.airports'
 
 ## Dates and Timestamps
 
-Time is a big deal in data. Malloy has built in contructs to easily handle time, relative time filtering, date ranges and timestamps. This section gives a brief introduction to some of these tools, but for more details see the [Time Ranges](time-ranges.md) section.
+Working with time in data is often needlessly complex; Malloy has built in constructs to simplify many time-related operations. This section gives a brief introduction to some of these tools, but for more details see the [Time Ranges](time-ranges.md) section.
 
 ### Time Literals
 
@@ -194,20 +191,23 @@ explore 'malloy-data.faa.flights' : [dep_time: @2003]
 
 There is a special time literal `now`, referring to the current timestamp, which allows for relative time filters.
 
+```malloy
+explore 'malloy-data.faa.flights' : [dep_time > now - 6 hours]
+| reduce flights_last_6_hours is count()
+```
+
 ### Truncation
 
-Time values can be truncated to a given timeframe, e.g. `some_time.month`.
+Time values can be truncated to a given timeframe, which can be `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, or `year`.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto"}
 explore 'malloy-data.faa.flights'
 | reduce
   flight_year is dep_time.year
+  flight_month is dep_time.month
   flight_count is count()
 ```
-
-<!--
-This information can probably be left for the detailed doc.
 
 ### Extraction
 
@@ -219,11 +219,16 @@ explore 'malloy-data.faa.flights'
 | reduce order by 1
   day_of_week is day(dep_time)
   flight_count is count()
-``` -->
+```
+
+<!-- TODO it may be worth having a doc describing what the JSON+Metadata
+output of these look like, i.e. that the JSON just includes a regular date,
+but the metadata specifices that it's in that given timeframe.
+And likewise for any other data type that has interesting output metadata. -->
 
 ### Time Ranges
 
-There are two obvious kinds time ranges: the range between two times, and the range starting at some time for some duration. These are represented like `@2003 to @2005` and `@2004-Q1 for 6 quarters` respectively. These ranges can be used in filters just like time literals.
+Two kinds of time ranges are given special syntax: the range between two times and the range starting at some time for some duration. These are represented like `@2003 to @2005` and `@2004-Q1 for 6 quarters` respectively. These ranges can be used in filters just like time literals.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto"}
@@ -231,10 +236,10 @@ explore 'malloy-data.faa.flights' : [dep_time: @2003 to @2005]
 | reduce flight_count is count()
 ```
 
-There are actually two more types of time ranges: literals and truncations. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. `@2003` represents the whole of the year 2003, and `@2004-Q1` lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the
+Time literals and truncations can also behave like time ranges. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. `@2003` represents the whole of the year 2003, and `@2004-Q1` lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the
 timeframe from the truncation, e.g. `now.month` means the entirety of the current month.
 
-When a time range is used in a comparison, `=` checks for "is in the range", `>` "is after", and `<` "is before." Therefore `some_time > @2003` filters dates starting on January 1, 2004.
+When a time range is used in a comparison, `=` checks for "is in the range", `>` "is after", and `<` "is before." So `some_time > @2003` filters dates starting on January 1, 2004, while `some_time = @2003` filters to dates in the year 2003.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto"}
@@ -245,7 +250,7 @@ explore 'malloy-data.faa.flights' : [dep_time > @2003]
 
 ## Nested Queries
 
-The next several examples will use this simple explore:
+The next several examples will use this simple explore definition:
 
 ```malloy
 define airports is (explore 'malloy-data.faa.airports'
@@ -264,7 +269,7 @@ explore airports
 | reduce
   state
   airport_count
-  by_facility is (reduce top 2
+  by_facility is (reduce top 5
     fac_type
     airport_count
   )
@@ -272,7 +277,7 @@ explore airports
 
 Here we can see that the `by_facility` column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.
 
-Queries can also be nested to any depth, allowing for rich, complex output structures.
+Queries can also be deeply nested, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
@@ -311,7 +316,7 @@ explore airports
 
 ## Piping and Multi-stage Queries
 
-The output from one stage of a query can be "piped" into another stage using `|`. For example, we'll start with this query which outputs for California and New York the total number of airports, as well as the number of airports in each county.
+The output from one stage of a query can be "piped" into another stage using `|`. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "small"}
@@ -326,7 +331,7 @@ explore airports
 ```
 
 Next, we'll use the output of that query as the input to another, where we determine which counties have the highest
-percentage of airports compared to the whole state.
+percentage of airports compared to the whole state, taking advantage of the nested structure of the data to to so.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
@@ -359,15 +364,15 @@ define flights is (explore 'malloy-data.faa.flights'
   flight_count is count()
 
   origin_airport is join airports on origin
-  destination_airport is join airports on destination
 );
 
 explore flights
 | reduce
   origin_state is origin_airport.state
   flight_count
-  total_distance is sum(distance)
 ```
+
+In this example, the `airports` explore is joined to `flights`, linking the foreign key `origin` of `flights` to the primary key `code` of `airports`. The resulting joined explore is aliased as `origin_airport` within `flights`.
 
 ## Comments
 

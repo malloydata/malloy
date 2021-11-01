@@ -28,7 +28,7 @@ Literal strings in Malloy are enclosed in single quotes `'`, and may include the
 
 Malloy has two time types, `date` and `timestamp`.
 
-Both the `date` and `timestamp` types may have a
+Both the `date` and `timestamp` types may have an associated
 _timeframe_, which can be `year`, `quarter`, `month`,
 `week`, or `day`, and for `timestamp`s only, additionally
 `hour`, `minute`, or `second`.

@@ -1,13 +1,12 @@
 # Explores
 
 An explore consists of a data source along with a list of
-additional properties which exptend it, like adding fields
-or specifying joins. When an explore is used in a query,
-everything from the original source and all extensions can be used in queries and field definitions.
+additional properties which extend it, such as named fields, queries, and joins. When an explore is used in a query,
+everything from the original source and all its extensions can be referenced.
 
 ```malloy
 define my_explore is (explore source
-  extensions
+  -- Extensions go here
 );
 ```
 
@@ -15,8 +14,8 @@ define my_explore is (explore source
 
 An explore's source can be any of the following:
 
-* An existing SQL table or view
-* Another explore
+* A SQL table or view
+* Another Malloy explore
 * A Malloy query
 
 ### Explores from Tables or Views
@@ -36,14 +35,16 @@ or queries.
 ```malloy
 flights | reduce
   -- Columns from the source table are available
-  origin
-  destination
+  distance
+  carrier
 ```
 
 ### Explores from Other Explores
 
 An explore can also be created from another explore in order
 to add fields, impose filters, or restrict available fields.
+This is useful for performing in-depth analysis without altering
+the base explore with modifications only relevant in that specific context.
 
 ```malloy
 define sfo_flights is (explore flights : [origin = 'SFO']);
@@ -62,8 +63,8 @@ be defined inline or referenced by name.
 **Inline query as explore source**
 
 ```malloy
-define origins is (explore (flights | reduce
-  code is origin
+define carriers is (explore (flights | reduce
+  code is carrier
   flight_count is count()
 )
   ...
@@ -95,9 +96,7 @@ available.
 
 ### Filtering Explores
 
-When an explore is defined, it may add filters to its
-source, which are applied to any query against the new
-explore.
+When an explore is defined, filters which apply to any query against the new explore may be added.
 
 ```malloy
 define long_sfo_flights is (explore flights : [
@@ -108,8 +107,8 @@ define long_sfo_flights is (explore flights : [
 
 ### Primary Keys
 
-To be used in joins from other explores, an explore should
-specify its primary key.
+To be used in joins to other explores, an explore must
+have a primary key specified.
 
 ```malloy
 define carriers is (explore 'malloy-data.faa.carriers'
@@ -119,18 +118,19 @@ define carriers is (explore 'malloy-data.faa.carriers'
 
 ### Joins
 
-Explores can be joined together as part of their
-definition, allowing queries to reference fields in joined
-explores without having to specify the join relationship
-each time.
+When explores are joined as part of their definition, queries can reference fields in the joined explores without having to specify the join relationship each time.
 
 ```malloy
 define flights is (explore 'malloy-data.faa.flights'
   carriers is join on carrier_code
 );
+
+explore flights | reduce
+  carriers.name
+  flight_count
 ```
 
-See the [Joins](join.md) section for more information on the various types of joins.
+See the [Joins](join.md) section for more information on working with joins.
 
 ### Adding Fields
 
@@ -156,9 +156,8 @@ define airports is (explore 'malloy-data.faa.airports'
 
 ### Renaming Fields
 
-Fields from an explore's source may be renamed for cases in
-which the original name is undescriptive or has a different
-meaning in the context of the new explore.
+Fields from an explore's source may be renamed in the context of the
+new explore. This is useful when the original name is undescriptive or has a different meaning in the new explore.
 
 ```malloy
 define flights is (explore 'malloy-data.faa.flights'

@@ -1,6 +1,6 @@
 # Fields
 
-Fields constitute all kinds of concrete data in Malloy. They
+Fields constitute all kinds of data in Malloy. They
 can represent dimensional attributes sourced directly from
 tables in a database, constant values to be used in later analyis, computed metrics derived from other fields, or even nested structures created from aggregating subqueries.
 
