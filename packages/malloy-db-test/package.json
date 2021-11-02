@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/malloy-db-test",
+  "name": "@malloy-lang/db-test",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "@malloy-lang/malloy": "*",
-    "@malloy-lang/malloy-db-bigquery": "*"
+    "@malloy-lang/db-bigquery": "*"
   }
 }

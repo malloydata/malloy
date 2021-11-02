@@ -15,7 +15,7 @@ import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { Malloy, MalloyTranslator, ModelDef } from "@malloy-lang/malloy";
-import { DataStyles, HtmlView, DataTreeRoot } from "@malloy-lang/malloy-render";
+import { DataStyles, HtmlView, DataTreeRoot } from "@malloy-lang/render";
 import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
 import { MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";

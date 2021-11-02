@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/malloy-render",
+  "name": "@malloy-lang/render",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",

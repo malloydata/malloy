@@ -13,7 +13,7 @@
 /* eslint-disable no-console */
 
 import { Malloy, QueryModel } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 Malloy.db = new BigQueryConnection("test");
 

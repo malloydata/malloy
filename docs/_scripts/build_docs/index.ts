@@ -14,7 +14,7 @@
 import path from "path";
 import fs from "fs";
 import { Malloy } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { performance } from "perf_hooks";
 import { renderDoc } from "./render_document";
 import { renderFooter, renderSidebar, Section } from "./page";

@@ -2,7 +2,7 @@
   "private": true,
   "version": "0.0.1",
   "license": "GPL-2.0",
-  "name": "@malloy-lang/malloy",
+  "name": "malloy",
   "workspaces": {
     "packages": [
       "packages/*"
@@ -46,8 +46,8 @@
     "jest-diff": "^27.0.6",
     "jest-expect-message": "^1.0.2",
     "@malloy-lang/malloy": "*",
-    "@malloy-lang/malloy-db-bigquery": "*",
-    "@malloy-lang/malloy-render": "*",
+    "@malloy-lang/db-bigquery": "*",
+    "@malloy-lang/render": "*",
     "md5": "^2.3.0",
     "prettier": "^2.3.2",
     "prismjs": "^1.24.1",

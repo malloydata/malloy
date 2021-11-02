@@ -19,7 +19,7 @@ import {
   QueryResult,
   StructDef,
 } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { fStringEq, fStringLike } from "./test_utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
