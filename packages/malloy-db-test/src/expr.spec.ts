@@ -40,7 +40,7 @@ async function bqCompile(sql: string): Promise<boolean> {
 }
 
 const expressionModelText = `
-export define aircraft_models is (explore 'lookerdata.liquor.aircraft_models'
+export define aircraft_models is (explore 'malloytest.aircraft_models'
   primary key aircraft_model_code
   airport_count is count(*),
   aircraft_model_count is count(),
@@ -52,7 +52,7 @@ export define aircraft_models is (explore 'lookerdata.liquor.aircraft_models'
 );
 
 export define aircraft is (
-  explore 'lookerdata.liquor.aircraft'
+  explore 'malloytest.aircraft'
   primary key tail_num
   aircraft_count is count(*),
   by_manufacturer is (reduce top 5
@@ -67,7 +67,7 @@ export define aircraft is (
 `;
 
 export const modelHandBase: StructDef = {
-  name: "lookerdata.liquor.aircraft_models",
+  name: "malloytest.aircraft_models",
   as: "aircraft_models",
   type: "struct",
   dialect: "standardsql",
@@ -166,7 +166,7 @@ export const modelHandBase: StructDef = {
 
 export const aircraftHandBase: StructDef = {
   type: "struct",
-  name: "lookerdata.liquor.aircraft",
+  name: "malloytest.aircraft",
   dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable", connectionName: "test" },
@@ -403,7 +403,7 @@ describe("expression tests", () => {
     // console.log(result.sql);
     // console.log(result.result[0]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((result.result[0] as any).pipe[0].total_aircraft).toBe(6417);
+    expect((result.result[0] as any).pipe[0].total_aircraft).toBe(61);
   });
 
   // basic calculations for sum, filtered sum, without a join.
@@ -456,12 +456,12 @@ describe("expression tests", () => {
             boeing_seats3 is aircraft_models.boeing_seats : [aircraft_models.manufacturer: ~'B%']
         `);
     // console.log(result.sql);
-    expect(result.result[0].total_seats).toBe(241580);
-    expect(result.result[0].total_seats2).toBe(3013033);
-    expect(result.result[0].total_seats3).toBe(241580);
-    expect(result.result[0].boeing_seats).toBe(96005);
-    expect(result.result[0].boeing_seats2).toBe(96005);
-    expect(result.result[0].boeing_seats3).toBe(96005);
+    expect(result.result[0].total_seats).toBe(18294);
+    expect(result.result[0].total_seats2).toBe(31209);
+    expect(result.result[0].total_seats3).toBe(18294);
+    expect(result.result[0].boeing_seats).toBe(6244);
+    expect(result.result[0].boeing_seats2).toBe(6244);
+    expect(result.result[0].boeing_seats3).toBe(6244);
   });
 
   it("hand: bad root name for pathed sum", async () => {
@@ -470,7 +470,7 @@ describe("expression tests", () => {
               total_seats3 is aircraft_models.sum(aircraft_models.seats),
           `);
     // console.log(result.sql);
-    expect(result.result[0].total_seats3).toBe(241580);
+    expect(result.result[0].total_seats3).toBe(18294);
   });
 
   // BROKEN:
@@ -481,8 +481,8 @@ describe("expression tests", () => {
               aircraft_models.total_seats,
               aircraft_models.boeing_seats
           `);
-    expect(result.result[0].total_seats).toBe(241580);
-    expect(result.result[0].boeing_seats).toBe(96005);
+    expect(result.result[0].total_seats).toBe(18294);
+    expect(result.result[0].boeing_seats).toBe(6244);
   });
 
   // WORKs: (hand coded model):
@@ -493,8 +493,8 @@ describe("expression tests", () => {
               aircraft_models.total_seats,
               aircraft_models.boeing_seats
           `);
-    expect(result.result[0].total_seats).toBe(241580);
-    expect(result.result[0].boeing_seats).toBe(96005);
+    expect(result.result[0].total_seats).toBe(18294);
+    expect(result.result[0].boeing_seats).toBe(6244);
   });
 
   it("model: filtered measures", async () => {
@@ -502,7 +502,7 @@ describe("expression tests", () => {
             explore aircraft | reduce
               boeing_seats is aircraft_models.total_seats : [aircraft_models.manufacturer:'BOEING']
           `);
-    expect(result.result[0].boeing_seats).toBe(96005);
+    expect(result.result[0].boeing_seats).toBe(6244);
   });
 
   // does the filter force a join?
@@ -511,7 +511,7 @@ describe("expression tests", () => {
             explore aircraft | reduce
               boeing_aircraft is count() : [aircraft_models.manufacturer:'BOEING']
           `);
-    expect(result.result[0].boeing_aircraft).toBe(6959);
+    expect(result.result[0].boeing_aircraft).toBe(69);
   });
 
   // Works: Generate query using named alias.
@@ -532,7 +532,7 @@ describe("expression tests", () => {
       ],
     });
     // console.log(result.sql);
-    expect(result.result[0].boeing_seats).toBe(96005);
+    expect(result.result[0].boeing_seats).toBe(6244);
   });
 
   // turtle expressions
@@ -556,21 +556,21 @@ describe("expression tests", () => {
   // having.
   it("model: simple having", async () => {
     const result = await model.runQuery(`
-          explore aircraft | reduce : [aircraft_count: >9000 ]
+          explore aircraft | reduce : [aircraft_count: >90 ]
             state,
             aircraft_count
             order by 2
           `);
-    expect(result.result[0].aircraft_count).toBe(9199);
+    expect(result.result[0].aircraft_count).toBe(91);
   });
 
-  it("model: turtle having", async () => {
+  it("model: turtle having2", async () => {
     const result = await model.runQuery(`
       -- hacking a null test for now
       explore aircraft
       | reduce top 10 order by 1: [region != NULL]
           region,
-          by_state is (reduce top 10 order by 1 desc : [aircraft_count: >5000]
+          by_state is (reduce top 10 order by 1 desc : [aircraft_count: >50]
             state,
             aircraft_count
           )
@@ -585,13 +585,13 @@ describe("expression tests", () => {
     const result = await model.runQuery(`
       -- hacking a null test for now
       explore aircraft
-      | reduce order by 2 asc: [aircraft_count: >50000]
+      | reduce order by 2 asc: [aircraft_count: >500]
           region
           aircraft_count
-          by_state is (reduce  order by 2 asc : [aircraft_count: >3000]
+          by_state is (reduce  order by 2 asc : [aircraft_count: >45]
             state,
             aircraft_count
-            by_city is (reduce  order by 2 asc : [aircraft_count: >500 ]
+            by_city is (reduce  order by 2 asc : [aircraft_count: >5 ]
               city,
               aircraft_count
             )
@@ -651,7 +651,7 @@ describe("expression tests", () => {
 
   it("model: dates", async () => {
     const result = await model.runQuery(`
-        explore 'lookerdata.liquor.alltypes' | reduce
+        explore 'malloytest.alltypes' | reduce
           t_date,
           t_date.\`month\`,
           t_date.\`year\`,
@@ -692,11 +692,11 @@ describe("expression tests", () => {
 
   it.skip("defines in model", async () => {
     // const result1 = await model.runQuery(`
-    //   define a is ('lookerdata.liquor.alltypes');
+    //   define a is ('malloytest.alltypes');
     //   explore a | reduce x is count(*)
     //   `);
     // const result = await model.runQuery(`
-    //     define a is ('lookerdata.liquor.alltypes');
+    //     define a is ('malloytest.alltypes');
     //     explore a | reduce x is count(*)
     //     `);
   });
@@ -729,7 +729,7 @@ describe("expression tests", () => {
 
         explore b | reduce m_count is count(distinct aircraft_models.manufacturer);
         `);
-    expect(rows(result)[0].m_count).toBe(3496);
+    expect(rows(result)[0].m_count).toBe(63);
   });
 
   it("query with aliasname used twice", async () => {
@@ -754,11 +754,11 @@ aircraft_count
 
   it.skip("join foreign_key reverse", async () => {
     const result = await model.runQuery(`
-  define a is('lookerdata.liquor.aircraft'
+  define a is('malloytest.aircraft'
     primary key tail_num
     aircraft_count is count()
   );
-  export define am is ('lookerdata.liquor.aircraft_models'
+  export define am is ('malloytest.aircraft_models'
     primary key aircraft_model_code
     a is join on a.aircraft_model_code
 
@@ -774,13 +774,13 @@ aircraft_count
 
   it("joined filtered explores", async () => {
     const result = await model.runQuery(`
-    define a_models is (explore 'lookerdata.liquor.aircraft_models'
+    define a_models is (explore 'malloytest.aircraft_models'
     : [manufacturer: ~'B%']
     primary key aircraft_model_code
     model_count is count()
   )
 
-    define aircraft2 is (explore 'lookerdata.liquor.aircraft'
+    define aircraft2 is (explore 'malloytest.aircraft'
     model is join a_models on aircraft_model_code
     aircraft_count is count()
   )
@@ -790,14 +790,14 @@ aircraft_count
       aircraft_count
         `);
     // console.log(result.sql);
-    expect(rows(result)[0].model_count).toBe(5046);
-    expect(rows(result)[0].aircraft_count).toBe(359928);
+    expect(rows(result)[0].model_count).toBe(244);
+    expect(rows(result)[0].aircraft_count).toBe(3599);
   });
 
   it("joined filtered explores with dependancies", async () => {
     const result = await model.runQuery(`
     define bo_models is (
-      (explore 'lookerdata.liquor.aircraft_models'
+      (explore 'malloytest.aircraft_models'
         : [manufacturer: ~ 'BO%']
       | project
         aircraft_model_code
@@ -809,7 +809,7 @@ aircraft_count
     );
 
     define b_models is (
-      (explore 'lookerdata.liquor.aircraft_models'
+      (explore 'malloytest.aircraft_models'
         : [manufacturer: ~ 'B%']
       | project
         aircraft_model_code
@@ -821,7 +821,7 @@ aircraft_count
       bo_models is join on aircraft_model_code
     );
 
-    define models is (explore 'lookerdata.liquor.aircraft_models'
+    define models is (explore 'malloytest.aircraft_models'
       b_models is join on aircraft_model_code
       model_count is count()
     )
@@ -841,49 +841,49 @@ describe("order by tests", () => {
   beforeAll(async () => {
     model = new QueryModel(undefined);
     await model.parseModel(
-      `export define users is ('lookerdata.liquor.users'
-          user_count is count()
+      `export define models is ('malloytest.aircraft_models'
+          model_count is count()
         )`
     );
   });
 
   it("boolean type", async () => {
     const result = await model.runQuery(`
-        explore users | reduce
-          is_over_21 is age >=21
-          user_count is count()
+        explore models | reduce
+          big is seats >=20
+          model_count is count()
         `);
-    expect(rows(result)[0].is_over_21).toBe(true);
-    expect(rows(result)[0].user_count).toBe(45927);
+    expect(rows(result)[0].big).toBe(false);
+    expect(rows(result)[0].model_count).toBe(58451);
   });
 
   it("boolean in pipeline", async () => {
     const result = await model.runQuery(`
-        explore users | reduce
-          first_name
-          is_over_21 is age >=21
-          user_count is count()
+        explore models | reduce
+          manufacturer
+          big is seats >=21
+          model_count is count()
         | reduce
-          is_over_21
-          user_count is user_count.sum()
+          big
+          model_count is model_count.sum()
         `);
-    expect(rows(result)[0].is_over_21).toBe(true);
-    expect(rows(result)[0].user_count).toBe(45927);
+    expect(rows(result)[0].big).toBe(false);
+    expect(rows(result)[0].model_count).toBe(58500);
   });
 
   it("filtered measures in model are aggregates #352", async () => {
     const result = await model.runQuery(`
-        explore users
-          j_names is user_count : [last_name ~ 'J%']
+        explore models
+          j_names is model_count : [manufacturer ~ 'J%']
         | reduce
           j_names
         `);
-    expect(rows(result)[0].j_names).toBe(2292);
+    expect(rows(result)[0].j_names).toBe(1358);
   });
 
   it("reserved words are quoted", async () => {
     const result = await model.compileQuery(`
-        explore users | reduce
+        explore models | reduce
           fetch is count()
         | project
           fetch
@@ -893,9 +893,9 @@ describe("order by tests", () => {
 
   it("reserved words are quoted in turtles", async () => {
     const result = await model.compileQuery(`
-        explore users | reduce
+        explore models | reduce
           withx is (reduce
-             select is UPPER(first_name)
+             select is UPPER(manufacturer)
              fetch is count()
           )
         | project
@@ -907,9 +907,9 @@ describe("order by tests", () => {
 
   it.skip("reserved words in structure definitions", async () => {
     const result = await model.compileQuery(`
-        explore users | reduce
+        explore models | reduce
           with is (reduce
-             select is UPPER(first_name)
+             select is UPPER(manufacturer)
              fetch is count()
           )
         | project
@@ -921,52 +921,52 @@ describe("order by tests", () => {
 
   it("aggregate and scalar conditions", async () => {
     const result = await model.compileQuery(`
-        explore users | reduce
-          user_count is count() : [first_name: ~'A%']
+        explore models | reduce
+          model_count is count() : [manufacturer: ~'A%']
         `);
     await bqCompile(result.sql);
   });
 
   it("modeled having simple", async () => {
     const result = await model.runQuery(`
-        define popular_names is (users
-          | reduce : [user_count > 100]
-            first_name
-            user_count
+        define popular_names is (models
+          | reduce : [model_count > 100]
+            manufacturer
+            model_count
         );
         popular_names | project order by 2
-         first_name
-         user_count
+         manufacturer
+         model_count
         `);
-    expect(rows(result)[0].user_count).toBe(101);
+    expect(rows(result)[0].model_count).toBe(102);
   });
 
   it("modeled having complex", async () => {
     const result = await model.runQuery(`
-        define popular_names is (users
-          | reduce : [user_count > 100]
-            first_name
-            user_count
+        define popular_names is (models
+          | reduce : [model_count > 100]
+            manufacturer
+            model_count
             l is (reduce top 5
-              last_name
-              user_count
+              manufacturer
+              model_count
             )
         );
         popular_names | project order by 2
-         first_name
-         user_count
+         manufacturer
+         model_count
         `);
-    expect(rows(result)[0].user_count).toBe(101);
+    expect(rows(result)[0].model_count).toBe(102);
   });
 
   it("turtle references joined element", async () => {
     const result = await model.compileQuery(`
-      define a is ('lookerdata.liquor.aircraft'
+      define a is ('malloytest.aircraft'
         primary key tail_num
         aircraft_count is count(*)
       );
 
-      define f is ('lookerdata.liquor.flights'
+      define f is ('malloytest.flights'
         primary key id2
         flight_count is count()
         foo is (reduce
@@ -1097,7 +1097,7 @@ describe("join tests", () => {
     // console.log(result.sql);
     // console.log(result.result);
     expect(result.result[0].total_seats).toBe(452415);
-    expect(result.result[0].aircraft_count).toBe(373371);
+    expect(result.result[0].aircraft_count).toBe(62644);
   });
 
   it("hand join foreign key filtered inner", async () => {
@@ -1113,7 +1113,7 @@ describe("join tests", () => {
     await bqCompile(result.sql);
     // console.log(result.sql);
     // console.log(result.result);
-    expect(result.result[0].total_seats).toBe(108964);
-    expect(result.result[0].aircraft_count).toBe(52293);
+    expect(result.result[0].total_seats).toBe(7448);
+    expect(result.result[0].aircraft_count).toBe(544);
   });
 });
