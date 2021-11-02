@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/malloy-db-bigquery",
+  "name": "@malloy-lang/db-bigquery",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",

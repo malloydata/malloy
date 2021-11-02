@@ -33,7 +33,7 @@ import {
 } from "./commands";
 import { Malloy } from "@malloy-lang/malloy";
 import { showResultJsonCommand } from "./commands/show_result_json";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 Malloy.db = new BigQueryConnection("vsCode");
 

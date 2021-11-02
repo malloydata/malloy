@@ -17,7 +17,7 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, DataTreeRoot, HtmlView } from "@malloy-lang/malloy-render";
+import { DataStyles, DataTreeRoot, HtmlView } from "@malloy-lang/render";
 import { Malloy, MalloyTranslator } from "@malloy-lang/malloy";
 import path from "path";
 import fs from "fs";

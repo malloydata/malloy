@@ -19,7 +19,7 @@ import {
 import { Malloy, MalloyTranslator, LogMessage } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 Malloy.db = new BigQueryConnection("vsCode");
 

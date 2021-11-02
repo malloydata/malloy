@@ -19,7 +19,7 @@ import { fStringEq } from "./test_utils";
 import "@malloy-lang/malloy/src/lang/jestery";
 import { TestTranslator } from "@malloy-lang/malloy/src/lang/jest-factories";
 import { FLIGHTS_EXPLORE } from "./models/faa_model";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 Malloy.db = new BigQueryConnection("test");
 

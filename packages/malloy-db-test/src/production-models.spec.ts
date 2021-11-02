@@ -16,7 +16,7 @@ import fs from "fs";
 import path from "path";
 import { Malloy } from "@malloy-lang/malloy/src/malloy";
 import { MalloyTranslator, TranslateResponse } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 Malloy.db = new BigQueryConnection("test");
 

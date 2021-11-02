@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/malloy-db-postgres",
+  "name": "@malloy-lang/db-postgres",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "echo 'no tests for 'malloy-db-postgres' yet'",
+    "test": "echo 'no tests for 'db-postgres' yet'",
     "build": "yarn tsc --build"
   },
   "dependencies": {
