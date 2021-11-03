@@ -18,6 +18,7 @@ import { Renderer } from "../renderer";
 import { HtmlBarChartRenderer } from "./bar_chart";
 import { HtmlBooleanRenderer } from "./boolean";
 import { HtmlJSONRenderer } from "./json";
+import { HtmlPercentRenderer } from "./percent";
 import { HtmlBytesRenderer } from "./bytes";
 import { HtmlCurrencyRenderer } from "./currency";
 import { HtmlDashboardRenderer } from "./dashboard";
@@ -156,6 +157,8 @@ export function makeRenderer(
       return new HtmlDateRenderer();
     } else if (renderDef.renderer === "currency") {
       return new HtmlCurrencyRenderer();
+    } else if (renderDef.renderer === "percent") {
+      return new HtmlPercentRenderer();
     } else if (renderDef.renderer === "number" || field.type === "number") {
       return new HtmlNumberRenderer();
     } else if (renderDef.renderer === "bytes") {

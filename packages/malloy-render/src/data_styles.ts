@@ -35,6 +35,7 @@ export type RenderDef =
   | ({ renderer: "segment_map" } & SegmentMapRenderOptions)
   | ({ renderer: "shape_map" } & ShapeMapRenderOptions)
   | ({ renderer: "number" } & NumberRenderOptions)
+  | ({ renderer: "percent" } & PercentRenderOptions)
   | ({ renderer: "boolean" } & BooleanRenderOptions)
   | ({ renderer: "spark_line" } & SparkLineRenderOptions)
   | ({ renderer: "bytes" } & BytesRenderOptions)
@@ -85,6 +86,10 @@ export interface TimeRenderOptions extends TextRenderOptions {
 
 export interface NumberRenderOptions extends TextRenderOptions {
   number?: Record<string, unknown>;
+}
+
+export interface PercentRenderOptions extends TextRenderOptions {
+  percent?: Record<string, unknown>;
 }
 
 export interface BooleanRenderOptions extends TextRenderOptions {

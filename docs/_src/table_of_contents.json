@@ -61,16 +61,16 @@
           "link": "/language/filters.md"
         },
         {
-          "title": "Filter Syntax",
-          "link": "/language/filter_expressions.md"
-        },
-        {
           "title": "Time Ranges",
           "link": "/language/time-ranges.md"
         },
         {
           "title": "Nesting",
           "link": "/language/nesting.md"
+        },
+        {
+          "title": "Aggregates",
+          "link": "/language/aggregates.md"
         },
         {
           "title": "Imports and Exports",

@@ -4,12 +4,6 @@ An explore consists of a data source along with a list of
 additional properties which extend it, such as named fields, queries, and joins. When an explore is used in a query,
 everything from the original source and all its extensions can be referenced.
 
-```malloy
-define my_explore is (explore source
-  -- Extensions go here
-);
-```
-
 ## Explore Sources
 
 An explore's source can be any of the following:

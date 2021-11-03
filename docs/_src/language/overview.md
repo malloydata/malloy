@@ -7,8 +7,7 @@ Malloy is essentially a Domain-specific Language (DSL) where the
 "domain" is "exploration and transformation of SQL datasets."
 
 This section is designed to be an explorable reference to the
-underlying language. For an overview of malloy, refer to the [Basics of
-Malloy](../language/basic.md) introduction.
+underlying language. For an overview of malloy, refer to the [Malloy Quickstart](../language/basic.md) introduction.
 
 * [About Malloy](about-malloy.md) – A longer read, why is there Malloy and why does it look like it does
 * [Queries](query.md) – How to write data transformations in malloy

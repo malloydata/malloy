@@ -277,7 +277,7 @@ explore airports
 
 Here we can see that the `by_facility` column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.
 
-Queries can also be deeply nested, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth.
+Queries can be nested infinitely, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
@@ -334,7 +334,7 @@ Next, we'll use the output of that query as the input to another, where we deter
 percentage of airports compared to the whole state, taking advantage of the nested structure of the data to to so.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large", "dataStyles": { "percent_in_county": { "renderer": "percent" }}}
 explore airports
 | reduce : [state : 'CA'|'NY']
   state
@@ -347,7 +347,7 @@ explore airports
   by_county.county
   airports_in_county is by_county.airport_count
   airports_in_state is airport_count
-  portion_in_county is by_county.airport_count / airport_count
+  percent_in_county is by_county.airport_count / airport_count
 ```
 
 ## Joins
@@ -373,6 +373,23 @@ explore flights
 ```
 
 In this example, the `airports` explore is joined to `flights`, linking the foreign key `origin` of `flights` to the primary key `code` of `airports`. The resulting joined explore is aliased as `origin_airport` within `flights`.
+
+## Aggregates
+
+As in SQL, aggregates `sum`, `count`, and `avg` are available, and their use in
+an expression identifies the corresponding field as a [measure](fields.md#measures).
+
+Aggregates may be computed with respect to any joined explore, allowing for a wider variety of measurements to be calculated than is possible in SQL. See the [Aggregate Locality](aggregates.md#aggregate-locality) section for more information.
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
+explore aircraft
+| reduce
+  -- The average number of seats on models of registered aircraft
+  models_avg_seats is aircraft_models.seats.avg()
+  -- The average number of seats on registered aircraft
+  aircraft_avg_seats is avg(aircraft_models.seats)
+```
 
 ## Comments
 
