@@ -12,11 +12,13 @@
  */
 
 module.exports = {
-  moduleDirectories: ["../../node_modules"],
+  globals: {
+    "ts-jest": { tsconfig: "<rootDir>/tsconfig.json" },
+  },
   moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  modulePathIgnorePatterns: ["<rootDir>/dist/"],
   setupFilesAfterEnv: ["jest-expect-message"],
   testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
+  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/out/"],
   transform: {
     "^.+\\.(ts|tsx)$": "ts-jest",
   },

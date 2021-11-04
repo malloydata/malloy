@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "jest",
+    "test": "jest --config=../../jest.config.js",
     "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
     "testLang": "(cd src/lang ; yarn jest *.spec.ts)",
     "testModel": "(cd src/model ; yarn jest *.spec.ts)",
