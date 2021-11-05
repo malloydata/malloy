@@ -16,26 +16,39 @@ export * from "./model";
 export * from "./lang";
 export {
   Malloy,
-  Translator,
   Runner,
   Runtime,
-  EmptyUriReader,
-  InMemoryUriReader,
+  EmptyUrlReader,
+  InMemoryUrlReader,
   FixedConnections,
   MalloyError,
+  JoinRelationship,
+  SourceRelationship,
 } from "./malloy";
-export type { PreparedQuery, PreparedSql } from "./malloy";
 export type {
-  UriReader,
+  Explore,
+  Model,
+  PreparedQuery,
+  PreparedResult,
+  Field,
+  AtomicField,
+  ExploreField,
+  QueryField,
+  Result,
+  DataArray,
+  DataColumn,
+} from "./malloy";
+export type {
+  UrlReader,
   SchemaReader,
   LookupSchemaReader,
   SqlRunner,
   LookupSqlRunner,
   QueryString,
   ModelString,
-  QueryUri,
-  ModelUri,
+  QueryUrl,
+  ModelUrl,
 } from "./runtime_types";
-export { Uri } from "./runtime_types";
+export { Url } from "./runtime_types";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

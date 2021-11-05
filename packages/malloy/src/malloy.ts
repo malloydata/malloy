@@ -12,24 +12,30 @@
  */
 
 import { Connection } from "./connection";
-import { LogMessage, MalloyTranslator, TranslateResponse } from "./lang";
+import { LogMessage, MalloyTranslator } from "./lang";
 import {
   CompiledQuery,
+  FieldTypeDef,
+  FilterExpression,
   ModelDef,
   Query as InternalQuery,
+  QueryData,
+  QueryDataRow,
   QueryModel,
   QueryResult,
+  StructDef,
+  TurtleDef,
 } from "./model";
 import {
   LookupSqlRunner as LookupSqlRunner,
   LookupSchemaReader,
   ModelString,
-  ModelUri,
+  ModelUrl,
   SqlRunner,
   QueryString,
-  QueryUri,
-  Uri,
-  UriReader,
+  QueryUrl,
+  Url,
+  UrlReader,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -44,7 +50,7 @@ export interface Loggable {
 }
 
 export class Malloy {
-  // TODO load from file built during release
+  // TODO load from file built durlng release
   public static get version(): string {
     return "0.0.1";
   }
@@ -61,13 +67,6 @@ export class Malloy {
   }
 }
 
-type SuccessfulTranslateResponse = TranslateResponse & {
-  translated: {
-    modelDef: ModelDef;
-    queryList: PreparedQuery[];
-  };
-};
-
 export class MalloyError extends Error {
   public readonly log: LogMessage[];
   constructor(message: string, log: LogMessage[] = []) {
@@ -76,36 +75,21 @@ export class MalloyError extends Error {
   }
 }
 
-class Model {
-  private response: SuccessfulTranslateResponse;
+export class Model {
+  private modelDef: ModelDef;
+  private queryList: InternalQuery[];
 
-  constructor(response: TranslateResponse) {
-    this.response = Model.getSuccessfulTranslation(response);
-  }
-
-  private static getSuccessfulTranslation(
-    response: TranslateResponse
-  ): SuccessfulTranslateResponse {
-    if (response.translated !== undefined) {
-      return response as SuccessfulTranslateResponse;
-    } else {
-      const errors = response.errors || [];
-      throw new MalloyError(
-        `Error(s) compiling model: ${errors[0]?.message}.`,
-        errors
-      );
-    }
+  constructor(modelDef: ModelDef, queryList: InternalQuery[]) {
+    this.modelDef = modelDef;
+    this.queryList = queryList;
   }
 
   public getPreparedQueryByName(queryName: string): PreparedQuery {
-    const struct = this.response.translated.modelDef.structs[queryName];
+    const struct = this.modelDef.structs[queryName];
     if (struct.type === "struct") {
       const source = struct.structSource;
       if (source.type === "query") {
-        return new PreparedQuery(
-          source.query,
-          this.response.translated.modelDef
-        );
+        return new PreparedQuery(source.query, this.modelDef, queryName);
       }
     }
 
@@ -113,30 +97,60 @@ class Model {
   }
 
   public getPreparedQueryByIndex(index: number): PreparedQuery {
-    const adjustedIndex =
-      index === -1 ? this.response.translated.queryList.length - 1 : index;
+    if (index < 0) {
+      throw new Error(`Invalid index ${index}.`);
+    } else if (index >= this.queryList.length) {
+      throw new Error(`Query index ${index} is out of bounds.`);
+    }
+    return new PreparedQuery(this.queryList[index], this.modelDef);
+  }
+
+  /*
+   * Get this model's final unnamed query.
+   */
+  public getPreparedQuery(): PreparedQuery {
+    if (this.queryList.length < 0) {
+      throw new Error("Model has no queries.");
+    }
     return new PreparedQuery(
-      this.response.translated.queryList[adjustedIndex],
-      this.response.translated.modelDef
+      this.queryList[this.queryList.length - 1],
+      this.modelDef
     );
   }
 
-  public getPreparedQuery(): PreparedQuery {
-    return this.getPreparedQueryByIndex(-1);
+  public getExploreByName(name: string): Explore {
+    return new Explore(this.modelDef.structs[name]);
   }
 
-  public get _modelDef(): ModelDef {
-    return this.response.translated.modelDef;
+  public getExplores(): Explore[] {
+    return Object.keys(this.modelDef.structs).map((name) =>
+      this.getExploreByName(name)
+    );
+  }
+
+  public _getModelDef(): ModelDef {
+    return this.modelDef;
   }
 }
 
 export class PreparedQuery {
-  _modelDef: ModelDef;
-  _query: InternalQuery;
+  private _modelDef: ModelDef;
+  private _query: InternalQuery;
+  private name?: string;
 
-  constructor(query: InternalQuery, model: ModelDef) {
+  constructor(query: InternalQuery, model: ModelDef, name?: string) {
     this._query = query;
     this._modelDef = model;
+    this.name = name;
+  }
+
+  public getPreparedResult(): PreparedResult {
+    const queryModel = new QueryModel(this._modelDef);
+    const translatedQuery = queryModel.compileQuery(this._query);
+    return new PreparedResult({
+      queryName: this.name || translatedQuery.queryName,
+      ...translatedQuery,
+    });
   }
 }
 
@@ -149,40 +163,51 @@ function parseTableName(connectionTableString: string) {
   }
 }
 
-export class Translator {
-  private uriReader: UriReader;
+export class Compiler {
+  private urlReader: UrlReader;
   private lookupSchemaReader: LookupSchemaReader;
 
-  constructor(uriReader: UriReader, lookupSchemaReader: LookupSchemaReader) {
-    this.uriReader = uriReader;
+  constructor(urlReader: UrlReader, lookupSchemaReader: LookupSchemaReader) {
+    this.urlReader = urlReader;
     this.lookupSchemaReader = lookupSchemaReader;
   }
 
   private async _compile(
-    uri: Uri,
+    url: Url,
     malloy: string,
     model?: ModelDef
-  ): Promise<Model> {
-    const translator = new MalloyTranslator(uri.toString(), {
-      URLs: { [uri.toString()]: malloy },
+  ): Promise<{ modelDef: ModelDef; queryList: InternalQuery[] }> {
+    const translator = new MalloyTranslator(url.toString(), {
+      URLs: { [url.toString()]: malloy },
     });
     translator.translate(model);
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const result = translator.translate();
       if (result.final) {
-        return new Model(result);
+        if (result.translated) {
+          return {
+            modelDef: result.translated.modelDef,
+            queryList: result.translated.queryList,
+          };
+        } else {
+          const errors = result.errors || [];
+          throw new MalloyError(
+            `Error(s) compiling model: ${errors[0]?.message}.`,
+            errors
+          );
+        }
       } else if (result.URLs) {
-        for (const neededUri of result.URLs) {
-          if (neededUri.startsWith("internal://")) {
+        for (const neededUrl of result.URLs) {
+          if (neededUrl.startsWith("internal://")) {
             throw new Error(
-              "In order to use relative imports, you must compile a file via a URI."
+              "In order to use relative imports, you must compile a file via a URL."
             );
           }
-          const neededText = await this.uriReader.readUri(
-            Uri.fromString(neededUri)
+          const neededText = await this.urlReader.readUrl(
+            Url.fromString(neededUrl)
           );
-          const URLs = { [neededUri]: neededText };
+          const URLs = { [neededUrl]: neededText };
           translator.update({ URLs });
         }
       } else if (result.tables) {
@@ -216,241 +241,140 @@ export class Translator {
     }
   }
 
-  public async toModel(
-    primaryOrBase: ModelString | ModelUri | Model,
-    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
-  ): Promise<Model>;
-  public async toModel(model: ModelString | ModelUri | Model): Promise<Model>;
-  public async toModel(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri
-  ): Promise<Model>;
-  public async toModel(
-    primaryOrBase: ModelString | ModelUri | Model,
-    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
-  ): Promise<Model> {
-    let primary: ModelString | ModelUri | Model | QueryString | QueryUri;
-    let base: ModelString | ModelUri | Model | undefined;
-    let model: Model | undefined;
-    {
-      if (maybePrimary === undefined) {
-        if (primaryOrBase instanceof Model) {
-          throw new Error("Oops!"); // TODO crs
-        }
-        primary = primaryOrBase;
-      } else {
-        primary = maybePrimary;
-        base = primaryOrBase;
-      }
+  private async toUrlAndContents(source: Url | string) {
+    if (source instanceof Url) {
+      const contents = await this.urlReader.readUrl(source);
+      return { contents, url: source };
+    } else {
+      return {
+        contents: source,
+        url: Url.fromString("internal://internal.malloy"),
+      };
     }
+  }
+
+  public async makeModel(model: ModelString | ModelUrl | Model): Promise<Model>;
+  public async makeModel(
+    model: ModelString | ModelUrl | Model,
+    query: QueryString | QueryUrl
+  ): Promise<Model>;
+  public async makeModel(
+    primaryOrBase: ModelString | ModelUrl | Model,
+    maybePrimary?: ModelString | ModelUrl | QueryString | QueryUrl
+  ): Promise<Model> {
+    const { primary, base } = flipPrimaryBase(primaryOrBase, maybePrimary);
+    let model: ModelDef | undefined;
 
     if (base !== undefined) {
       if (base instanceof Model) {
-        model = base;
+        model = base._getModelDef();
       } else {
-        model = await this.toModel(base);
+        const { url, contents } = await this.toUrlAndContents(base);
+        model = (await this._compile(url, contents)).modelDef;
       }
     }
 
-    if (primary instanceof Model) {
-      return primary;
-    } else if (primary instanceof Uri) {
-      const string = await this.uriReader.readUri(primary);
-      return this._compile(primary, string, model?._modelDef);
-    } else {
-      return this._compile(
-        Uri.fromString("internal://query"),
-        primary,
-        model?._modelDef
-      );
-    }
-  }
-
-  // TODO crs Maybe get rid of this function, and rename compile to toModel
-  // Or else, make compile private
-  // public async toModel(model: ModelString | ModelUri): Promise<Model> {
-  //   return await this.compile(model);
-  // }
-
-  public async toPreparedQuery(
-    queryOrModel: ModelString | ModelUri | Model | QueryString | QueryUri,
-    maybeQuery?: QueryString | QueryUri
-  ): Promise<PreparedQuery>;
-  public async toPreparedQuery(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri
-  ): Promise<PreparedQuery>;
-  public async toPreparedQuery(
-    query: QueryString | QueryUri
-  ): Promise<PreparedQuery>;
-  public async toPreparedQuery(
-    queryOrModel: ModelString | ModelUri | Model | QueryString | QueryUri,
-    maybeQuery?: QueryString | QueryUri
-  ): Promise<PreparedQuery> {
-    let model: ModelString | ModelUri | Model | undefined;
-    let query: QueryString | QueryUri | PreparedQuery;
-    if (maybeQuery === undefined) {
-      if (queryOrModel instanceof Model) {
-        throw new Error("Illegal invocation.!"); // TODO crs
-      }
-      query = queryOrModel;
-    } else {
-      query = maybeQuery;
-      model = queryOrModel;
-    }
-    // TODO crs swap order in this function too
-    return (await this.toModel(query, model)).getPreparedQuery();
-  }
-
-  public async toPreparedQueryByIndex(
-    model: ModelString | ModelUri | Model,
-    index: number
-  ): Promise<PreparedQuery> {
-    return (await this.toModel(model)).getPreparedQueryByIndex(index);
-  }
-
-  public async toPreparedQueryByName(
-    model: ModelString | ModelUri | Model,
-    name: string
-  ): Promise<PreparedQuery> {
-    return (await this.toModel(model)).getPreparedQueryByName(name);
-  }
-
-  public async toPreparedSql(
-    queryOrModel:
-      | ModelString
-      | ModelUri
-      | Model
-      | QueryString
-      | QueryUri
-      | PreparedQuery,
-    maybeQuery?: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql>;
-  public async toPreparedSql(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql>;
-  public async toPreparedSql(
-    query: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql>;
-  public async toPreparedSql(
-    queryOrModel:
-      | ModelString
-      | ModelUri
-      | Model
-      | QueryString
-      | QueryUri
-      | PreparedQuery,
-    maybeQuery?: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql> {
-    let model: ModelString | ModelUri | Model | undefined;
-    let query: QueryString | QueryUri | PreparedQuery;
-    {
-      if (maybeQuery === undefined) {
-        if (queryOrModel instanceof Model) {
-          throw new Error("Illegal invocation.!"); // TODO crs
-        }
-        query = queryOrModel;
-      } else {
-        if (queryOrModel instanceof PreparedQuery) {
-          throw new Error("Illegal invocation."); // TODO crs
-        }
-        query = maybeQuery;
-        model = queryOrModel;
-      }
-    }
-    if (query instanceof PreparedQuery) {
-      const queryModel = new QueryModel(query._modelDef);
-      return new PreparedSql(await queryModel.compileQuery(query._query));
-    } else {
-      return this.toPreparedSql(
-        (await this.toModel(query, model)).getPreparedQuery()
-      );
-    }
-  }
-
-  public async toPreparedSqlByIndex(
-    model: ModelString | ModelUri | Model,
-    index: number
-  ): Promise<PreparedSql> {
-    return this.toPreparedSql(
-      (await this.toModel(model)).getPreparedQueryByIndex(index)
-    );
-  }
-
-  public async toPreparedSqlByName(
-    model: ModelString | ModelUri | Model,
-    name: string
-  ): Promise<PreparedSql> {
-    return this.toPreparedSql(
-      (await this.toModel(model)).getPreparedQueryByName(name)
-    );
+    const { url, contents } = await this.toUrlAndContents(primary);
+    const { modelDef, queryList } = await this._compile(url, contents, model);
+    return new Model(modelDef, queryList);
   }
 }
 
 export class Runner {
-  private lookupQueryExecutor: LookupSqlRunner;
+  private lookupSqlRunner: LookupSqlRunner;
 
-  constructor(lookupQueryExecutor: LookupSqlRunner) {
-    this.lookupQueryExecutor = lookupQueryExecutor;
+  constructor(lookupSqlRunner: LookupSqlRunner) {
+    this.lookupSqlRunner = lookupSqlRunner;
   }
 
-  public async runPreparedSql(preparedSql: PreparedSql): Promise<QueryResult> {
-    const sqlQueryRunner = await this.getSqlRunner(
-      preparedSql.getConnectionName()
-    );
-    const result = await sqlQueryRunner.runSql(preparedSql.getSql());
-    return {
-      ...preparedSql._getRawQuery(),
-      result: result.rows,
-      totalRows: result.totalRows,
-    };
+  public async run(
+    preparedSql: PreparedResult | Promise<PreparedResult>
+  ): Promise<Result> {
+    preparedSql = await preparedSql;
+    const sqlRunner = await this.getSqlRunner(preparedSql.getConnectionName());
+    return Runner.run(sqlRunner, preparedSql);
   }
 
   public getSqlRunner(connectionName: string): Promise<SqlRunner> {
-    return this.lookupQueryExecutor.lookupQueryRunner(connectionName);
+    return this.lookupSqlRunner.lookupQueryRunner(connectionName);
+  }
+
+  public static async run(
+    sqlRunner: SqlRunner,
+    preparedSql: PreparedResult | Promise<PreparedResult>
+  ): Promise<Result> {
+    preparedSql = await preparedSql;
+    const result = await sqlRunner.runSql(preparedSql.getSql());
+    return new Result({
+      ...preparedSql._getRawQuery(),
+      result: result.rows,
+      totalRows: result.totalRows,
+    });
   }
 }
 
-export class PreparedSql {
-  private query: CompiledQuery;
+export class PreparedResult {
+  protected inner: CompiledQuery;
 
   constructor(query: CompiledQuery) {
-    this.query = query;
+    this.inner = query;
   }
 
   public getConnectionName(): string {
-    return this.query.connectionName;
+    return this.inner.connectionName;
   }
 
   public _getRawQuery(): CompiledQuery {
-    return this.query;
+    return this.inner;
   }
 
   getSql(): string {
-    return this.query.sql;
+    return this.inner.sql;
+  }
+
+  getResultExplore(): Explore {
+    const lastStageName = this.inner.lastStageName;
+    const explore = this.inner.structs.find(
+      (explore) => explore.name === lastStageName
+    );
+    if (explore === undefined) {
+      throw new Error("Malformed query result.");
+    }
+    const namedExplore = {
+      ...explore,
+      name: this.inner.queryName || explore.name,
+    };
+    return new Explore(namedExplore);
+  }
+
+  _getSourceExploreName(): string {
+    return this.inner.sourceExplore;
+  }
+
+  _getSourceFilters(): FilterExpression[] {
+    return this.inner.sourceFilters || [];
   }
 }
 
-export class EmptyUriReader implements UriReader {
-  async readUri(_uri: Uri): Promise<string> {
+export class EmptyUrlReader implements UrlReader {
+  async readUrl(_url: Url): Promise<string> {
     throw new Error("No files.");
   }
 }
 
-export class InMemoryUriReader implements UriReader {
-  private files: Map<Uri, string>;
+export class InMemoryUrlReader implements UrlReader {
+  private files: Map<string, string>;
 
-  constructor(files: Map<Uri, string>) {
+  constructor(files: Map<string, string>) {
     this.files = files;
   }
 
-  async readUri(uri: Uri): Promise<string> {
-    const file = this.files.get(uri);
+  async readUrl(url: Url): Promise<string> {
+    const file = this.files.get(url.toString());
     if (file !== undefined) {
       return Promise.resolve(file);
     } else {
-      throw new Error("File not found.");
+      throw new Error(`File not found '${url}'`);
     }
   }
 }
@@ -492,156 +416,644 @@ export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
   }
 }
 
+export enum SourceRelationship {
+  Nested = "nested",
+  Condition = "condition",
+  BaseTable = "base_table",
+  ForeignKey = "foreign_key",
+  Inline = "inline",
+}
+
+// TODO maybe generalize this as leftOptional?
+function flipPrimaryBase(
+  primaryOrBase: ModelString | ModelUrl | Model,
+  maybePrimary?: ModelString | ModelUrl | QueryString | QueryUrl
+) {
+  let primary: ModelString | ModelUrl | QueryString | QueryUrl;
+  let base: ModelString | ModelUrl | Model | undefined;
+  if (maybePrimary === undefined) {
+    if (primaryOrBase instanceof Model) {
+      // TODO crs
+      throw new Error("Oops");
+    }
+    primary = primaryOrBase;
+  } else {
+    primary = maybePrimary;
+    base = primaryOrBase;
+  }
+  return { primary, base };
+}
+
+export type Field = AtomicField | QueryField | ExploreField;
+
+export class Explore {
+  protected readonly structDef: StructDef;
+  protected readonly parentExplore?: Explore;
+  private fields: Map<string, Field> | undefined;
+
+  getName(): string {
+    return this.structDef.as || this.structDef.name;
+  }
+
+  constructor(structDef: StructDef, parentExplore?: Explore) {
+    this.structDef = structDef;
+    this.parentExplore = parentExplore;
+  }
+
+  public _getStructDef(): StructDef {
+    return this.structDef;
+  }
+
+  getQueryByName(name: string): PreparedQuery {
+    const internalQuery: InternalQuery = {
+      type: "query",
+      structRef: this.structDef,
+      pipeline: [
+        {
+          type: "reduce",
+          fields: [name],
+        },
+      ],
+    };
+    return new PreparedQuery(internalQuery, this.getModelDef());
+  }
+
+  private getModelDef(): ModelDef {
+    return {
+      name: "generated_model",
+      exports: [],
+      structs: { [this.structDef.name]: this.structDef },
+    };
+  }
+
+  getSingleExploreModel(): Model {
+    return new Model(this.getModelDef(), []);
+  }
+
+  getFieldMap(): Map<string, Field> {
+    if (this.fields === undefined) {
+      this.fields = new Map(
+        this.structDef.fields.map((fieldDef) => {
+          const name = fieldDef.as || fieldDef.name;
+          if (fieldDef.type === "struct") {
+            return [name, new ExploreField(fieldDef, this)];
+          } else if (fieldDef.type === "turtle") {
+            return [name, new QueryField(fieldDef)];
+          } else {
+            return [name, new AtomicField(fieldDef)];
+          }
+        }) as [string, Field][]
+      );
+    }
+    return this.fields;
+  }
+
+  getFields(): Field[] {
+    return [...this.getFieldMap().values()];
+  }
+
+  getFieldByName(fieldName: string): Field {
+    const field = this.getFieldMap().get(fieldName);
+    if (field === undefined) {
+      throw new Error(`No such field ${fieldName}.`);
+    }
+    return field;
+  }
+
+  getPrimaryKey(): string | undefined {
+    return this.structDef.primaryKey;
+  }
+
+  getParentExplore(): Explore | undefined {
+    return this.parentExplore;
+  }
+
+  getSourceRelationship(): SourceRelationship {
+    switch (this.structDef.structRelationship.type) {
+      case "condition":
+        return SourceRelationship.Condition;
+      case "foreignKey":
+        return SourceRelationship.ForeignKey;
+      case "inline":
+        return SourceRelationship.Inline;
+      case "nested":
+        return SourceRelationship.Nested;
+      case "basetable":
+        return SourceRelationship.BaseTable;
+    }
+  }
+
+  hasParentExplore(): this is ExploreField {
+    return this instanceof ExploreField;
+  }
+}
+
+export enum AtomicFieldType {
+  String = "string",
+  Number = "number",
+  Boolean = "boolean",
+  Date = "date",
+  Timestamp = "timestamp",
+}
+
+export class AtomicField {
+  private fieldTypeDef: FieldTypeDef;
+
+  constructor(fieldTypeDef: FieldTypeDef) {
+    this.fieldTypeDef = fieldTypeDef;
+  }
+
+  getName(): string {
+    return this.fieldTypeDef.as || this.fieldTypeDef.name;
+  }
+
+  getType(): AtomicFieldType {
+    switch (this.fieldTypeDef.type) {
+      case "string":
+        return AtomicFieldType.String;
+      case "boolean":
+        return AtomicFieldType.Boolean;
+      case "date":
+        return AtomicFieldType.Date;
+      case "timestamp":
+        return AtomicFieldType.Timestamp;
+      case "number":
+        return AtomicFieldType.Number;
+    }
+  }
+
+  isQueryField(): this is QueryField {
+    return false;
+  }
+
+  isExploreField(): this is ExploreField {
+    return false;
+  }
+
+  isAtomicField(): this is AtomicField {
+    return true;
+  }
+
+  isAggregate(): boolean {
+    return !!this.fieldTypeDef.aggregate;
+  }
+}
+
+export class QueryField {
+  private turtleDef: TurtleDef;
+
+  constructor(turtleDef: TurtleDef) {
+    this.turtleDef = turtleDef;
+  }
+
+  getName(): string {
+    return this.turtleDef.as || this.turtleDef.name;
+  }
+
+  isQueryField(): this is QueryField {
+    return true;
+  }
+
+  isExploreField(): this is ExploreField {
+    return false;
+  }
+
+  isAtomicField(): this is AtomicField {
+    return false;
+  }
+}
+
+export enum JoinRelationship {
+  OneToOne = "one_to_one",
+  OneToMany = "one_to_many",
+  ManyToOne = "many_to_one",
+}
+
+export class ExploreField extends Explore {
+  protected parentExplore: Explore;
+
+  constructor(structDef: StructDef, parentExplore: Explore) {
+    super(structDef, parentExplore);
+    this.parentExplore = parentExplore;
+  }
+
+  getJoinRelationship(): JoinRelationship {
+    switch (this.structDef.structRelationship.type) {
+      case "condition":
+      case "foreignKey":
+        return JoinRelationship.OneToMany;
+      case "inline":
+        return JoinRelationship.OneToOne;
+      case "nested":
+        return JoinRelationship.ManyToOne;
+      default:
+        throw new Error("An explore field must have a join relationship.");
+    }
+  }
+
+  isQueryField(): this is QueryField {
+    return false;
+  }
+
+  isExploreField(): this is ExploreField {
+    return true;
+  }
+
+  isAtomicField(): this is AtomicField {
+    return false;
+  }
+
+  getParentExplore(): Explore {
+    return this.parentExplore;
+  }
+}
+
 export class Runtime {
-  private translator: Translator;
+  private compiler: Compiler;
   private runner: Runner;
 
-  constructor(
-    uriReader: UriReader,
-    lookupSchemaReader: LookupSchemaReader,
-    lookupQueryExecutor: LookupSqlRunner
-  ) {
-    this.translator = new Translator(uriReader, lookupSchemaReader);
-    this.runner = new Runner(lookupQueryExecutor);
+  constructor({
+    urls,
+    schemas,
+    connections,
+  }: {
+    urls: UrlReader;
+    schemas: LookupSchemaReader;
+    connections: LookupSqlRunner;
+  }) {
+    this.compiler = new Compiler(urls, schemas);
+    this.runner = new Runner(connections);
   }
 
-  public async toModel(
-    primaryOrBase: ModelString | ModelUri | Model,
-    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
-  ): Promise<Model>;
-  public async toModel(model: ModelString | ModelUri | Model): Promise<Model>;
-  public async toModel(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri
-  ): Promise<Model>;
-  public async toModel(
-    primaryOrBase: ModelString | ModelUri | Model,
-    maybePrimary?: ModelString | ModelUri | Model | QueryString | QueryUri
-  ): Promise<Model> {
-    return await this.translator.toModel(primaryOrBase, maybePrimary);
+  makeModel(source: ModelUrl | ModelString): ModelRuntimeRequest {
+    const compiler = this.getCompiler();
+    return new ModelRuntimeRequest(this, function build() {
+      return compiler.makeModel(source);
+    });
   }
 
-  public async toPreparedQuery(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri
-  ): Promise<PreparedQuery>;
-  public async toPreparedQuery(
-    query: QueryString | QueryUri
-  ): Promise<PreparedQuery>;
-  public async toPreparedQuery(
-    queryOrModel: ModelString | ModelUri | Model | QueryString | QueryUri,
-    maybeQuery?: QueryString | QueryUri
-  ): Promise<PreparedQuery> {
-    return this.translator.toPreparedQuery(queryOrModel, maybeQuery);
+  makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
+    return this.makeModel(query).getQuery();
   }
 
-  public async toPreparedQueryByIndex(
-    model: ModelString | ModelUri | Model,
+  makeQueryByIndex(
+    model: ModelUrl | ModelString,
     index: number
-  ): Promise<PreparedQuery> {
-    return this.translator.toPreparedQueryByIndex(model, index);
+  ): PreparedQueryRuntimeRequest {
+    return this.makeModel(model).getQueryByIndex(index);
   }
 
-  public async toPreparedQueryByName(
-    model: ModelString | ModelUri | Model,
+  makeQueryByName(
+    model: ModelUrl | ModelString,
     name: string
-  ): Promise<PreparedQuery> {
-    return this.translator.toPreparedQueryByName(model, name);
+  ): PreparedQueryRuntimeRequest {
+    return this.makeModel(model).getQueryByName(name);
   }
 
-  public async toPreparedSql(
-    queryOrModel:
-      | ModelString
-      | ModelUri
-      | Model
-      | QueryString
-      | QueryUri
-      | PreparedQuery,
-    maybeQuery?: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql>;
-  public async toPreparedSql(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql>;
-  public async toPreparedSql(
-    query: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql>;
-  public async toPreparedSql(
-    queryOrModel:
-      | ModelString
-      | ModelUri
-      | Model
-      | QueryString
-      | QueryUri
-      | PreparedQuery,
-    maybeQuery?: QueryString | QueryUri | PreparedQuery
-  ): Promise<PreparedSql> {
-    return this.translator.toPreparedSql(queryOrModel, maybeQuery);
+  public getRunner(): Runner {
+    return this.runner;
   }
 
-  public async toPreparedSqlByIndex(
-    model: ModelString | ModelUri | Model,
-    index: number
-  ): Promise<PreparedSql> {
-    return this.translator.toPreparedSqlByIndex(model, index);
+  public getCompiler(): Compiler {
+    return this.compiler;
+  }
+}
+
+class RuntimeRequest<T> {
+  protected runtime: Runtime;
+  private readonly _build: () => Promise<T>;
+  private built: Promise<T> | undefined;
+
+  constructor(runtime: Runtime, build: () => Promise<T>) {
+    this.runtime = runtime;
+    this._build = build;
   }
 
-  public async toPreparedSqlByName(
-    model: ModelString | ModelUri | Model,
-    name: string
-  ): Promise<PreparedSql> {
-    return this.translator.toPreparedSqlByName(model, name);
+  public build(): Promise<T> {
+    if (this.built === undefined) {
+      return this.rebuild();
+    }
+    return this.built;
   }
 
-  public async runPreparedSql(sqlQuery: PreparedSql): Promise<QueryResult> {
-    return this.runner.runPreparedSql(sqlQuery);
+  public rebuild(): Promise<T> {
+    this.built = this._build();
+    return this.built;
   }
 
-  public async run(preparedSql: PreparedSql): Promise<QueryResult>;
-  public async run(
-    model: ModelString | ModelUri | Model,
-    query: QueryString | QueryUri | PreparedQuery
-  ): Promise<QueryResult>;
-  public async run(
-    query: QueryString | QueryUri | PreparedQuery
-  ): Promise<QueryResult>;
-  public async run(
-    queryOrModelOrSql:
-      | ModelString
-      | ModelUri
-      | Model
-      | QueryString
-      | QueryUri
-      | PreparedQuery
-      | PreparedSql,
-    maybeQuery?: QueryString | QueryUri | PreparedQuery
-  ): Promise<QueryResult> {
-    const preparedSql =
-      queryOrModelOrSql instanceof PreparedSql
-        ? queryOrModelOrSql
-        : await this.toPreparedSql(queryOrModelOrSql, maybeQuery);
-    return this.runner.runPreparedSql(preparedSql);
+  protected buildQuery(
+    build: () => Promise<PreparedQuery>
+  ): PreparedQueryRuntimeRequest {
+    return new PreparedQueryRuntimeRequest(this.runtime, build);
   }
 
-  public async runByName(
-    model: ModelString | ModelUri | Model,
-    name: string
-  ): Promise<QueryResult> {
-    return this.runner.runPreparedSql(
-      await this.toPreparedSqlByName(model, name)
-    );
+  protected buildExplore(build: () => Promise<Explore>): ExploreRuntimeRequest {
+    return new ExploreRuntimeRequest(this.runtime, build);
   }
 
-  public async runByIndex(
-    model: ModelString | ModelUri | Model,
-    index: number
-  ): Promise<QueryResult> {
-    return this.runner.runPreparedSql(
-      await this.toPreparedSqlByIndex(model, index)
-    );
+  protected buildPreparedResult(
+    build: () => Promise<PreparedResult>
+  ): PreparedResultRuntimeRequest {
+    return new PreparedResultRuntimeRequest(this.runtime, build);
+  }
+}
+
+class ModelRuntimeRequest extends RuntimeRequest<Model> {
+  getQuery(): PreparedQueryRuntimeRequest {
+    return this.buildQuery(async () => {
+      return (await this.build()).getPreparedQuery();
+    });
   }
 
-  public getSqlRunner(connectionName: string): Promise<SqlRunner> {
-    return this.runner.getSqlRunner(connectionName);
+  getQueryByIndex(index: number): PreparedQueryRuntimeRequest {
+    return this.buildQuery(async () => {
+      return (await this.build()).getPreparedQueryByIndex(index);
+    });
+  }
+
+  getQueryByName(name: string): PreparedQueryRuntimeRequest {
+    return this.buildQuery(async () => {
+      return (await this.build()).getPreparedQueryByName(name);
+    });
+  }
+
+  makeQuery(query: QueryString | QueryUrl): PreparedQueryRuntimeRequest {
+    return this.buildQuery(async () => {
+      const model = await this.runtime
+        .getCompiler()
+        .makeModel(await this.build(), query);
+      return model.getPreparedQuery();
+    });
+  }
+
+  getExploreByName(name: string): ExploreRuntimeRequest {
+    return this.buildExplore(async () => {
+      return (await this.build()).getExploreByName(name);
+    });
+  }
+}
+
+class PreparedQueryRuntimeRequest extends RuntimeRequest<PreparedQuery> {
+  async run(): Promise<Result> {
+    return this.runtime.getRunner().run(await this.getSql().build());
+  }
+
+  getSql(): PreparedResultRuntimeRequest {
+    return this.buildPreparedResult(async () => {
+      return (await this.build()).getPreparedResult();
+    });
+  }
+}
+
+class PreparedResultRuntimeRequest extends RuntimeRequest<PreparedResult> {
+  async run(): Promise<Result> {
+    const preparedSql = await this.build();
+    return this.runtime.getRunner().run(preparedSql);
+  }
+}
+
+class ExploreRuntimeRequest extends RuntimeRequest<Explore> {
+  getQueryByName(name: string): PreparedQueryRuntimeRequest {
+    return this.buildQuery(async () => {
+      return (await this.build()).getQueryByName(name);
+    });
+  }
+}
+
+export class Result extends PreparedResult {
+  protected inner: QueryResult;
+
+  constructor(queryResult: QueryResult) {
+    super(queryResult);
+    this.inner = queryResult;
+  }
+
+  _getQueryResult(): QueryResult {
+    return this.inner;
+  }
+
+  getData(): DataArray {
+    return new DataArray(this.inner.result, this.getResultExplore());
+  }
+}
+
+export type DataColumn =
+  | DataArray
+  | DataRecord
+  | DataString
+  | DataBoolean
+  | DataNumber
+  | DataDate
+  | DataTimestamp
+  | DataNull
+  | DataBytes;
+
+abstract class Data<T> {
+  protected field: Field | Explore;
+
+  constructor(field: Field | Explore) {
+    this.field = field;
+  }
+
+  getField(): Field | Explore {
+    return this.field;
+  }
+
+  abstract getValue(): T;
+
+  isString(): this is DataString {
+    return this instanceof DataString;
+  }
+
+  asString(): DataString {
+    if (this.isString()) {
+      return this;
+    }
+    throw new Error("Not a string.");
+  }
+
+  isBoolean(): this is DataBoolean {
+    return this instanceof DataBoolean;
+  }
+
+  asBoolean(): DataBoolean {
+    if (this.isBoolean()) {
+      return this;
+    }
+    throw new Error("Not a boolean.");
+  }
+
+  isNumber(): this is DataNumber {
+    return this instanceof DataNumber;
+  }
+
+  asNumber(): DataNumber {
+    if (this.isNumber()) {
+      return this;
+    }
+    throw new Error("Not a number.");
+  }
+
+  isTimestamp(): this is DataTimestamp {
+    return this instanceof DataTimestamp;
+  }
+
+  asTimestamp(): DataTimestamp {
+    if (this.isTimestamp()) {
+      return this;
+    }
+    throw new Error("Not a timestamp.");
+  }
+
+  isDate(): this is DataDate {
+    return this instanceof DataDate;
+  }
+
+  asDate(): DataDate {
+    if (this.isDate()) {
+      return this;
+    }
+    throw new Error("Not a date.");
+  }
+
+  isNull(): this is DataNull {
+    return this instanceof DataNull;
+  }
+
+  isBytes(): this is DataBytes {
+    return this instanceof DataBytes;
+  }
+
+  asBytes(): DataBytes {
+    if (this.isBytes()) {
+      return this;
+    }
+    throw new Error("Not bytes.");
+  }
+
+  isRecord(): this is DataRecord {
+    return this instanceof DataRecord;
+  }
+
+  asRecord(): DataRecord {
+    if (this.isRecord()) {
+      return this;
+    }
+    throw new Error("Not a record.");
+  }
+
+  isArray(): this is DataArray {
+    return this instanceof DataArray;
+  }
+
+  asArray(): DataArray {
+    if (this.isArray()) {
+      return this;
+    }
+    throw new Error("Not an array.");
+  }
+}
+
+class ScalarData<T> extends Data<T> {
+  private value: T;
+  protected field: AtomicField;
+
+  constructor(value: T, field: AtomicField) {
+    super(field);
+    this.value = value;
+    this.field = field;
+  }
+
+  getValue(): T {
+    return this.value;
+  }
+}
+
+class DataString extends ScalarData<string> {}
+class DataBoolean extends ScalarData<boolean> {}
+class DataNumber extends ScalarData<number> {}
+class DataTimestamp extends ScalarData<Date> {}
+class DataDate extends ScalarData<Date> {}
+class DataBytes extends ScalarData<Buffer> {}
+
+class DataNull extends Data<null> {
+  getValue(): null {
+    return null;
+  }
+}
+
+export class DataArray extends Data<DataColumn[]> {
+  private queryData: QueryData;
+  protected field: Explore;
+
+  constructor(queryData: QueryData, field: Explore) {
+    super(field);
+    this.queryData = queryData;
+    this.field = field;
+  }
+
+  getField(): Explore {
+    return this.field;
+  }
+
+  toObject(): QueryData {
+    return this.queryData;
+  }
+
+  getRowByIndex(index: number): DataRecord {
+    return new DataRecord(this.queryData[index], this.field);
+  }
+
+  getValue(): DataColumn[] {
+    throw new Error("Not implemented;");
+  }
+}
+
+class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
+  private queryDataRow: QueryDataRow;
+  protected field: Explore;
+
+  constructor(queryDataRow: QueryDataRow, field: Explore) {
+    super(field);
+    this.queryDataRow = queryDataRow;
+    this.field = field;
+  }
+
+  toObject(): QueryDataRow {
+    return this.queryDataRow;
+  }
+
+  getColumn(fieldName: string): DataColumn {
+    const field = this.field.getFieldByName(fieldName);
+    const value = this.queryDataRow[fieldName];
+    if (value === null) {
+      return new DataNull(field);
+    }
+    if (field.isAtomicField()) {
+      switch (field.getType()) {
+        case AtomicFieldType.Boolean:
+          return new DataBoolean(value as boolean, field);
+        case AtomicFieldType.Date:
+          return new DataDate(value as Date, field);
+        case AtomicFieldType.Timestamp:
+          return new DataTimestamp(value as Date, field);
+        case AtomicFieldType.Number:
+          return new DataNumber(value as number, field);
+        case AtomicFieldType.String:
+          return new DataString(value as string, field);
+      }
+    } else if (field.isExploreField()) {
+      if (value instanceof Array) {
+        return new DataArray(value, field);
+      } else {
+        return new DataRecord(value as QueryDataRow, field);
+      }
+    }
+    // TODO crs
+    throw new Error("Oops");
+  }
+
+  getValue(): { [fieldName: string]: DataColumn } {
+    throw new Error("Not implemented;");
   }
 }

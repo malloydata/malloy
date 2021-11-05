@@ -12,7 +12,7 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { QueryResult } from "malloy";
+import { Result } from "malloy";
 import { BigQueryConnection } from "malloy-db-bigquery";
 
 export const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
@@ -24,7 +24,7 @@ export interface RunState {
   panel: WebviewPanel;
   panelId: string;
   document: TextDocument;
-  result?: QueryResult;
+  result?: Result;
 }
 
 class MalloyExtensionState {

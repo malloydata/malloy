@@ -11,43 +11,65 @@
  * GNU General Public License for more details.
  */
 
-import { Runtime, EmptyUriReader } from "malloy";
+import { Runtime, EmptyUrlReader } from "malloy";
 import { BigQueryConnection } from "malloy-db-bigquery";
 import { PostgresConnection } from "malloy-db-postgres";
 
 it("runs Malloy against BQ connection", async () => {
-  const files = new EmptyUriReader();
+  const files = new EmptyUrlReader();
   // TODO should connections need to know their own name?
   const bqConnection = new BigQueryConnection("bigquery");
-  const runtime = new Runtime(files, bqConnection, bqConnection);
-  const result = await runtime.run(
-    "define flights is (explore 'examples.flights');",
-    "flights | reduce flight_count is count()"
-  );
-  expect(result.result[0].flight_count).toBe(37561525);
+  const runtime = new Runtime({
+    urls: files,
+    schemas: bqConnection,
+    connections: bqConnection,
+  });
+  const result = await runtime
+    .makeModel("define flights is (explore 'examples.flights');")
+    .makeQuery("flights | reduce flight_count is count()")
+    .run();
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
 it("runs Malloy against Postgres connection", async () => {
-  const files = new EmptyUriReader();
+  const files = new EmptyUrlReader();
   const postgresConnection = new PostgresConnection("postgres");
-  const runtime = new Runtime(files, postgresConnection, postgresConnection);
-  const result = await runtime.run(
-    "'public.flights' | reduce flight_count is count()"
-  );
-  expect(result.result[0].flight_count).toBe(37561525);
+  const runtime = new Runtime({
+    urls: files,
+    schemas: postgresConnection,
+    connections: postgresConnection,
+  });
+  const result = await runtime
+    .makeQuery("'public.flights' | reduce flight_count is count()")
+    .run();
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
-const files = new EmptyUriReader();
+const files = new EmptyUrlReader();
 const postgresConnection = new PostgresConnection("postgres");
 const bqConnection = new BigQueryConnection("bigquery");
-const bigquery = new Runtime(files, bqConnection, bqConnection);
-const postgres = new Runtime(files, postgresConnection, postgresConnection);
+const bigquery = new Runtime({
+  urls: files,
+  schemas: bqConnection,
+  connections: bqConnection,
+});
+const postgres = new Runtime({
+  urls: files,
+  schemas: postgresConnection,
+  connections: postgresConnection,
+});
 
 it("runs Malloy against multiple connections", async () => {
   for (const runtime of [bigquery, postgres]) {
-    const result = await runtime.run(
-      "'examples.flights' | reduce flight_count is count()"
-    );
-    expect(result.result[0].flight_count).toBe(37561525);
+    const result = await runtime
+      .makeQuery("'examples.flights' | reduce flight_count is count()")
+      .run();
+    expect(result.getData().toObject()).toMatchObject([
+      { flight_count: 37561525 },
+    ]);
   }
 });

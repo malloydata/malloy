@@ -3096,7 +3096,7 @@ export class QueryModel {
     };
   }
 
-  async compileQuery(query: Query): Promise<CompiledQuery> {
+  compileQuery(query: Query): CompiledQuery {
     let newModel: QueryModel | undefined;
     const m = newModel || this;
     const ret = m.loadQuery(query, undefined, true);

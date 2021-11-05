@@ -501,13 +501,7 @@ export interface ModelDef {
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
 
-export type QueryScalar =
-  | string
-  | boolean
-  | number
-  | { value: string }
-  | { type: "Buffer"; data: number[] }
-  | null;
+export type QueryScalar = string | boolean | number | Date | Buffer | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;

@@ -16,7 +16,7 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { LogMessage, MalloyError, Runtime, Uri } from "malloy";
+import { LogMessage, MalloyError, Runtime, Url } from "malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import { BigQueryConnection } from "malloy-db-bigquery";
@@ -42,57 +42,56 @@ export async function getMalloyDiagnostics(
 ): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
 
+  const uri = document.uri.toString();
+  const files = {
+    readUrl: (url: Url) => magicGetTheFile(documents, url.toString()),
+  };
+  const runtime = new Runtime({
+    urls: files,
+    schemas: BIGQUERY_CONNECTION,
+    connections: BIGQUERY_CONNECTION,
+  });
+  let errors: LogMessage[] = [];
   try {
-    const uri = document.uri.toString();
-    const files = {
-      readUri: (uri: Uri) => magicGetTheFile(documents, uri.toString()),
-    };
-    const runtime = new Runtime(
-      files,
-      BIGQUERY_CONNECTION,
-      BIGQUERY_CONNECTION
-    );
-    let errors: LogMessage[] = [];
-    try {
-      await runtime.toModel(uri);
-    } catch (error) {
-      if (error instanceof MalloyError) {
-        errors = error.log;
-      }
-    }
-
-    for (const err of errors) {
-      const sev =
-        err.severity === "warn"
-          ? DiagnosticSeverity.Warning
-          : err.severity === "debug"
-          ? DiagnosticSeverity.Information
-          : DiagnosticSeverity.Error;
-
+    await runtime.makeModel(new Url(uri)).build();
+  } catch (error) {
+    if (error instanceof MalloyError) {
+      errors = error.log;
+    } else {
+      // TODO this kind of error should cease to exist. All errors should have source info.
       diagnostics.push({
-        severity: sev,
+        severity: DiagnosticSeverity.Error,
         range: {
-          start: {
-            line: (err.begin?.line || 1) - 1,
-            character: err.begin?.char || 0,
-          },
-          end: {
-            line: (err.end?.line || err.begin?.line || 1) - 1,
-            character: err.end?.char || Number.MAX_VALUE,
-          },
+          start: { line: 0, character: 0 },
+          end: { line: 0, character: Number.MAX_VALUE },
         },
-        message: err.message,
+        message: error.message,
         source: "malloy",
       });
     }
-  } catch (error) {
+  }
+
+  for (const err of errors) {
+    const sev =
+      err.severity === "warn"
+        ? DiagnosticSeverity.Warning
+        : err.severity === "debug"
+        ? DiagnosticSeverity.Information
+        : DiagnosticSeverity.Error;
+
     diagnostics.push({
-      severity: DiagnosticSeverity.Error,
+      severity: sev,
       range: {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: Number.MAX_VALUE },
+        start: {
+          line: (err.begin?.line || 1) - 1,
+          character: err.begin?.char || 0,
+        },
+        end: {
+          line: (err.end?.line || err.begin?.line || 1) - 1,
+          character: err.end?.char || Number.MAX_VALUE,
+        },
       },
-      message: error.message,
+      message: err.message,
       source: "malloy",
     });
   }

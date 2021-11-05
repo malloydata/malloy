@@ -13,29 +13,29 @@
 
 import { MalloyQueryData, StructDef } from "./model";
 
-export class Uri {
-  private _uri: string;
+export class Url {
+  private _url: string;
 
-  constructor(stringUri: string) {
-    this._uri = stringUri;
+  constructor(stringUrl: string) {
+    this._url = stringUrl;
   }
 
   public toString(): string {
-    return this._uri;
+    return this._url;
   }
 
-  public static fromString(stringUri: string): Uri {
-    return new Uri(stringUri);
+  public static fromString(stringUrl: string): Url {
+    return new Url(stringUrl);
   }
 }
 
 export type QueryString = string;
 export type ModelString = string;
-export type ModelUri = Uri;
-export type QueryUri = Uri;
+export type ModelUrl = Url;
+export type QueryUrl = Url;
 
-export interface UriReader {
-  readUri: (uri: Uri) => Promise<string>;
+export interface UrlReader {
+  readUrl: (url: Url) => Promise<string>;
 }
 
 export interface SchemaReader {

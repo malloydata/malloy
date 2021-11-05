@@ -14,7 +14,7 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { Uri, Runtime, UriReader } from "malloy";
+import { Url, Runtime, UrlReader } from "malloy";
 import { DataStyles, HtmlView, DataTreeRoot } from "malloy-render";
 import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
 import {
@@ -23,7 +23,7 @@ import {
   RunState,
 } from "../state";
 import turtleIcon from "../../media/turtle.svg";
-import { fetchFile, VscodeUriReader } from "../utils";
+import { fetchFile, VscodeUrlReader } from "../utils";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -88,16 +88,16 @@ interface QueryFileSpec {
 
 type QuerySpec = NamedQuerySpec | QueryStringSpec | QueryFileSpec;
 
-class HackyDataStylesAccumulator implements UriReader {
-  private uriReader: UriReader;
+class HackyDataStylesAccumulator implements UrlReader {
+  private uriReader: UrlReader;
   private dataStyles: DataStyles = {};
 
-  constructor(uriReader: UriReader) {
+  constructor(uriReader: UrlReader) {
     this.uriReader = uriReader;
   }
 
-  async readUri(uri: Uri): Promise<string> {
-    const contents = await this.uriReader.readUri(uri);
+  async readUrl(uri: Url): Promise<string> {
+    const contents = await this.uriReader.readUrl(uri);
     this.dataStyles = {
       ...this.dataStyles,
       ...(await dataStylesForFile(uri.toString(), contents)),
@@ -185,14 +185,14 @@ export function runMalloyQuery(
         }
       });
 
-      const vscodeFiles = new VscodeUriReader();
+      const vscodeFiles = new VscodeUrlReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
 
-      const runtime = new Runtime(
-        files,
-        BIGQUERY_CONNECTION,
-        BIGQUERY_CONNECTION
-      );
+      const runtime = new Runtime({
+        urls: files,
+        schemas: BIGQUERY_CONNECTION,
+        connections: BIGQUERY_CONNECTION,
+      });
 
       return (async () => {
         try {
@@ -205,37 +205,37 @@ export function runMalloyQuery(
           );
           progress.report({ increment: 20, message: "Compiling" });
 
-          let preparedSql;
-          let error;
+          let prepareSql;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            preparedSql = await runtime.toPreparedSql(
-              Uri.fromString("file://" + query.file.uri.fsPath),
-              query.text
-            );
+            prepareSql = runtime
+              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .makeQuery(query.text)
+              .getSql();
           } else if (query.type === "named") {
-            preparedSql = await runtime.toPreparedSqlByName(
-              Uri.fromString("file://" + query.file.uri.fsPath),
-              query.name
-            );
+            prepareSql = runtime
+              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .getQueryByName(query.name)
+              .getSql();
           } else {
-            preparedSql = await runtime.toPreparedSqlByIndex(
-              Uri.fromString("file://" + query.file.uri.fsPath),
-              query.index
-            );
+            prepareSql = runtime
+              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .getQueryByIndex(query.index)
+              .getSql();
           }
 
-          if (!preparedSql) {
+          try {
+            const preparedSql = await prepareSql.build();
+            styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
+
+            if (canceled) return;
+            malloyLog.appendLine(preparedSql.getSql());
+          } catch (error) {
             current.panel.webview.html = renderErrorHtml(
-              new Error(error || "Something went wrong.")
+              new Error(error.message || "Something went wrong.")
             );
             return;
           }
-
-          styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
-
-          if (canceled) return;
-          malloyLog.appendLine(preparedSql.getSql());
 
           const compileEnd = performance.now();
           logTime("Compile", compileBegin, compileEnd);
@@ -246,7 +246,7 @@ export function runMalloyQuery(
             loadingIndicator("Running")
           );
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await runtime.run(preparedSql);
+          const queryResult = await prepareSql.run();
           if (canceled) return;
 
           const runEnd = performance.now();
@@ -265,23 +265,16 @@ export function runMalloyQuery(
             setTimeout(async () => {
               const renderBegin = runEnd;
 
-              const data = queryResult.result;
-              const field = queryResult.structs.find(
-                (s) => s.name === queryResult.lastStageName
-              );
+              const data = queryResult.getData();
+              const resultExplore = queryResult.getResultExplore();
 
-              if (field) {
-                const namedQueryName =
-                  query.type === "named" ? query.name : undefined;
-                const namedField = {
-                  ...field,
-                  name: namedQueryName || queryResult.queryName || field.name,
-                };
+              if (resultExplore) {
+                // TODO replace the DataTree with DataArray
                 const table = new DataTreeRoot(
-                  data,
-                  namedField,
-                  queryResult.sourceExplore,
-                  queryResult.sourceFilters || []
+                  data.toObject(),
+                  resultExplore._getStructDef(),
+                  queryResult._getSourceExploreName(),
+                  queryResult._getSourceFilters()
                 );
                 current.panel.webview.html = wrapHTMLSnippet(
                   css + (await new HtmlView().render(table, styles))

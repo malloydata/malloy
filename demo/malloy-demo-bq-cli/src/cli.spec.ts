@@ -10,38 +10,44 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { Uri, InMemoryUriReader } from "malloy";
-import { run } from "./index";
+import { InMemoryUrlReader } from "malloy";
+import { run, pathToUrl } from "./index";
 
 const unModeledQuery = "'examples.flights' | reduce flight_count is count()";
 const modeledQuery = "flights | reduce flight_count";
 const model = "define flights is ('examples.flights' flight_count is count());";
 
-const modelUri = "file:///flights.malloy";
-const modeledQueryUri = "file:///modeled_query.malloy";
-const unmodeledQueryUri = "file:///unmodeled_.malloy";
+const modelPath = "/flights.malloy";
+const modeledQueryPath = "/modeled_query.malloy";
+const unmodeledQueryPath = "/unmodeled_.malloy";
 
-const files = new InMemoryUriReader(
+const files = new InMemoryUrlReader(
   new Map([
-    [Uri.fromString(modelUri), model],
-    [Uri.fromString(modeledQueryUri), modeledQuery],
-    [Uri.fromString(unmodeledQueryUri), unModeledQuery],
+    [pathToUrl(modelPath).toString(), model],
+    [pathToUrl(modeledQueryPath).toString(), modeledQuery],
+    [pathToUrl(unmodeledQueryPath).toString(), unModeledQuery],
   ])
 );
 
 it("runs a query string", async () => {
   const result = await run(files, ["--query", unModeledQuery]);
-  expect(result.result).toMatchObject([{ flight_count: 37561525 }]);
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
 it("runs a query file", async () => {
-  const result = await run(files, ["--query-file", unmodeledQueryUri]);
-  expect(result.result).toMatchObject([{ flight_count: 37561525 }]);
+  const result = await run(files, ["--query-file", unmodeledQueryPath]);
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
 it("runs a query string against a model string", async () => {
   const result = await run(files, ["--query", modeledQuery, "--model", model]);
-  expect(result.result).toMatchObject([{ flight_count: 37561525 }]);
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
 it("runs a query string against a model file", async () => {
@@ -49,27 +55,33 @@ it("runs a query string against a model file", async () => {
     "--query",
     modeledQuery,
     "--model-file",
-    modelUri,
+    modelPath,
   ]);
-  expect(result.result).toMatchObject([{ flight_count: 37561525 }]);
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
 it("runs a query file against a model string", async () => {
   const result = await run(files, [
     "--query-file",
-    modeledQueryUri,
+    modeledQueryPath,
     "--model",
     model,
   ]);
-  expect(result.result).toMatchObject([{ flight_count: 37561525 }]);
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
 
 it("runs a query file against a model file", async () => {
   const result = await run(files, [
     "--query-file",
-    modeledQueryUri,
+    modeledQueryPath,
     "--model-file",
-    modelUri,
+    modelPath,
   ]);
-  expect(result.result).toMatchObject([{ flight_count: 37561525 }]);
+  expect(result.getData().toObject()).toMatchObject([
+    { flight_count: 37561525 },
+  ]);
 });
