@@ -12,14 +12,14 @@
  */
 
 import { test } from "@jest/globals";
-import { Malloy, QueryModel } from "malloy";
+import { Malloy, QueryModel } from "@malloy-lang/malloy";
 import { testModel } from "./models/faa_model";
 import { fStringEq } from "./test_utils";
 
-import "malloy/src/lang/jestery";
-import { TestTranslator } from "malloy/src/lang/jest-factories";
+import "@malloy-lang/malloy/src/lang/jestery";
+import { TestTranslator } from "@malloy-lang/malloy/src/lang/jest-factories";
 import { FLIGHTS_EXPLORE } from "./models/faa_model";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 Malloy.db = new BigQueryConnection("test");
 

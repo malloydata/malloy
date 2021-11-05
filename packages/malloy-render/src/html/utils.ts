@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { TimeTimeframe } from "malloy";
+import { TimeTimeframe } from "@malloy-lang/malloy";
 
 function numberFixedDigits(value: number, digits: number) {
   return value.toString().padStart(digits, "0");

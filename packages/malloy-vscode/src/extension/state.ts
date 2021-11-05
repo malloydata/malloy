@@ -12,8 +12,8 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { Result } from "malloy";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import { Result } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 export const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
   pageSize: 50,

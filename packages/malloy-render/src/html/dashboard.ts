@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { isDimensional, isMeasureLike } from "malloy";
+import { isDimensional, isMeasureLike } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";

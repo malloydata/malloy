@@ -42,7 +42,14 @@ if (fs.existsSync(outputFile)) throw new Error("Output file exists already");
 axios.defaults.timeout = 500000;
 axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 
-const malloyPackages = ["malloy", "malloy-render", "malloy-vscode"];
+const malloyPackages = [
+  "@malloy-lang/malloy",
+  "@malloy-lang/render",
+  "malloy-vscode",
+  "@malloy-lang/db-test",
+  "@malloy-lang/db-bigquery",
+  "@malloy-lang/db-postgres",
+];
 
 // licenses that we would need to mirror source for, if we included (we don't today)
 const sourceMirrorLicenses = [

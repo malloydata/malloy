@@ -14,8 +14,8 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { Url, Runtime, UrlReader } from "malloy";
-import { DataStyles, HtmlView, DataTreeRoot } from "malloy-render";
+import { Url, Runtime, UrlReader } from "@malloy-lang/malloy";
+import { DataStyles, HtmlView, DataTreeRoot } from "@malloy-lang/render";
 import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
 import {
   BIGQUERY_CONNECTION,

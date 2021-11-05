@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, QueryValue } from "malloy";
+import { FieldDef, QueryValue } from "@malloy-lang/malloy";
 import { HtmlCartesianChartRenderer } from "./cartesian_chart";
 
 export class HtmlLineChartRenderer extends HtmlCartesianChartRenderer {

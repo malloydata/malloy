@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "malloy";
+import { FieldDef, StructDef } from "@malloy-lang/malloy";
 import { HtmlListRenderer } from "./list";
 
 export class HtmlListDetailRenderer extends HtmlListRenderer {

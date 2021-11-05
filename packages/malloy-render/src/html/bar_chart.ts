@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, isMeasureLike } from "malloy";
+import { FieldDef, isMeasureLike } from "@malloy-lang/malloy";
 import {
   BarChartRenderOptions,
   ChartSize,
