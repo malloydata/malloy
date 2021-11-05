@@ -173,7 +173,7 @@ export const medicareModel: StructDef = {
       ],
     },
   ],
-  name: "lookerdata.liquor.medicare_test",
+  name: "malloytest.bq_medicare_test",
   primaryKey: "id",
   structRelationship: { type: "basetable", connectionName: "test" },
   structSource: { type: "table" },
@@ -205,7 +205,7 @@ export const medicareStateFacts: StructDef = {
 
 // export const medicareStateFacts: StructDef = {
 //   type: 'struct',
-//   name: '(SELECT provider_state, COUNT(DISTINCT provider_id) as num_providers FROM lookerdata.liquor.medicare_test GROUP BY 1)',
+//   name: '(SELECT provider_state, COUNT(DISTINCT provider_id) as num_providers FROM malloytest.medicare_test GROUP BY 1)',
 //   as: 'medicare_state_facts',
 //   structRelationship: {type:'basetable'},
 //   structSource: {type:'table'},
