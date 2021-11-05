@@ -11,11 +11,11 @@
  * GNU General Public License for more details.
  */
 /* eslint-disable no-console */
-import * as malloy from "malloy";
+import * as malloy from "@malloy-lang/malloy";
 import * as fs from "fs";
 import * as util from "util";
 import * as path from "path";
-import { BigQueryConnection } from "malloy-db-bigquery";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 export function pathToUrl(filePath: string): malloy.Url {
   return malloy.Url.fromString("file://" + path.resolve(filePath));

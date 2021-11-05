@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { UrlReader, Url } from "malloy";
+import { UrlReader, Url } from "@malloy-lang/malloy";
 import * as vscode from "vscode";
 
 export async function fetchFile(uri: string): Promise<string> {
