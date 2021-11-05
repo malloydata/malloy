@@ -757,7 +757,7 @@ class RuntimeRequest<T> {
   }
 }
 
-class ModelRuntimeRequest extends RuntimeRequest<Model> {
+export class ModelRuntimeRequest extends RuntimeRequest<Model> {
   getQuery(): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       return (await this.build()).getPreparedQuery();
