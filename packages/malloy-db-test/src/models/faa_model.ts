@@ -871,5 +871,3 @@ export const testModel: ModelDef = {
     // aircraft: aircraftHandStructDef,
   },
 };
-
-// // clang-format on

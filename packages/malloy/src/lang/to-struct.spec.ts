@@ -1350,10 +1350,7 @@ describe("document", () => {
         `;
     const letsParse = new TestTranslator(letsgoSrc);
     const needThese: NeedSchemaData = {
-      tables: [
-        "malloytest.aircraft_models",
-        "malloytest.aircraft",
-      ],
+      tables: ["malloytest.aircraft_models", "malloytest.aircraft"],
     };
     expect(letsParse).toBeValidMalloy();
     const xr = letsParse.translate();
