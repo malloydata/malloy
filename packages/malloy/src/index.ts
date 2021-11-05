@@ -36,7 +36,6 @@ export type {
   QueryField,
   Result,
   DataArray,
-  DataColumn,
 } from "./malloy";
 export type {
   UrlReader,

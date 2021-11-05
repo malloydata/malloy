@@ -20,14 +20,13 @@ import {
   ModelDef,
   Query as InternalQuery,
   QueryData,
-  QueryDataRow,
   QueryModel,
   QueryResult,
   StructDef,
   TurtleDef,
 } from "./model";
 import {
-  LookupSqlRunner as LookupSqlRunner,
+  LookupSqlRunner,
   LookupSchemaReader,
   ModelString,
   ModelUrl,
@@ -837,157 +836,11 @@ export class Result extends PreparedResult {
   }
 }
 
-export type DataColumn =
-  | DataArray
-  | DataRecord
-  | DataString
-  | DataBoolean
-  | DataNumber
-  | DataDate
-  | DataTimestamp
-  | DataNull
-  | DataBytes;
-
-abstract class Data<T> {
-  protected field: Field | Explore;
-
-  constructor(field: Field | Explore) {
-    this.field = field;
-  }
-
-  getField(): Field | Explore {
-    return this.field;
-  }
-
-  abstract getValue(): T;
-
-  isString(): this is DataString {
-    return this instanceof DataString;
-  }
-
-  asString(): DataString {
-    if (this.isString()) {
-      return this;
-    }
-    throw new Error("Not a string.");
-  }
-
-  isBoolean(): this is DataBoolean {
-    return this instanceof DataBoolean;
-  }
-
-  asBoolean(): DataBoolean {
-    if (this.isBoolean()) {
-      return this;
-    }
-    throw new Error("Not a boolean.");
-  }
-
-  isNumber(): this is DataNumber {
-    return this instanceof DataNumber;
-  }
-
-  asNumber(): DataNumber {
-    if (this.isNumber()) {
-      return this;
-    }
-    throw new Error("Not a number.");
-  }
-
-  isTimestamp(): this is DataTimestamp {
-    return this instanceof DataTimestamp;
-  }
-
-  asTimestamp(): DataTimestamp {
-    if (this.isTimestamp()) {
-      return this;
-    }
-    throw new Error("Not a timestamp.");
-  }
-
-  isDate(): this is DataDate {
-    return this instanceof DataDate;
-  }
-
-  asDate(): DataDate {
-    if (this.isDate()) {
-      return this;
-    }
-    throw new Error("Not a date.");
-  }
-
-  isNull(): this is DataNull {
-    return this instanceof DataNull;
-  }
-
-  isBytes(): this is DataBytes {
-    return this instanceof DataBytes;
-  }
-
-  asBytes(): DataBytes {
-    if (this.isBytes()) {
-      return this;
-    }
-    throw new Error("Not bytes.");
-  }
-
-  isRecord(): this is DataRecord {
-    return this instanceof DataRecord;
-  }
-
-  asRecord(): DataRecord {
-    if (this.isRecord()) {
-      return this;
-    }
-    throw new Error("Not a record.");
-  }
-
-  isArray(): this is DataArray {
-    return this instanceof DataArray;
-  }
-
-  asArray(): DataArray {
-    if (this.isArray()) {
-      return this;
-    }
-    throw new Error("Not an array.");
-  }
-}
-
-class ScalarData<T> extends Data<T> {
-  private value: T;
-  protected field: AtomicField;
-
-  constructor(value: T, field: AtomicField) {
-    super(field);
-    this.value = value;
-    this.field = field;
-  }
-
-  getValue(): T {
-    return this.value;
-  }
-}
-
-class DataString extends ScalarData<string> {}
-class DataBoolean extends ScalarData<boolean> {}
-class DataNumber extends ScalarData<number> {}
-class DataTimestamp extends ScalarData<Date> {}
-class DataDate extends ScalarData<Date> {}
-class DataBytes extends ScalarData<Buffer> {}
-
-class DataNull extends Data<null> {
-  getValue(): null {
-    return null;
-  }
-}
-
-export class DataArray extends Data<DataColumn[]> {
+export class DataArray {
   private queryData: QueryData;
   protected field: Explore;
 
   constructor(queryData: QueryData, field: Explore) {
-    super(field);
     this.queryData = queryData;
     this.field = field;
   }
@@ -998,62 +851,5 @@ export class DataArray extends Data<DataColumn[]> {
 
   toObject(): QueryData {
     return this.queryData;
-  }
-
-  getRowByIndex(index: number): DataRecord {
-    return new DataRecord(this.queryData[index], this.field);
-  }
-
-  getValue(): DataColumn[] {
-    throw new Error("Not implemented;");
-  }
-}
-
-class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
-  private queryDataRow: QueryDataRow;
-  protected field: Explore;
-
-  constructor(queryDataRow: QueryDataRow, field: Explore) {
-    super(field);
-    this.queryDataRow = queryDataRow;
-    this.field = field;
-  }
-
-  toObject(): QueryDataRow {
-    return this.queryDataRow;
-  }
-
-  getColumn(fieldName: string): DataColumn {
-    const field = this.field.getFieldByName(fieldName);
-    const value = this.queryDataRow[fieldName];
-    if (value === null) {
-      return new DataNull(field);
-    }
-    if (field.isAtomicField()) {
-      switch (field.getType()) {
-        case AtomicFieldType.Boolean:
-          return new DataBoolean(value as boolean, field);
-        case AtomicFieldType.Date:
-          return new DataDate(value as Date, field);
-        case AtomicFieldType.Timestamp:
-          return new DataTimestamp(value as Date, field);
-        case AtomicFieldType.Number:
-          return new DataNumber(value as number, field);
-        case AtomicFieldType.String:
-          return new DataString(value as string, field);
-      }
-    } else if (field.isExploreField()) {
-      if (value instanceof Array) {
-        return new DataArray(value, field);
-      } else {
-        return new DataRecord(value as QueryDataRow, field);
-      }
-    }
-    // TODO crs
-    throw new Error("Oops");
-  }
-
-  getValue(): { [fieldName: string]: DataColumn } {
-    throw new Error("Not implemented;");
   }
 }
