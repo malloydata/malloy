@@ -1,0 +1,44 @@
+
+
+export define small_flights is (explore 'malloy-data.faa.flights'
+  :[
+    floor(tail_num_hash/100)*100 = tail_num_hash
+  ]
+
+  tail_num_hash is  CONCAT('0x', SUBSTR(to_hex(MD5(tail_num))::string,1,2))::number
+  flight_count is count()
+
+  by_hash is (reduce
+    tail_num_hash
+
+  )
+
+  by_tail_num is (reduce
+    tail_num
+    flight_count
+  )
+  project_all is ( project *
+  )
+)
+
+-- export define airports is (explore 'malloytest.airports'
+--   airport_count is count()
+-- )
+
+
+export define aircraft is (explore 'malloytest.aircraft'
+  aircraft_count is count()
+)
+
+export define aircraft_models is (explore 'malloytest.aircraft_models'
+  aircraft_model_count is count()
+)
+
+
+export define models is ('malloytest.aircraft_models'
+          model_count is count()
+        )
+
+explore models | reduce
+          big is seats >=20
+          model_count is count()
