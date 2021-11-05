@@ -486,44 +486,6 @@ describe("expression tests", () => {
     await bqCompile(result.sql);
   });
 
-  it("simple_count_distinct", async () => {
-    const result = await faa.runQuery({
-      pipeline: [{ type: "reduce", fields: ["provider_count"] }],
-      structRef: "medicare_test",
-    });
-    expect(result.result[0].provider_count).toBe(3276);
-  });
-
-  it("simple_count_distinct_filtered", async () => {
-    const result = await faa.runQuery({
-      filterList: [fStringEq("provider_state", "AZ")],
-      pipeline: [{ fields: ["provider_count"], type: "reduce" }],
-      structRef: "medicare_test",
-    });
-    expect(result.result[0].provider_count).toBe(58);
-  });
-
-  it("medicare_test.discharges_by_state", async () => {
-    const result = await faa.runQuery(
-      "explore medicare_test | discharges_by_state"
-    );
-    expect(result.result[0].provider_state).toBe("FL");
-  });
-
-  it("default_sort_number", async () => {
-    const result = await faa.runQuery(
-      "EXPLORE medicare_test | REDUCE provider_name, total_discharges LIMIT 10"
-    );
-    expect(result.result[0].total_discharges).toBe(37886);
-  });
-
-  it("default_orderby_dir", async () => {
-    const result = await faa.runQuery(
-      "EXPLORE medicare_test | REDUCE provider_name, total_discharges ORDER BY 2 LIMIT 10"
-    );
-    expect(result.result[0].total_discharges).toBe(11);
-  });
-
   it("flights.search_index", async () => {
     const result = await faa.compileQuery("EXPLORE flights | search_index");
     await bqCompile(result.sql);
@@ -543,14 +505,6 @@ describe("expression tests", () => {
     | PROJECT state.code.code LIMIT 1
     `);
     expect(result.result[0].code).toBe("ALB");
-  });
-
-  it("simple_filter", async () => {
-    const result = await faa.runQuery(
-      "EXPLORE medicare_test : [provider_state:'AL'] | REDUCE provider_name, total_discharges ORDER BY 2 LIMIT 10"
-    );
-    expect(result.result[0].total_discharges).toBe(23);
-    expect(result.result[0].provider_name).toBe("HALE COUNTY HOSPITAL");
   });
 
   it("flights.search_index", async () => {
@@ -640,11 +594,11 @@ describe("expression tests", () => {
 
   // const faa2: TestDeclaration[] = [
 
-  it("table_base_on_query", async () => {
+  it("table_base_on_query2", async () => {
     const result = await faa.runQuery({
       structRef: {
         type: "struct",
-        name: "lookerdata.liquor.medicare_test",
+        name: "malloytest.bq_medicare_test",
         dialect: "standardsql",
         as: "mtest",
         structRelationship: { type: "basetable", connectionName: "test" },
@@ -671,7 +625,7 @@ describe("expression tests", () => {
 });
 
 const airportModelText = `
-export define airports is (explore 'lookerdata.liquor.airports'
+export define airports is (explore 'malloytest.airports'
   primary key code
   airport_count is count(*),
 
@@ -923,7 +877,7 @@ describe("sql injection tests", () => {
     expect(error).not.toBeUndefined();
   });
 
-  test.todo("'lookerdata.liquor\\'.tables' produces the wrong error...");
+  test.todo("'malloytest\\'.tables' produces the wrong error...");
 
   test("nested_table", async () => {
     const result = await model.runQuery(`
