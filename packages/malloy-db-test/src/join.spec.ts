@@ -18,7 +18,7 @@ import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 Malloy.db = new BigQueryConnection("test");
 
 const joinModelText = `
-export define aircraft_models is ('lookerdata.liquor.aircraft_models'
+export define aircraft_models is ('malloytest.aircraft_models'
   primary key aircraft_model_code
   model_count is count(*),
   manufacturer_models is (reduce
@@ -41,7 +41,7 @@ export define pipe is (aircraft_models
   | reduce manufacturer, f is count(*)
   | reduce f_sum is f.sum());
 
-export define aircraft is ('lookerdata.liquor.aircraft'
+export define aircraft is ('malloytest.aircraft'
   primary key tail_num
   aircraft_count is count(*),
 )
@@ -60,7 +60,7 @@ describe("expression tests", () => {
         aircraft_count,
         aircraft_models.model_count
     `);
-    expect(result.result[0].model_count).toBe(46953);
+    expect(result.result[0].model_count).toBe(1416);
   });
 
   it("model: join fact table query", async () => {

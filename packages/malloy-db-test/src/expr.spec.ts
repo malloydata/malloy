@@ -294,14 +294,33 @@ describe("expression tests", () => {
   });
 
   it("hand turtle", async () => {
-    const result = await handModel.compileQuery({
+    const result = await handModel.runQuery({
       structRef: "aircraft",
       pipeHead: { name: "hand_turtle" },
       pipeline: [],
     });
-    await bqCompile(result.sql);
-    // console.log(result.sql);
-    // expect(result.result[0].total_seats).toBe(452415);
+    expect(result.result[0].aircraft_count).toBe(3599);
+  });
+
+  it("hand turtle malloy", async () => {
+    const result = await handModel.runQuery(`
+      explore aircraft | hand_turtle
+    `);
+    expect(result.result[0].aircraft_count).toBe(3599);
+  });
+
+  it("default sort order", async () => {
+    const result = await handModel.runQuery(`
+      explore aircraft | reduce state, aircraft_count limit 10
+    `);
+    expect(result.result[0].aircraft_count).toBe(367);
+  });
+
+  it("default sort order by dir", async () => {
+    const result = await handModel.runQuery(`
+      explore aircraft | reduce state, aircraft_count order by 2 limit 10
+    `);
+    expect(result.result[0].aircraft_count).toBe(1);
   });
 
   it("hand turtle2", async () => {
