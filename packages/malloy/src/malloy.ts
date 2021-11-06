@@ -691,6 +691,11 @@ export class Runtime {
     });
   }
 
+  // used internally by the testing framwork.
+  public _makeModelFromModelDef(_modelDef: ModelDef): ModelRuntimeRequest {
+    throw new Error("Chris, please implement");
+  }
+
   makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
     return this.makeModel(query).getQuery();
   }
@@ -783,6 +788,10 @@ export class ModelRuntimeRequest extends RuntimeRequest<Model> {
         .makeModel(await this.build(), query);
       return model.getPreparedQuery();
     });
+  }
+
+  _makeQueryFromQueryDef(_query: InternalQuery): PreparedQueryRuntimeRequest {
+    throw new Error("Chris, please implement");
   }
 
   getExploreByName(name: string): ExploreRuntimeRequest {
