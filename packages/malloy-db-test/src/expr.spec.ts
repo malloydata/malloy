@@ -39,9 +39,11 @@ async function bqCompile(sql: string): Promise<boolean> {
 
 async function compileHandQueryToSql(
   model: malloy.ModelRuntimeRequest,
-  _queryDef: Query
+  queryDef: Query
 ): Promise<string> {
-  return (await model.makeQuery("this is a test").getSql().build()).getSql();
+  return (
+    await model._makeQueryFromQueryDef(queryDef).getSql().build()
+  ).getSql();
 }
 
 const expressionModelText = `
