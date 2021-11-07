@@ -12,10 +12,10 @@
  */
 
 import { Runtime, EmptyUrlReader } from "malloy";
-import { BigQueryConnection } from "malloy-db-bigquery";
-import { PostgresConnection } from "malloy-db-postgres";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { PostgresConnection } from "@malloy-lang/db-postgres";
 
-it("runs Malloy against BQ connection", async () => {
+it.skip("runs Malloy against BQ connection", async () => {
   const files = new EmptyUrlReader();
   // TODO should connections need to know their own name?
   const bqConnection = new BigQueryConnection("bigquery");
@@ -33,7 +33,7 @@ it("runs Malloy against BQ connection", async () => {
   ]);
 });
 
-it("runs Malloy against Postgres connection", async () => {
+it.skip("runs Malloy against Postgres connection", async () => {
   const files = new EmptyUrlReader();
   const postgresConnection = new PostgresConnection("postgres");
   const runtime = new Runtime({
@@ -63,7 +63,7 @@ const postgres = new Runtime({
   connections: postgresConnection,
 });
 
-it("runs Malloy against multiple connections", async () => {
+it.skip("runs Malloy against multiple connections", async () => {
   for (const runtime of [bigquery, postgres]) {
     const result = await runtime
       .makeQuery("'examples.flights' | reduce flight_count is count()")

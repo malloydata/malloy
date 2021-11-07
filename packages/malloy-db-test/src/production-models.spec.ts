@@ -14,11 +14,10 @@
 import "@malloy-lang/malloy/src/lang/jestery";
 import fs from "fs";
 import path from "path";
-import { Malloy } from "@malloy-lang/malloy/src/malloy";
 import { MalloyTranslator, TranslateResponse } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
-Malloy.db = new BigQueryConnection("test");
+const db = new BigQueryConnection("test");
 
 const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/");
 
@@ -42,9 +41,7 @@ describe(`compiling server models`, () => {
           do {
             tr = trans.translate();
             if (tr.tables) {
-              const tables = await Malloy.db.getSchemaForMissingTables(
-                tr.tables
-              );
+              const tables = await db.fetchSchemaForTables(tr.tables);
               trans.update({ tables });
             } else if (tr.URLs) {
               const files: { [fileName: string]: string } = {};

@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { Runtime, EmptyUrlReader } from "malloy";
-import { BigQueryConnection } from "malloy-db-bigquery";
 
 const files = new EmptyUrlReader();
 const bqConnection = new BigQueryConnection("bigquery");
