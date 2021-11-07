@@ -366,8 +366,8 @@ describe("expression tests", () => {
         )`
     );
 
-    //handModel = runtime._makeModelFromModelDef(handCodedModel);
-    //handJoinModel = runtime._makeModelFromModelDef(joinModel);
+    handModel = runtime._makeModelFromModelDef(handCodedModel);
+    handJoinModel = runtime._makeModelFromModelDef(joinModel);
   });
 
   it("hand query hand model", async () => {
