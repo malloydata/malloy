@@ -332,13 +332,10 @@ export class PreparedResult {
   }
 
   getResultExplore(): Explore {
-    const lastStageName = this.inner.lastStageName;
-    const explore = this.inner.structs.find(
-      (explore) => explore.name === lastStageName
-    );
-    if (explore === undefined) {
+    if (this.inner.structs.length === 0) {
       throw new Error("Malformed query result.");
     }
+    const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
       ...explore,
       name: this.inner.queryName || explore.name,
