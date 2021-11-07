@@ -15,61 +15,74 @@ import { Runtime, EmptyUrlReader } from "malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { PostgresConnection } from "@malloy-lang/db-postgres";
 
-it.skip("runs Malloy against BQ connection", async () => {
-  const files = new EmptyUrlReader();
-  // TODO should connections need to know their own name?
-  const bqConnection = new BigQueryConnection("bigquery");
-  const runtime = new Runtime({
-    urls: files,
-    schemas: bqConnection,
-    connections: bqConnection,
-  });
-  const result = await runtime
-    .makeModel("define flights is (explore 'examples.flights');")
-    .makeQuery("flights | reduce flight_count is count()")
-    .run();
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
-});
+import { env } from "process";
 
-it.skip("runs Malloy against Postgres connection", async () => {
-  const files = new EmptyUrlReader();
-  const postgresConnection = new PostgresConnection("postgres");
-  const runtime = new Runtime({
-    urls: files,
-    schemas: postgresConnection,
-    connections: postgresConnection,
-  });
-  const result = await runtime
-    .makeQuery("'public.flights' | reduce flight_count is count()")
-    .run();
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
-});
-
-const files = new EmptyUrlReader();
-const postgresConnection = new PostgresConnection("postgres");
 const bqConnection = new BigQueryConnection("bigquery");
-const bigquery = new Runtime({
-  urls: files,
-  schemas: bqConnection,
-  connections: bqConnection,
-});
-const postgres = new Runtime({
-  urls: files,
-  schemas: postgresConnection,
-  connections: postgresConnection,
-});
+const postgresConnection = new PostgresConnection("postgres");
+const files = new EmptyUrlReader();
 
-it.skip("runs Malloy against multiple connections", async () => {
-  for (const runtime of [bigquery, postgres]) {
-    const result = await runtime
-      .makeQuery("'examples.flights' | reduce flight_count is count()")
-      .run();
-    expect(result.getData().toObject()).toMatchObject([
-      { flight_count: 37561525 },
-    ]);
+const runtimes: Map<string, Runtime> = new Map<string, Runtime>(
+  Object.entries({
+    bigquery: new Runtime({
+      urls: files,
+      schemas: bqConnection,
+      connections: bqConnection,
+    }),
+    postgres: new Runtime({
+      urls: files,
+      schemas: postgresConnection,
+      connections: postgresConnection,
+    }),
+  })
+);
+
+const testDatabaseEnv = env.MALLOY_TEST_DATABASES;
+// const testDatabaseEnv = "bigquery,postgres";
+
+let databases;
+if (testDatabaseEnv !== undefined) {
+  databases = testDatabaseEnv.split(",");
+} else {
+  databases = ["bigquery"];
+}
+for (const key of runtimes.keys()) {
+  if (!databases.includes(key)) {
+    runtimes.delete(key);
   }
+}
+
+runtimes.forEach((runtime, key) => {
+  it(`runs a test ${key}`, async () => {
+    const result = await runtime
+      .makeModel("define flights is (explore 'malloytest.flights');")
+      .makeQuery("flights | reduce flight_count is count()")
+      .run();
+    expect(result.getData().toObject()[0].flight_count).toBe(344827);
+  });
+
+  it(`runs another test ${key}`, async () => {
+    const result = await runtime
+      .makeModel("define flights is (explore 'malloytest.flights');")
+      .makeQuery("flights | reduce flight_count is count()")
+      .run();
+    expect(result.getData().toObject()[0].flight_count).toBe(344827);
+  });
+
+  key !== "postgres" &&
+    it(`runs not postgres test ${key}`, async () => {
+      const result = await runtime
+        .makeModel("define flights is (explore 'malloytest.flights');")
+        .makeQuery("flights | reduce flight_count is count()")
+        .run();
+      expect(result.getData().toObject()[0].flight_count).toBe(344827);
+    });
+
+  key === "postgres" &&
+    it(`must be postgres test ${key}`, async () => {
+      const result = await runtime
+        .makeModel("define flights is (explore 'malloytest.flights');")
+        .makeQuery("flights | reduce flight_count is count()")
+        .run();
+      expect(result.getData().toObject()[0].flight_count).toBe(344827);
+    });
 });
