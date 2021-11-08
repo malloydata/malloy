@@ -1334,14 +1334,14 @@ describe("document", () => {
   test("x model", async () => {
     const letsgoSrc = `
       define aircraft_models is
-        (explore 'lookerdata.liquor.aircraft_models'
+        (explore 'malloytest.aircraft_models'
           primary key aircraft_model_code
           total_seats is sum(seats),
           airport_count is count(*),
         );
 
       export define aircraft is
-        (explore 'lookerdata.liquor.aircraft'
+        (explore 'malloytest.aircraft'
           primary key tail_num
           aircraft_count is count(*),
           joins
@@ -1351,8 +1351,8 @@ describe("document", () => {
     const letsParse = new TestTranslator(letsgoSrc);
     const needThese: NeedSchemaData = {
       tables: [
-        "lookerdata.liquor.aircraft_models",
-        "lookerdata.liquor.aircraft",
+        "malloytest.aircraft_models",
+        "malloytest.aircraft",
       ],
     };
     expect(letsParse).toBeValidMalloy();
@@ -1360,9 +1360,9 @@ describe("document", () => {
     expect(xr).toEqual(needThese);
     //const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
     const tables = {
-      "lookerdata.liquor.aircraft_models": {
+      "malloytest.aircraft_models": {
         type: "struct",
-        name: "lookerdata.liquor.aircraft_models",
+        name: "malloytest.aircraft_models",
         dialect: "standardsql",
         structSource: {
           type: "table",
@@ -1425,10 +1425,10 @@ describe("document", () => {
           },
         ],
       },
-      "lookerdata.liquor.aircraft": {
+      "malloytest.aircraft": {
         type: "struct",
         dialect: "standardsql",
-        name: "lookerdata.liquor.aircraft",
+        name: "malloytest.aircraft",
         structSource: {
           type: "table",
         },

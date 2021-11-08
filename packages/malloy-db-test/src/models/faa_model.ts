@@ -18,7 +18,7 @@ import { fStringEq, fYearEq } from "../test_utils";
 /** Flight Model */
 export const FLIGHTS_EXPLORE: StructDef = {
   type: "struct",
-  name: "lookerdata.liquor.flights",
+  name: "malloytest.flights",
   as: "flights",
   dialect: "standardsql",
   structSource: { type: "table" },
@@ -63,7 +63,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // carriers
     {
       type: "struct",
-      name: "lookerdata.liquor.carriers",
+      name: "malloytest.carriers",
       as: "carriers",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -79,7 +79,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // aircraft
     {
       type: "struct",
-      name: "lookerdata.liquor.aircraft",
+      name: "malloytest.aircraft",
       as: "aircraft",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -133,7 +133,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         // subjoin aircraft models
         {
           type: "struct",
-          name: "lookerdata.liquor.aircraft_models",
+          name: "malloytest.aircraft_models",
           as: "aircraft_models",
           dialect: "standardsql",
           primaryKey: "aircraft_model_code",
@@ -182,7 +182,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // origin
     {
       type: "struct",
-      name: "lookerdata.liquor.airports",
+      name: "malloytest.airports",
       as: "origin",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -228,7 +228,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // destination
     {
       type: "struct",
-      name: "lookerdata.liquor.airports",
+      name: "malloytest.airports",
       as: "destination",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -810,7 +810,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
 
 const tableAirports: StructDef = {
   type: "struct",
-  name: "lookerdata.liquor.airports",
+  name: "malloytest.airports",
   as: "table_airports",
   dialect: "standardsql",
   structSource: { type: "table" },
