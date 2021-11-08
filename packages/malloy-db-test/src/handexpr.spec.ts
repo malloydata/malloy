@@ -148,7 +148,7 @@ export const modelHandBase: StructDef = {
 
 export const aircraftHandBase: StructDef = {
   type: "struct",
-  name: "databamalloy-303216.malloytestseName.aircraft",
+  name: "malloy-303216.malloytest.aircraft",
   dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable", connectionName: "bigquery" },
