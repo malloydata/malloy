@@ -12,7 +12,7 @@
  */
 
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-import { Runtime, EmptyUrlReader } from "malloy";
+import { Runtime, EmptyUrlReader } from "@malloy-lang/malloy";
 
 const files = new EmptyUrlReader();
 const bqConnection = new BigQueryConnection("bigquery");

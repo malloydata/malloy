@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Runtime, EmptyUrlReader, Result } from "malloy";
+import { Runtime, EmptyUrlReader, Result } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { PostgresConnection } from "@malloy-lang/db-postgres";
 
