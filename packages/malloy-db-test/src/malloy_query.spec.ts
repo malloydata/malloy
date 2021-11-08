@@ -633,7 +633,7 @@ describe("expression tests", () => {
       ._makeQueryFromQueryDef({
         structRef: {
           type: "struct",
-          name: "malloytest.bq_medicare_test",
+          name: "malloy-data.malloytest.bq_medicare_test",
           dialect: "standardsql",
           as: "mtest",
           structRelationship: { type: "basetable", connectionName: "test" },
@@ -661,7 +661,7 @@ describe("expression tests", () => {
 });
 
 const airportModelText = `
-export define airports is (explore 'malloytest.airports'
+export define airports is (explore 'malloy-data.malloytest.airports'
   primary key code
   airport_count is count(*),
 
