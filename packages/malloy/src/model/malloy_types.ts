@@ -400,7 +400,7 @@ export type StructRelationship =
 
 /** where does the struct come from? */
 export type StructSource =
-  | { type: "table" }
+  | { type: "table"; tablePath?: string }
   | { type: "nested" }
   | { type: "inline" }
   | { type: "query"; query: Query }

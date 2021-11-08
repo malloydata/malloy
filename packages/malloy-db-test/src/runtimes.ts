@@ -23,9 +23,11 @@ import { PostgresConnection } from "@malloy-lang/db-postgres";
 import { env } from "process";
 
 class BigQueryTestConnection extends BigQueryConnection {
-  public fetchSchemaForTables(missing: string[]): Promise<NamedStructDefs> {
-    const fullMissing = missing.map((name) => `malloy-303216.${name}`);
-    return super.fetchSchemaForTables(fullMissing);
+  // we probably need a better way to do this.
+  public async fetchSchemaForTables(
+    missing: string[]
+  ): Promise<NamedStructDefs> {
+    return await super.fetchSchemaForTables(missing, "malloy-data");
   }
 }
 

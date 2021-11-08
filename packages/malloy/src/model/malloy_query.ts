@@ -2805,9 +2805,9 @@ class QueryStruct extends QueryNode {
   structSourceSQL(stageWriter: StageWriter): string {
     switch (this.fieldDef.structSource.type) {
       case "table":
-        // 'name' is always the source table, even if it has been renamed
-        // through 'as'
-        return this.dialect.quoteTableName(this.fieldDef.name);
+        return this.dialect.quoteTableName(
+          this.fieldDef.structSource.tablePath || this.fieldDef.name
+        );
       case "sql":
         return this.fieldDef.name;
       case "nested":

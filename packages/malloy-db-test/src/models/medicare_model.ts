@@ -173,7 +173,7 @@ export const medicareModel: StructDef = {
       ],
     },
   ],
-  name: "malloy-303216.malloytest.bq_medicare_test",
+  name: "malloy-data.malloytest.bq_medicare_test",
   primaryKey: "id",
   structRelationship: { type: "basetable", connectionName: "test" },
   structSource: { type: "table" },

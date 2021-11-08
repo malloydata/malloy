@@ -17,8 +17,8 @@
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes, rows } from "./runtimes";
 
-// const runtimes = getRuntimes(["bigquery"]);
-const runtimes = getRuntimes();
+const runtimes = getRuntimes(["bigquery"]);
+// const runtimes = getRuntimes();
 
 const expressionModelText = `
 export define aircraft_models is (explore 'malloytest.aircraft_models'
