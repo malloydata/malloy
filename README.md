@@ -81,7 +81,6 @@ The following will install dependencies for the entire set of packages and compi
 
 ```bash
 yarn install
-yarn build
 ```
 
 ## Malloy VSCode Extension
@@ -94,7 +93,7 @@ To build and install the current version of the extension, first ensure that you
 
 ```bash
 yarn install
-yarn build
+yarn build-extension
 ```
 
 Next, in VSCode _EITHER_:
