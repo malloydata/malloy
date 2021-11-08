@@ -23,7 +23,7 @@ const bigquery = new Runtime({
 });
 
 const theModel = `
-define flights is (explore 'examples.flights'
+define flights is (explore 'malloy-data.malloytest.flights'
   measures is (reduce
     total_distance is sum(distance)
     flight_count is count()
