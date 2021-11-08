@@ -14,11 +14,16 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { Malloy, MalloyTranslator, ModelDef } from "@malloy-lang/malloy";
+import { Url, Runtime, UrlReader } from "@malloy-lang/malloy";
 import { DataStyles, HtmlView, DataTreeRoot } from "@malloy-lang/render";
 import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
-import { MALLOY_EXTENSION_STATE, RunState } from "../state";
+import {
+  BIGQUERY_CONNECTION,
+  MALLOY_EXTENSION_STATE,
+  RunState,
+} from "../state";
 import turtleIcon from "../../media/turtle.svg";
+import { fetchFile, VscodeUrlReader } from "../utils";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -83,36 +88,27 @@ interface QueryFileSpec {
 
 type QuerySpec = NamedQuerySpec | QueryStringSpec | QueryFileSpec;
 
-async function compile(uri: string, malloy: string, model?: ModelDef) {
-  let dataStyles = await dataStylesForFile(uri, malloy);
-  const translator = new MalloyTranslator(uri, { URLs: { [uri]: malloy } });
-  translator.translate(model);
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const result = translator.translate();
-    if (result.final) {
-      return { result, dataStyles };
-    } else if (result.URLs) {
-      for (const neededUri of result.URLs) {
-        const neededText = await fetchFile(neededUri);
-        const URLs = { [neededUri]: neededText };
-        translator.update({ URLs });
-        dataStyles = {
-          ...dataStyles,
-          ...(await dataStylesForFile(neededUri, neededText)),
-        };
-      }
-    } else if (result.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-      translator.update({ tables });
-    }
-  }
-}
+class HackyDataStylesAccumulator implements UrlReader {
+  private uriReader: UrlReader;
+  private dataStyles: DataStyles = {};
 
-async function fetchFile(uri: string): Promise<string> {
-  return (
-    await vscode.workspace.openTextDocument(uri.replace(/^file:\/\//, ""))
-  ).getText();
+  constructor(uriReader: UrlReader) {
+    this.uriReader = uriReader;
+  }
+
+  async readUrl(uri: Url): Promise<string> {
+    const contents = await this.uriReader.readUrl(uri);
+    this.dataStyles = {
+      ...this.dataStyles,
+      ...(await dataStylesForFile(uri.toString(), contents)),
+    };
+
+    return contents;
+  }
+
+  getHackyAccumulatedDataStyles() {
+    return this.dataStyles;
+  }
 }
 
 export function runMalloyQuery(
@@ -189,111 +185,57 @@ export function runMalloyQuery(
         }
       });
 
+      const vscodeFiles = new VscodeUrlReader();
+      const files = new HackyDataStylesAccumulator(vscodeFiles);
+
+      const runtime = new Runtime({
+        urls: files,
+        schemas: BIGQUERY_CONNECTION,
+        connections: BIGQUERY_CONNECTION,
+      });
+
       return (async () => {
         try {
           malloyLog.appendLine("");
           const allBegin = performance.now();
           const compileBegin = allBegin;
-          const malloy = new Malloy();
 
           current.panel.webview.html = wrapHTMLSnippet(
             loadingIndicator("Compiling")
           );
           progress.report({ increment: 20, message: "Compiling" });
 
-          let compiledQuery;
-          let error;
+          let prepareSql;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            let model;
-            {
-              const { result, dataStyles } = await compile(
-                query.file.uri.toString(),
-                query.file.getText()
-              );
-              if (result.translated) {
-                model = result.translated.modelDef;
-                styles = dataStyles;
-              } else if (result?.errors) {
-                error = result.errors[0].message;
-              }
-            }
-            if (model) {
-              const fakeUri = path.join(
-                query.file.uri.toString(),
-                "..",
-                "__QUERY__.malloy"
-              );
-              const { result, dataStyles } = await compile(
-                fakeUri,
-                query.text,
-                model
-              );
-              if (result.translated) {
-                const q =
-                  result.translated.queryList[
-                    result.translated.queryList.length - 1
-                  ];
-                malloy.model = result.translated.modelDef;
-                compiledQuery = await malloy.compileQuery(q);
-                styles = { ...styles, ...dataStyles };
-              } else if (result?.errors) {
-                error = result.errors[0].message;
-              }
-            }
+            prepareSql = runtime
+              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .makeQuery(query.text)
+              .getSql();
           } else if (query.type === "named") {
-            const { result, dataStyles } = await compile(
-              query.file.uri.toString(),
-              query.file.getText()
-            );
-            if (result.translated) {
-              const struct = result.translated.modelDef.structs[query.name];
-              if (struct.type === "struct") {
-                const source = struct.structSource;
-                if (source.type === "query") {
-                  malloy.model = result.translated.modelDef;
-                  compiledQuery = await malloy.compileQuery(source.query);
-                  styles = dataStyles;
-                }
-              }
-
-              if (compiledQuery === undefined) {
-                current.panel.webview.html = renderErrorHtml(
-                  new Error(`${query.name} is not a named query.`)
-                );
-                return;
-              }
-            } else if (result.errors) {
-              error = result.errors[0].message;
-            }
+            prepareSql = runtime
+              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .getQueryByName(query.name)
+              .getSql();
           } else {
-            const { result, dataStyles } = await compile(
-              query.file.uri.toString(),
-              query.file.getText()
-            );
-            if (result?.translated) {
-              const index =
-                query.index === -1
-                  ? result.translated.queryList.length - 1
-                  : query.index;
-              const q = result.translated.queryList[index];
-              malloy.model = result.translated.modelDef;
-              compiledQuery = await malloy.compileQuery(q);
-              styles = dataStyles;
-            } else if (result?.errors) {
-              error = result.errors[0]?.message;
-            }
+            prepareSql = runtime
+              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .getQueryByIndex(query.index)
+              .getSql();
           }
 
-          if (!compiledQuery) {
+          try {
+            const preparedSql = await prepareSql.build();
+            styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
+
+            if (canceled) return;
+            malloyLog.appendLine(preparedSql.getSql());
+          } catch (error) {
             current.panel.webview.html = renderErrorHtml(
-              new Error(error || "Something went wrong.")
+              new Error(error.message || "Something went wrong.")
             );
             return;
           }
-
-          if (canceled) return;
-          malloyLog.appendLine(compiledQuery.sql);
 
           const compileEnd = performance.now();
           logTime("Compile", compileBegin, compileEnd);
@@ -304,7 +246,7 @@ export function runMalloyQuery(
             loadingIndicator("Running")
           );
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await malloy.runCompiledQuery(compiledQuery, 50);
+          const queryResult = await prepareSql.run();
           if (canceled) return;
 
           const runEnd = performance.now();
@@ -323,23 +265,16 @@ export function runMalloyQuery(
             setTimeout(async () => {
               const renderBegin = runEnd;
 
-              const data = queryResult.result;
-              const field = queryResult.structs.find(
-                (s) => s.name === queryResult.lastStageName
-              );
+              const data = queryResult.getData();
+              const resultExplore = queryResult.getResultExplore();
 
-              if (field) {
-                const namedQueryName =
-                  query.type === "named" ? query.name : undefined;
-                const namedField = {
-                  ...field,
-                  name: namedQueryName || queryResult.queryName || field.name,
-                };
+              if (resultExplore) {
+                // TODO replace the DataTree with DataArray
                 const table = new DataTreeRoot(
-                  data,
-                  namedField,
-                  queryResult.sourceExplore,
-                  queryResult.sourceFilters || []
+                  data.toObject(),
+                  resultExplore._getStructDef(),
+                  queryResult._getSourceExploreName(),
+                  queryResult._getSourceFilters()
                 );
                 current.panel.webview.html = wrapHTMLSnippet(
                   css + (await new HtmlView().render(table, styles))

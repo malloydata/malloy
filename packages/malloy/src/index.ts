@@ -14,6 +14,41 @@
 // TODO tighten up exports
 export * from "./model";
 export * from "./lang";
-export { Malloy } from "./malloy";
+export {
+  Malloy,
+  Runner,
+  Runtime,
+  EmptyUrlReader,
+  InMemoryUrlReader,
+  FixedConnections,
+  MalloyError,
+  JoinRelationship,
+  SourceRelationship,
+} from "./malloy";
+export type {
+  Explore,
+  Model,
+  PreparedQuery,
+  PreparedResult,
+  Field,
+  AtomicField,
+  ExploreField,
+  QueryField,
+  Result,
+  DataArray,
+  ModelRuntimeRequest,
+} from "./malloy";
+export type {
+  UrlReader,
+  SchemaReader,
+  LookupSchemaReader,
+  SqlRunner,
+  LookupSqlRunner,
+  QueryString,
+  ModelString,
+  QueryUrl,
+  ModelUrl,
+} from "./runtime_types";
+export { Url } from "./runtime_types";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

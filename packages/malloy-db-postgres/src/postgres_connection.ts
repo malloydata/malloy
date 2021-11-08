@@ -40,7 +40,7 @@ export class PostgresConnection extends Connection {
     return "postgres";
   }
 
-  public async getSchemaForMissingTables(
+  public async fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
@@ -85,7 +85,7 @@ export class PostgresConnection extends Connection {
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
-        connectionName: "postgres",
+        connectionName: this.name,
       },
       fields: [],
     };
@@ -116,12 +116,12 @@ export class PostgresConnection extends Connection {
     return structDef;
   }
 
-  public async runQuery(query: string): Promise<QueryData> {
+  public async executeSqlRaw(query: string): Promise<QueryData> {
     const queryData = await this.runPostgresQuery(query, 1000, 0, false);
     return queryData.rows;
   }
 
-  public async runMalloyQuery(
+  public async runSql(
     sqlCommand: string,
     pageSize = 1000,
     rowIndex = 0

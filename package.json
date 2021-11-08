@@ -5,7 +5,8 @@
   "name": "malloy",
   "workspaces": {
     "packages": [
-      "packages/*"
+      "packages/*",
+      "demo/*"
     ]
   },
   "engines": {

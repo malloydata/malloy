@@ -25,7 +25,7 @@ import {
   isConditionParameter,
   StructDef,
 } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
+import { FieldSpace, ConstantFieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
   FieldName,
@@ -128,47 +128,6 @@ class DollarReference extends ExpressionDef {
       value: [{ type: "applyVal" }],
       aggregate: false,
     };
-  }
-}
-
-const constantContext: StructDef = {
-  type: "struct",
-  name: "constant expr eval context",
-  dialect: "invalid dialect",
-  structSource: { type: "table" },
-  structRelationship: {
-    type: "basetable",
-    connectionName: "unknown connection",
-  },
-  fields: [],
-};
-
-/**
- * Used as a namespace for evaluating expressions which are supposed to contain
- * only constants. Will obviously return "notfound" if any variable name is
- * referenced.
- */
-class ConstantFieldSpace extends FieldSpace {
-  constructor() {
-    super(constantContext);
-  }
-
-  structDef(): StructDef {
-    throw new Error(
-      "Internal Compiler Error, can't make structdef from constant context"
-    );
-  }
-
-  emptyStructDef(): StructDef {
-    throw new Error(
-      "Internal Compiler Error, can't make structdef from constant context"
-    );
-  }
-
-  outerName(): string {
-    throw new Error(
-      "Internal Compiler Error, can't make structdef from constant context"
-    );
   }
 }
 

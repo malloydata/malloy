@@ -44,6 +44,15 @@ export interface BigQueryManagerOptions {
   userAgent: string;
 }
 
+export interface BigQueryQueryOptions {
+  pageSize: number;
+  rowIndex: number;
+}
+
+type QueryOptionsReader =
+  | Partial<BigQueryQueryOptions>
+  | (() => Partial<BigQueryQueryOptions>);
+
 // BigQuery SDK apparently throws various authentication errors from Gaxios (https://github.com/googleapis/gaxios) and from
 // @google-cloud/common (https://www.npmjs.com/package/@google-cloud/common)
 // catching and rewriting here a single kind of authentication error we can consistently catch further up the stack
@@ -74,7 +83,10 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection extends Connection {
-  static DEFAULT_PAGE_SIZE = 10;
+  static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
+    pageSize: 10,
+    rowIndex: 0,
+  };
 
   private bigQuery: BigQuerySDK;
   private projectID;
@@ -82,6 +94,8 @@ export class BigQueryConnection extends Connection {
 
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+
+  private queryOptions?: QueryOptionsReader;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -102,7 +116,7 @@ export class BigQueryConnection extends Connection {
     // BIGNUMERIC
   };
 
-  constructor(name: string) {
+  constructor(name: string, queryOptions?: QueryOptionsReader) {
     super(name);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
@@ -111,17 +125,32 @@ export class BigQueryConnection extends Connection {
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
     // we want to use the tables API
     this.projectID = this.bigQuery.projectId;
+
+    this.queryOptions = queryOptions;
   }
 
   get dialectName(): string {
     return "standardsql";
   }
 
-  public async runMalloyQuery(
+  private readQueryOptions(): BigQueryQueryOptions {
+    const options = BigQueryConnection.DEFAULT_QUERY_OPTIONS;
+    if (this.queryOptions) {
+      if (this.queryOptions instanceof Function) {
+        return { ...options, ...this.queryOptions() };
+      } else {
+        return { ...options, ...this.queryOptions };
+      }
+    } else {
+      return options;
+    }
+  }
+
+  public async runSql(
     sqlCommand: string,
-    pageSize: number = BigQueryConnection.DEFAULT_PAGE_SIZE,
-    rowIndex = 0
+    options: Partial<BigQueryQueryOptions> = {}
   ): Promise<MalloyQueryData> {
+    const { pageSize, rowIndex } = { ...this.readQueryOptions(), ...options };
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
@@ -193,20 +222,26 @@ export class BigQueryConnection extends Connection {
 
     return this.structDefFromSchema(
       `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
-      dryRunResults.metadata.statistics.query.schema
+      dryRunResults.metadata.statistics.query.schema,
+      undefined
     );
   }
 
   public async getTableFieldSchema(
-    tablePath: string
+    tablePath: string,
+    pathPrefix: string | undefined = undefined
   ): Promise<bigquery.ITableFieldSchema> {
     const segments = tablePath.split(".");
 
     // paths can have two or three segments
     // if there are only two segments, assume the dataset is "local" to the current billing project
     let projectID, datasetName, tableName;
-    if (segments.length === 2) [datasetName, tableName] = segments;
-    else if (segments.length === 3)
+    if (segments.length === 2) {
+      [datasetName, tableName] = segments;
+      if (pathPrefix !== undefined) {
+        projectID = pathPrefix;
+      }
+    } else if (segments.length === 3)
       [projectID, datasetName, tableName] = segments;
     else
       throw new Error(
@@ -229,7 +264,7 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  public async runQuery(sqlCommand: string): Promise<QueryData> {
+  public async executeSqlRaw(sqlCommand: string): Promise<QueryData> {
     const result = await this.runBigQueryJob(sqlCommand);
     return result[0];
   }
@@ -376,15 +411,30 @@ export class BigQueryConnection extends Connection {
     }
   }
 
+  private static fullPath(
+    tablePath: string,
+    pathPrefix: string | undefined
+  ): string {
+    if (pathPrefix !== undefined && tablePath.split(".").length === 2) {
+      return `${pathPrefix}.${tablePath}`;
+    } else {
+      return tablePath;
+    }
+  }
+
   private structDefFromSchema(
     tablePath: string,
-    tableFieldSchema: bigquery.ITableFieldSchema
+    tableFieldSchema: bigquery.ITableFieldSchema,
+    pathPrefix: string | undefined
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
       name: tablePath,
       dialect: this.dialectName,
-      structSource: { type: "table" },
+      structSource: {
+        type: "table",
+        tablePath: BigQueryConnection.fullPath(tablePath, pathPrefix),
+      },
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
     };
@@ -392,16 +442,24 @@ export class BigQueryConnection extends Connection {
     return structDef;
   }
 
-  public async getSchemaForMissingTables(
-    missing: string[]
+  public async fetchSchemaForTables(
+    missing: string[],
+    pathPrefix: string | undefined = undefined
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
 
     for (const tablePath of missing) {
       let inCache = this.schemaCache.get(tablePath);
       if (!inCache) {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        inCache = this.structDefFromSchema(tablePath, tableFieldSchema);
+        const tableFieldSchema = await this.getTableFieldSchema(
+          tablePath,
+          pathPrefix
+        );
+        inCache = this.structDefFromSchema(
+          tablePath,
+          tableFieldSchema,
+          pathPrefix
+        );
         this.schemaCache.set(tablePath, inCache);
       }
       tableStructDefs[tablePath] = inCache;

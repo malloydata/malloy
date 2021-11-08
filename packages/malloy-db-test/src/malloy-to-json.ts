@@ -45,7 +45,7 @@ async function translateMalloy(fileSrc: string, url = "malloy://cli/stdin") {
   let mr = mt.translate();
   while (translating) {
     if (mr.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(mr.tables);
+      const tables = await Malloy.db.fetchSchemaForTables(mr.tables);
       mt.update({ tables });
     }
     if (mr.final) {
