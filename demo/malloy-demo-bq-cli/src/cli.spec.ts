@@ -33,23 +33,17 @@ const files = new InMemoryUrlReader(
 
 it("runs a query string", async () => {
   const result = await run(files, ["--query", unModeledQuery]);
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
+  expect(result.getData().toObject()[0].flight_count).toBe(344827);
 });
 
 it("runs a query file", async () => {
   const result = await run(files, ["--query-file", unmodeledQueryPath]);
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
+  expect(result.getData().toObject()[0].flight_count).toBe(344827);
 });
 
 it("runs a query string against a model string", async () => {
   const result = await run(files, ["--query", modeledQuery, "--model", model]);
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
+  expect(result.getData().toObject()[0].flight_count).toBe(344827);
 });
 
 it("runs a query string against a model file", async () => {
@@ -59,9 +53,7 @@ it("runs a query string against a model file", async () => {
     "--model-file",
     modelPath,
   ]);
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
+  expect(result.getData().toObject()[0].flight_count).toBe(344827);
 });
 
 it("runs a query file against a model string", async () => {
@@ -71,9 +63,7 @@ it("runs a query file against a model string", async () => {
     "--model",
     model,
   ]);
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
+  expect(result.getData().toObject()[0].flight_count).toBe(344827);
 });
 
 it("runs a query file against a model file", async () => {
@@ -83,7 +73,5 @@ it("runs a query file against a model file", async () => {
     "--model-file",
     modelPath,
   ]);
-  expect(result.getData().toObject()).toMatchObject([
-    { flight_count: 37561525 },
-  ]);
+  expect(result.getData().toObject()[0].flight_count).toBe(344827);
 });
