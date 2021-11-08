@@ -12,39 +12,13 @@
  * GNU General Public License for more details.
  */
 
-import { Malloy, ModelDef, Query, StructDef } from "@malloy-lang/malloy";
-import { fStringEq, fStringLike } from "./test_utils";
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rows(qr: malloy.Result): any[] {
-  return qr.getData().toObject();
-}
 
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import * as malloy from "@malloy-lang/malloy";
-import * as util from "util";
-import * as fs from "fs";
+import { getRuntimes, rows } from "./runtimes";
 
-Malloy.db = new BigQueryConnection("test");
-
-async function bqCompile(sql: string): Promise<boolean> {
-  try {
-    await Malloy.db.executeSqlRaw(`WITH test AS(\n${sql}) SELECT 1`);
-  } catch (e) {
-    console.log(`SQL: didn't compile\n=============\n${sql}`);
-    throw e;
-  }
-  return true;
-}
-
-async function compileHandQueryToSql(
-  model: malloy.ModelRuntimeRequest,
-  queryDef: Query
-): Promise<string> {
-  return (
-    await model._makeQueryFromQueryDef(queryDef).getSql().build()
-  ).getSql();
-}
+// const runtimes = getRuntimes(["bigquery"]);
+const runtimes = getRuntimes();
 
 const expressionModelText = `
 export define aircraft_models is (explore 'malloytest.aircraft_models'
@@ -70,496 +44,17 @@ export define aircraft is (
   joins
     aircraft_models on aircraft_model_code
 );
-
 `;
 
-export const modelHandBase: StructDef = {
-  name: "malloytest.aircraft_models",
-  as: "aircraft_models",
-  type: "struct",
-  dialect: "standardsql",
-  structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
-  fields: [
-    { type: "string", name: "aircraft_model_code" },
-    { type: "string", name: "manufacturer" },
-    { type: "string", name: "model" },
-    { type: "number", name: "aircraft_type_id", numberType: "integer" },
-    {
-      type: "number",
-      name: "aircraft_engine_type_id",
-      numberType: "integer",
-    },
-    { type: "number", name: "aircraft_category_id", numberType: "integer" },
-    { type: "number", name: "amateur", numberType: "integer" },
-    { type: "number", name: "engines", numberType: "integer" },
-    { type: "number", name: "seats", numberType: "integer" },
-    { type: "number", name: "weight", numberType: "integer" },
-    { type: "number", name: "speed", numberType: "integer" },
-    {
-      name: "model_count",
-      type: "number",
-      e: [{ type: "aggregate", function: "count", e: [] }],
-      aggregate: true,
-      numberType: "float",
-    },
-    {
-      name: "total_seats",
-      type: "number",
-      e: [
-        {
-          type: "aggregate",
-          function: "sum",
-          e: [{ type: "field", path: "seats" }],
-        },
-      ],
-      aggregate: true,
-      numberType: "float",
-    },
-    {
-      name: "boeing_seats",
-      type: "number",
-      e: [
-        {
-          type: "filterExpression",
-          e: [
-            {
-              type: "aggregate",
-              function: "sum",
-              e: [{ type: "field", path: "seats" }],
-            },
-          ],
-          filterList: [
-            {
-              aggregate: false,
-              source: "manufacturer='BOEING'",
-              expression: [
-                {
-                  type: "field",
-                  path: "manufacturer",
-                },
-                "='BOEING'",
-              ],
-            },
-          ],
-        },
-      ],
-      aggregate: true,
-      numberType: "float",
-    },
-    {
-      name: "percent_boeing",
-      type: "number",
-      e: [
-        "(",
-        { type: "field", path: "boeing_seats" },
-        "/",
-        { type: "field", path: "total_seats" },
-        ")*100",
-      ],
-      aggregate: true,
-      numberType: "float",
-    },
-    {
-      name: "percent_boeing_floor",
-      type: "number",
-      aggregate: true,
-      e: ["FLOOR(", { type: "field", path: "percent_boeing" }, ")"],
-      numberType: "float",
-    },
-  ],
-  primaryKey: "aircraft_model_code",
-};
+const expressionModels = new Map<string, malloy.ModelRuntimeRequest>();
+runtimes.forEach((runtime, databaseName) =>
+  expressionModels.set(databaseName, runtime.makeModel(expressionModelText))
+);
 
-export const aircraftHandBase: StructDef = {
-  type: "struct",
-  name: "malloytest.aircraft",
-  dialect: "standardsql",
-  structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
-  fields: [
-    { type: "string", name: "tail_num" },
-    { type: "string", name: "aircraft_serial" },
-    { type: "string", name: "aircraft_model_code" },
-    { type: "string", name: "aircraft_engine_code" },
-    { type: "number", name: "year_built", numberType: "integer" },
-    { type: "number", name: "aircraft_type_id", numberType: "integer" },
-    { type: "number", name: "aircraft_engine_type_id", numberType: "integer" },
-    { type: "number", name: "registrant_type_id", numberType: "integer" },
-    { type: "string", name: "name" },
-    { type: "string", name: "address1" },
-    { type: "string", name: "address2" },
-    { type: "string", name: "city" },
-    { type: "string", name: "state" },
-    { type: "string", name: "zip" },
-    { type: "string", name: "region" },
-    { type: "string", name: "county" },
-    { type: "string", name: "country" },
-    { type: "string", name: "certification" },
-    { type: "string", name: "status_code" },
-    { type: "string", name: "mode_s_code" },
-    { type: "string", name: "fract_owner" },
-    { type: "date", name: "last_action_date" },
-    { type: "date", name: "cert_issue_date" },
-    { type: "date", name: "air_worth_date" },
-    {
-      name: "aircraft_count",
-      type: "number",
-      e: [{ type: "aggregate", function: "count", e: [] }],
-      aggregate: true,
-      numberType: "float",
-    },
-    {
-      type: "turtle",
-      name: "hand_turtle",
-      pipeline: [{ type: "reduce", fields: ["aircraft_count"] }],
-    },
-    {
-      type: "turtle",
-      name: "hand_turtle_pipeline",
-      pipeline: [
-        { type: "reduce", fields: [{ name: "aircraft_count", as: "a" }] },
-        { type: "reduce", fields: ["a"] },
-      ],
-    },
-  ],
-  primaryKey: "tail_num",
-  as: "aircraft",
-};
-
-export const aircraftHandStructDef: StructDef = {
-  ...aircraftHandBase,
-  fields: [
-    ...aircraftHandBase.fields,
-    {
-      ...modelHandBase,
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: "aircraft_model_code",
-      },
-    },
-  ],
-};
-
-const handCodedModel: ModelDef = {
-  name: "Hand Coded Models",
-  exports: ["aircraft"],
-  structs: {
-    aircraft: aircraftHandStructDef,
-  },
-};
-
-/** Flight model */
-export const exprHandModelDef: ModelDef = {
-  name: "Hand Coded Expressions",
-  exports: ["aircraft"],
-  structs: { aircraft: aircraftHandStructDef },
-};
-
-export const joinModelAircraftHandStructDef: StructDef = {
-  ...modelHandBase,
-  as: "model_aircraft",
-  fields: [
-    ...modelHandBase.fields,
-    {
-      ...aircraftHandBase,
-      structRelationship: {
-        type: "condition",
-        joinRelationship: "one_to_many",
-        onExpression: {
-          e: [
-            { type: "field", path: "aircraft_model_code" },
-            "=",
-            { type: "field", path: "aircraft.aircraft_model_code" },
-          ],
-        },
-      },
-    },
-  ],
-};
-
-// Join tests
-
-// airport_models filtered to 'B%' manufacturer
-export const modelB: StructDef = {
-  ...modelHandBase,
-  filterList: [
-    {
-      expression: [{ type: "field", path: "manufacturer" }, " LIKE 'B%'"],
-      source: "manufacturer ~ 'B%'",
-    },
-  ],
-};
-
-// one to many
-export const modelAircraftHandStructDef: StructDef = {
-  ...modelHandBase,
-  as: "model_aircraft",
-  fields: [
-    ...modelHandBase.fields,
-    {
-      ...aircraftHandBase,
-      structRelationship: {
-        type: "condition",
-        joinRelationship: "one_to_many",
-        onExpression: {
-          e: [
-            { type: "field", path: "aircraft_model_code" },
-            "=",
-            { type: "field", path: "aircraft.aircraft_model_code" },
-          ],
-        },
-      },
-    },
-  ],
-};
-
-export const aircraftBModelInner: StructDef = {
-  ...aircraftHandBase,
-  as: "aircraft_modelb_inner",
-  fields: [
-    ...aircraftHandBase.fields,
-    {
-      ...modelB,
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: "aircraft_model_code",
-        joinType: "inner",
-      },
-    },
-  ],
-};
-
-const joinModel: ModelDef = {
-  name: "Hand Coded Join Models",
-  exports: ["model_aircraft", "aircraft_modelb_inner"],
-  structs: {
-    model_aircraft: joinModelAircraftHandStructDef,
-    aircraft_modelb_inner: aircraftBModelInner,
-  },
-};
-
-describe("expression tests", () => {
-  let bq: BigQueryConnection;
-  let runtime: malloy.Runtime;
-  let model: malloy.ModelRuntimeRequest;
-  let handModel: malloy.ModelRuntimeRequest;
-  let orderByModel: malloy.ModelRuntimeRequest;
-  let handJoinModel: malloy.ModelRuntimeRequest;
-
-  beforeAll(() => {
-    bq = new BigQueryConnection("test");
-    const files = {
-      readUrl: async (url: malloy.Url) => {
-        const filePath = url.toString().replace(/^file:\/\//, "");
-        return await util.promisify(fs.readFile)(filePath, "utf8");
-      },
-    };
-    runtime = new malloy.Runtime({
-      urls: files,
-      schemas: bq,
-      connections: bq,
-    });
-    model = runtime.makeModel(expressionModelText);
-
-    orderByModel = runtime.makeModel(
-      `export define models is ('malloytest.aircraft_models'
-          model_count is count()
-        )`
-    );
-
-    handModel = runtime._makeModelFromModelDef(handCodedModel);
-    handJoinModel = runtime._makeModelFromModelDef(joinModel);
-  });
-
-  it("hand query hand model", async () => {
-    const sql = await compileHandQueryToSql(handModel, {
-      structRef: "aircraft",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: [
-            // "aircraft_models.total_seats",
-            // "aircraft_models.boeing_seats"
-            // "aircraft_models.percent_boeing",
-            // {
-            //   type: "number",
-            //   name: "my_boeing_seats",
-            //   aggregate: true,
-            //   e: [
-            //     {
-            //       type: "filterExpression",
-            //  fieldDef    e: [{ type: "field", path: "aircraft_models.total_seats" }],
-            //     },
-            //   ],
-            // },
-            {
-              name: "aircraft_models.total_seats",
-              as: "my_boeing_seats2",
-              filterList: [fStringEq("aircraft_models.manufacturer", "BOEING")],
-            },
-          ],
-        },
-      ],
-    });
-    await bqCompile(sql);
-    // console.log(result.sql);
-    // expect(result.getData().toObject()[0].total_seats).toBe(452415);
-  });
-
-  it("hand turtle", async () => {
-    const result = await handModel
-      ._makeQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeHead: { name: "hand_turtle" },
-        pipeline: [],
-      })
-      .run();
-    expect(result.getData().toObject()[0].aircraft_count).toBe(3599);
-  });
-
-  it("hand turtle malloy", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-explore aircraft | hand_turtle
-`
-      )
-      .run();
-    expect(result.getData().toObject()[0].aircraft_count).toBe(3599);
-  });
-
-  it("default sort order", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-      explore aircraft | reduce state, aircraft_count limit 10
-    `
-      )
-      .run();
-    expect(result.getData().toObject()[0].aircraft_count).toBe(367);
-  });
-
-  it("default sort order by dir", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-      explore aircraft | reduce state, aircraft_count order by 2 limit 10
-    `
-      )
-      .run();
-    expect(result.getData().toObject()[0].aircraft_count).toBe(1);
-  });
-
-  it("hand turtle2", async () => {
-    const sql = await compileHandQueryToSql(handModel, {
-      structRef: "aircraft",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: [
-            "state",
-            "aircraft_count",
-            {
-              type: "turtle",
-              name: "my_turtle",
-              pipeline: [
-                { type: "reduce", fields: ["county", "aircraft_count"] },
-              ],
-            },
-          ],
-        },
-      ],
-    });
-    await bqCompile(sql);
-    // console.log(result.sql);
-    // expect(result.getData().toObject()[0].total_seats).toBe(452415);
-  });
-
-  it("hand turtle3", async () => {
-    const sql = await compileHandQueryToSql(handModel, {
-      structRef: "aircraft",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: ["state", "aircraft_count", "hand_turtle"],
-        },
-      ],
-    });
-    await bqCompile(sql);
-    // console.log(result.sql);
-    // expect(result.getData().toObject()[0].total_seats).toBe(452415);
-  });
-
-  it("hand: declared pipeline as main query", async () => {
-    const sql = await compileHandQueryToSql(handModel, {
-      structRef: "aircraft",
-      pipeHead: { name: "hand_turtle_pipeline" },
-      pipeline: [],
-    });
-    // console.log(result.sql);
-    await bqCompile(sql);
-    // console.log(result.sql);
-    // expect(result.getData().toObject()[0].total_seats).toBe(452415);
-  });
-
-  it("hand: turtle is pipeline", async () => {
-    const result = await handModel
-      ._makeQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeline: [
-          {
-            type: "reduce",
-            fields: [
-              "aircraft_count",
-              {
-                type: "turtle",
-                name: "pipe",
-                pipeline: [
-                  {
-                    type: "reduce",
-                    fields: ["state", "county", "aircraft_count"],
-                  },
-                  {
-                    type: "reduce",
-                    filterList: [fStringLike("county", "2%")],
-                    fields: [
-                      "state",
-                      {
-                        name: "total_aircraft",
-                        type: "number",
-                        e: [
-                          {
-                            type: "aggregate",
-                            function: "sum",
-                            e: [{ type: "field", path: "aircraft_count" }],
-                          },
-                        ],
-                        aggregate: true,
-                        numberType: "float",
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      })
-      .run();
-    // console.log(result.sql);
-    // await bqCompile(result.sql);
-    // console.log(result.sql);
-    // console.log(result.getData().toObject()[0]);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((result.getData().toObject()[0] as any).pipe[0].total_aircraft).toBe(
-      61
-    );
-  });
-
+expressionModels.forEach((expressionModel, databaseName) => {
   // basic calculations for sum, filtered sum, without a join.
-  it("basic calculations", async () => {
-    const result = await model
+  it(`basic calculations - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore aircraft_models | reduce
@@ -591,10 +86,9 @@ explore aircraft | hand_turtle
     // expect(result.getData().toObject()[0].percent_boeing_floor).toBe(55);
     // expect(result.getData().toObject()[0].percent_boeing_floor2).toBe(55);
   });
-
   // Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
-  it("Floor() -or any function bustage with aggregates", async () => {
-    const result = await model
+  it(`Floor() -or any function bustage with aggregates - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore aircraft_models | reduce
@@ -607,47 +101,10 @@ explore aircraft | hand_turtle
     expect(result.getData().toObject()[0].percent_boeing_floor2).toBe(55);
   });
 
-  // Hand model basic calculations for sum, filtered sum, without a join.
-  it("hand: lots of kinds of sums", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-          explore aircraft | reduce
-            aircraft_models.total_seats,
-            total_seats2 is sum(aircraft_models.seats),
-            total_seats3 is aircraft_models.sum(aircraft_models.seats),
-            aircraft_models.boeing_seats,
-            boeing_seats2 is aircraft_models.sum(aircraft_models.seats) : [aircraft_models.manufacturer: 'BOEING'],
-            boeing_seats3 is aircraft_models.boeing_seats : [aircraft_models.manufacturer: ~'B%']
-        `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.getData().toObject()[0].total_seats).toBe(18294);
-    expect(result.getData().toObject()[0].total_seats2).toBe(31209);
-    expect(result.getData().toObject()[0].total_seats3).toBe(18294);
-    expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
-    expect(result.getData().toObject()[0].boeing_seats2).toBe(6244);
-    expect(result.getData().toObject()[0].boeing_seats3).toBe(6244);
-  });
-
-  it("hand: bad root name for pathed sum", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-            explore aircraft | reduce
-              total_seats3 is aircraft_models.sum(aircraft_models.seats),
-          `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.getData().toObject()[0].total_seats3).toBe(18294);
-  });
-
   // BROKEN:
   // Model based version of sums.
-  it("model: expression fixups.", async () => {
-    const result = await model
+  it(`model: expression fixups. - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
             explore aircraft | reduce
@@ -657,78 +114,12 @@ explore aircraft | hand_turtle
       )
       .run();
     expect(result.getData().toObject()[0].total_seats).toBe(18294);
-    expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
-  });
-
-  // WORKs: (hand coded model):
-  // Model based version of sums.
-  it("hand: expression fixups.", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-            explore aircraft | reduce
-              aircraft_models.total_seats,
-              aircraft_models.boeing_seats
-          `
-      )
-      .run();
-    expect(result.getData().toObject()[0].total_seats).toBe(18294);
-    expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
-  });
-
-  it("model: filtered measures", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-            explore aircraft | reduce
-              boeing_seats is aircraft_models.total_seats : [aircraft_models.manufacturer:'BOEING']
-          `
-      )
-      .run();
-    expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
-  });
-
-  // does the filter force a join?
-  it("model: do filters force dependant joins?", async () => {
-    const result = await handModel
-      .makeQuery(
-        `
-            explore aircraft | reduce
-              boeing_aircraft is count() : [aircraft_models.manufacturer:'BOEING']
-          `
-      )
-      .run();
-    expect(result.getData().toObject()[0].boeing_aircraft).toBe(69);
-  });
-
-  // Works: Generate query using named alias.
-  it("hand: filtered measures", async () => {
-    const result = await handModel
-      ._makeQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeline: [
-          {
-            type: "reduce",
-            fields: [
-              {
-                name: "aircraft_models.total_seats",
-                as: "boeing_seats",
-                filterList: [
-                  fStringEq("aircraft_models.manufacturer", "BOEING"),
-                ],
-              },
-            ],
-          },
-        ],
-      })
-      .run();
-    // console.log(result.sql);
     expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
   });
 
   // turtle expressions
-  it("model: turtle", async () => {
-    const result = await model
+  it(`model: turtle - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
             explore aircraft | reduce
@@ -740,8 +131,8 @@ explore aircraft | hand_turtle
   });
 
   // filtered turtle expressions
-  it("model: filtered turtle", async () => {
-    const result = await model
+  it(`model: filtered turtle - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
               explore aircraft | reduce
@@ -753,8 +144,8 @@ explore aircraft | hand_turtle
   });
 
   // having.
-  it("model: simple having", async () => {
-    const result = await model
+  it(`model: simple having - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
           explore aircraft | reduce : [aircraft_count: >90 ]
@@ -767,8 +158,8 @@ explore aircraft | hand_turtle
     expect(result.getData().toObject()[0].aircraft_count).toBe(91);
   });
 
-  it("model: turtle having2", async () => {
-    const result = await model
+  it(`model: turtle having2 - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
       -- hacking a null test for now
@@ -790,8 +181,8 @@ explore aircraft | hand_turtle
     );
   });
 
-  it("model: turtle having on main", async () => {
-    const result = await model
+  it(`model: turtle having on main - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
       -- hacking a null test for now
@@ -816,8 +207,8 @@ explore aircraft | hand_turtle
   });
 
   // bigquery doesn't like to partition by floats,
-  it("model: having float group by partition", async () => {
-    const result = await model
+  it(`model: having float group by partition - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
     -- hacking a null test for now
@@ -837,8 +228,8 @@ explore aircraft | hand_turtle
     expect(result.getData().toObject()[0].aircraft_model_count).toBe(448);
   });
 
-  it("model: aggregate functions distinct min max", async () => {
-    const result = await model
+  it(`model: aggregate functions distinct min max - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore aircraft_models | reduce
@@ -867,8 +258,8 @@ explore aircraft | hand_turtle
     expect(result.getData().toObject()[0].boeing_max_model).toBe("YL-15");
   });
 
-  it("model: dates", async () => {
-    const result = await model
+  it(`model: dates - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore 'malloytest.alltypes' | reduce
@@ -923,8 +314,8 @@ explore aircraft | hand_turtle
     //     `);
   });
 
-  it("named query metadata undefined", async () => {
-    const result = await model
+  it(`named query metadata undefined - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore aircraft| reduce
@@ -935,8 +326,8 @@ explore aircraft | hand_turtle
     expect(result._getQueryResult().queryName).toBe(undefined);
   });
 
-  it("named query metadata named", async () => {
-    const result = await model
+  it(`named query metadata named - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore aircraft | by_manufacturer
@@ -946,8 +337,8 @@ explore aircraft | hand_turtle
     expect(result._getQueryResult().queryName).toBe("by_manufacturer");
   });
 
-  it("named query metadata named head of pipeline", async () => {
-    const result = await model
+  it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         explore aircraft | by_manufacturer | reduce c is count()
@@ -957,8 +348,8 @@ explore aircraft | hand_turtle
     expect(result._getQueryResult().queryName).toBe(undefined);
   });
 
-  it("filtered explores", async () => {
-    const result = await model
+  it(`filtered explores - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
         define b is (explore aircraft : [aircraft_models.manufacturer: ~'B%']);
@@ -970,8 +361,8 @@ explore aircraft | hand_turtle
     expect(rows(result)[0].m_count).toBe(63);
   });
 
-  it("query with aliasname used twice", async () => {
-    const result = await model
+  it(`query with aliasname used twice - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
 aircraft | reduce
@@ -995,7 +386,7 @@ aircraft_count
   });
 
   it.skip("join foreign_key reverse", async () => {
-    const result = await model
+    const result = await expressionModel
       .makeQuery(
         `
   define a is('malloytest.aircraft'
@@ -1018,8 +409,8 @@ aircraft_count
     expect(rows(result)[0].first_three).toBe("SAN");
   });
 
-  it("joined filtered explores", async () => {
-    const result = await model
+  it(`joined filtered explores - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
     define a_models is (explore 'malloytest.aircraft_models'
@@ -1044,8 +435,8 @@ aircraft_count
     expect(rows(result)[0].aircraft_count).toBe(3599);
   });
 
-  it("joined filtered explores with dependancies", async () => {
-    const result = await model
+  it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
+    const result = await expressionModel
       .makeQuery(
         `
     define bo_models is (
@@ -1087,257 +478,5 @@ aircraft_count
       .run();
     expect(result.getData().toObject()[0].model_count).toBe(60461);
     expect(rows(result)[0].b_count).toBe(355);
-  });
-
-  it("boolean type", async () => {
-    const result = await orderByModel
-      .makeQuery(
-        `
-        explore models | reduce
-          big is seats >=20
-          model_count is count()
-        `
-      )
-      .run();
-    expect(rows(result)[0].big).toBe(false);
-    expect(rows(result)[0].model_count).toBe(58451);
-  });
-
-  it("boolean in pipeline", async () => {
-    const result = await orderByModel
-      .makeQuery(
-        `
-        explore models | reduce
-          manufacturer
-          big is seats >=21
-          model_count is count()
-        | reduce
-          big
-          model_count is model_count.sum()
-        `
-      )
-      .run();
-    expect(rows(result)[0].big).toBe(false);
-    expect(rows(result)[0].model_count).toBe(58500);
-  });
-
-  it("filtered measures in model are aggregates #352", async () => {
-    const result = await orderByModel
-      .makeQuery(
-        `
-        explore models
-          j_names is model_count : [manufacturer ~ 'J%']
-        | reduce
-          j_names
-        `
-      )
-      .run();
-    expect(rows(result)[0].j_names).toBe(1358);
-  });
-
-  it("reserved words are quoted", async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          fetch is count()
-        | project
-          fetch
-        `
-        )
-        .getSql()
-        .build()
-    ).getSql();
-    await bqCompile(sql);
-  });
-
-  it("reserved words are quoted in turtles", async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          withx is (reduce
-             select is UPPER(manufacturer)
-             fetch is count()
-          )
-        | project
-          withx is lower(withx.select)
-          fetch is withx.fetch
-        `
-        )
-        .getSql()
-        .build()
-    ).getSql();
-    await bqCompile(sql);
-  });
-
-  it.skip("reserved words in structure definitions", async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          with is (reduce
-             select is UPPER(manufacturer)
-             fetch is count()
-          )
-        | project
-          withxis lower(withx.select)
-          fetch is with.fetch
-        `
-        )
-        .getSql()
-        .build()
-    ).getSql();
-    await bqCompile(sql);
-  });
-
-  it("aggregate and scalar conditions", async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          model_count is count() : [manufacturer: ~'A%']
-        `
-        )
-        .getSql()
-        .build()
-    ).getSql();
-    await bqCompile(sql);
-  });
-
-  it("modeled having simple", async () => {
-    const result = await orderByModel
-      .makeQuery(
-        `
-        define popular_names is (models
-          | reduce : [model_count > 100]
-            manufacturer
-            model_count
-        );
-        popular_names | project order by 2
-         manufacturer
-         model_count
-        `
-      )
-      .run();
-    expect(rows(result)[0].model_count).toBe(102);
-  });
-
-  it("modeled having complex", async () => {
-    const result = await orderByModel
-      .makeQuery(
-        `
-        define popular_names is (models
-          | reduce : [model_count > 100]
-            manufacturer
-            model_count
-            l is (reduce top 5
-              manufacturer
-              model_count
-            )
-        );
-        popular_names | project order by 2
-         manufacturer
-         model_count
-        `
-      )
-      .run();
-    expect(rows(result)[0].model_count).toBe(102);
-  });
-
-  it("turtle references joined element", async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-      define a is ('malloytest.aircraft'
-        primary key tail_num
-        aircraft_count is count(*)
-      );
-
-      define f is ('malloytest.flights'
-        primary key id2
-        flight_count is count()
-        foo is (reduce
-          carrier
-          flight_count
-          a.aircraft_count
-        )
-        joins
-          a on tail_num
-      );
-      explore f | foo
-    `
-        )
-        .getSql()
-        .build()
-    ).getSql();
-    await bqCompile(sql);
-  });
-
-  it("hand join ON", async () => {
-    const sql = (
-      await handJoinModel
-        ._makeQueryFromQueryDef({
-          structRef: "model_aircraft",
-          pipeline: [
-            {
-              type: "reduce",
-              fields: [
-                "aircraft.state",
-                "aircraft.aircraft_count",
-                "model_count",
-              ],
-            },
-          ],
-        })
-        .getSql()
-        .build()
-    ).getSql();
-    await bqCompile(sql);
-    // console.log(result.sql);
-    // expect(result.getData().toObject()[0].total_seats).toBe(452415);
-  });
-
-  it("hand join symmetric agg", async () => {
-    const result = await handJoinModel
-      ._makeQueryFromQueryDef({
-        structRef: "model_aircraft",
-        pipeline: [
-          {
-            type: "reduce",
-            fields: ["total_seats", "aircraft.aircraft_count"],
-          },
-        ],
-      })
-      .run();
-    // await bqCompile(result.sql);
-    // console.log(result.sql);
-    // console.log(result.getData().toObject());
-    expect(result.getData().toObject()[0].total_seats).toBe(452415);
-    expect(result.getData().toObject()[0].aircraft_count).toBe(62644);
-  });
-
-  it("hand join foreign key filtered inner", async () => {
-    const result = await handJoinModel
-      ._makeQueryFromQueryDef({
-        structRef: "aircraft_modelb_inner",
-        pipeline: [
-          {
-            type: "reduce",
-            fields: ["aircraft_models.total_seats", "aircraft_count"],
-          },
-        ],
-      })
-      .run();
-    // await bqCompile(result.sql);
-    // console.log(result.sql);
-    // console.log(result.getData().toObject());
-    expect(result.getData().toObject()[0].total_seats).toBe(7448);
-    expect(result.getData().toObject()[0].aircraft_count).toBe(544);
   });
 });

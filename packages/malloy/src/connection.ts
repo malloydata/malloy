@@ -54,7 +54,7 @@ export abstract class Connection
 
   private getConnection(connectionName?: string): Promise<Connection> {
     if (connectionName !== undefined && connectionName !== this.name) {
-      throw new Error("");
+      throw new Error(`Unknown Connection: ${connectionName}`);
     }
     return Promise.resolve(this);
   }
