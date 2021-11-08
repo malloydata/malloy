@@ -13,9 +13,11 @@
 import { InMemoryUrlReader } from "malloy";
 import { run, pathToUrl } from "./index";
 
-const unModeledQuery = "'malloy-data.malloytest.flights' | reduce flight_count is count()";
+const unModeledQuery =
+  "'malloy-data.malloytest.flights' | reduce flight_count is count()";
 const modeledQuery = "flights | reduce flight_count";
-const model = "define flights is ('malloy-data.malloytest.flights' flight_count is count());";
+const model =
+  "define flights is ('malloy-data.malloytest.flights' flight_count is count());";
 
 const modelPath = "/flights.malloy";
 const modeledQueryPath = "/modeled_query.malloy";
