@@ -17,6 +17,7 @@
   "scripts": {
     "clean": "yarn workspace @malloy-lang/malloy clean && yarn tsc --build --clean",
     "build": "yarn workspace @malloy-lang/malloy build-parser && yarn tsc --build",
+    "build-extension": "yarn build && yarn workspace malloy-vscode package",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn lint && yarn build && yarn workspaces run test",
     "test-fast": "yarn workspaces run test",
