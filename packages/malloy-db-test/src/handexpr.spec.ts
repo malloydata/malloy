@@ -49,7 +49,7 @@ async function compileHandQueryToSql(
 }
 
 export const modelHandBase: StructDef = {
-  name: "malloytest.aircraft_models",
+  name: "malloy-303216.malloytest.aircraft_models",
   as: "aircraft_models",
   type: "struct",
   dialect: "standardsql",
@@ -148,7 +148,7 @@ export const modelHandBase: StructDef = {
 
 export const aircraftHandBase: StructDef = {
   type: "struct",
-  name: "malloytest.aircraft",
+  name: "databamalloy-303216.malloytestseName.aircraft",
   dialect: "standardsql",
   structSource: { type: "table" },
   structRelationship: { type: "basetable", connectionName: "bigquery" },

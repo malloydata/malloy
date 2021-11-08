@@ -11,13 +11,25 @@
  * GNU General Public License for more details.
  */
 
-import { Runtime, EmptyUrlReader, Result } from "@malloy-lang/malloy";
+import {
+  Runtime,
+  EmptyUrlReader,
+  Result,
+  NamedStructDefs,
+} from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { PostgresConnection } from "@malloy-lang/db-postgres";
 
 import { env } from "process";
 
-const bqConnection = new BigQueryConnection("bigquery");
+class BigQueryTestConnection extends BigQueryConnection {
+  public fetchSchemaForTables(missing: string[]): Promise<NamedStructDefs> {
+    const fullMissing = missing.map((name) => `malloy-303216.${name}`);
+    return super.fetchSchemaForTables(fullMissing);
+  }
+}
+
+const bqConnection = new BigQueryTestConnection("bigquery");
 const postgresConnection = new PostgresConnection("postgres");
 const files = new EmptyUrlReader();
 
