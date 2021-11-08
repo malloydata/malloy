@@ -413,3 +413,45 @@ export class ProjectFieldSpace extends PipeFieldSpace {
     }
   }
 }
+
+/**
+ * Used as a namespace for evaluating expressions which are supposed to contain
+ * only constants. Will obviously return "notfound" if any variable name is
+ * referenced.
+ */
+
+const constantContext: model.StructDef = {
+  type: "struct",
+  name: "constant expr eval context",
+  dialect: "invalid dialect",
+  structSource: { type: "table" },
+  structRelationship: {
+    type: "basetable",
+    connectionName: "unknown connection",
+  },
+  fields: [],
+};
+
+export class ConstantFieldSpace extends FieldSpace {
+  constructor() {
+    super(constantContext);
+  }
+
+  structDef(): model.StructDef {
+    throw new Error(
+      "Internal Compiler Error, can't make structdef from constant context"
+    );
+  }
+
+  emptyStructDef(): model.StructDef {
+    throw new Error(
+      "Internal Compiler Error, can't make structdef from constant context"
+    );
+  }
+
+  outerName(): string {
+    throw new Error(
+      "Internal Compiler Error, can't make structdef from constant context"
+    );
+  }
+}
