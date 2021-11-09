@@ -84,7 +84,7 @@
       "view/item/context": [
         {
           "command": "malloy.runTurtleFromSchema",
-          "when": "view == malloySchema && viewItem == turtle",
+          "when": "view == malloySchema && viewItem == query",
           "group": "inline"
         }
       ]
