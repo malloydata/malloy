@@ -415,7 +415,9 @@ export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
     }
   }
 
-  public async lookupSchemaReader(connectionName?: string): Promise<Connection> {
+  public async lookupSchemaReader(
+    connectionName?: string
+  ): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 
