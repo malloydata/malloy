@@ -7,7 +7,7 @@
  * version 2 as published by the Free Software Foundation.
  *
  * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without evenro the implied warranty of
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
@@ -323,6 +323,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
+    // TODO The result explore should really be unnamed. This test currently
+    //      inspects inner information because we have no way to have unnamed
+    //       explores today.
+    // expect(result.getResultExplore().getName()).toBe(undefined);
     expect(result._getQueryResult().queryName).toBe(undefined);
   });
 
@@ -334,7 +338,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result._getQueryResult().queryName).toBe("by_manufacturer");
+    expect(result.getResultExplore().getName()).toBe("by_manufacturer");
   });
 
   it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
@@ -345,6 +349,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
+    // TODO Same as above -- this test should check the explore name
+    // expect(result.getResultExplore().getName()).toBe(undefined);
     expect(result._getQueryResult().queryName).toBe(undefined);
   });
 
