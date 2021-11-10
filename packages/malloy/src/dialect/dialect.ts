@@ -25,6 +25,7 @@ export abstract class Dialect {
   abstract udfPrefix: string;
   abstract hasFinalStage: boolean;
   abstract stringTypeName: string;
+  abstract divisionIsInteger: boolean;
 
   // return a quoted string for use as a table name.
   abstract quoteTableName(tableName: string): string;
