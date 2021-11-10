@@ -57,6 +57,7 @@ export {
   QueryData,
   QueryScalar,
   QueryDataRow,
+  QueryValue,
   NamedStructDefs,
   MalloyQueryData,
   FilterExpression,
