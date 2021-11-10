@@ -11,9 +11,6 @@
  * GNU General Public License for more details.
  */
 
-// TODO tighten up exports
-export * from "./model";
-export * from "./lang";
 export {
   Malloy,
   Runner,
@@ -50,5 +47,29 @@ export type {
   ModelUrl,
 } from "./runtime_types";
 export { Url } from "./runtime_types";
+
+// TODO tighten these up?
+export {
+  AtomicFieldType,
+  FieldTypeDef,
+  FieldDef,
+  StructDef,
+  QueryData,
+  QueryScalar,
+  QueryDataRow,
+  NamedStructDefs,
+  MalloyQueryData,
+  FilterExpression,
+  TimeTimeframe,
+  isValueBoolean,
+  getDimensions,
+  isValueString,
+  isValueTimestamp,
+  isValueDate,
+  isFieldTimeBased,
+  isValueNumber,
+  isMeasureLike,
+  isDimensional,
+} from "./model";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

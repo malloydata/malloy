@@ -10,7 +10,6 @@
     "testLang": "(cd src/lang ; yarn jest *.spec.ts)",
     "testModel": "(cd src/model ; yarn jest *.spec.ts)",
     "clean": "rm -rf src/lang/lib",
-    "malloyc": "ts-node src/lang/test/malloy-to-json.ts",
     "build": "yarn build-parser && yarn tsc --build"
   },
   "dependencies": {

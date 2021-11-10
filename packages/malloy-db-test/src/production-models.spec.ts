@@ -14,7 +14,10 @@
 import "@malloy-lang/malloy/src/lang/jestery";
 import fs from "fs";
 import path from "path";
-import { MalloyTranslator, TranslateResponse } from "@malloy-lang/malloy";
+import {
+  MalloyTranslator,
+  TranslateResponse,
+} from "@malloy-lang/malloy/src/lang";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
 const db = new BigQueryConnection("test");

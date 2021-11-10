@@ -12,7 +12,7 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, Query, StructDef } from "@malloy-lang/malloy";
+import { ModelDef, Query, StructDef } from "@malloy-lang/malloy/src/model";
 import { fStringEq, fStringLike } from "./test_utils";
 
 import * as malloy from "@malloy-lang/malloy";

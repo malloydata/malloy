@@ -306,7 +306,7 @@ export class Runner {
     const result = await sqlRunner.runSql(preparedSql.getSql());
     return new Result({
       ...preparedSql._getRawQuery(),
-      result: result.rows,
+      data: result.rows,
       totalRows: result.totalRows,
     });
   }
@@ -843,7 +843,7 @@ export class Result extends PreparedResult {
   }
 
   getData(): DataArray {
-    return new DataArray(this.inner.result, this.getResultExplore());
+    return new DataArray(this.inner.data, this.getResultExplore());
   }
 }
 

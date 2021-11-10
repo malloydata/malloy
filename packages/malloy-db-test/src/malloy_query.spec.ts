@@ -21,7 +21,7 @@ import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import * as malloy from "@malloy-lang/malloy";
 import * as util from "util";
 import * as fs from "fs";
-import { Query } from "@malloy-lang/malloy";
+import { Query } from "@malloy-lang/malloy/src/model";
 
 const bq = new BigQueryConnection("test");
 const files = {

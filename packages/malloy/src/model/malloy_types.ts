@@ -534,7 +534,7 @@ export interface CompiledQuery extends DrillSource {
 
 /** Result type for running a Malloy query. */
 export interface QueryResult extends CompiledQuery {
-  result: QueryData;
+  data: QueryData;
   totalRows: number;
   error?: string;
 }
