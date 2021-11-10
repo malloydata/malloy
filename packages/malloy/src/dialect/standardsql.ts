@@ -20,6 +20,7 @@ export class StandardSQLDialect extends Dialect {
   udfPrefix = "__udf";
   hasFinalStage = false;
   stringTypeName = "STRING";
+  divisionIsInteger = true;
 
   quoteTableName(tableName: string): string {
     return `\`${tableName}\``;

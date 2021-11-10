@@ -17,8 +17,9 @@
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes, rows } from "./runtimes";
 
-const runtimes = getRuntimes(["bigquery"]);
-// const runtimes = getRuntimes();
+// const runtimes = getRuntimes(["bigquery"]);
+// const runtimes = getRuntimes(["postgres"]);
+const runtimes = getRuntimes();
 
 const expressionModelText = `
 export define aircraft_models is (explore 'malloytest.aircraft_models'
@@ -71,7 +72,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       )
       .run();
     // console.log(JSON.stringify(result.getData().toObject(), undefined, 2));
-    // console.log(result.sql);
+    // console.log(result.getSql());
     expect(result.getData().toObject()[0].total_seats).toBe(452415);
     expect(result.getData().toObject()[0].total_seats2).toBe(452415);
     expect(result.getData().toObject()[0].boeing_seats).toBe(252771);
@@ -239,7 +240,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           cessna_min_seats is min(seats) : [manufacturer: 'CESSNA'],
           max_seats is max(seats),
           cessna_max_seats is max(seats) : [manufacturer: 'CESSNA'],
-          min_model is min(model),
+          min_code is min(aircraft_model_code),
           boeing_min_model is min(model) : [manufacturer: 'BOEING'],
           max_model is max(model),
           boeing_max_model is max(model) : [manufacturer: 'BOEING'],
@@ -251,8 +252,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.getData().toObject()[0].min_seats).toBe(0);
     expect(result.getData().toObject()[0].cessna_min_seats).toBe(1);
     expect(result.getData().toObject()[0].max_seats).toBe(660);
+    expect(result.getData().toObject()[0].min_code).toBe("0030109");
     expect(result.getData().toObject()[0].cessna_max_seats).toBe(14);
-    expect(result.getData().toObject()[0].min_model).toBe(" SEAREY");
     expect(result.getData().toObject()[0].boeing_min_model).toBe("100");
     expect(result.getData().toObject()[0].max_model).toBe("ZWEIFEL PA18");
     expect(result.getData().toObject()[0].boeing_max_model).toBe("YL-15");
