@@ -387,7 +387,7 @@ export class InMemoryUrlReader implements UrlReader {
   }
 }
 
-export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
+export class FixedConnectionMap implements LookupSchemaReader, LookupSqlRunner {
   private connections: Map<string, Connection>;
   private defaultConnectionName?: string;
   constructor(
