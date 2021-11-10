@@ -688,6 +688,7 @@ export class Runtime {
     });
   }
 
+  // TODO subclass instead of making visible?
   // used internally by the testing framwork.
   public _makeModelFromModelDef(modelDef: ModelDef): ModelRuntimeRequest {
     return new ModelRuntimeRequest(this, async function build() {
