@@ -16,6 +16,7 @@ import {
   EmptyUrlReader,
   Result,
   NamedStructDefs,
+  MalloyQueryData,
 } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { PostgresConnection } from "@malloy-lang/db-postgres";
@@ -29,10 +30,32 @@ class BigQueryTestConnection extends BigQueryConnection {
   ): Promise<NamedStructDefs> {
     return await super.fetchSchemaForTables(missing, "malloy-data");
   }
+
+  public async runSql(sqlCommand: string): Promise<MalloyQueryData> {
+    try {
+      return await super.runSql(sqlCommand);
+    } catch (e) {
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+class PostgresTestConnection extends PostgresConnection {
+  // we probably need a better way to do this.
+
+  public async runSql(sqlCommand: string): Promise<MalloyQueryData> {
+    try {
+      return await super.runSql(sqlCommand);
+    } catch (e) {
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
 }
 
 const bqConnection = new BigQueryTestConnection("bigquery");
-const postgresConnection = new PostgresConnection("postgres");
+const postgresConnection = new PostgresTestConnection("postgres");
 const files = new EmptyUrlReader();
 
 export function getRuntimes(

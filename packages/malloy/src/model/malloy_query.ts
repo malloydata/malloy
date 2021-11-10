@@ -1710,13 +1710,18 @@ class QueryQuery extends QueryField {
         return s;
       }
     } else if (structRelationship.type === "nested") {
-      let prefix = "";
-      if (qs.parent) {
-        prefix = qs.parent.getIdentifier() + ".";
+      if (qs.parent === undefined || ji.parent === undefined) {
+        throw new Error("Internal Error, nested structure with no parent.");
       }
+      const fieldExpression = this.parent.dialect.sqlFieldReference(
+        qs.parent.getIdentifier(),
+        structRelationship.field as string,
+        "struct",
+        qs.parent.fieldDef.structRelationship.type === "nested"
+      );
       // we need to generate primary key.  If parent has a primary key combine
       s += `${this.parent.dialect.sqlUnnestAlias(
-        `${prefix}${structRelationship.field}`,
+        fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey

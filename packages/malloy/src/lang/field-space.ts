@@ -13,6 +13,7 @@
 
 /* eslint-disable no-useless-constructor */
 import { cloneDeep } from "lodash";
+import { Dialect, getDialect } from "../dialect";
 import * as model from "../model/malloy_types";
 import {
   NameOnly,
@@ -60,6 +61,10 @@ export class FieldSpace {
 
   constructor(sourceStructDef: model.StructDef) {
     this.fromStruct = sourceStructDef;
+  }
+
+  getDialect(): Dialect {
+    return getDialect(this.fromStruct.dialect);
   }
 
   fromFieldDef(from: model.FieldDef): SpaceField {
