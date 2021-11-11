@@ -191,12 +191,7 @@ export function runMalloyQuery(
 
       const vscodeFiles = new VscodeUrlReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
-
-      const runtime = new Runtime({
-        urls: files,
-        schemas: BIGQUERY_CONNECTION,
-        connections: BIGQUERY_CONNECTION,
-      });
+      const runtime = new Runtime(files, BIGQUERY_CONNECTION);
 
       return (async () => {
         try {
@@ -209,37 +204,30 @@ export function runMalloyQuery(
           );
           progress.report({ increment: 20, message: "Compiling" });
 
-          let prepareSql;
+          let queryMaterializer;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            prepareSql = runtime
-              .createModelMaterializer(
-                Url.fromString("file://" + query.file.uri.fsPath)
-              )
-              .createQueryMaterializer(query.text)
-              .getPreparedResultMaterializer();
+            queryMaterializer = runtime
+              .loadModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .loadQuery(query.text);
           } else if (query.type === "named") {
-            prepareSql = runtime
-              .createModelMaterializer(
-                Url.fromString("file://" + query.file.uri.fsPath)
-              )
-              .getQueryMaterializerByName(query.name)
-              .getPreparedResultMaterializer();
+            queryMaterializer = runtime.loadQueryByName(
+              Url.fromString("file://" + query.file.uri.fsPath),
+              query.name
+            );
           } else {
-            prepareSql = runtime
-              .createModelMaterializer(
-                Url.fromString("file://" + query.file.uri.fsPath)
-              )
-              .getQueryMaterializerByIndex(query.index)
-              .getPreparedResultMaterializer();
+            queryMaterializer = runtime.loadQueryByIndex(
+              Url.fromString("file://" + query.file.uri.fsPath),
+              query.index
+            );
           }
 
           try {
-            const preparedSql = await prepareSql.materialize();
+            const preparedResult = await queryMaterializer.getPreparedResult();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
-            malloyLog.appendLine(preparedSql.getSql());
+            malloyLog.appendLine(preparedResult.getSql());
           } catch (error) {
             current.panel.webview.html = renderErrorHtml(
               new Error(error.message || "Something went wrong.")
@@ -256,7 +244,7 @@ export function runMalloyQuery(
             loadingIndicator("Running")
           );
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await prepareSql.run();
+          const queryResult = await queryMaterializer.run();
           if (canceled) return;
 
           const runEnd = performance.now();

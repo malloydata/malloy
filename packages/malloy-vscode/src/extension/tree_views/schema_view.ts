@@ -124,12 +124,8 @@ async function getStructs(
   const uri = Url.fromString("file://" + document.uri.fsPath);
   const files = new VscodeUrlReader();
   try {
-    const runtime = new Runtime({
-      urls: files,
-      schemas: BIGQUERY_CONNECTION,
-      connections: BIGQUERY_CONNECTION,
-    });
-    const model = await runtime.createModelMaterializer(uri).materialize();
+    const runtime = new Runtime(files, BIGQUERY_CONNECTION);
+    const model = await runtime.getModel(uri);
 
     return Object.values(model.getExplores()).sort(exploresByName);
   } catch (error) {

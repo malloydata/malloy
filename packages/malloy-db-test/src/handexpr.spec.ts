@@ -40,14 +40,11 @@ async function validateCompilation(
 }
 
 async function compileHandQueryToSql(
-  model: malloy.RuntimeModelMaterializer,
+  model: malloy.ModelMaterializer,
   queryDef: Query
 ): Promise<string> {
   return (
-    await model
-      ._makeQueryFromQueryDef(queryDef)
-      .getPreparedResultMaterializer()
-      .materialize()
+    await model._loadQueryFromQueryDef(queryDef).getPreparedResult()
   ).getSql();
 }
 
@@ -233,7 +230,7 @@ if (!bqRuntime) {
   throw new Error("Can't create bigquery RUntime");
 }
 
-const handModel = bqRuntime._makeModelFromModelDef(handCodedModel);
+const handModel = bqRuntime._loadModelFromModelDef(handCodedModel);
 const databaseName = "bigquery";
 
 it(`hand query hand model - ${databaseName}`, async () => {
@@ -273,7 +270,7 @@ it(`hand query hand model - ${databaseName}`, async () => {
 
 it(`hand turtle - ${databaseName}`, async () => {
   const result = await handModel
-    ._makeQueryFromQueryDef({
+    ._loadQueryFromQueryDef({
       structRef: "aircraft",
       pipeHead: { name: "hand_turtle" },
       pipeline: [],
@@ -284,7 +281,7 @@ it(`hand turtle - ${databaseName}`, async () => {
 
 it(`hand turtle malloy - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
 explore aircraft | hand_turtle
 `
@@ -295,7 +292,7 @@ explore aircraft | hand_turtle
 
 it(`default sort order - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
       explore aircraft | reduce state, aircraft_count limit 10
     `
@@ -306,7 +303,7 @@ it(`default sort order - ${databaseName}`, async () => {
 
 it(`default sort order by dir - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
       explore aircraft | reduce state, aircraft_count order by 2 limit 10
     `
@@ -369,7 +366,7 @@ it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
 
 it(`hand: turtle is pipeline - ${databaseName}`, async () => {
   const result = await handModel
-    ._makeQueryFromQueryDef({
+    ._loadQueryFromQueryDef({
       structRef: "aircraft",
       pipeline: [
         {
@@ -424,7 +421,7 @@ it(`hand: turtle is pipeline - ${databaseName}`, async () => {
 // Hand model basic calculations for sum, filtered sum, without a join.
 it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
           explore aircraft | reduce
             aircraft_models.total_seats,
@@ -447,7 +444,7 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
 
 it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
             explore aircraft | reduce
               total_seats3 is aircraft_models.sum(aircraft_models.seats),
@@ -462,7 +459,7 @@ it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
 // Model based version of sums.
 it(`hand: expression fixups. - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
             explore aircraft | reduce
               aircraft_models.total_seats,
@@ -476,7 +473,7 @@ it(`hand: expression fixups. - ${databaseName}`, async () => {
 
 it(`model: filtered measures - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
             explore aircraft | reduce
               boeing_seats is aircraft_models.total_seats : [aircraft_models.manufacturer:'BOEING']
@@ -489,7 +486,7 @@ it(`model: filtered measures - ${databaseName}`, async () => {
 // does the filter force a join?
 it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
   const result = await handModel
-    .createQueryMaterializer(
+    .loadQuery(
       `
             explore aircraft | reduce
               boeing_aircraft is count() : [aircraft_models.manufacturer:'BOEING']
@@ -502,7 +499,7 @@ it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
 // Works: Generate query using named alias.
 it(`hand: filtered measures - ${databaseName}`, async () => {
   const result = await handModel
-    ._makeQueryFromQueryDef({
+    ._loadQueryFromQueryDef({
       structRef: "aircraft",
       pipeline: [
         {
@@ -612,12 +609,12 @@ const joinModel: ModelDef = {
   },
 };
 
-const handJoinModel = bqRuntime._makeModelFromModelDef(joinModel);
+const handJoinModel = bqRuntime._loadModelFromModelDef(joinModel);
 
 it(`hand join ON - ${databaseName}`, async () => {
   const sql = (
     await handJoinModel
-      ._makeQueryFromQueryDef({
+      ._loadQueryFromQueryDef({
         structRef: "model_aircraft",
         pipeline: [
           {
@@ -630,8 +627,7 @@ it(`hand join ON - ${databaseName}`, async () => {
           },
         ],
       })
-      .getPreparedResultMaterializer()
-      .materialize()
+      .getPreparedResult()
   ).getSql();
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
@@ -640,7 +636,7 @@ it(`hand join ON - ${databaseName}`, async () => {
 
 it(`hand join symmetric agg - ${databaseName}`, async () => {
   const result = await handJoinModel
-    ._makeQueryFromQueryDef({
+    ._loadQueryFromQueryDef({
       structRef: "model_aircraft",
       pipeline: [
         {
@@ -659,7 +655,7 @@ it(`hand join symmetric agg - ${databaseName}`, async () => {
 
 it(`hand join foreign key filtered inner - ${databaseName}`, async () => {
   const result = await handJoinModel
-    ._makeQueryFromQueryDef({
+    ._loadQueryFromQueryDef({
       structRef: "aircraft_modelb_inner",
       pipeline: [
         {

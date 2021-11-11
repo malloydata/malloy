@@ -36,11 +36,11 @@ async function validateCompilation(
   return true;
 }
 
-const expressionModels = new Map<string, malloy.RuntimeModelMaterializer>();
+const expressionModels = new Map<string, malloy.ModelMaterializer>();
 runtimes.forEach((runtime, databaseName) =>
   expressionModels.set(
     databaseName,
-    runtime.createModelMaterializer(`
+    runtime.loadModel(`
     export define models is ('malloytest.aircraft_models'
     model_count is count()
   )`)
@@ -50,7 +50,7 @@ runtimes.forEach((runtime, databaseName) =>
 expressionModels.forEach((orderByModel, databaseName) => {
   it(`boolean type - ${databaseName}`, async () => {
     const result = await orderByModel
-      .createQueryMaterializer(
+      .loadQuery(
         `
         explore models | reduce
           big is seats >=20
@@ -64,7 +64,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
     const result = await orderByModel
-      .createQueryMaterializer(
+      .loadQuery(
         `
         explore models | reduce
           manufacturer
@@ -82,7 +82,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
     const result = await orderByModel
-      .createQueryMaterializer(
+      .loadQuery(
         `
         explore models
           j_names is model_count : [manufacturer ~ 'J%']
@@ -97,7 +97,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
   it(`reserved words are quoted - ${databaseName}`, async () => {
     const sql = (
       await orderByModel
-        .createQueryMaterializer(
+        .loadQuery(
           `
         explore models | reduce
           fetch is count()
@@ -105,8 +105,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch
         `
         )
-        .getPreparedResultMaterializer()
-        .materialize()
+        .getPreparedResult()
     ).getSql();
     await validateCompilation(databaseName, sql);
   });
@@ -114,7 +113,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
   it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
     const sql = (
       await orderByModel
-        .createQueryMaterializer(
+        .loadQuery(
           `
         explore models | reduce
           withx is (reduce
@@ -126,8 +125,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch is withx.fetch
         `
         )
-        .getPreparedResultMaterializer()
-        .materialize()
+        .getPreparedResult()
     ).getSql();
     await validateCompilation(databaseName, sql);
   });
@@ -135,7 +133,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
   it.skip("reserved words in structure definitions", async () => {
     const sql = (
       await orderByModel
-        .createQueryMaterializer(
+        .loadQuery(
           `
         explore models | reduce
           with is (reduce
@@ -147,8 +145,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch is with.fetch
         `
         )
-        .getPreparedResultMaterializer()
-        .materialize()
+        .getPreparedResult()
     ).getSql();
     await validateCompilation(databaseName, sql);
   });
@@ -156,21 +153,20 @@ expressionModels.forEach((orderByModel, databaseName) => {
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
     const sql = (
       await orderByModel
-        .createQueryMaterializer(
+        .loadQuery(
           `
         explore models | reduce
           model_count is count() : [manufacturer: ~'A%']
         `
         )
-        .getPreparedResultMaterializer()
-        .materialize()
+        .getPreparedResult()
     ).getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it(`modeled having simple - ${databaseName}`, async () => {
     const result = await orderByModel
-      .createQueryMaterializer(
+      .loadQuery(
         `
         define popular_names is (models
           | reduce : [model_count > 100]
@@ -188,7 +184,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
   it(`modeled having complex - ${databaseName}`, async () => {
     const result = await orderByModel
-      .createQueryMaterializer(
+      .loadQuery(
         `
         define popular_names is (models
           | reduce : [model_count > 100]
@@ -211,7 +207,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
   it(`turtle references joined element - ${databaseName}`, async () => {
     const sql = (
       await orderByModel
-        .createQueryMaterializer(
+        .loadQuery(
           `
       define a is ('malloytest.aircraft'
         primary key tail_num
@@ -232,8 +228,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
       explore f | foo
     `
         )
-        .getPreparedResultMaterializer()
-        .materialize()
+        .getPreparedResult()
     ).getSql();
     await validateCompilation(databaseName, sql);
   });

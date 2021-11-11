@@ -46,14 +46,10 @@ export async function getMalloyDiagnostics(
   const files = {
     readUrl: (url: Url) => magicGetTheFile(documents, url.toString()),
   };
-  const runtime = new Runtime({
-    urls: files,
-    schemas: BIGQUERY_CONNECTION,
-    connections: BIGQUERY_CONNECTION,
-  });
+  const runtime = new Runtime(files, BIGQUERY_CONNECTION);
   let errors: LogMessage[] = [];
   try {
-    await runtime.createModelMaterializer(new Url(uri)).materialize();
+    await runtime.getModel(new Url(uri));
   } catch (error) {
     if (error instanceof MalloyError) {
       errors = error.log;

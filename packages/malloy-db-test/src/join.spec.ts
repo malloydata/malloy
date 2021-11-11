@@ -48,16 +48,16 @@ export define aircraft is ('malloytest.aircraft'
 // const runtimes = getRuntimes(["bigquery"]);
 const runtimes = getRuntimes();
 
-const models = new Map<string, malloy.RuntimeModelMaterializer>();
+const models = new Map<string, malloy.ModelMaterializer>();
 runtimes.forEach((runtime, key) => {
-  models.set(key, runtime.createModelMaterializer(joinModelText));
+  models.set(key, runtime.loadModel(joinModelText));
 });
 
 describe("join expression tests", () => {
   models.forEach((model, database) => {
     it(`model post join - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore aircraft joins aircraft_models on aircraft_model_code | reduce
         aircraft_count,
@@ -70,7 +70,7 @@ describe("join expression tests", () => {
 
     it(`model: join fact table query - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore aircraft_models
         joins am_facts is (
@@ -90,7 +90,7 @@ describe("join expression tests", () => {
 
     it(`model: explore based on query - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore (
             aircraft_models  | reduce
@@ -109,7 +109,7 @@ describe("join expression tests", () => {
 
     it(`model: funnel - merge two queries - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore (
           aircraft_models  | reduce
@@ -136,7 +136,7 @@ describe("join expression tests", () => {
 
     it(`model: modeled funnel - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore (aircraft_models | manufacturer_models)
         joins seats is (aircraft_models | manufacturer_seats)
@@ -156,7 +156,7 @@ describe("join expression tests", () => {
 
     it(`model: modeled funnel - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore funnel
       | project
@@ -174,7 +174,7 @@ describe("join expression tests", () => {
 
     it(`model: double_pipe - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore
        (aircraft_models | reduce manufacturer, f is count(*) | reduce f_sum is f.sum())
@@ -187,7 +187,7 @@ describe("join expression tests", () => {
 
     it(`model: double_pipe2 - ${database}`, async () => {
       const result = await model
-        .createQueryMaterializer(
+        .loadQuery(
           `
       explore pipe | project f_sum2 is f_sum+1
       `

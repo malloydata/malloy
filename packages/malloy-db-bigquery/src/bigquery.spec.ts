@@ -16,11 +16,7 @@ describe("db:BigQuery", () => {
         return await util.promisify(fs.readFile)(filePath, "utf8");
       },
     };
-    runtime = new malloy.Runtime({
-      urls: files,
-      schemas: bq,
-      connections: bq,
-    });
+    runtime = new malloy.Runtime(files, bq);
   });
 
   it("runs a SQL query", async () => {
@@ -48,24 +44,22 @@ describe("db:BigQuery", () => {
 
   it("runs a Malloy query", async () => {
     const result = await runtime
-      .createModelMaterializer(
+      .loadModel(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
-      .createQueryMaterializer("explore carriers | reduce carrier_count")
-      .getPreparedResultMaterializer()
-      .materialize();
+      .loadQuery("explore carriers | reduce carrier_count")
+      .getPreparedResult();
     const res = await bq.runSql(result.getSql());
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
   it("streams a Malloy query for download", async () => {
     const result = await runtime
-      .createModelMaterializer(
+      .loadModel(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
-      .createQueryMaterializer("explore carriers | reduce name")
-      .getPreparedResultMaterializer()
-      .materialize();
+      .loadQuery("explore carriers | reduce name")
+      .getPreparedResult();
     const res = await bq.downloadMalloyQuery(result.getSql());
 
     return new Promise((resolve) => {

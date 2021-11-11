@@ -658,32 +658,53 @@ export class ExploreField extends Explore {
   }
 }
 
-interface Materializer<T> {
-  materialize(): Promise<T>;
-}
-
 export class Runtime {
   private compiler: Compiler;
   private runner: Runner;
 
-  constructor({
-    urls,
-    schemas,
-    connections,
-  }: {
-    urls: UrlReader;
-    schemas: LookupSchemaReader;
-    connections: LookupSqlRunner;
-  }) {
-    this.compiler = new Compiler(urls, schemas);
-    this.runner = new Runner(connections);
+  constructor(runtime: LookupSchemaReader & LookupSqlRunner & UrlReader);
+  constructor(
+    urls: UrlReader,
+    connections: LookupSchemaReader & LookupSqlRunner
+  );
+  constructor(
+    urls: UrlReader,
+    schemas: LookupSchemaReader,
+    connections: LookupSqlRunner
+  );
+  constructor(connections: LookupSchemaReader & LookupSqlRunner);
+  constructor(schemas: LookupSchemaReader, connections: LookupSqlRunner);
+  constructor(...args: (UrlReader | LookupSchemaReader | LookupSqlRunner)[]) {
+    let urlReader: UrlReader | undefined;
+    let lookupSchemaReader: LookupSchemaReader | undefined;
+    let lookupSqlRunner: LookupSqlRunner | undefined;
+    for (const arg of args) {
+      if (isUrlReader(arg)) {
+        urlReader = arg;
+      }
+      if (isLookupSchemaReader(arg)) {
+        lookupSchemaReader = arg;
+      }
+      if (isLookupSqlRunner(arg)) {
+        lookupSqlRunner = arg;
+      }
+    }
+    if (urlReader === undefined) {
+      urlReader = new EmptyUrlReader();
+    }
+    if (lookupSchemaReader === undefined) {
+      throw new Error("A LookupSchemaReader is required.");
+    }
+    if (lookupSqlRunner === undefined) {
+      throw new Error("A LookupSqlReader is required.");
+    }
+    this.compiler = new Compiler(urlReader, lookupSchemaReader);
+    this.runner = new Runner(lookupSqlRunner);
   }
 
-  public createModelMaterializer(
-    source: ModelUrl | ModelString
-  ): RuntimeModelMaterializer {
+  public loadModel(source: ModelUrl | ModelString): ModelMaterializer {
     const compiler = this.getCompiler();
-    return new RuntimeModelMaterializer(this, function materialize() {
+    return new ModelMaterializer(this, function materialize() {
       return compiler.makeModel(source);
     });
   }
@@ -692,32 +713,51 @@ export class Runtime {
   //      as well as a `Model.fromModelDefinition` if we choose to expose
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
-  public _makeModelFromModelDef(modelDef: ModelDef): RuntimeModelMaterializer {
-    return new RuntimeModelMaterializer(this, async function materialize() {
+  public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
+    return new ModelMaterializer(this, async function materialize() {
       return new Model(modelDef, []);
     });
   }
 
-  public createQueryMaterializer(
-    query: QueryUrl | QueryString
-  ): RuntimeQueryMaterializer {
-    return this.createModelMaterializer(query).getQueryMaterializer();
+  public loadQuery(query: QueryUrl | QueryString): QueryMaterializer {
+    return this.loadModel(query).loadFinalQuery();
   }
 
-  public createQueryMaterializerByIndex(
+  public loadQueryByIndex(
     model: ModelUrl | ModelString,
     index: number
-  ): RuntimeQueryMaterializer {
-    return this.createModelMaterializer(model).getQueryMaterializerByIndex(
-      index
-    );
+  ): QueryMaterializer {
+    return this.loadModel(model).loadQueryByIndex(index);
   }
 
-  public createQueryMaterializerByName(
+  public loadQueryByName(
     model: ModelUrl | ModelString,
     name: string
-  ): RuntimeQueryMaterializer {
-    return this.createModelMaterializer(model).getQueryMaterializerByName(name);
+  ): QueryMaterializer {
+    return this.loadModel(model).loadQueryByName(name);
+  }
+
+  // TODO maybe use overloads for the alternative parameters
+  public getModel(source: ModelUrl | ModelString): Promise<Model> {
+    return this.loadModel(source).getModel();
+  }
+
+  public getQuery(query: QueryUrl | QueryString): Promise<PreparedQuery> {
+    return this.loadQuery(query).getPreparedQuery();
+  }
+
+  public getQueryByIndex(
+    model: ModelUrl | ModelString,
+    index: number
+  ): Promise<PreparedQuery> {
+    return this.loadQueryByIndex(model, index).getPreparedQuery();
+  }
+
+  public getQueryByName(
+    model: ModelUrl | ModelString,
+    name: string
+  ): Promise<PreparedQuery> {
+    return this.loadQueryByName(model, name).getPreparedQuery();
   }
 
   public getRunner(): Runner {
@@ -729,7 +769,7 @@ export class Runtime {
   }
 }
 
-class RuntimeMaterializer<T> implements Materializer<T> {
+class FluentState<T> {
   protected runtime: Runtime;
   private readonly _materialize: () => Promise<T>;
   private materialized: Promise<T> | undefined;
@@ -739,59 +779,57 @@ class RuntimeMaterializer<T> implements Materializer<T> {
     this._materialize = materialize;
   }
 
-  public materialize(): Promise<T> {
+  protected materialize(): Promise<T> {
     if (this.materialized === undefined) {
       return this.rematerialize();
     }
     return this.materialized;
   }
 
-  public rematerialize(): Promise<T> {
+  protected rematerialize(): Promise<T> {
     this.materialized = this._materialize();
     return this.materialized;
   }
 
   protected makeQueryMaterializer(
     materialize: () => Promise<PreparedQuery>
-  ): RuntimeQueryMaterializer {
-    return new RuntimeQueryMaterializer(this.runtime, materialize);
+  ): QueryMaterializer {
+    return new QueryMaterializer(this.runtime, materialize);
   }
 
   protected makeExploreMaterializer(
     materialize: () => Promise<Explore>
-  ): RuntimeExploreMaterializer {
-    return new RuntimeExploreMaterializer(this.runtime, materialize);
+  ): ExploreMaterializer {
+    return new ExploreMaterializer(this.runtime, materialize);
   }
 
   protected makePreparedResultMaterializer(
     materialize: () => Promise<PreparedResult>
-  ): RuntimePreparedResultMaterializer {
-    return new RuntimePreparedResultMaterializer(this.runtime, materialize);
+  ): PreparedResultMaterializer {
+    return new PreparedResultMaterializer(this.runtime, materialize);
   }
 }
 
-export class RuntimeModelMaterializer extends RuntimeMaterializer<Model> {
-  public getQueryMaterializer(): RuntimeQueryMaterializer {
+export class ModelMaterializer extends FluentState<Model> {
+  public loadFinalQuery(): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getPreparedQuery();
     });
   }
 
-  public getQueryMaterializerByIndex(index: number): RuntimeQueryMaterializer {
+  public loadQueryByIndex(index: number): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getPreparedQueryByIndex(index);
     });
   }
 
-  public getQueryMaterializerByName(name: string): RuntimeQueryMaterializer {
+  public loadQueryByName(name: string): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getPreparedQueryByName(name);
     });
   }
 
-  public createQueryMaterializer(
-    query: QueryString | QueryUrl
-  ): RuntimeQueryMaterializer {
+  public loadQuery(query: QueryString | QueryUrl): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.runtime
         .getCompiler()
@@ -800,54 +838,94 @@ export class RuntimeModelMaterializer extends RuntimeMaterializer<Model> {
     });
   }
 
+  public getFinalQuery(): Promise<PreparedQuery> {
+    return this.loadFinalQuery().getPreparedQuery();
+  }
+
+  public getQueryByIndex(index: number): Promise<PreparedQuery> {
+    return this.loadQueryByIndex(index).getPreparedQuery();
+  }
+
+  public getQueryByName(name: string): Promise<PreparedQuery> {
+    return this.loadQueryByName(name).getPreparedQuery();
+  }
+
+  public getQuery(query: QueryString | QueryUrl): Promise<PreparedQuery> {
+    return this.loadQuery(query).getPreparedQuery();
+  }
+
   // TODO Consider formalizing this. Perhaps as a `withQuery` method,
   //      as well as a `PreparedQuery.fromQueryDefinition` if we choose to expose
   //      `InternalQuery` to the world formally. For now, this should only
   //      be used in tests.
-  public _makeQueryFromQueryDef(
-    query: InternalQuery
-  ): RuntimeQueryMaterializer {
+  public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.materialize();
       return new PreparedQuery(query, model._getModelDef());
     });
   }
 
-  public getExploreMaterializerByName(
-    name: string
-  ): RuntimeExploreMaterializer {
+  public loadExploreByName(name: string): ExploreMaterializer {
     return this.makeExploreMaterializer(async () => {
       return (await this.materialize()).getExploreByName(name);
     });
   }
+
+  public getExploreByName(name: string): Promise<Explore> {
+    return this.loadExploreByName(name).getExplore();
+  }
+
+  public getModel(): Promise<Model> {
+    return this.materialize();
+  }
 }
 
-class RuntimeQueryMaterializer extends RuntimeMaterializer<PreparedQuery> {
+class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(): Promise<Result> {
     return this.runtime
       .getRunner()
-      .run(await this.getPreparedResultMaterializer().materialize());
+      .run(await this.loadPreparedResult().getPreparedResult());
   }
 
-  public getPreparedResultMaterializer(): RuntimePreparedResultMaterializer {
+  public loadPreparedResult(): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
       return (await this.materialize()).getPreparedResult();
     });
   }
+
+  public getPreparedResult(): Promise<PreparedResult> {
+    return this.loadPreparedResult().getPreparedResult();
+  }
+
+  public getPreparedQuery(): Promise<PreparedQuery> {
+    return this.materialize();
+  }
 }
 
-class RuntimePreparedResultMaterializer extends RuntimeMaterializer<PreparedResult> {
+class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(): Promise<Result> {
     const preparedSql = await this.materialize();
     return this.runtime.getRunner().run(preparedSql);
   }
+
+  public getPreparedResult(): Promise<PreparedResult> {
+    return this.materialize();
+  }
 }
 
-class RuntimeExploreMaterializer extends RuntimeMaterializer<Explore> {
-  getQueryMaterializerByName(name: string): RuntimeQueryMaterializer {
+class ExploreMaterializer extends FluentState<Explore> {
+  public loadQueryByName(name: string): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       return (await this.materialize()).getQueryByName(name);
     });
+  }
+
+  public getQueryByName(name: string): Promise<PreparedQuery> {
+    return this.loadQueryByName(name).getPreparedQuery();
+  }
+
+  public getExplore(): Promise<Explore> {
+    return this.materialize();
   }
 }
 
@@ -884,4 +962,51 @@ export class DataArray {
   public toObject(): QueryData {
     return this.queryData;
   }
+}
+
+function isUrlReader(
+  thing: UrlReader | LookupSchemaReader | LookupSqlRunner
+): thing is UrlReader {
+  return "readUrl" in thing;
+}
+
+function isLookupSchemaReader(
+  thing: UrlReader | LookupSchemaReader | LookupSqlRunner
+): thing is LookupSchemaReader {
+  return "lookupSchemaReader" in thing;
+}
+
+function isLookupSqlRunner(
+  thing: UrlReader | LookupSchemaReader | LookupSqlRunner
+): thing is LookupSqlRunner {
+  return "lookupSqlRunner" in thing;
+}
+
+async function test() {
+  const runtime = new Runtime(new FixedConnectionMap(new Map()));
+
+  // "get X" means return to me a Promise<X>
+  // "load X" means return to me an XMaterializer
+  // XMaterializers retain the Runtime context, and can be used to produce other materializers, or results
+
+  runtime.getModel("model");
+  runtime.getQuery("query");
+  runtime.getQueryByIndex("model", 4);
+  runtime.getQueryByName("model", "flights_by_carrier");
+  const modelMaterializer = runtime.loadModel("model");
+  modelMaterializer.getModel();
+  modelMaterializer.getFinalQuery();
+  modelMaterializer.getExploreByName("flights");
+  modelMaterializer.loadExploreByName("flights").getQueryByName("by_carrier");
+  modelMaterializer
+    .loadExploreByName("flights")
+    .loadQueryByName("by_carrier")
+    .run();
+  modelMaterializer.loadQuery("query").run();
+  modelMaterializer.loadQuery("query").getPreparedResult();
+  modelMaterializer.getQuery("query");
+  modelMaterializer.loadQueryByName("name").run();
+  modelMaterializer.loadQueryByIndex(1).run();
+  modelMaterializer.loadFinalQuery().run();
+  modelMaterializer.getFinalQuery();
 }
