@@ -12,8 +12,7 @@
  */
 /* eslint-disable no-console */
 import * as malloy from "@malloy-lang/malloy";
-import * as fs from "fs";
-import * as util from "util";
+import { promises as fs } from "fs";
 import * as path from "path";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
@@ -64,7 +63,7 @@ export async function main(): Promise<void> {
   const files = {
     readUrl: async (url: malloy.Url) => {
       const filePath = url.toString().replace(/^file:\/\//, "");
-      return await util.promisify(fs.readFile)(filePath, "utf8");
+      return fs.readFile(filePath, "utf8");
     },
   };
   console.log((await run(files, process.argv)).getData().toObject());

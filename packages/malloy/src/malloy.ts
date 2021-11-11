@@ -49,7 +49,7 @@ export interface Loggable {
 }
 
 export class Malloy {
-  // TODO load from file built durlng release
+  // TODO load from file built during release
   public static get version(): string {
     return "0.0.1";
   }
@@ -252,7 +252,7 @@ export class Compiler {
     }
   }
 
-  public async makeModel(model: ModelString | ModelUrl | Model): Promise<Model>;
+  public async makeModel(model: ModelString | ModelUrl): Promise<Model>;
   public async makeModel(
     model: ModelString | ModelUrl | Model,
     query: QueryString | QueryUrl
@@ -261,7 +261,19 @@ export class Compiler {
     primaryOrBase: ModelString | ModelUrl | Model,
     maybePrimary?: ModelString | ModelUrl | QueryString | QueryUrl
   ): Promise<Model> {
-    const { primary, base } = flipPrimaryBase(primaryOrBase, maybePrimary);
+    let primary: ModelString | ModelUrl | QueryString | QueryUrl;
+    let base: ModelString | ModelUrl | Model | undefined;
+    if (maybePrimary === undefined) {
+      if (primaryOrBase instanceof Model) {
+        throw new Error(
+          "Internal error: last parameter cannot already be a compiled model."
+        );
+      }
+      primary = primaryOrBase;
+    } else {
+      primary = maybePrimary;
+      base = primaryOrBase;
+    }
     let model: ModelDef | undefined;
 
     if (base !== undefined) {
@@ -327,11 +339,11 @@ export class PreparedResult {
     return this.inner;
   }
 
-  getSql(): string {
+  public getSql(): string {
     return this.inner.sql;
   }
 
-  getResultExplore(): Explore {
+  public getResultExplore(): Explore {
     if (this.inner.structs.length === 0) {
       throw new Error("Malformed query result.");
     }
@@ -343,11 +355,11 @@ export class PreparedResult {
     return new Explore(namedExplore);
   }
 
-  _getSourceExploreName(): string {
+  public _getSourceExploreName(): string {
     return this.inner.sourceExplore;
   }
 
-  _getSourceFilters(): FilterExpression[] {
+  public _getSourceFilters(): FilterExpression[] {
     return this.inner.sourceFilters || [];
   }
 }
@@ -365,7 +377,7 @@ export class InMemoryUrlReader implements UrlReader {
     this.files = files;
   }
 
-  async readUrl(url: Url): Promise<string> {
+  public async readUrl(url: Url): Promise<string> {
     const file = this.files.get(url.toString());
     if (file !== undefined) {
       return Promise.resolve(file);
@@ -375,7 +387,7 @@ export class InMemoryUrlReader implements UrlReader {
   }
 }
 
-export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
+export class FixedConnectionMap implements LookupSchemaReader, LookupSqlRunner {
   private connections: Map<string, Connection>;
   private defaultConnectionName?: string;
   constructor(
@@ -386,7 +398,7 @@ export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
     this.defaultConnectionName = defaultConnectionName;
   }
 
-  async getConnection(connectionName?: string): Promise<Connection> {
+  public async getConnection(connectionName?: string): Promise<Connection> {
     if (connectionName === undefined) {
       if (this.defaultConnectionName !== undefined) {
         connectionName = this.defaultConnectionName;
@@ -403,11 +415,13 @@ export class FixedConnections implements LookupSchemaReader, LookupSqlRunner {
     }
   }
 
-  async lookupSchemaReader(connectionName?: string): Promise<Connection> {
+  public async lookupSchemaReader(
+    connectionName?: string
+  ): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 
-  async lookupQueryRunner(connectionName?: string): Promise<Connection> {
+  public async lookupQueryRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 }
@@ -420,26 +434,6 @@ export enum SourceRelationship {
   Inline = "inline",
 }
 
-// TODO maybe generalize this as leftOptional?
-function flipPrimaryBase(
-  primaryOrBase: ModelString | ModelUrl | Model,
-  maybePrimary?: ModelString | ModelUrl | QueryString | QueryUrl
-) {
-  let primary: ModelString | ModelUrl | QueryString | QueryUrl;
-  let base: ModelString | ModelUrl | Model | undefined;
-  if (maybePrimary === undefined) {
-    if (primaryOrBase instanceof Model) {
-      // TODO crs
-      throw new Error("Oops");
-    }
-    primary = primaryOrBase;
-  } else {
-    primary = maybePrimary;
-    base = primaryOrBase;
-  }
-  return { primary, base };
-}
-
 export type Field = AtomicField | QueryField | ExploreField;
 
 export class Explore {
@@ -447,7 +441,7 @@ export class Explore {
   protected readonly parentExplore?: Explore;
   private fields: Map<string, Field> | undefined;
 
-  getName(): string {
+  public getName(): string {
     return this.structDef.as || this.structDef.name;
   }
 
@@ -460,7 +454,7 @@ export class Explore {
     return this.structDef;
   }
 
-  getQueryByName(name: string): PreparedQuery {
+  public getQueryByName(name: string): PreparedQuery {
     const internalQuery: InternalQuery = {
       type: "query",
       structRef: this.structDef,
@@ -482,11 +476,11 @@ export class Explore {
     };
   }
 
-  getSingleExploreModel(): Model {
+  public getSingleExploreModel(): Model {
     return new Model(this.getModelDef(), []);
   }
 
-  getFieldMap(): Map<string, Field> {
+  private getFieldMap(): Map<string, Field> {
     if (this.fields === undefined) {
       this.fields = new Map(
         this.structDef.fields.map((fieldDef) => {
@@ -504,11 +498,11 @@ export class Explore {
     return this.fields;
   }
 
-  getFields(): Field[] {
+  public getFields(): Field[] {
     return [...this.getFieldMap().values()];
   }
 
-  getFieldByName(fieldName: string): Field {
+  public getFieldByName(fieldName: string): Field {
     const field = this.getFieldMap().get(fieldName);
     if (field === undefined) {
       throw new Error(`No such field ${fieldName}.`);
@@ -516,15 +510,15 @@ export class Explore {
     return field;
   }
 
-  getPrimaryKey(): string | undefined {
+  public getPrimaryKey(): string | undefined {
     return this.structDef.primaryKey;
   }
 
-  getParentExplore(): Explore | undefined {
+  public getParentExplore(): Explore | undefined {
     return this.parentExplore;
   }
 
-  getSourceRelationship(): SourceRelationship {
+  public getSourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
       case "condition":
         return SourceRelationship.Condition;
@@ -539,7 +533,7 @@ export class Explore {
     }
   }
 
-  hasParentExplore(): this is ExploreField {
+  public hasParentExplore(): this is ExploreField {
     return this instanceof ExploreField;
   }
 }
@@ -559,11 +553,11 @@ export class AtomicField {
     this.fieldTypeDef = fieldTypeDef;
   }
 
-  getName(): string {
+  public getName(): string {
     return this.fieldTypeDef.as || this.fieldTypeDef.name;
   }
 
-  getType(): AtomicFieldType {
+  public getType(): AtomicFieldType {
     switch (this.fieldTypeDef.type) {
       case "string":
         return AtomicFieldType.String;
@@ -578,19 +572,19 @@ export class AtomicField {
     }
   }
 
-  isQueryField(): this is QueryField {
+  public isQueryField(): this is QueryField {
     return false;
   }
 
-  isExploreField(): this is ExploreField {
+  public isExploreField(): this is ExploreField {
     return false;
   }
 
-  isAtomicField(): this is AtomicField {
+  public isAtomicField(): this is AtomicField {
     return true;
   }
 
-  isAggregate(): boolean {
+  public isAggregate(): boolean {
     return !!this.fieldTypeDef.aggregate;
   }
 }
@@ -602,19 +596,19 @@ export class QueryField {
     this.turtleDef = turtleDef;
   }
 
-  getName(): string {
+  public getName(): string {
     return this.turtleDef.as || this.turtleDef.name;
   }
 
-  isQueryField(): this is QueryField {
+  public isQueryField(): this is QueryField {
     return true;
   }
 
-  isExploreField(): this is ExploreField {
+  public isExploreField(): this is ExploreField {
     return false;
   }
 
-  isAtomicField(): this is AtomicField {
+  public isAtomicField(): this is AtomicField {
     return false;
   }
 }
@@ -633,7 +627,7 @@ export class ExploreField extends Explore {
     this.parentExplore = parentExplore;
   }
 
-  getJoinRelationship(): JoinRelationship {
+  public getJoinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
       case "condition":
       case "foreignKey":
@@ -647,19 +641,19 @@ export class ExploreField extends Explore {
     }
   }
 
-  isQueryField(): this is QueryField {
+  public isQueryField(): this is QueryField {
     return false;
   }
 
-  isExploreField(): this is ExploreField {
+  public isExploreField(): this is ExploreField {
     return true;
   }
 
-  isAtomicField(): this is AtomicField {
+  public isAtomicField(): this is AtomicField {
     return false;
   }
 
-  getParentExplore(): Explore {
+  public getParentExplore(): Explore {
     return this.parentExplore;
   }
 }
@@ -681,32 +675,35 @@ export class Runtime {
     this.runner = new Runner(connections);
   }
 
-  makeModel(source: ModelUrl | ModelString): ModelRuntimeRequest {
+  public makeModel(source: ModelUrl | ModelString): ModelRuntimeRequest {
     const compiler = this.getCompiler();
     return new ModelRuntimeRequest(this, function build() {
       return compiler.makeModel(source);
     });
   }
 
-  // used internally by the testing framwork.
+  // TODO Consider formalizing this. Perhaps as a `withModel` method,
+  //      as well as a `Model.fromModelDefinition` if we choose to expose
+  //      `ModelDef` to the world formally. For now, this should only
+  //      be used in tests.
   public _makeModelFromModelDef(modelDef: ModelDef): ModelRuntimeRequest {
     return new ModelRuntimeRequest(this, async function build() {
       return new Model(modelDef, []);
     });
   }
 
-  makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
+  public makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
     return this.makeModel(query).getQuery();
   }
 
-  makeQueryByIndex(
+  public makeQueryByIndex(
     model: ModelUrl | ModelString,
     index: number
   ): PreparedQueryRuntimeRequest {
     return this.makeModel(model).getQueryByIndex(index);
   }
 
-  makeQueryByName(
+  public makeQueryByName(
     model: ModelUrl | ModelString,
     name: string
   ): PreparedQueryRuntimeRequest {
@@ -762,25 +759,25 @@ class RuntimeRequest<T> {
 }
 
 export class ModelRuntimeRequest extends RuntimeRequest<Model> {
-  getQuery(): PreparedQueryRuntimeRequest {
+  public getQuery(): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       return (await this.build()).getPreparedQuery();
     });
   }
 
-  getQueryByIndex(index: number): PreparedQueryRuntimeRequest {
+  public getQueryByIndex(index: number): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       return (await this.build()).getPreparedQueryByIndex(index);
     });
   }
 
-  getQueryByName(name: string): PreparedQueryRuntimeRequest {
+  public getQueryByName(name: string): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       return (await this.build()).getPreparedQueryByName(name);
     });
   }
 
-  makeQuery(query: QueryString | QueryUrl): PreparedQueryRuntimeRequest {
+  public makeQuery(query: QueryString | QueryUrl): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       const model = await this.runtime
         .getCompiler()
@@ -789,14 +786,20 @@ export class ModelRuntimeRequest extends RuntimeRequest<Model> {
     });
   }
 
-  _makeQueryFromQueryDef(query: InternalQuery): PreparedQueryRuntimeRequest {
+  // TODO Consider formalizing this. Perhaps as a `withQuery` method,
+  //      as well as a `PreparedQuery.fromQueryDefinition` if we choose to expose
+  //      `InternalQuery` to the world formally. For now, this should only
+  //      be used in tests.
+  public _makeQueryFromQueryDef(
+    query: InternalQuery
+  ): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       const model = await this.build();
       return new PreparedQuery(query, model._getModelDef());
     });
   }
 
-  getExploreByName(name: string): ExploreRuntimeRequest {
+  public getExploreByName(name: string): ExploreRuntimeRequest {
     return this.buildExplore(async () => {
       return (await this.build()).getExploreByName(name);
     });
@@ -808,7 +811,7 @@ class PreparedQueryRuntimeRequest extends RuntimeRequest<PreparedQuery> {
     return this.runtime.getRunner().run(await this.getSql().build());
   }
 
-  getSql(): PreparedResultRuntimeRequest {
+  public getSql(): PreparedResultRuntimeRequest {
     return this.buildPreparedResult(async () => {
       return (await this.build()).getPreparedResult();
     });
@@ -838,11 +841,11 @@ export class Result extends PreparedResult {
     this.inner = queryResult;
   }
 
-  _getQueryResult(): QueryResult {
+  public _getQueryResult(): QueryResult {
     return this.inner;
   }
 
-  getData(): DataArray {
+  public getData(): DataArray {
     return new DataArray(this.inner.result, this.getResultExplore());
   }
 }
@@ -856,11 +859,11 @@ export class DataArray {
     this.field = field;
   }
 
-  getField(): Explore {
+  public getField(): Explore {
     return this.field;
   }
 
-  toObject(): QueryData {
+  public toObject(): QueryData {
     return this.queryData;
   }
 }

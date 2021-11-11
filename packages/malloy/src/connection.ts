@@ -48,8 +48,8 @@ export abstract class Connection
   ): Promise<NamedStructDefs>;
 
   /*
-   * Implement `SchemaFetcherGetter` and `SqlQueryRunnerGetter` so these can be
-   * passed directly into `Translator` and `Runner`
+   * Implement `LookupSqlRunner` and `LookupSchemaReader` so these can be
+   * passed directly into `Compiler` and `Runner`
    */
 
   private getConnection(connectionName?: string): Promise<Connection> {

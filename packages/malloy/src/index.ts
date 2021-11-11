@@ -20,7 +20,7 @@ export {
   Runtime,
   EmptyUrlReader,
   InMemoryUrlReader,
-  FixedConnections,
+  FixedConnectionMap,
   MalloyError,
   JoinRelationship,
   SourceRelationship,

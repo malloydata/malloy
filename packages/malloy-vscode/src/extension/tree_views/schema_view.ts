@@ -27,7 +27,7 @@ import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
 import timeIcon from "../../media/time.svg";
 import structIcon from "../../media/struct.svg";
-import turtleIcon from "../../media/turtle.svg";
+import queryIcon from "../../media/turtle.svg";
 import stringIcon from "../../media/string.svg";
 import oneToManyIcon from "../../media/one_to_many.svg";
 import manyToOneIcon from "../../media/many_to_one.svg";
@@ -247,8 +247,8 @@ function getIconPath(fieldType: string, isAggregate: boolean) {
       case "boolean":
         imageFileName = booleanIcon;
         break;
-      case "turtle":
-        imageFileName = turtleIcon;
+      case "query":
+        imageFileName = queryIcon;
 
         break;
       default:
