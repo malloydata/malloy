@@ -46,7 +46,7 @@ hasExpr
 
 defineValue
   : OPAREN explore CPAREN  # defFromExplore
-  | JSON json              # defFromJson
+  | JSON json              # defFromJSON
   ;
 
  importStatement

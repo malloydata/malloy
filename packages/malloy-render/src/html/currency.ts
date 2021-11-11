@@ -12,9 +12,9 @@
  */
 
 import { DataValue } from "../data_table";
-import { HtmlTextRenderer } from "./text";
+import { HTMLTextRenderer } from "./text";
 
-export class HtmlCurrencyRenderer extends HtmlTextRenderer {
+export class HTMLCurrencyRenderer extends HTMLTextRenderer {
   getText(data: DataValue): string | null {
     if (data === null) {
       return null;

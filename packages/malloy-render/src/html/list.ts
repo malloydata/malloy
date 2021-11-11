@@ -16,7 +16,7 @@ import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
 
-export class HtmlListRenderer extends ContainerRenderer {
+export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "small",
   };

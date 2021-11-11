@@ -115,7 +115,7 @@ interface ErrorResponse {
 }
 interface FatalResponse extends FinalResponse, ErrorResponse {}
 export interface NeedURLData {
-  URLs: string[];
+  urls: string[];
 }
 export interface NeedSchemaData {
   tables: string[];
@@ -129,7 +129,7 @@ type ParseResponse = Partial<ParseData>;
 interface NeededData extends NeedURLData, NeedSchemaData {}
 export type DataRequestResponse = Partial<NeededData> | null;
 function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!(dr?.tables || dr?.URLs);
+  return !!(dr?.tables || dr?.urls);
 }
 
 interface TranslatedResponse extends NeededData, ErrorResponse, FinalResponse {
@@ -227,7 +227,7 @@ export abstract class MalloyTranslation {
     }
     const source = this.root.importZone.get(this.sourceURL);
     if (!source) {
-      return { URLs: [this.sourceURL] };
+      return { urls: [this.sourceURL] };
     }
 
     const parse = runParser(
@@ -267,9 +267,9 @@ export abstract class MalloyTranslation {
         }
       }
 
-      if (parseRefs?.URLs) {
-        for (const relativeRef in parseRefs.URLs) {
-          const firstRef = parseRefs.URLs[relativeRef];
+      if (parseRefs?.urls) {
+        for (const relativeRef in parseRefs.urls) {
+          const firstRef = parseRefs.urls[relativeRef];
           try {
             const ref = new URL(relativeRef, this.sourceURL).toString();
             this.addChild(ref);
@@ -302,7 +302,7 @@ export abstract class MalloyTranslation {
 
     const missingImports = this.root.importZone.getUndefined();
     if (missingImports) {
-      allMissing = { ...allMissing, URLs: missingImports };
+      allMissing = { ...allMissing, urls: missingImports };
     }
 
     if (isNeedResponse(allMissing)) {
@@ -530,17 +530,17 @@ export class MalloyTranslator extends MalloyTranslation {
 
   update(dd: ParseUpdate): void {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
-    this.importZone.updateFrom(dd.URLs, dd.errors?.URLs);
+    this.importZone.updateFrom(dd.urls, dd.errors?.urls);
   }
 }
 
 interface ErrorData {
   tables: Record<string, string>;
-  URLs: Record<string, string>;
+  urls: Record<string, string>;
 }
 
 export interface URLData {
-  URLs: ZoneData<string>;
+  urls: ZoneData<string>;
 }
 export interface SchemaData {
   tables: ZoneData<StructDef>;

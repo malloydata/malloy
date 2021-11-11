@@ -14,8 +14,8 @@
 import {
   SchemaReader,
   LookupSchemaReader,
-  SqlRunner,
-  LookupSqlRunner,
+  SQLRunner,
+  LookupSQLRunner,
 } from "./runtime_types";
 import {
   MalloyQueryData,
@@ -24,7 +24,7 @@ import {
 } from "./model/malloy_types";
 
 export abstract class Connection
-  implements LookupSchemaReader, SchemaReader, LookupSqlRunner, SqlRunner
+  implements LookupSchemaReader, SchemaReader, LookupSQLRunner, SQLRunner
 {
   _name: string;
 
@@ -39,16 +39,16 @@ export abstract class Connection
   // returns instance of Dialect class that works for this connection
   abstract get dialectName(): string;
 
-  abstract executeSqlRaw(sqlCommand: string): Promise<QueryData>;
+  abstract executeSQLRaw(sqlCommand: string): Promise<QueryData>;
 
-  abstract runSql(sqlCommand: string): Promise<MalloyQueryData>;
+  abstract runSQL(sqlCommand: string): Promise<MalloyQueryData>;
 
   public abstract fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs>;
 
   /*
-   * Implement `LookupSqlRunner` and `LookupSchemaReader` so these can be
+   * Implement `LookupSQLRunner` and `LookupSchemaReader` so these can be
    * passed directly into `Compiler` and `Runner`
    */
 
@@ -59,7 +59,7 @@ export abstract class Connection
     return Promise.resolve(this);
   }
 
-  public lookupQueryRunner(connectionName?: string): Promise<Connection> {
+  public lookupSQLRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 

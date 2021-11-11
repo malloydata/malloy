@@ -12,9 +12,9 @@
  */
 
 import { FieldDef, StructDef } from "@malloy-lang/malloy";
-import { HtmlListRenderer } from "./list";
+import { HTMLListRenderer } from "./list";
 
-export class HtmlListDetailRenderer extends HtmlListRenderer {
+export class HTMLListDetailRenderer extends HTMLListRenderer {
   getDetailField(struct: StructDef): FieldDef | undefined {
     return struct.fields[1];
   }

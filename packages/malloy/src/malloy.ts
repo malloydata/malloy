@@ -26,15 +26,15 @@ import {
   TurtleDef,
 } from "./model";
 import {
-  LookupSqlRunner,
+  LookupSQLRunner,
   LookupSchemaReader,
   ModelString,
-  ModelUrl,
-  SqlRunner,
+  ModelURL,
+  SQLRunner,
   QueryString,
-  QueryUrl,
-  Url,
-  UrlReader,
+  QueryURL,
+  URL,
+  URLReader,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -163,21 +163,21 @@ function parseTableName(connectionTableString: string) {
 }
 
 export class Compiler {
-  private urlReader: UrlReader;
+  private urlReader: URLReader;
   private lookupSchemaReader: LookupSchemaReader;
 
-  constructor(urlReader: UrlReader, lookupSchemaReader: LookupSchemaReader) {
+  constructor(urlReader: URLReader, lookupSchemaReader: LookupSchemaReader) {
     this.urlReader = urlReader;
     this.lookupSchemaReader = lookupSchemaReader;
   }
 
   private async _compile(
-    url: Url,
+    url: URL,
     malloy: string,
     model?: ModelDef
   ): Promise<{ modelDef: ModelDef; queryList: InternalQuery[] }> {
     const translator = new MalloyTranslator(url.toString(), {
-      URLs: { [url.toString()]: malloy },
+      urls: { [url.toString()]: malloy },
     });
     translator.translate(model);
     // eslint-disable-next-line no-constant-condition
@@ -196,18 +196,18 @@ export class Compiler {
             errors
           );
         }
-      } else if (result.URLs) {
-        for (const neededUrl of result.URLs) {
-          if (neededUrl.startsWith("internal://")) {
+      } else if (result.urls) {
+        for (const neededURL of result.urls) {
+          if (neededURL.startsWith("internal://")) {
             throw new Error(
               "In order to use relative imports, you must compile a file via a URL."
             );
           }
-          const neededText = await this.urlReader.readUrl(
-            Url.fromString(neededUrl)
+          const neededText = await this.urlReader.readURL(
+            URL.fromString(neededURL)
           );
-          const URLs = { [neededUrl]: neededText };
-          translator.update({ URLs });
+          const urls = { [neededURL]: neededText };
+          translator.update({ urls });
         }
       } else if (result.tables) {
         // collect tables by connection name since there may be multiple connections
@@ -240,29 +240,29 @@ export class Compiler {
     }
   }
 
-  private async toUrlAndContents(source: Url | string) {
-    if (source instanceof Url) {
-      const contents = await this.urlReader.readUrl(source);
+  private async toURLAndContents(source: URL | string) {
+    if (source instanceof URL) {
+      const contents = await this.urlReader.readURL(source);
       return { contents, url: source };
     } else {
       return {
         contents: source,
-        url: Url.fromString("internal://internal.malloy"),
+        url: URL.fromString("internal://internal.malloy"),
       };
     }
   }
 
-  public async makeModel(model: ModelString | ModelUrl): Promise<Model>;
+  public async makeModel(model: ModelString | ModelURL): Promise<Model>;
   public async makeModel(
-    model: ModelString | ModelUrl | Model,
-    query: QueryString | QueryUrl
+    model: ModelString | ModelURL | Model,
+    query: QueryString | QueryURL
   ): Promise<Model>;
   public async makeModel(
-    primaryOrBase: ModelString | ModelUrl | Model,
-    maybePrimary?: ModelString | ModelUrl | QueryString | QueryUrl
+    primaryOrBase: ModelString | ModelURL | Model,
+    maybePrimary?: ModelString | ModelURL | QueryString | QueryURL
   ): Promise<Model> {
-    let primary: ModelString | ModelUrl | QueryString | QueryUrl;
-    let base: ModelString | ModelUrl | Model | undefined;
+    let primary: ModelString | ModelURL | QueryString | QueryURL;
+    let base: ModelString | ModelURL | Model | undefined;
     if (maybePrimary === undefined) {
       if (primaryOrBase instanceof Model) {
         throw new Error(
@@ -280,44 +280,44 @@ export class Compiler {
       if (base instanceof Model) {
         model = base._getModelDef();
       } else {
-        const { url, contents } = await this.toUrlAndContents(base);
+        const { url, contents } = await this.toURLAndContents(base);
         model = (await this._compile(url, contents)).modelDef;
       }
     }
 
-    const { url, contents } = await this.toUrlAndContents(primary);
+    const { url, contents } = await this.toURLAndContents(primary);
     const { modelDef, queryList } = await this._compile(url, contents, model);
     return new Model(modelDef, queryList);
   }
 }
 
 export class Runner {
-  private lookupSqlRunner: LookupSqlRunner;
+  private lookupSQLRunner: LookupSQLRunner;
 
-  constructor(lookupSqlRunner: LookupSqlRunner) {
-    this.lookupSqlRunner = lookupSqlRunner;
+  constructor(lookupSQLRunner: LookupSQLRunner) {
+    this.lookupSQLRunner = lookupSQLRunner;
   }
 
   public async run(
-    preparedSql: PreparedResult | Promise<PreparedResult>
+    preparedSQL: PreparedResult | Promise<PreparedResult>
   ): Promise<Result> {
-    preparedSql = await preparedSql;
-    const sqlRunner = await this.getSqlRunner(preparedSql.getConnectionName());
-    return Runner.run(sqlRunner, preparedSql);
+    preparedSQL = await preparedSQL;
+    const sqlRunner = await this.getSQLRunner(preparedSQL.getConnectionName());
+    return Runner.run(sqlRunner, preparedSQL);
   }
 
-  public getSqlRunner(connectionName: string): Promise<SqlRunner> {
-    return this.lookupSqlRunner.lookupQueryRunner(connectionName);
+  public getSQLRunner(connectionName: string): Promise<SQLRunner> {
+    return this.lookupSQLRunner.lookupSQLRunner(connectionName);
   }
 
   public static async run(
-    sqlRunner: SqlRunner,
-    preparedSql: PreparedResult | Promise<PreparedResult>
+    sqlRunner: SQLRunner,
+    preparedSQL: PreparedResult | Promise<PreparedResult>
   ): Promise<Result> {
-    preparedSql = await preparedSql;
-    const result = await sqlRunner.runSql(preparedSql.getSql());
+    preparedSQL = await preparedSQL;
+    const result = await sqlRunner.runSQL(preparedSQL.getSQL());
     return new Result({
-      ...preparedSql._getRawQuery(),
+      ...preparedSQL._getRawQuery(),
       result: result.rows,
       totalRows: result.totalRows,
     });
@@ -339,7 +339,7 @@ export class PreparedResult {
     return this.inner;
   }
 
-  public getSql(): string {
+  public getSQL(): string {
     return this.inner.sql;
   }
 
@@ -364,20 +364,20 @@ export class PreparedResult {
   }
 }
 
-export class EmptyUrlReader implements UrlReader {
-  async readUrl(_url: Url): Promise<string> {
+export class EmptyURLReader implements URLReader {
+  async readURL(_url: URL): Promise<string> {
     throw new Error("No files.");
   }
 }
 
-export class InMemoryUrlReader implements UrlReader {
+export class InMemoryURLReader implements URLReader {
   private files: Map<string, string>;
 
   constructor(files: Map<string, string>) {
     this.files = files;
   }
 
-  public async readUrl(url: Url): Promise<string> {
+  public async readURL(url: URL): Promise<string> {
     const file = this.files.get(url.toString());
     if (file !== undefined) {
       return Promise.resolve(file);
@@ -387,7 +387,7 @@ export class InMemoryUrlReader implements UrlReader {
   }
 }
 
-export class FixedConnectionMap implements LookupSchemaReader, LookupSqlRunner {
+export class FixedConnectionMap implements LookupSchemaReader, LookupSQLRunner {
   private connections: Map<string, Connection>;
   private defaultConnectionName?: string;
   constructor(
@@ -421,7 +421,7 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSqlRunner {
     return this.getConnection(connectionName);
   }
 
-  public async lookupQueryRunner(connectionName?: string): Promise<Connection> {
+  public async lookupSQLRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 }
@@ -667,15 +667,15 @@ export class Runtime {
     schemas,
     connections,
   }: {
-    urls: UrlReader;
+    urls: URLReader;
     schemas: LookupSchemaReader;
-    connections: LookupSqlRunner;
+    connections: LookupSQLRunner;
   }) {
     this.compiler = new Compiler(urls, schemas);
     this.runner = new Runner(connections);
   }
 
-  public makeModel(source: ModelUrl | ModelString): ModelRuntimeRequest {
+  public makeModel(source: ModelURL | ModelString): ModelRuntimeRequest {
     const compiler = this.getCompiler();
     return new ModelRuntimeRequest(this, function build() {
       return compiler.makeModel(source);
@@ -692,19 +692,19 @@ export class Runtime {
     });
   }
 
-  public makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
+  public makeQuery(query: QueryURL | QueryString): PreparedQueryRuntimeRequest {
     return this.makeModel(query).getQuery();
   }
 
   public makeQueryByIndex(
-    model: ModelUrl | ModelString,
+    model: ModelURL | ModelString,
     index: number
   ): PreparedQueryRuntimeRequest {
     return this.makeModel(model).getQueryByIndex(index);
   }
 
   public makeQueryByName(
-    model: ModelUrl | ModelString,
+    model: ModelURL | ModelString,
     name: string
   ): PreparedQueryRuntimeRequest {
     return this.makeModel(model).getQueryByName(name);
@@ -777,7 +777,7 @@ export class ModelRuntimeRequest extends RuntimeRequest<Model> {
     });
   }
 
-  public makeQuery(query: QueryString | QueryUrl): PreparedQueryRuntimeRequest {
+  public makeQuery(query: QueryString | QueryURL): PreparedQueryRuntimeRequest {
     return this.buildQuery(async () => {
       const model = await this.runtime
         .getCompiler()
@@ -808,10 +808,10 @@ export class ModelRuntimeRequest extends RuntimeRequest<Model> {
 
 class PreparedQueryRuntimeRequest extends RuntimeRequest<PreparedQuery> {
   async run(): Promise<Result> {
-    return this.runtime.getRunner().run(await this.getSql().build());
+    return this.runtime.getRunner().run(await this.getSQL().build());
   }
 
-  public getSql(): PreparedResultRuntimeRequest {
+  public getSQL(): PreparedResultRuntimeRequest {
     return this.buildPreparedResult(async () => {
       return (await this.build()).getPreparedResult();
     });
@@ -820,8 +820,8 @@ class PreparedQueryRuntimeRequest extends RuntimeRequest<PreparedQuery> {
 
 class PreparedResultRuntimeRequest extends RuntimeRequest<PreparedResult> {
   async run(): Promise<Result> {
-    const preparedSql = await this.build();
-    return this.runtime.getRunner().run(preparedSql);
+    const preparedSQL = await this.build();
+    return this.runtime.getRunner().run(preparedSQL);
   }
 }
 

@@ -16,7 +16,7 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { LogMessage, MalloyError, Runtime, Url } from "@malloy-lang/malloy";
+import { LogMessage, MalloyError, Runtime, URL } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
@@ -44,7 +44,7 @@ export async function getMalloyDiagnostics(
 
   const uri = document.uri.toString();
   const files = {
-    readUrl: (url: Url) => magicGetTheFile(documents, url.toString()),
+    readURL: (url: URL) => magicGetTheFile(documents, url.toString()),
   };
   const runtime = new Runtime({
     urls: files,
@@ -53,7 +53,7 @@ export async function getMalloyDiagnostics(
   });
   let errors: LogMessage[] = [];
   try {
-    await runtime.makeModel(new Url(uri)).build();
+    await runtime.makeModel(new URL(uri)).build();
   } catch (error) {
     if (error instanceof MalloyError) {
       errors = error.log;

@@ -773,9 +773,9 @@ describe("document", () => {
     const docParse = new TestTranslator(`import "child"`);
     const xr = docParse.unresolved();
     expect(docParse).toBeErrorless();
-    expect(xr).toEqual({ URLs: ["internal://test/child"] });
+    expect(xr).toEqual({ urls: ["internal://test/child"] });
     docParse.update({
-      URLs: { "internal://test/child": "export define aa is (explore a)" },
+      urls: { "internal://test/child": "export define aa is (explore a)" },
     });
     const yr = docParse.unresolved();
     expect(yr).toBeNull();
@@ -801,10 +801,10 @@ describe("document", () => {
     const docParse = new TestTranslator(`import "child"`);
     const xr = docParse.unresolved();
     expect(docParse).toBeErrorless();
-    expect(xr).toEqual({ URLs: ["internal://test/child"] });
+    expect(xr).toEqual({ urls: ["internal://test/child"] });
     const reportedError = "ENOWAY: No way to find your child";
     docParse.update({
-      errors: { URLs: { "internal://test/child": reportedError } },
+      errors: { urls: { "internal://test/child": reportedError } },
     });
     expect(docParse).not.toTranslate();
     expect(docParse.prettyErrors()).toContain(reportedError);
@@ -813,11 +813,11 @@ describe("document", () => {
   test("chained imports", () => {
     const docParse = new TestTranslator(`import "child"`);
     docParse.update({
-      URLs: { "internal://test/child": `import "grandChild"` },
+      urls: { "internal://test/child": `import "grandChild"` },
     });
     const xr = docParse.unresolved();
     expect(docParse).toBeErrorless();
-    expect(xr).toEqual({ URLs: ["internal://test/grandChild"] });
+    expect(xr).toEqual({ urls: ["internal://test/grandChild"] });
   });
 
   test("query lists", () => {

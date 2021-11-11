@@ -27,8 +27,8 @@ async function validateCompilation(
       throw new Error(`Unknown database ${databaseName}`);
     }
     await (
-      await runtime.getRunner().getSqlRunner(databaseName)
-    ).runSql(`WITH test AS(\n${sql}) SELECT 1`);
+      await runtime.getRunner().getSQLRunner(databaseName)
+    ).runSQL(`WITH test AS(\n${sql}) SELECT 1`);
   } catch (e) {
     console.log(`SQL: didn't compile\n=============\n${sql}`);
     throw e;
@@ -105,9 +105,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch
         `
         )
-        .getSql()
+        .getSQL()
         .build()
-    ).getSql();
+    ).getSQL();
     await validateCompilation(databaseName, sql);
   });
 
@@ -126,9 +126,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch is withx.fetch
         `
         )
-        .getSql()
+        .getSQL()
         .build()
-    ).getSql();
+    ).getSQL();
     await validateCompilation(databaseName, sql);
   });
 
@@ -147,9 +147,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch is with.fetch
         `
         )
-        .getSql()
+        .getSQL()
         .build()
-    ).getSql();
+    ).getSQL();
     await validateCompilation(databaseName, sql);
   });
 
@@ -162,9 +162,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
           model_count is count() : [manufacturer: ~'A%']
         `
         )
-        .getSql()
+        .getSQL()
         .build()
-    ).getSql();
+    ).getSQL();
     await validateCompilation(databaseName, sql);
   });
 
@@ -232,9 +232,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
       explore f | foo
     `
         )
-        .getSql()
+        .getSQL()
         .build()
-    ).getSql();
+    ).getSQL();
     await validateCompilation(databaseName, sql);
   });
 });

@@ -14,16 +14,16 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { Url, Runtime, UrlReader } from "@malloy-lang/malloy";
-import { DataStyles, HtmlView, DataTreeRoot } from "@malloy-lang/render";
-import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
+import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
+import { DataStyles, HTMLView, DataTreeRoot } from "@malloy-lang/render";
+import { loadingIndicator, renderErrorHTML, wrapHTMLSnippet } from "../html";
 import {
   BIGQUERY_CONNECTION,
   MALLOY_EXTENSION_STATE,
   RunState,
 } from "../state";
 import turtleIcon from "../../media/turtle.svg";
-import { fetchFile, VscodeUrlReader } from "../utils";
+import { fetchFile, VSCodeURLReader } from "../utils";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -90,18 +90,18 @@ type QuerySpec = NamedQuerySpec | QueryStringSpec | QueryFileSpec;
 
 // TODO Come up with a better way to handle data styles. Perhaps this is
 //      an in-language understanding of model "metadata". For now,
-//      we abuse the `UrlReader` API to keep track of requested URLs
+//      we abuse the `URLReader` API to keep track of requested URLs
 //      and accummulate data styles for those files.
-class HackyDataStylesAccumulator implements UrlReader {
-  private uriReader: UrlReader;
+class HackyDataStylesAccumulator implements URLReader {
+  private uriReader: URLReader;
   private dataStyles: DataStyles = {};
 
-  constructor(uriReader: UrlReader) {
+  constructor(uriReader: URLReader) {
     this.uriReader = uriReader;
   }
 
-  async readUrl(uri: Url): Promise<string> {
-    const contents = await this.uriReader.readUrl(uri);
+  async readURL(uri: URL): Promise<string> {
+    const contents = await this.uriReader.readURL(uri);
     this.dataStyles = {
       ...this.dataStyles,
       ...(await dataStylesForFile(uri.toString(), contents)),
@@ -189,7 +189,7 @@ export function runMalloyQuery(
         }
       });
 
-      const vscodeFiles = new VscodeUrlReader();
+      const vscodeFiles = new VSCodeURLReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
 
       const runtime = new Runtime({
@@ -209,33 +209,33 @@ export function runMalloyQuery(
           );
           progress.report({ increment: 20, message: "Compiling" });
 
-          let prepareSql;
+          let prepareSQL;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+            prepareSQL = runtime
+              .makeModel(URL.fromString("file://" + query.file.uri.fsPath))
               .makeQuery(query.text)
-              .getSql();
+              .getSQL();
           } else if (query.type === "named") {
-            prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+            prepareSQL = runtime
+              .makeModel(URL.fromString("file://" + query.file.uri.fsPath))
               .getQueryByName(query.name)
-              .getSql();
+              .getSQL();
           } else {
-            prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
+            prepareSQL = runtime
+              .makeModel(URL.fromString("file://" + query.file.uri.fsPath))
               .getQueryByIndex(query.index)
-              .getSql();
+              .getSQL();
           }
 
           try {
-            const preparedSql = await prepareSql.build();
+            const preparedSQL = await prepareSQL.build();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
-            malloyLog.appendLine(preparedSql.getSql());
+            malloyLog.appendLine(preparedSQL.getSQL());
           } catch (error) {
-            current.panel.webview.html = renderErrorHtml(
+            current.panel.webview.html = renderErrorHTML(
               new Error(error.message || "Something went wrong.")
             );
             return;
@@ -250,7 +250,7 @@ export function runMalloyQuery(
             loadingIndicator("Running")
           );
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await prepareSql.run();
+          const queryResult = await prepareSQL.run();
           if (canceled) return;
 
           const runEnd = performance.now();
@@ -281,7 +281,7 @@ export function runMalloyQuery(
                   queryResult._getSourceFilters()
                 );
                 current.panel.webview.html = wrapHTMLSnippet(
-                  css + (await new HtmlView().render(table, styles))
+                  css + (await new HTMLView().render(table, styles))
                 );
 
                 const renderEnd = performance.now();
@@ -294,7 +294,7 @@ export function runMalloyQuery(
             }, 0);
           });
         } catch (error) {
-          current.panel.webview.html = renderErrorHtml(error);
+          current.panel.webview.html = renderErrorHTML(error);
         }
       })();
     }

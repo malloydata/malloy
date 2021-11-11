@@ -13,11 +13,11 @@
 
 import { QueryData, StructDef } from "@malloy-lang/malloy";
 import * as lite from "vega-lite";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
 import { DEFAULT_SPEC } from "./vega_spec";
 
-export abstract class HtmlCartesianChartRenderer extends HtmlChartRenderer {
+export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
 
   getVegaLiteSpec(data: QueryData, metadata: StructDef): lite.TopLevelSpec {

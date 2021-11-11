@@ -24,7 +24,7 @@ import { Renderer } from "../renderer";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { StyleDefaults } from "../data_styles";
 
-export abstract class HtmlChartRenderer implements Renderer {
+export abstract class HTMLChartRenderer implements Renderer {
   abstract getDataType(
     field: FieldDef,
     metadata: StructDef

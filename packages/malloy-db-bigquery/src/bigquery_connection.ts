@@ -146,7 +146,7 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  public async runSql(
+  public async runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {}
   ): Promise<MalloyQueryData> {
@@ -264,7 +264,7 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  public async executeSqlRaw(sqlCommand: string): Promise<QueryData> {
+  public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
     const result = await this.runBigQueryJob(sqlCommand);
     return result[0];
   }

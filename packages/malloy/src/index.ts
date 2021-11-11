@@ -18,8 +18,8 @@ export {
   Malloy,
   Runner,
   Runtime,
-  EmptyUrlReader,
-  InMemoryUrlReader,
+  EmptyURLReader,
+  InMemoryURLReader,
   FixedConnectionMap,
   MalloyError,
   JoinRelationship,
@@ -39,16 +39,16 @@ export type {
   ModelRuntimeRequest,
 } from "./malloy";
 export type {
-  UrlReader,
+  URLReader,
   SchemaReader,
   LookupSchemaReader,
-  SqlRunner,
-  LookupSqlRunner,
+  SQLRunner,
+  LookupSQLRunner,
   QueryString,
   ModelString,
-  QueryUrl,
-  ModelUrl,
+  QueryURL,
+  ModelURL,
 } from "./runtime_types";
-export { Url } from "./runtime_types";
+export { URL } from "./runtime_types";
 export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

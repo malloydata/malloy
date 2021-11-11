@@ -68,7 +68,7 @@ export function loadingIndicator(text = "Loading"): string {
 	`;
 }
 
-export function renderErrorHtml(error: Error): string {
+export function renderErrorHTML(error: Error): string {
   return wrapHTMLSnippet(`<div style="color: red;">${error.toString()}</div>`);
 }
 

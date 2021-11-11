@@ -16,7 +16,7 @@ import * as vscode from "vscode";
 import {
   Explore,
   Runtime,
-  Url,
+  URL,
   JoinRelationship,
   Field,
   QueryField,
@@ -33,7 +33,7 @@ import oneToManyIcon from "../../media/one_to_many.svg";
 import manyToOneIcon from "../../media/many_to_one.svg";
 import oneToOneIcon from "../../media/one_to_one.svg";
 import { BIGQUERY_CONNECTION, MALLOY_EXTENSION_STATE } from "../state";
-import { VscodeUrlReader } from "../utils";
+import { VSCodeURLReader } from "../utils";
 
 export class SchemaProvider
   implements vscode.TreeDataProvider<ExploreItem | FieldItem>
@@ -121,8 +121,8 @@ export class SchemaProvider
 async function getStructs(
   document: vscode.TextDocument
 ): Promise<Explore[] | undefined> {
-  const uri = Url.fromString("file://" + document.uri.fsPath);
-  const files = new VscodeUrlReader();
+  const uri = URL.fromString("file://" + document.uri.fsPath);
+  const files = new VSCodeURLReader();
   try {
     const runtime = new Runtime({
       urls: files,

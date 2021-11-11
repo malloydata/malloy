@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { UrlReader, Url } from "@malloy-lang/malloy";
+import { URLReader, URL } from "@malloy-lang/malloy";
 import * as vscode from "vscode";
 
 export async function fetchFile(uri: string): Promise<string> {
@@ -20,8 +20,8 @@ export async function fetchFile(uri: string): Promise<string> {
   ).getText();
 }
 
-export class VscodeUrlReader implements UrlReader {
-  async readUrl(uri: Url): Promise<string> {
-    return fetchFile(uri.toString());
+export class VSCodeURLReader implements URLReader {
+  async readURL(url: URL): Promise<string> {
+    return fetchFile(url.toString());
   }
 }

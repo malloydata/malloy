@@ -39,7 +39,7 @@ function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
 export function getMalloySymbols(document: TextDocument): DocumentSymbol[] {
   const uri = document.uri.toString();
   const translator = new MalloyTranslator(uri, {
-    URLs: {
+    urls: {
       [uri]: document.getText(),
     },
   });

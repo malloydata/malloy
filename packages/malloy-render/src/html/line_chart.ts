@@ -12,9 +12,9 @@
  */
 
 import { FieldDef, QueryValue } from "@malloy-lang/malloy";
-import { HtmlCartesianChartRenderer } from "./cartesian_chart";
+import { HTMLCartesianChartRenderer } from "./cartesian_chart";
 
-export class HtmlLineChartRenderer extends HtmlCartesianChartRenderer {
+export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): "line" {
     return "line";
   }

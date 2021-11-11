@@ -69,7 +69,7 @@
         }
       },
       {
-        "command": "malloy.showResultJson",
+        "command": "malloy.showResultJSON",
         "title": "Show Result JSON"
       }
     ],

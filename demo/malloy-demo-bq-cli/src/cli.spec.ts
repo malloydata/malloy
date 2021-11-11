@@ -10,8 +10,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { InMemoryUrlReader } from "@malloy-lang/malloy";
-import { run, pathToUrl } from "./index";
+import { InMemoryURLReader } from "@malloy-lang/malloy";
+import { run, pathToURL } from "./index";
 
 const unModeledQuery =
   "'malloy-data.malloytest.flights' | reduce flight_count is count()";
@@ -23,11 +23,11 @@ const modelPath = "/flights.malloy";
 const modeledQueryPath = "/modeled_query.malloy";
 const unmodeledQueryPath = "/unmodeled_.malloy";
 
-const files = new InMemoryUrlReader(
+const files = new InMemoryURLReader(
   new Map([
-    [pathToUrl(modelPath).toString(), model],
-    [pathToUrl(modeledQueryPath).toString(), modeledQuery],
-    [pathToUrl(unmodeledQueryPath).toString(), unModeledQuery],
+    [pathToURL(modelPath).toString(), model],
+    [pathToURL(modeledQueryPath).toString(), modeledQuery],
+    [pathToURL(unmodeledQueryPath).toString(), unModeledQuery],
   ])
 );
 

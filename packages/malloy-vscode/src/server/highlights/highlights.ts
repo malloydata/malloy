@@ -46,7 +46,7 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const text = document.getText();
   const textLines = text.split("\n");
   const translator = new MalloyTranslator(uri, {
-    URLs: {
+    urls: {
       [uri]: text,
     },
   });
@@ -124,7 +124,7 @@ function mapTypes(type: string) {
     case HighlightType.Keyword.Import:
       return "keyword";
     // These are more like meta types, so maybe they should be highlighted differently
-    case HighlightType.Keyword.Json:
+    case HighlightType.Keyword.JSON:
     case HighlightType.Keyword.Turtle:
       return "keyword";
     case HighlightType.Call.TimeFrame:

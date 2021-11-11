@@ -11,4 +11,4 @@
  * GNU General Public License for more details.
  */
 
-export { renderErrorHtml, loadingIndicator, wrapHTMLSnippet } from "./html";
+export { renderErrorHTML, loadingIndicator, wrapHTMLSnippet } from "./html";

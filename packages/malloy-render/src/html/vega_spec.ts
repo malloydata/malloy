@@ -18,7 +18,7 @@ import {
   QueryValue,
   StructDef,
 } from "@malloy-lang/malloy";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
 import { getColorScale } from "./utils";
 import { StyleDefaults } from "../data_styles";
@@ -406,7 +406,7 @@ export function isDataContainer(a: unknown): a is DataContainer {
   return a instanceof Array || a instanceof Object;
 }
 
-export class HtmlVegaSpecRenderer extends HtmlChartRenderer {
+export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   spec: lite.TopLevelSpec;
 
   constructor(styleDefaults: StyleDefaults, spec: lite.TopLevelSpec) {
