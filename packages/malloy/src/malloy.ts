@@ -658,6 +658,10 @@ export class ExploreField extends Explore {
   }
 }
 
+interface Materializer<T> {
+  materialize(): Promise<T>;
+}
+
 export class Runtime {
   private compiler: Compiler;
   private runner: Runner;
@@ -675,9 +679,11 @@ export class Runtime {
     this.runner = new Runner(connections);
   }
 
-  public makeModel(source: ModelUrl | ModelString): ModelRuntimeRequest {
+  public createModelMaterializer(
+    source: ModelUrl | ModelString
+  ): RuntimeModelMaterializer {
     const compiler = this.getCompiler();
-    return new ModelRuntimeRequest(this, function build() {
+    return new RuntimeModelMaterializer(this, function materialize() {
       return compiler.makeModel(source);
     });
   }
@@ -686,28 +692,32 @@ export class Runtime {
   //      as well as a `Model.fromModelDefinition` if we choose to expose
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
-  public _makeModelFromModelDef(modelDef: ModelDef): ModelRuntimeRequest {
-    return new ModelRuntimeRequest(this, async function build() {
+  public _makeModelFromModelDef(modelDef: ModelDef): RuntimeModelMaterializer {
+    return new RuntimeModelMaterializer(this, async function materialize() {
       return new Model(modelDef, []);
     });
   }
 
-  public makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
-    return this.makeModel(query).getQuery();
+  public createQueryMaterializer(
+    query: QueryUrl | QueryString
+  ): RuntimeQueryMaterializer {
+    return this.createModelMaterializer(query).getQueryMaterializer();
   }
 
-  public makeQueryByIndex(
+  public createQueryMaterializerByIndex(
     model: ModelUrl | ModelString,
     index: number
-  ): PreparedQueryRuntimeRequest {
-    return this.makeModel(model).getQueryByIndex(index);
+  ): RuntimeQueryMaterializer {
+    return this.createModelMaterializer(model).getQueryMaterializerByIndex(
+      index
+    );
   }
 
-  public makeQueryByName(
+  public createQueryMaterializerByName(
     model: ModelUrl | ModelString,
     name: string
-  ): PreparedQueryRuntimeRequest {
-    return this.makeModel(model).getQueryByName(name);
+  ): RuntimeQueryMaterializer {
+    return this.createModelMaterializer(model).getQueryMaterializerByName(name);
   }
 
   public getRunner(): Runner {
@@ -719,69 +729,73 @@ export class Runtime {
   }
 }
 
-class RuntimeRequest<T> {
+class RuntimeMaterializer<T> implements Materializer<T> {
   protected runtime: Runtime;
-  private readonly _build: () => Promise<T>;
-  private built: Promise<T> | undefined;
+  private readonly _materialize: () => Promise<T>;
+  private materialized: Promise<T> | undefined;
 
-  constructor(runtime: Runtime, build: () => Promise<T>) {
+  constructor(runtime: Runtime, materialize: () => Promise<T>) {
     this.runtime = runtime;
-    this._build = build;
+    this._materialize = materialize;
   }
 
-  public build(): Promise<T> {
-    if (this.built === undefined) {
-      return this.rebuild();
+  public materialize(): Promise<T> {
+    if (this.materialized === undefined) {
+      return this.rematerialize();
     }
-    return this.built;
+    return this.materialized;
   }
 
-  public rebuild(): Promise<T> {
-    this.built = this._build();
-    return this.built;
+  public rematerialize(): Promise<T> {
+    this.materialized = this._materialize();
+    return this.materialized;
   }
 
-  protected buildQuery(
-    build: () => Promise<PreparedQuery>
-  ): PreparedQueryRuntimeRequest {
-    return new PreparedQueryRuntimeRequest(this.runtime, build);
+  protected makeQueryMaterializer(
+    materialize: () => Promise<PreparedQuery>
+  ): RuntimeQueryMaterializer {
+    return new RuntimeQueryMaterializer(this.runtime, materialize);
   }
 
-  protected buildExplore(build: () => Promise<Explore>): ExploreRuntimeRequest {
-    return new ExploreRuntimeRequest(this.runtime, build);
+  protected makeExploreMaterializer(
+    materialize: () => Promise<Explore>
+  ): RuntimeExploreMaterializer {
+    return new RuntimeExploreMaterializer(this.runtime, materialize);
   }
 
-  protected buildPreparedResult(
-    build: () => Promise<PreparedResult>
-  ): PreparedResultRuntimeRequest {
-    return new PreparedResultRuntimeRequest(this.runtime, build);
+  protected makePreparedResultMaterializer(
+    materialize: () => Promise<PreparedResult>
+  ): RuntimePreparedResultMaterializer {
+    return new RuntimePreparedResultMaterializer(this.runtime, materialize);
   }
 }
 
-export class ModelRuntimeRequest extends RuntimeRequest<Model> {
-  public getQuery(): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getPreparedQuery();
+export class RuntimeModelMaterializer extends RuntimeMaterializer<Model> {
+  public getQueryMaterializer(): RuntimeQueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getPreparedQuery();
     });
   }
 
-  public getQueryByIndex(index: number): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getPreparedQueryByIndex(index);
+  public getQueryMaterializerByIndex(index: number): RuntimeQueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getPreparedQueryByIndex(index);
     });
   }
 
-  public getQueryByName(name: string): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getPreparedQueryByName(name);
+  public getQueryMaterializerByName(name: string): RuntimeQueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getPreparedQueryByName(name);
     });
   }
 
-  public makeQuery(query: QueryString | QueryUrl): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
+  public createQueryMaterializer(
+    query: QueryString | QueryUrl
+  ): RuntimeQueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
       const model = await this.runtime
         .getCompiler()
-        .makeModel(await this.build(), query);
+        .makeModel(await this.materialize(), query);
       return model.getPreparedQuery();
     });
   }
@@ -792,43 +806,47 @@ export class ModelRuntimeRequest extends RuntimeRequest<Model> {
   //      be used in tests.
   public _makeQueryFromQueryDef(
     query: InternalQuery
-  ): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      const model = await this.build();
+  ): RuntimeQueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      const model = await this.materialize();
       return new PreparedQuery(query, model._getModelDef());
     });
   }
 
-  public getExploreByName(name: string): ExploreRuntimeRequest {
-    return this.buildExplore(async () => {
-      return (await this.build()).getExploreByName(name);
+  public getExploreMaterializerByName(
+    name: string
+  ): RuntimeExploreMaterializer {
+    return this.makeExploreMaterializer(async () => {
+      return (await this.materialize()).getExploreByName(name);
     });
   }
 }
 
-class PreparedQueryRuntimeRequest extends RuntimeRequest<PreparedQuery> {
+class RuntimeQueryMaterializer extends RuntimeMaterializer<PreparedQuery> {
   async run(): Promise<Result> {
-    return this.runtime.getRunner().run(await this.getSql().build());
+    return this.runtime
+      .getRunner()
+      .run(await this.getPreparedResultMaterializer().materialize());
   }
 
-  public getSql(): PreparedResultRuntimeRequest {
-    return this.buildPreparedResult(async () => {
-      return (await this.build()).getPreparedResult();
+  public getPreparedResultMaterializer(): RuntimePreparedResultMaterializer {
+    return this.makePreparedResultMaterializer(async () => {
+      return (await this.materialize()).getPreparedResult();
     });
   }
 }
 
-class PreparedResultRuntimeRequest extends RuntimeRequest<PreparedResult> {
+class RuntimePreparedResultMaterializer extends RuntimeMaterializer<PreparedResult> {
   async run(): Promise<Result> {
-    const preparedSql = await this.build();
+    const preparedSql = await this.materialize();
     return this.runtime.getRunner().run(preparedSql);
   }
 }
 
-class ExploreRuntimeRequest extends RuntimeRequest<Explore> {
-  getQueryByName(name: string): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getQueryByName(name);
+class RuntimeExploreMaterializer extends RuntimeMaterializer<Explore> {
+  getQueryMaterializerByName(name: string): RuntimeQueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getQueryByName(name);
     });
   }
 }

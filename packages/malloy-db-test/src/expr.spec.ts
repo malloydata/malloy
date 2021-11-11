@@ -46,16 +46,19 @@ export define aircraft is (
 );
 `;
 
-const expressionModels = new Map<string, malloy.ModelRuntimeRequest>();
+const expressionModels = new Map<string, malloy.RuntimeModelMaterializer>();
 runtimes.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.makeModel(expressionModelText))
+  expressionModels.set(
+    databaseName,
+    runtime.createModelMaterializer(expressionModelText)
+  )
 );
 
 expressionModels.forEach((expressionModel, databaseName) => {
   // basic calculations for sum, filtered sum, without a join.
   it(`basic calculations - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore aircraft_models | reduce
           total_seats,
@@ -89,7 +92,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
   it(`Floor() -or any function bustage with aggregates - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore aircraft_models | reduce
           percent_boeing_floor,
@@ -105,7 +108,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // Model based version of sums.
   it(`model: expression fixups. - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
             explore aircraft | reduce
               aircraft_models.total_seats,
@@ -120,7 +123,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // turtle expressions
   it(`model: turtle - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
             explore aircraft | reduce
               by_manufacturer
@@ -133,7 +136,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // filtered turtle expressions
   it(`model: filtered turtle - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
               explore aircraft | reduce
                 b is by_manufacturer : [aircraft_models.manufacturer:~'B%']
@@ -146,7 +149,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // having.
   it(`model: simple having - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
           explore aircraft | reduce : [aircraft_count: >90 ]
             state,
@@ -160,7 +163,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`model: turtle having2 - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
       -- hacking a null test for now
       explore aircraft
@@ -183,7 +186,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`model: turtle having on main - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
       -- hacking a null test for now
       explore aircraft
@@ -209,7 +212,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // bigquery doesn't like to partition by floats,
   it(`model: having float group by partition - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
     -- hacking a null test for now
     explore aircraft_models
@@ -230,7 +233,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`model: aggregate functions distinct min max - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore aircraft_models | reduce
           distinct_seats is count(distinct seats),
@@ -260,7 +263,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`model: dates - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore 'malloytest.alltypes' | reduce
           t_date,
@@ -316,7 +319,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`named query metadata undefined - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore aircraft| reduce
           aircraft_count is count()
@@ -332,7 +335,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`named query metadata named - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore aircraft | by_manufacturer
         `
@@ -343,7 +346,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         explore aircraft | by_manufacturer | reduce c is count()
         `
@@ -356,7 +359,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`filtered explores - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
         define b is (explore aircraft : [aircraft_models.manufacturer: ~'B%']);
 
@@ -369,7 +372,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`query with aliasname used twice - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
 aircraft | reduce
 first is substring(city,1,1)
@@ -393,7 +396,7 @@ aircraft_count
 
   it.skip("join foreign_key reverse", async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
   define a is('malloytest.aircraft'
     primary key tail_num
@@ -417,7 +420,7 @@ aircraft_count
 
   it(`joined filtered explores - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
     define a_models is (explore 'malloytest.aircraft_models'
     : [manufacturer: ~'B%']
@@ -443,7 +446,7 @@ aircraft_count
 
   it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
     const result = await expressionModel
-      .makeQuery(
+      .createQueryMaterializer(
         `
     define bo_models is (
       (explore 'malloytest.aircraft_models'

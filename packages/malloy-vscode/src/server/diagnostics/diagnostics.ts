@@ -53,7 +53,7 @@ export async function getMalloyDiagnostics(
   });
   let errors: LogMessage[] = [];
   try {
-    await runtime.makeModel(new Url(uri)).build();
+    await runtime.createModelMaterializer(new Url(uri)).materialize();
   } catch (error) {
     if (error instanceof MalloyError) {
       errors = error.log;

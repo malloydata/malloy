@@ -48,24 +48,24 @@ describe("db:BigQuery", () => {
 
   it("runs a Malloy query", async () => {
     const result = await runtime
-      .makeModel(
+      .createModelMaterializer(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
-      .makeQuery("explore carriers | reduce carrier_count")
-      .getSql()
-      .build();
+      .createQueryMaterializer("explore carriers | reduce carrier_count")
+      .getPreparedResultMaterializer()
+      .materialize();
     const res = await bq.runSql(result.getSql());
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
   it("streams a Malloy query for download", async () => {
     const result = await runtime
-      .makeModel(
+      .createModelMaterializer(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
-      .makeQuery("explore carriers | reduce name")
-      .getSql()
-      .build();
+      .createQueryMaterializer("explore carriers | reduce name")
+      .getPreparedResultMaterializer()
+      .materialize();
     const res = await bq.downloadMalloyQuery(result.getSql());
 
     return new Promise((resolve) => {

@@ -37,18 +37,28 @@ const runtime = new malloy.Runtime({
 });
 
 async function compileQueryFromQueryDef(
-  model: malloy.ModelRuntimeRequest,
+  model: malloy.RuntimeModelMaterializer,
   query: Query
 ) {
-  return (await model._makeQueryFromQueryDef(query).getSql().build()).getSql();
+  return (
+    await model
+      ._makeQueryFromQueryDef(query)
+      .getPreparedResultMaterializer()
+      .materialize()
+  ).getSql();
 }
 
-async function compileQuery(model: malloy.ModelRuntimeRequest, query: string) {
-  return (await model.makeQuery(query).getSql().build()).getSql();
+async function compileQuery(model: malloy.RuntimeModelMaterializer, query: string) {
+  return (
+    await model
+      .createQueryMaterializer(query)
+      .getPreparedResultMaterializer()
+      .materialize()
+  ).getSql();
 }
 
-async function runQuery(model: malloy.ModelRuntimeRequest, query: string) {
-  return await model.makeQuery(query).run();
+async function runQuery(model: malloy.RuntimeModelMaterializer, query: string) {
+  return await model.createQueryMaterializer(query).run();
 }
 
 async function bqCompile(sql: string): Promise<boolean> {
@@ -685,9 +695,9 @@ define ca_airports is (airports | by_fac_type : [state: 'CA' | 'NY'])
 `;
 
 describe("airport_tests", () => {
-  let model: malloy.ModelRuntimeRequest;
+  let model: malloy.RuntimeModelMaterializer;
   beforeAll(async () => {
-    model = runtime.makeModel(airportModelText);
+    model = runtime.createModelMaterializer(airportModelText);
   });
 
   it("airport_count", async () => {

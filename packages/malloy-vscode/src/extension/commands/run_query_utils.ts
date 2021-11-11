@@ -213,23 +213,29 @@ export function runMalloyQuery(
           let styles: DataStyles = {};
           if (query.type === "string") {
             prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
-              .makeQuery(query.text)
-              .getSql();
+              .createModelMaterializer(
+                Url.fromString("file://" + query.file.uri.fsPath)
+              )
+              .createQueryMaterializer(query.text)
+              .getPreparedResultMaterializer();
           } else if (query.type === "named") {
             prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
-              .getQueryByName(query.name)
-              .getSql();
+              .createModelMaterializer(
+                Url.fromString("file://" + query.file.uri.fsPath)
+              )
+              .getQueryMaterializerByName(query.name)
+              .getPreparedResultMaterializer();
           } else {
             prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
-              .getQueryByIndex(query.index)
-              .getSql();
+              .createModelMaterializer(
+                Url.fromString("file://" + query.file.uri.fsPath)
+              )
+              .getQueryMaterializerByIndex(query.index)
+              .getPreparedResultMaterializer();
           }
 
           try {
-            const preparedSql = await prepareSql.build();
+            const preparedSql = await prepareSql.materialize();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;

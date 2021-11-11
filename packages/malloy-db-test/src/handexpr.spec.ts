@@ -40,11 +40,14 @@ async function validateCompilation(
 }
 
 async function compileHandQueryToSql(
-  model: malloy.ModelRuntimeRequest,
+  model: malloy.RuntimeModelMaterializer,
   queryDef: Query
 ): Promise<string> {
   return (
-    await model._makeQueryFromQueryDef(queryDef).getSql().build()
+    await model
+      ._makeQueryFromQueryDef(queryDef)
+      .getPreparedResultMaterializer()
+      .materialize()
   ).getSql();
 }
 
@@ -281,7 +284,7 @@ it(`hand turtle - ${databaseName}`, async () => {
 
 it(`hand turtle malloy - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
 explore aircraft | hand_turtle
 `
@@ -292,7 +295,7 @@ explore aircraft | hand_turtle
 
 it(`default sort order - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
       explore aircraft | reduce state, aircraft_count limit 10
     `
@@ -303,7 +306,7 @@ it(`default sort order - ${databaseName}`, async () => {
 
 it(`default sort order by dir - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
       explore aircraft | reduce state, aircraft_count order by 2 limit 10
     `
@@ -421,7 +424,7 @@ it(`hand: turtle is pipeline - ${databaseName}`, async () => {
 // Hand model basic calculations for sum, filtered sum, without a join.
 it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
           explore aircraft | reduce
             aircraft_models.total_seats,
@@ -444,7 +447,7 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
 
 it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
             explore aircraft | reduce
               total_seats3 is aircraft_models.sum(aircraft_models.seats),
@@ -459,7 +462,7 @@ it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
 // Model based version of sums.
 it(`hand: expression fixups. - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
             explore aircraft | reduce
               aircraft_models.total_seats,
@@ -473,7 +476,7 @@ it(`hand: expression fixups. - ${databaseName}`, async () => {
 
 it(`model: filtered measures - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
             explore aircraft | reduce
               boeing_seats is aircraft_models.total_seats : [aircraft_models.manufacturer:'BOEING']
@@ -486,7 +489,7 @@ it(`model: filtered measures - ${databaseName}`, async () => {
 // does the filter force a join?
 it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
   const result = await handModel
-    .makeQuery(
+    .createQueryMaterializer(
       `
             explore aircraft | reduce
               boeing_aircraft is count() : [aircraft_models.manufacturer:'BOEING']
@@ -627,8 +630,8 @@ it(`hand join ON - ${databaseName}`, async () => {
           },
         ],
       })
-      .getSql()
-      .build()
+      .getPreparedResultMaterializer()
+      .materialize()
   ).getSql();
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);

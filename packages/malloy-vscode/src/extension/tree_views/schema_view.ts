@@ -129,7 +129,7 @@ async function getStructs(
       schemas: BIGQUERY_CONNECTION,
       connections: BIGQUERY_CONNECTION,
     });
-    const model = await runtime.makeModel(uri).build();
+    const model = await runtime.createModelMaterializer(uri).materialize();
 
     return Object.values(model.getExplores()).sort(exploresByName);
   } catch (error) {
