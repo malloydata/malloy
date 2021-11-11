@@ -897,6 +897,10 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
     return this.loadPreparedResult().getPreparedResult();
   }
 
+  public async getSql(): Promise<string> {
+    return (await this.getPreparedResult()).getSql();
+  }
+
   public getPreparedQuery(): Promise<PreparedQuery> {
     return this.materialize();
   }
@@ -910,6 +914,10 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
 
   public getPreparedResult(): Promise<PreparedResult> {
     return this.materialize();
+  }
+
+  public async getSql(): Promise<string> {
+    return (await this.getPreparedResult()).getSql();
   }
 }
 

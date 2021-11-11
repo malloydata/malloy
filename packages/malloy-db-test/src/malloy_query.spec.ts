@@ -42,7 +42,7 @@ async function compileQueryFromQueryDef(
 }
 
 async function compileQuery(model: malloy.ModelMaterializer, query: string) {
-  return (await model.loadQuery(query).getPreparedResult()).getSql();
+  return await model.loadQuery(query).getSql();
 }
 
 async function runQuery(model: malloy.ModelMaterializer, query: string) {
