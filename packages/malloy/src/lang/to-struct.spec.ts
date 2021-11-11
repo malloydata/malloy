@@ -1573,7 +1573,7 @@ describe("document", () => {
     `;
     const parentDoc = new TestTranslator(parentSrc);
     parentDoc.update({
-      URLs: {
+      urls: {
         "internal://test/child":
           "export define childA is ('aTable' new0 is aninteger + 1)",
       },
@@ -1598,7 +1598,7 @@ describe("document", () => {
     const parentDoc = new TestTranslator(parentSrc);
     parentDoc.update({
       errors: {
-        URLs: { "internal://test/no-such-file": "No such file or directory" },
+        urls: { "internal://test/no-such-file": "No such file or directory" },
       },
     });
     expect(parentDoc.unresolved()).toBeNull();
@@ -1613,7 +1613,7 @@ describe("document", () => {
     `;
     const parentDoc = new TestTranslator(parentSrc);
     parentDoc.update({
-      URLs: {
+      urls: {
         "internal://test/child": `
           import "grandchild"
           export define childC is (explore childG newC is newG + 1)
