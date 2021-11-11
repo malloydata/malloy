@@ -34,7 +34,7 @@ import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
-  ExpressionFieldFromAst,
+  ExpressionFieldFromAST,
   TurtleFieldAST,
   TurtleFieldStruct,
   ColumnSpaceField,
@@ -235,7 +235,7 @@ export class TranslationFieldSpace extends FieldSpace {
     // TODO express the "three fields kinds" in a typesafe way
     // one of three kinds of fields are legal in an explore: expressions ...
     if (def instanceof ExpressionFieldDef) {
-      const exprField = new ExpressionFieldFromAst(this, def);
+      const exprField = new ExpressionFieldFromAST(this, def);
       this.setEntry(exprField.name, exprField);
       // querry (turtle) fields
     } else if (def instanceof Turtle) {

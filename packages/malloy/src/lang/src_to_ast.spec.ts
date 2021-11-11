@@ -33,8 +33,8 @@ describe("translation api", () => {
       "explore a primary key astring c is count(*) | reduce newName is afloat + 1",
       "explore"
     );
-    const epAst = ep.ast();
-    expect(epAst?.toString()).toBe(
+    const epAST = ep.ast();
+    expect(epAST?.toString()).toBe(
       `<explore>
   source: <namedSource> name=a
   primaryKey: <primary key>
@@ -84,162 +84,162 @@ describe("expressions", () => {
   const aNULL = new ast.ExprNULL();
 
   test("literal true", () => {
-    expect("true").toMakeAst("fieldExpr", aTrue);
+    expect("true").toMakeAST("fieldExpr", aTrue);
   });
 
   test("literal false", () => {
-    expect("false").toMakeAst("fieldExpr", aFalse);
+    expect("false").toMakeAST("fieldExpr", aFalse);
   });
   test("not", () => {
-    expect("not false").toMakeAst("fieldExpr", new ast.ExprNot(aFalse));
+    expect("not false").toMakeAST("fieldExpr", new ast.ExprNot(aFalse));
   });
   test("and", () => {
-    expect("true and false").toMakeAst(
+    expect("true and false").toMakeAST(
       "fieldExpr",
       new ast.ExprLogicalOp(aTrue, "and", aFalse)
     );
   });
   test("or", () => {
-    expect("true or false").toMakeAst(
+    expect("true or false").toMakeAST(
       "fieldExpr",
       new ast.ExprLogicalOp(aTrue, "or", aFalse)
     );
   });
 
   test("string literal", () => {
-    expect("'malloy is for dummies'").toMakeAst("fieldExpr", sString);
+    expect("'malloy is for dummies'").toMakeAST("fieldExpr", sString);
   });
 
   test("integer literal", () => {
-    expect("42").toMakeAst("fieldExpr", n42);
+    expect("42").toMakeAST("fieldExpr", n42);
   });
   test("float literal", () => {
-    expect("4.2").toMakeAst("fieldExpr", n4p2);
+    expect("4.2").toMakeAST("fieldExpr", n4p2);
   });
   test("field name", () => {
-    expect("a").toMakeAst("fieldExpr", aExpr);
+    expect("a").toMakeAST("fieldExpr", aExpr);
   });
   test("NULL", () => {
-    expect("NULL").toMakeAst("fieldExpr", aNULL);
+    expect("NULL").toMakeAST("fieldExpr", aNULL);
   });
   test("( 42 )", () => {
-    expect("(42)").toMakeAst("fieldExpr", new ast.ExprParens(n42));
+    expect("(42)").toMakeAST("fieldExpr", new ast.ExprParens(n42));
   });
   test("-42", () => {
-    expect("-42").toMakeAst("fieldExpr", new ast.ExprMinus(n42));
+    expect("-42").toMakeAST("fieldExpr", new ast.ExprMinus(n42));
   });
   test("42 - 4.2", () => {
-    expect("42 - 4.2").toMakeAst(
+    expect("42 - 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprAddSub(n42, "-", n4p2)
     );
   });
   test("42 + 4.2", () => {
-    expect("42 + 4.2").toMakeAst(
+    expect("42 + 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprAddSub(n42, "+", n4p2)
     );
   });
   test("42 * 4.2", () => {
-    expect("42 * 4.2").toMakeAst(
+    expect("42 * 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprMulDiv(n42, "*", n4p2)
     );
   });
   test("42 / 4.2", () => {
-    expect("42 / 4.2").toMakeAst(
+    expect("42 / 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprMulDiv(n42, "/", n4p2)
     );
   });
   test("42 > 4.2", () => {
-    expect("42 > 4.2").toMakeAst(
+    expect("42 > 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(n42, ">", n4p2)
     );
   });
   test("42 = 4.2", () => {
-    expect("42 = 4.2").toMakeAst(
+    expect("42 = 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(n42, "=", n4p2)
     );
   });
   test("42 < 4.2", () => {
-    expect("42 < 4.2").toMakeAst(
+    expect("42 < 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(n42, "<", n4p2)
     );
   });
   test("42 >= 4.2", () => {
-    expect("42 >= 4.2").toMakeAst(
+    expect("42 >= 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(n42, ">=", n4p2)
     );
   });
   test("42 <= 4.2", () => {
-    expect("42 <= 4.2").toMakeAst(
+    expect("42 <= 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(n42, "<=", n4p2)
     );
   });
   test("42 != 4.2", () => {
-    expect("42 != 4.2").toMakeAst(
+    expect("42 != 4.2").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(n42, "!=", n4p2)
     );
   });
 
   test("count()", () => {
-    expect("count()").toMakeAst("fieldExpr", new ast.ExprCount());
+    expect("count()").toMakeAST("fieldExpr", new ast.ExprCount());
   });
   test("count(distinct a)", () => {
-    expect("count(distinct a)").toMakeAst(
+    expect("count(distinct a)").toMakeAST(
       "fieldExpr",
       new ast.ExprCountDistinct(aExpr)
     );
   });
   test("sum(a)", () => {
-    expect("sum(a)").toMakeAst("fieldExpr", new ast.ExprSum(aExpr));
+    expect("sum(a)").toMakeAST("fieldExpr", new ast.ExprSum(aExpr));
   });
   test("avg(a)", () => {
-    expect("avg(a)").toMakeAst("fieldExpr", new ast.ExprAvg(aExpr));
+    expect("avg(a)").toMakeAST("fieldExpr", new ast.ExprAvg(aExpr));
   });
   test("min(a)", () => {
-    expect("min(a)").toMakeAst("fieldExpr", new ast.ExprMin(aExpr));
+    expect("min(a)").toMakeAST("fieldExpr", new ast.ExprMin(aExpr));
   });
   test("max(a)", () => {
-    expect("max(a)").toMakeAst("fieldExpr", new ast.ExprMax(aExpr));
+    expect("max(a)").toMakeAST("fieldExpr", new ast.ExprMax(aExpr));
   });
   test("a.sum(b)", () => {
     const func = new ast.ExprSum(mkExprIdRef("b"), "a");
-    expect("a.sum(b)").toMakeAst("fieldExpr", func);
+    expect("a.sum(b)").toMakeAST("fieldExpr", func);
   });
   test("function call", () => {
-    expect("withargs(42, 'malloy is for dummies')").toMakeAst(
+    expect("withargs(42, 'malloy is for dummies')").toMakeAST(
       "fieldExpr",
       new ast.ExprFunc("withargs", [n42, sString])
     );
   });
   test("function()", () => {
-    expect("noargs()").toMakeAst("fieldExpr", new ast.ExprFunc("noargs", []));
+    expect("noargs()").toMakeAST("fieldExpr", new ast.ExprFunc("noargs", []));
   });
 
   test("case when 42 then 4.2 else NULL end", () => {
-    expect("case when 42 then 4.2 else NULL end").toMakeAst(
+    expect("case when 42 then 4.2 else NULL end").toMakeAST(
       "fieldExpr",
       new ast.ExprCase([new ast.WhenClause(n42, n4p2)], aNULL)
     );
   });
 
   test("case when 42 then 4.2", () => {
-    expect("case when 42 then 4.2 end").toMakeAst(
+    expect("case when 42 then 4.2 end").toMakeAST(
       "fieldExpr",
       new ast.ExprCase([new ast.WhenClause(n42, n4p2)])
     );
   });
 
   test("full pick", () => {
-    expect("pick 'a' when 'A' pick 'B' when 'b' else 'c'").toMakeAst(
+    expect("pick 'a' when 'A' pick 'B' when 'b' else 'c'").toMakeAST(
       "fieldExpr",
       new ast.Pick(
         [
@@ -258,7 +258,7 @@ describe("expressions", () => {
   });
 
   test("pick no value", () => {
-    expect("'a': pick when 'a' ELSE 'nota'").toMakeAst(
+    expect("'a': pick when 'a' ELSE 'nota'").toMakeAST(
       "fieldExpr",
       new ast.Apply(
         new ast.ExprString(`'a'`),
@@ -271,7 +271,7 @@ describe("expressions", () => {
   });
 
   test("pick no else", () => {
-    expect("pick 'a' when 'A' pick 'B' when 'b'").toMakeAst(
+    expect("pick 'a' when 'A' pick 'B' when 'b'").toMakeAST(
       "fieldExpr",
       new ast.Pick([
         new ast.PickWhen(new ast.ExprString(`'a'`), new ast.ExprString(`'A'`)),
@@ -281,69 +281,69 @@ describe("expressions", () => {
   });
 
   test("some_count : [ state:'ca']", () => {
-    expect("some_count : [ state:'ca']").toMakeAst(
+    expect("some_count : [ state:'ca']").toMakeAST(
       "fieldExpr",
       new ast.ExprFilter(mkExprIdRef("some_count"), caFilter)
     );
   });
 
   test("cast to string", () => {
-    expect("cast(42 as string)").toMakeAst(
+    expect("cast(42 as string)").toMakeAST(
       "fieldExpr",
       new ast.ExprCast(n42, "string")
     );
   });
 
   test("cast to boolean", () => {
-    expect("cast(42 as boolean)").toMakeAst(
+    expect("cast(42 as boolean)").toMakeAST(
       "fieldExpr",
       new ast.ExprCast(n42, "boolean")
     );
   });
 
   test("cast to number", () => {
-    expect("cast(42 as number)").toMakeAst(
+    expect("cast(42 as number)").toMakeAST(
       "fieldExpr",
       new ast.ExprCast(n42, "number")
     );
   });
   test("cast to date", () => {
-    expect("cast(42 as date)").toMakeAst(
+    expect("cast(42 as date)").toMakeAST(
       "fieldExpr",
       new ast.ExprCast(n42, "date")
     );
   });
 
   test("cast to timestamp", () => {
-    expect("cast(42 as timestamp)").toMakeAst(
+    expect("cast(42 as timestamp)").toMakeAST(
       "fieldExpr",
       new ast.ExprCast(n42, "timestamp")
     );
   });
 
   test("safecast timestamp", () => {
-    expect("42::timestamp)").toMakeAst(
+    expect("42::timestamp)").toMakeAST(
       "fieldExpr",
       new ast.ExprCast(n42, "timestamp", true)
     );
   });
 
   test("month truncation", () => {
-    expect("now.month").toMakeAst(
+    expect("now.month").toMakeAST(
       "fieldExpr",
       new ast.ExprGranularTime(new ast.ExprNow(), "month", true)
     );
   });
 
   test("colon with partial", () => {
-    expect("42:>4.2").toMakeAst(
+    expect("42:>4.2").toMakeAST(
       "fieldExpr",
       new ast.Apply(n42, new ast.PartialCompare(">", n4p2))
     );
   });
 
   test("compare plus conjunction", () => {
-    expect("42 >= 4.2|42").toMakeAst(
+    expect("42 >= 4.2|42").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(
         n42,
@@ -354,7 +354,7 @@ describe("expressions", () => {
   });
 
   test("compare plus partial", () => {
-    expect("42 > 4.2 & =42").toMakeAst(
+    expect("42 > 4.2 & =42").toMakeAST(
       "fieldExpr",
       new ast.ExprCompare(
         n42,
@@ -364,11 +364,11 @@ describe("expressions", () => {
     );
   });
   test("numeric range", () => {
-    expect("4.2 to 42").toMakeAst("fieldExpr", new ast.Range(n4p2, n42));
+    expect("4.2 to 42").toMakeAST("fieldExpr", new ast.Range(n4p2, n42));
   });
 
   test("date for range", () => {
-    expect("now for 42 days").toMakeAst(
+    expect("now for 42 days").toMakeAST(
       "fieldExpr",
       new ast.ForRange(new ast.ExprNow(), n42, new ast.Timeframe("day"))
     );
@@ -377,7 +377,7 @@ describe("expressions", () => {
 
 describe("field definitions", () => {
   test("newName rename oldName", () => {
-    expect("newA renames a").toMakeAst(
+    expect("newA renames a").toMakeAST(
       "fieldDef",
       new ast.RenameField("newA", "a")
     );
@@ -437,36 +437,36 @@ describe("field definitions", () => {
   });
 
   test("fieldName", () => {
-    expect("a").toMakeAst("fieldDef", mkFieldRefs("a"));
+    expect("a").toMakeAST("fieldDef", mkFieldRefs("a"));
   });
 
   test("exploreName.fieldName", () => {
-    expect("a.b").toMakeAst("fieldDef", mkFieldRefs("a.b"));
+    expect("a.b").toMakeAST("fieldDef", mkFieldRefs("a.b"));
   });
 
   test("wildcard", () => {
-    expect("*").toMakeAst(
+    expect("*").toMakeAST(
       "fieldDef",
       new ast.FieldReferences([new ast.Wildcard("", "*")])
     );
   });
 
   test("wildcard double star", () => {
-    expect("**").toMakeAst(
+    expect("**").toMakeAST(
       "fieldDef",
       new ast.FieldReferences([new ast.Wildcard("", "**")])
     );
   });
 
   test("wildcard dot star", () => {
-    expect("joinName.*").toMakeAst(
+    expect("joinName.*").toMakeAST(
       "fieldDef",
       new ast.FieldReferences([new ast.Wildcard("joinName", "*")])
     );
   });
 
   test("field name with quoted keywords", () => {
-    expect("`explore`.`join`").toMakeAst(
+    expect("`explore`.`join`").toMakeAST(
       "fieldDef",
       mkFieldRefs("explore.join")
     );
@@ -478,7 +478,7 @@ describe("field definitions", () => {
       "*",
       new ast.ExprNumber("9")
     );
-    expect("answer is 6*9").toMakeAst(
+    expect("answer is 6*9").toMakeAST(
       "fieldDef",
       new ast.ExpressionFieldDef(eAnswer, mkFieldName("answer"), "6*9")
     );
@@ -489,13 +489,13 @@ describe("field definitions", () => {
   ]);
 
   test("stage field", () => {
-    expect("justa is (reduce a)").toMakeAst(
+    expect("justa is (reduce a)").toMakeAST(
       "fieldDef",
       new ast.Turtle(aReduce, mkFieldName("justa"))
     );
   });
   test("name staged field", () => {
-    expect("aReduce is (reduce a)").toMakeAst(
+    expect("aReduce is (reduce a)").toMakeAST(
       "fieldDef",
       new ast.Turtle(aReduce, new ast.FieldName("aReduce"))
     );
@@ -504,7 +504,7 @@ describe("field definitions", () => {
 
 describe("pipe stages", () => {
   test("fields", () => {
-    expect("reduce a,b").toMakeAst(
+    expect("reduce a,b").toMakeAST(
       "queryStage",
       new ast.Reduce({
         fields: [mkFieldRefs("a", "b")],
@@ -513,7 +513,7 @@ describe("pipe stages", () => {
   });
 
   test("filters", () => {
-    expect("reduce : [state:'ca'] x").toMakeAst(
+    expect("reduce : [state:'ca'] x").toMakeAST(
       "queryStage",
       new ast.Reduce({
         fields: [mkFieldRefs("x")],
@@ -523,7 +523,7 @@ describe("pipe stages", () => {
   });
 
   test("order by", () => {
-    expect("reduce a order by 1").toMakeAst(
+    expect("reduce a order by 1").toMakeAST(
       "queryStage",
       new ast.Reduce({
         fields: [mkFieldRefs("a")],
@@ -533,7 +533,7 @@ describe("pipe stages", () => {
   });
 
   test("order by limit", () => {
-    expect("reduce a order by 1 limit 42").toMakeAst(
+    expect("reduce a order by 1 limit 42").toMakeAST(
       "queryStage",
       new ast.Reduce({
         fields: [mkFieldRefs("a")],
@@ -544,7 +544,7 @@ describe("pipe stages", () => {
   });
 
   test("project everything", () => {
-    expect("project : [state: 'ca'] a order by 1 limit 42").toMakeAst(
+    expect("project : [state: 'ca'] a order by 1 limit 42").toMakeAST(
       "queryStage",
       new ast.Project({
         filter: caFilter,
@@ -559,36 +559,36 @@ describe("pipe stages", () => {
     const want = new ast.PipelineElement([], mkFieldName("turtleHead"));
     const trans = new TestTranslator("turtleHead", "pipeline");
     expect(trans).toBeValidMalloy();
-    const turtleAst = trans.ast();
-    expect(turtleAst).toEqualAst(want);
+    const turtleAST = trans.ast();
+    expect(turtleAST).toEqualAST(want);
   });
 
   test("index", () => {
-    expect("index").toMakeAst("queryStage", new ast.Index());
+    expect("index").toMakeAST("queryStage", new ast.Index());
   });
 
   test("index field", () => {
     const oneField = new ast.Index();
     oneField.fields = [mkFieldRefs("a")];
-    expect("index a").toMakeAst("queryStage", oneField);
+    expect("index a").toMakeAST("queryStage", oneField);
   });
 
   test("index on", () => {
     const indexOn = new ast.Index();
     indexOn.on = mkFieldName("a");
-    expect("index on a").toMakeAst("queryStage", indexOn);
+    expect("index on a").toMakeAST("queryStage", indexOn);
   });
 
   test("index []", () => {
     const indexFiltered = new ast.Index();
     indexFiltered.filter = caFilter;
-    expect("index [ state:'ca']").toMakeAst("queryStage", indexFiltered);
+    expect("index [ state:'ca']").toMakeAST("queryStage", indexFiltered);
   });
 
   test("index limit", () => {
     const index = new ast.Index();
     index.limit = 42;
-    expect("index limit 42").toMakeAst("queryStage", index);
+    expect("index limit 42").toMakeAST("queryStage", index);
   });
 });
 
@@ -600,33 +600,33 @@ describe("query", () => {
     const aturtle = new ast.PipelineElement([]);
     aturtle.addHead(mkFieldName("aturtle"), caFilter);
     const want = mkExploreOf("a", { pipeline: aturtle });
-    expect(src).toMakeAst("explore", want);
+    expect(src).toMakeAST("explore", want);
   });
 
   test("named_explore", () => {
-    expect("a").toMakeAst("explore", mkExploreOf("a"));
+    expect("a").toMakeAST("explore", mkExploreOf("a"));
   });
 
   test("'table.name'", () => {
-    expect("'aTable'").toMakeAst(
+    expect("'aTable'").toMakeAST(
       "explore",
       new ast.Explore(new ast.TableSource("aTable"))
     );
   });
 
   test("optional keyword explore", () => {
-    expect("explore a").toMakeAst("explore", mkExploreOf("a"));
+    expect("explore a").toMakeAST("explore", mkExploreOf("a"));
   });
 
   test("( a )", () => {
-    expect("(a)").toMakeAst(
+    expect("(a)").toMakeAST(
       "explore",
       new ast.Explore(new ast.AnonymousSource(mkExploreOf("a")))
     );
   });
 
   test("primary key", () => {
-    expect("a primary key b").toMakeAst(
+    expect("a primary key b").toMakeAST(
       "explore",
       mkExploreOf("a", {
         primaryKey: new ast.PrimaryKey(new ast.FieldName("b")),
@@ -635,7 +635,7 @@ describe("query", () => {
   });
 
   test("explore one field", () => {
-    expect("a b is c").toMakeAst(
+    expect("a b is c").toMakeAST(
       "explore",
       mkExploreOf("a", {
         fields: [new ast.NameOnly(mkFieldName("c"), new ast.Filter([]), "b")],
@@ -644,14 +644,14 @@ describe("query", () => {
   });
 
   test("filtered", () => {
-    expect("a: [ state:'ca' ]").toMakeAst(
+    expect("a: [ state:'ca' ]").toMakeAST(
       "explore",
       mkExploreOf("a", { filter: caFilter })
     );
   });
 
   test("accept", () => {
-    expect("a accept astring").toMakeAst(
+    expect("a accept astring").toMakeAST(
       "explore",
       mkExploreOf("a", {
         fieldListEdit: new ast.FieldListEdit("accept", mkFieldRefs("astring")),
@@ -660,7 +660,7 @@ describe("query", () => {
   });
 
   test("with pipeline", () => {
-    expect("a | reduce astring").toMakeAst(
+    expect("a | reduce astring").toMakeAST(
       "explore",
       mkExploreOf("a", {
         pipeline: new ast.PipelineElement([
@@ -693,7 +693,7 @@ describe("query", () => {
     });
     expect(
       "a fields by_string_val is (reduce astring, val_count is count(*)) | by_string_val"
-    ).toMakeAst("explore", want);
+    ).toMakeAST("explore", want);
   });
 });
 
@@ -703,25 +703,25 @@ describe("joins", () => {
   }
 
   test("b on k", () => {
-    expect("b on k").toMakeAst(
+    expect("b on k").toMakeAST(
       "join",
       join("b", new ast.NamedSource("b"), "k")
     );
   });
   test("d is b on k", () => {
-    expect("d is b on k").toMakeAst(
+    expect("d is b on k").toMakeAST(
       "join",
       join("d", new ast.NamedSource("b"), "k")
     );
   });
   test("d is (b) on k", () => {
-    expect("d is (b) on k").toMakeAst(
+    expect("d is (b) on k").toMakeAST(
       "join",
       join("d", new ast.AnonymousSource(mkExploreOf("b")), "k")
     );
   });
   test("d is 'table' on key", () => {
-    expect("d is 'aTable' on k").toMakeAst(
+    expect("d is 'aTable' on k").toMakeAST(
       "join",
       join("d", new ast.TableSource("aTable"), "k")
     );
@@ -741,14 +741,14 @@ describe("document", () => {
     const got = defineStatement("define newA is (explore a)");
     const src = new ast.NamedSource("a");
     const want = new ast.Define("newA", new ast.Explore(src), false);
-    expect(got).toEqualAst(want);
+    expect(got).toEqualAST(want);
   });
 
   test("export define a is explore b", () => {
     const got = defineStatement("export define newA is (explore a)");
     const src = new ast.NamedSource("a");
     const want = new ast.Define("newA", new ast.Explore(src), true);
-    expect(got).toEqualAst(want);
+    expect(got).toEqualAST(want);
   });
 
   test("define three explores", () => {
@@ -825,7 +825,7 @@ describe("document", () => {
       new ast.DocumentQuery(mkExploreOf("a"), 0),
       new ast.DocumentQuery(mkExploreOf("b"), 1),
     ]);
-    expect("a;b").toMakeAst("malloyDocument", doc);
+    expect("a;b").toMakeAST("malloyDocument", doc);
   });
 });
 
@@ -839,7 +839,7 @@ describe("parameters", () => {
       }),
     ];
     const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-    expect("define ap(has aparam : timestamp) is (a)").toMakeAst(
+    expect("define ap(has aparam : timestamp) is (a)").toMakeAST(
       "defineStatement",
       def
     );
@@ -858,7 +858,7 @@ describe("parameters", () => {
         }),
       ];
       const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-      expect("define ap(has aparam timestamp or @1960-06-30) is (a)").toMakeAst(
+      expect("define ap(has aparam timestamp or @1960-06-30) is (a)").toMakeAST(
         "defineStatement",
         def
       );
@@ -872,7 +872,7 @@ describe("parameters", () => {
       const cExpr = new ast.ConstantSubExpression(when);
       const paramList = [new ast.ConstantParameter("aparam", cExpr)];
       const def = new ast.Define("ap", mkExploreOf("a"), false, paramList);
-      expect("define ap(has aparam @1960-06-30) is (a)").toMakeAst(
+      expect("define ap(has aparam @1960-06-30) is (a)").toMakeAST(
         "defineStatement",
         def
       );
@@ -884,7 +884,7 @@ describe("parameters", () => {
       aparam: new ast.ConstantSubExpression(new ast.ExprString("'a'")),
       param2: new ast.ConstantSubExpression(new ast.ExprNumber("2")),
     });
-    expect(`explore ap(aparam is 'a' param2 is 2)`).toMakeAst(
+    expect(`explore ap(aparam is 'a' param2 is 2)`).toMakeAST(
       "namelessQuery",
       new ast.DocumentQuery(new ast.Explore(ap), 0)
     );

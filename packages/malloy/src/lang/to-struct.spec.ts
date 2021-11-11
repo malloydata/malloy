@@ -42,28 +42,28 @@ function findField(
 function queryForExplore(exploreSource: string): model.Query {
   const x = new TestTranslator(exploreSource, "explore");
   expect(x).toTranslate();
-  const exploreAst = x.ast();
-  if (exploreAst instanceof ast.Explore) {
-    return exploreAst.query();
+  const exploreAST = x.ast();
+  if (exploreAST instanceof ast.Explore) {
+    return exploreAST.query();
   }
   throw new Error(
     `SOURCE:\n` +
       `${exploreSource}\n\n` +
-      `Expected source to parse to an explore => ${pretty(exploreAst)}`
+      `Expected source to parse to an explore => ${pretty(exploreAST)}`
   );
 }
 
 function sourceStructFromExplore(exploreSource: string): model.StructDef {
   const x = new TestTranslator(exploreSource, "explore");
   expect(x).toTranslate();
-  const exploreAst = x.ast();
-  if (exploreAst instanceof ast.Explore) {
-    return exploreAst.structDef();
+  const exploreAST = x.ast();
+  if (exploreAST instanceof ast.Explore) {
+    return exploreAST.structDef();
   }
   throw new Error(
     `SOURCE:\n` +
       `${exploreSource}\n\n` +
-      `Expected source to parse to an explore => ${pretty(exploreAst)}`
+      `Expected source to parse to an explore => ${pretty(exploreAST)}`
   );
 }
 
@@ -79,13 +79,13 @@ function wellTranslated(docSource: string) {
 
 function fieldDefFromExpression(expr: string): model.FieldTypeDef {
   const exprParse = new TestTranslator(expr, "fieldExpr");
-  const exprAst = exprParse.ast();
+  const exprAST = exprParse.ast();
   expect(exprParse).toTranslate();
-  expect(exprAst).toBeInstanceOf(ast.ExpressionDef);
-  if (exprAst instanceof ast.ExpressionDef) {
+  expect(exprAST).toBeInstanceOf(ast.ExpressionDef);
+  if (exprAST instanceof ast.ExpressionDef) {
     const aSpace = new FieldSpace(mkStruct("a"));
     const fakeDef = new ast.ExpressionFieldDef(
-      exprAst,
+      exprAST,
       new ast.FieldName("test")
     );
     const field = fakeDef.fieldDef(aSpace, "test");
@@ -1225,10 +1225,10 @@ describe("expressions", () => {
   test("dimension source code passed to back end", () => {
     const expr = "e is afloat + 42 / 54";
     const exprParse = new TestTranslator(expr, "fieldDef");
-    const exprAst = exprParse.ast();
-    expect(exprAst).toBeInstanceOf(ast.ExpressionFieldDef);
-    if (exprAst instanceof ast.ExpressionFieldDef) {
-      const f = exprAst.fieldDef(new FieldSpace(aTableDef), "test");
+    const exprAST = exprParse.ast();
+    expect(exprAST).toBeInstanceOf(ast.ExpressionFieldDef);
+    if (exprAST instanceof ast.ExpressionFieldDef) {
+      const f = exprAST.fieldDef(new FieldSpace(aTableDef), "test");
       expect(exprParse).toBeErrorless();
       expect(f.source).toEqual("afloat+42/54");
     } else {
