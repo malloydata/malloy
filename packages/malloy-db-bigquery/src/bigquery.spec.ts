@@ -43,24 +43,24 @@ describe("db:BigQuery", () => {
   it.todo("gets table structdefs");
 
   it("runs a Malloy query", async () => {
-    const result = await runtime
+    const sql = await runtime
       .loadModel(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
       .loadQuery("explore carriers | reduce carrier_count")
-      .getPreparedResult();
-    const res = await bq.runSql(result.getSql());
+      .getSql();
+    const res = await bq.runSql(sql);
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
   it("streams a Malloy query for download", async () => {
-    const result = await runtime
+    const sql = await runtime
       .loadModel(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
       .loadQuery("explore carriers | reduce name")
-      .getPreparedResult();
-    const res = await bq.downloadMalloyQuery(result.getSql());
+      .getSql();
+    const res = await bq.downloadMalloyQuery(sql);
 
     return new Promise((resolve) => {
       let count = 0;

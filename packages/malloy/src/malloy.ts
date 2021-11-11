@@ -989,32 +989,3 @@ function isLookupSqlRunner(
 ): thing is LookupSqlRunner {
   return "lookupSqlRunner" in thing;
 }
-
-async function test() {
-  const runtime = new Runtime(new FixedConnectionMap(new Map()));
-
-  // "get X" means return to me a Promise<X>
-  // "load X" means return to me an XMaterializer
-  // XMaterializers retain the Runtime context, and can be used to produce other materializers, or results
-
-  runtime.getModel("model");
-  runtime.getQuery("query");
-  runtime.getQueryByIndex("model", 4);
-  runtime.getQueryByName("model", "flights_by_carrier");
-  const modelMaterializer = runtime.loadModel("model");
-  modelMaterializer.getModel();
-  modelMaterializer.getFinalQuery();
-  modelMaterializer.getExploreByName("flights");
-  modelMaterializer.loadExploreByName("flights").getQueryByName("by_carrier");
-  modelMaterializer
-    .loadExploreByName("flights")
-    .loadQueryByName("by_carrier")
-    .run();
-  modelMaterializer.loadQuery("query").run();
-  modelMaterializer.loadQuery("query").getPreparedResult();
-  modelMaterializer.getQuery("query");
-  modelMaterializer.loadQueryByName("name").run();
-  modelMaterializer.loadQueryByIndex(1).run();
-  modelMaterializer.loadFinalQuery().run();
-  modelMaterializer.getFinalQuery();
-}

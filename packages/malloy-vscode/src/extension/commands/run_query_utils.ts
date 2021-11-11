@@ -223,11 +223,11 @@ export function runMalloyQuery(
           }
 
           try {
-            const preparedResult = await queryMaterializer.getPreparedResult();
+            const sql = await queryMaterializer.getSql();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
-            malloyLog.appendLine(preparedResult.getSql());
+            malloyLog.appendLine(sql);
           } catch (error) {
             current.panel.webview.html = renderErrorHtml(
               new Error(error.message || "Something went wrong.")

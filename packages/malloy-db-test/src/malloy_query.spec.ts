@@ -32,13 +32,11 @@ const files = {
 };
 const runtime = new malloy.Runtime(files, bq);
 
-async function compileQueryFromQueryDef(
+function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
   query: Query
 ) {
-  return (
-    await model._loadQueryFromQueryDef(query).getPreparedResult()
-  ).getSql();
+  return model._loadQueryFromQueryDef(query).getSql();
 }
 
 async function compileQuery(model: malloy.ModelMaterializer, query: string) {

@@ -39,13 +39,11 @@ async function validateCompilation(
   return true;
 }
 
-async function compileHandQueryToSql(
+function compileHandQueryToSql(
   model: malloy.ModelMaterializer,
   queryDef: Query
 ): Promise<string> {
-  return (
-    await model._loadQueryFromQueryDef(queryDef).getPreparedResult()
-  ).getSql();
+  return model._loadQueryFromQueryDef(queryDef).getSql();
 }
 
 export const modelHandBase: StructDef = {
@@ -612,23 +610,17 @@ const joinModel: ModelDef = {
 const handJoinModel = bqRuntime._loadModelFromModelDef(joinModel);
 
 it(`hand join ON - ${databaseName}`, async () => {
-  const sql = (
-    await handJoinModel
-      ._loadQueryFromQueryDef({
-        structRef: "model_aircraft",
-        pipeline: [
-          {
-            type: "reduce",
-            fields: [
-              "aircraft.state",
-              "aircraft.aircraft_count",
-              "model_count",
-            ],
-          },
-        ],
-      })
-      .getPreparedResult()
-  ).getSql();
+  const sql = await handJoinModel
+    ._loadQueryFromQueryDef({
+      structRef: "model_aircraft",
+      pipeline: [
+        {
+          type: "reduce",
+          fields: ["aircraft.state", "aircraft.aircraft_count", "model_count"],
+        },
+      ],
+    })
+    .getSql();
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
   // expect(result.getData().toObject()[0].total_seats).toBe(452415);

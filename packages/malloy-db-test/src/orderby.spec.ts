@@ -95,72 +95,64 @@ expressionModels.forEach((orderByModel, databaseName) => {
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .loadQuery(
-          `
-        explore models | reduce
-          fetch is count()
-        | project
-          fetch
+    const sql = await orderByModel
+      .loadQuery(
         `
-        )
-        .getPreparedResult()
-    ).getSql();
+      explore models | reduce
+        fetch is count()
+      | project
+        fetch
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .loadQuery(
-          `
-        explore models | reduce
-          withx is (reduce
-             select is UPPER(manufacturer)
-             fetch is count()
-          )
-        | project
-          withx is lower(withx.select)
-          fetch is withx.fetch
+    const sql = await orderByModel
+      .loadQuery(
         `
+      explore models | reduce
+        withx is (reduce
+          select is UPPER(manufacturer)
+          fetch is count()
         )
-        .getPreparedResult()
-    ).getSql();
+      | project
+        withx is lower(withx.select)
+        fetch is withx.fetch
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it.skip("reserved words in structure definitions", async () => {
-    const sql = (
-      await orderByModel
-        .loadQuery(
-          `
-        explore models | reduce
-          with is (reduce
-             select is UPPER(manufacturer)
-             fetch is count()
-          )
-        | project
-          withxis lower(withx.select)
-          fetch is with.fetch
+    const sql = await orderByModel
+      .loadQuery(
         `
+      explore models | reduce
+        with is (reduce
+          select is UPPER(manufacturer)
+          fetch is count()
         )
-        .getPreparedResult()
-    ).getSql();
+      | project
+        withxis lower(withx.select)
+        fetch is with.fetch
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .loadQuery(
-          `
-        explore models | reduce
-          model_count is count() : [manufacturer: ~'A%']
+    const sql = await orderByModel
+      .loadQuery(
         `
-        )
-        .getPreparedResult()
-    ).getSql();
+      explore models | reduce
+        model_count is count() : [manufacturer: ~'A%']
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
@@ -205,31 +197,29 @@ expressionModels.forEach((orderByModel, databaseName) => {
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .loadQuery(
-          `
-      define a is ('malloytest.aircraft'
-        primary key tail_num
-        aircraft_count is count(*)
-      );
+    const sql = await orderByModel
+      .loadQuery(
+        `
+    define a is ('malloytest.aircraft'
+      primary key tail_num
+      aircraft_count is count(*)
+    );
 
-      define f is ('malloytest.flights'
-        primary key id2
-        flight_count is count()
-        foo is (reduce
-          carrier
-          flight_count
-          a.aircraft_count
-        )
-        joins
-          a on tail_num
-      );
-      explore f | foo
-    `
-        )
-        .getPreparedResult()
-    ).getSql();
+    define f is ('malloytest.flights'
+      primary key id2
+      flight_count is count()
+      foo is (reduce
+        carrier
+        flight_count
+        a.aircraft_count
+      )
+      joins
+        a on tail_num
+    );
+    explore f | foo
+  `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 });
