@@ -52,6 +52,6 @@ export interface SQLRunner {
   runSQL(sql: string): Promise<MalloyQueryData>;
 }
 
-export interface LookupSqlRunner {
+export interface LookupSQLRunner {
   lookupSQLRunner(connectionName?: string): Promise<SQLRunner>;
 }
