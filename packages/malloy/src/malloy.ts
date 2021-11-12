@@ -307,7 +307,7 @@ export class Runner {
   }
 
   public getSqlRunner(connectionName: string): Promise<SqlRunner> {
-    return this.lookupSqlRunner.lookupQueryRunner(connectionName);
+    return this.lookupSqlRunner.lookupSqlRunner(connectionName);
   }
 
   public static async run(
@@ -421,7 +421,7 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSqlRunner {
     return this.getConnection(connectionName);
   }
 
-  public async lookupQueryRunner(connectionName?: string): Promise<Connection> {
+  public async lookupSqlRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 }
