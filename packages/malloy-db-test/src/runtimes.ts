@@ -63,16 +63,8 @@ export function getRuntimes(
 ): Map<string, Runtime> {
   const runtimes: Map<string, Runtime> = new Map<string, Runtime>(
     Object.entries({
-      bigquery: new Runtime({
-        urls: files,
-        schemas: bqConnection,
-        connections: bqConnection,
-      }),
-      postgres: new Runtime({
-        urls: files,
-        schemas: postgresConnection,
-        connections: postgresConnection,
-      }),
+      bigquery: new Runtime(files, bqConnection),
+      postgres: new Runtime(files, postgresConnection),
     })
   );
 

@@ -25,16 +25,12 @@ export function run(
   args: string[]
 ): Promise<malloy.Result> {
   const connection = new BigQueryConnection("bigquery");
-  const runtime = new malloy.Runtime({
-    urls: files,
-    schemas: connection,
-    connections: connection,
-  });
+  const runtime = new malloy.Runtime(files, connection);
   const { query, model } = getOptions(args);
-  const queryBuilder = model
-    ? runtime.makeModel(model).makeQuery(query)
-    : runtime.makeQuery(query);
-  return queryBuilder.run();
+  const queryMaterializer = model
+    ? runtime.loadModel(model).loadQuery(query)
+    : runtime.loadQuery(query);
+  return queryMaterializer.run();
 }
 
 function getOptions(args: string[]) {

@@ -16,11 +16,7 @@ describe("db:BigQuery", () => {
         return await util.promisify(fs.readFile)(filePath, "utf8");
       },
     };
-    runtime = new malloy.Runtime({
-      urls: files,
-      schemas: bq,
-      connections: bq,
-    });
+    runtime = new malloy.Runtime(files, bq);
   });
 
   it("runs a SQL query", async () => {
@@ -47,26 +43,24 @@ describe("db:BigQuery", () => {
   it.todo("gets table structdefs");
 
   it("runs a Malloy query", async () => {
-    const result = await runtime
-      .makeModel(
+    const sql = await runtime
+      .loadModel(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
-      .makeQuery("explore carriers | reduce carrier_count")
-      .getSQL()
-      .build();
-    const res = await bq.runSQL(result.getSQL());
+      .loadQuery("explore carriers | reduce carrier_count")
+      .getSQL();
+    const res = await bq.runSQL(sql);
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
   it("streams a Malloy query for download", async () => {
-    const result = await runtime
-      .makeModel(
+    const sql = await runtime
+      .loadModel(
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
-      .makeQuery("explore carriers | reduce name")
-      .getSQL()
-      .build();
-    const res = await bq.downloadMalloyQuery(result.getSQL());
+      .loadQuery("explore carriers | reduce name")
+      .getSQL();
+    const res = await bq.downloadMalloyQuery(sql);
 
     return new Promise((resolve) => {
       let count = 0;
