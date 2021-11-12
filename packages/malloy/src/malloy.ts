@@ -49,12 +49,10 @@ export interface Loggable {
 }
 
 export class Malloy {
-  // TODO load from file built durlng release
   public static get version(): string {
     return "0.0.1";
   }
 
-  public static db: Connection;
   private static _log: Loggable;
 
   public static get log(): Loggable {

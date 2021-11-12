@@ -48,7 +48,7 @@ export type {
 } from "./runtime_types";
 export { Url } from "./runtime_types";
 
-// TODO tighten these up
+// TODO these should all go away or move to malloy.ts
 // TODO AtomicFieldType is defined in malloy.ts but also in malloy_types (and defined differently)
 export {
   AtomicFieldType,
