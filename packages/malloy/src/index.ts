@@ -36,7 +36,7 @@ export type {
   QueryField,
   Result,
   DataArray,
-  ModelRuntimeRequest,
+  ModelMaterializer,
 } from "./malloy";
 export type {
   UrlReader,

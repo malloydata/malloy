@@ -36,11 +36,11 @@ async function validateCompilation(
   return true;
 }
 
-const expressionModels = new Map<string, malloy.ModelRuntimeRequest>();
+const expressionModels = new Map<string, malloy.ModelMaterializer>();
 runtimes.forEach((runtime, databaseName) =>
   expressionModels.set(
     databaseName,
-    runtime.makeModel(`
+    runtime.loadModel(`
     export define models is ('malloytest.aircraft_models'
     model_count is count()
   )`)
@@ -50,7 +50,7 @@ runtimes.forEach((runtime, databaseName) =>
 expressionModels.forEach((orderByModel, databaseName) => {
   it(`boolean type - ${databaseName}`, async () => {
     const result = await orderByModel
-      .makeQuery(
+      .loadQuery(
         `
         explore models | reduce
           big is seats >=20
@@ -64,7 +64,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
     const result = await orderByModel
-      .makeQuery(
+      .loadQuery(
         `
         explore models | reduce
           manufacturer
@@ -82,7 +82,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
     const result = await orderByModel
-      .makeQuery(
+      .loadQuery(
         `
         explore models
           j_names is model_count : [manufacturer ~ 'J%']
@@ -95,82 +95,70 @@ expressionModels.forEach((orderByModel, databaseName) => {
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          fetch is count()
-        | project
-          fetch
+    const sql = await orderByModel
+      .loadQuery(
         `
-        )
-        .getSql()
-        .build()
-    ).getSql();
+      explore models | reduce
+        fetch is count()
+      | project
+        fetch
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          withx is (reduce
-             select is UPPER(manufacturer)
-             fetch is count()
-          )
-        | project
-          withx is lower(withx.select)
-          fetch is withx.fetch
+    const sql = await orderByModel
+      .loadQuery(
         `
+      explore models | reduce
+        withx is (reduce
+          select is UPPER(manufacturer)
+          fetch is count()
         )
-        .getSql()
-        .build()
-    ).getSql();
+      | project
+        withx is lower(withx.select)
+        fetch is withx.fetch
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it.skip("reserved words in structure definitions", async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          with is (reduce
-             select is UPPER(manufacturer)
-             fetch is count()
-          )
-        | project
-          withxis lower(withx.select)
-          fetch is with.fetch
+    const sql = await orderByModel
+      .loadQuery(
         `
+      explore models | reduce
+        with is (reduce
+          select is UPPER(manufacturer)
+          fetch is count()
         )
-        .getSql()
-        .build()
-    ).getSql();
+      | project
+        withxis lower(withx.select)
+        fetch is with.fetch
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-        explore models | reduce
-          model_count is count() : [manufacturer: ~'A%']
+    const sql = await orderByModel
+      .loadQuery(
         `
-        )
-        .getSql()
-        .build()
-    ).getSql();
+      explore models | reduce
+        model_count is count() : [manufacturer: ~'A%']
+      `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 
   it(`modeled having simple - ${databaseName}`, async () => {
     const result = await orderByModel
-      .makeQuery(
+      .loadQuery(
         `
         define popular_names is (models
           | reduce : [model_count > 100]
@@ -188,7 +176,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
   it(`modeled having complex - ${databaseName}`, async () => {
     const result = await orderByModel
-      .makeQuery(
+      .loadQuery(
         `
         define popular_names is (models
           | reduce : [model_count > 100]
@@ -209,32 +197,29 @@ expressionModels.forEach((orderByModel, databaseName) => {
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {
-    const sql = (
-      await orderByModel
-        .makeQuery(
-          `
-      define a is ('malloytest.aircraft'
-        primary key tail_num
-        aircraft_count is count(*)
-      );
+    const sql = await orderByModel
+      .loadQuery(
+        `
+    define a is ('malloytest.aircraft'
+      primary key tail_num
+      aircraft_count is count(*)
+    );
 
-      define f is ('malloytest.flights'
-        primary key id2
-        flight_count is count()
-        foo is (reduce
-          carrier
-          flight_count
-          a.aircraft_count
-        )
-        joins
-          a on tail_num
-      );
-      explore f | foo
-    `
-        )
-        .getSql()
-        .build()
-    ).getSql();
+    define f is ('malloytest.flights'
+      primary key id2
+      flight_count is count()
+      foo is (reduce
+        carrier
+        flight_count
+        a.aircraft_count
+      )
+      joins
+        a on tail_num
+    );
+    explore f | foo
+  `
+      )
+      .getSql();
     await validateCompilation(databaseName, sql);
   });
 });

@@ -53,5 +53,5 @@ export interface SqlRunner {
 }
 
 export interface LookupSqlRunner {
-  lookupQueryRunner(connectionName?: string): Promise<SqlRunner>;
+  lookupSqlRunner(connectionName?: string): Promise<SqlRunner>;
 }

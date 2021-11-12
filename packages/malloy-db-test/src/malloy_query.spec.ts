@@ -30,25 +30,21 @@ const files = {
     return await util.promisify(fs.readFile)(filePath, "utf8");
   },
 };
-const runtime = new malloy.Runtime({
-  urls: files,
-  schemas: bq,
-  connections: bq,
-});
+const runtime = new malloy.Runtime(files, bq);
 
-async function compileQueryFromQueryDef(
-  model: malloy.ModelRuntimeRequest,
+function compileQueryFromQueryDef(
+  model: malloy.ModelMaterializer,
   query: Query
 ) {
-  return (await model._makeQueryFromQueryDef(query).getSql().build()).getSql();
+  return model._loadQueryFromQueryDef(query).getSql();
 }
 
-async function compileQuery(model: malloy.ModelRuntimeRequest, query: string) {
-  return (await model.makeQuery(query).getSql().build()).getSql();
+async function compileQuery(model: malloy.ModelMaterializer, query: string) {
+  return await model.loadQuery(query).getSql();
 }
 
-async function runQuery(model: malloy.ModelRuntimeRequest, query: string) {
-  return await model.makeQuery(query).run();
+async function runQuery(model: malloy.ModelMaterializer, query: string) {
+  return await model.loadQuery(query).run();
 }
 
 async function bqCompile(sql: string): Promise<boolean> {
@@ -62,7 +58,7 @@ async function bqCompile(sql: string): Promise<boolean> {
 }
 
 describe("expression tests", () => {
-  const faa = runtime._makeModelFromModelDef(testModel);
+  const faa = runtime._loadModelFromModelDef(testModel);
 
   it("simple_pipeline", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
@@ -612,7 +608,7 @@ describe("expression tests", () => {
 
   it("table_base_on_query", async () => {
     const result = await faa
-      ._makeQueryFromQueryDef({
+      ._loadQueryFromQueryDef({
         structRef: "medicare_state_facts",
         pipeline: [
           {
@@ -630,7 +626,7 @@ describe("expression tests", () => {
 
   it("table_base_on_query2", async () => {
     const result = await faa
-      ._makeQueryFromQueryDef({
+      ._loadQueryFromQueryDef({
         structRef: {
           type: "struct",
           name: "malloy-data.malloytest.bq_medicare_test",
@@ -685,9 +681,9 @@ define ca_airports is (airports | by_fac_type : [state: 'CA' | 'NY'])
 `;
 
 describe("airport_tests", () => {
-  let model: malloy.ModelRuntimeRequest;
+  let model: malloy.ModelMaterializer;
   beforeAll(async () => {
-    model = runtime.makeModel(airportModelText);
+    model = runtime.loadModel(airportModelText);
   });
 
   it("airport_count", async () => {
@@ -889,7 +885,7 @@ describe("airport_tests", () => {
 });
 
 describe("sql injection tests", () => {
-  const model = runtime._makeModelFromModelDef(testModel);
+  const model = runtime._loadModelFromModelDef(testModel);
   jest.setTimeout(100000);
 
   test("string literal escapes quotes", async () => {

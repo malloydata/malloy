@@ -307,7 +307,7 @@ export class Runner {
   }
 
   public getSqlRunner(connectionName: string): Promise<SqlRunner> {
-    return this.lookupSqlRunner.lookupQueryRunner(connectionName);
+    return this.lookupSqlRunner.lookupSqlRunner(connectionName);
   }
 
   public static async run(
@@ -421,7 +421,7 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSqlRunner {
     return this.getConnection(connectionName);
   }
 
-  public async lookupQueryRunner(connectionName?: string): Promise<Connection> {
+  public async lookupSqlRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 }
@@ -662,22 +662,49 @@ export class Runtime {
   private compiler: Compiler;
   private runner: Runner;
 
-  constructor({
-    urls,
-    schemas,
-    connections,
-  }: {
-    urls: UrlReader;
-    schemas: LookupSchemaReader;
-    connections: LookupSqlRunner;
-  }) {
-    this.compiler = new Compiler(urls, schemas);
-    this.runner = new Runner(connections);
+  constructor(runtime: LookupSchemaReader & LookupSqlRunner & UrlReader);
+  constructor(
+    urls: UrlReader,
+    connections: LookupSchemaReader & LookupSqlRunner
+  );
+  constructor(
+    urls: UrlReader,
+    schemas: LookupSchemaReader,
+    connections: LookupSqlRunner
+  );
+  constructor(connections: LookupSchemaReader & LookupSqlRunner);
+  constructor(schemas: LookupSchemaReader, connections: LookupSqlRunner);
+  constructor(...args: (UrlReader | LookupSchemaReader | LookupSqlRunner)[]) {
+    let urlReader: UrlReader | undefined;
+    let lookupSchemaReader: LookupSchemaReader | undefined;
+    let lookupSqlRunner: LookupSqlRunner | undefined;
+    for (const arg of args) {
+      if (isUrlReader(arg)) {
+        urlReader = arg;
+      }
+      if (isLookupSchemaReader(arg)) {
+        lookupSchemaReader = arg;
+      }
+      if (isLookupSqlRunner(arg)) {
+        lookupSqlRunner = arg;
+      }
+    }
+    if (urlReader === undefined) {
+      urlReader = new EmptyUrlReader();
+    }
+    if (lookupSchemaReader === undefined) {
+      throw new Error("A LookupSchemaReader is required.");
+    }
+    if (lookupSqlRunner === undefined) {
+      throw new Error("A LookupSqlReader is required.");
+    }
+    this.compiler = new Compiler(urlReader, lookupSchemaReader);
+    this.runner = new Runner(lookupSqlRunner);
   }
 
-  public makeModel(source: ModelUrl | ModelString): ModelRuntimeRequest {
+  public loadModel(source: ModelUrl | ModelString): ModelMaterializer {
     const compiler = this.getCompiler();
-    return new ModelRuntimeRequest(this, function build() {
+    return new ModelMaterializer(this, function materialize() {
       return compiler.makeModel(source);
     });
   }
@@ -686,28 +713,51 @@ export class Runtime {
   //      as well as a `Model.fromModelDefinition` if we choose to expose
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
-  public _makeModelFromModelDef(modelDef: ModelDef): ModelRuntimeRequest {
-    return new ModelRuntimeRequest(this, async function build() {
+  public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
+    return new ModelMaterializer(this, async function materialize() {
       return new Model(modelDef, []);
     });
   }
 
-  public makeQuery(query: QueryUrl | QueryString): PreparedQueryRuntimeRequest {
-    return this.makeModel(query).getQuery();
+  public loadQuery(query: QueryUrl | QueryString): QueryMaterializer {
+    return this.loadModel(query).loadFinalQuery();
   }
 
-  public makeQueryByIndex(
+  public loadQueryByIndex(
     model: ModelUrl | ModelString,
     index: number
-  ): PreparedQueryRuntimeRequest {
-    return this.makeModel(model).getQueryByIndex(index);
+  ): QueryMaterializer {
+    return this.loadModel(model).loadQueryByIndex(index);
   }
 
-  public makeQueryByName(
+  public loadQueryByName(
     model: ModelUrl | ModelString,
     name: string
-  ): PreparedQueryRuntimeRequest {
-    return this.makeModel(model).getQueryByName(name);
+  ): QueryMaterializer {
+    return this.loadModel(model).loadQueryByName(name);
+  }
+
+  // TODO maybe use overloads for the alternative parameters
+  public getModel(source: ModelUrl | ModelString): Promise<Model> {
+    return this.loadModel(source).getModel();
+  }
+
+  public getQuery(query: QueryUrl | QueryString): Promise<PreparedQuery> {
+    return this.loadQuery(query).getPreparedQuery();
+  }
+
+  public getQueryByIndex(
+    model: ModelUrl | ModelString,
+    index: number
+  ): Promise<PreparedQuery> {
+    return this.loadQueryByIndex(model, index).getPreparedQuery();
+  }
+
+  public getQueryByName(
+    model: ModelUrl | ModelString,
+    name: string
+  ): Promise<PreparedQuery> {
+    return this.loadQueryByName(model, name).getPreparedQuery();
   }
 
   public getRunner(): Runner {
@@ -719,117 +769,171 @@ export class Runtime {
   }
 }
 
-class RuntimeRequest<T> {
+class FluentState<T> {
   protected runtime: Runtime;
-  private readonly _build: () => Promise<T>;
-  private built: Promise<T> | undefined;
+  private readonly _materialize: () => Promise<T>;
+  private materialized: Promise<T> | undefined;
 
-  constructor(runtime: Runtime, build: () => Promise<T>) {
+  constructor(runtime: Runtime, materialize: () => Promise<T>) {
     this.runtime = runtime;
-    this._build = build;
+    this._materialize = materialize;
   }
 
-  public build(): Promise<T> {
-    if (this.built === undefined) {
-      return this.rebuild();
+  protected materialize(): Promise<T> {
+    if (this.materialized === undefined) {
+      return this.rematerialize();
     }
-    return this.built;
+    return this.materialized;
   }
 
-  public rebuild(): Promise<T> {
-    this.built = this._build();
-    return this.built;
+  protected rematerialize(): Promise<T> {
+    this.materialized = this._materialize();
+    return this.materialized;
   }
 
-  protected buildQuery(
-    build: () => Promise<PreparedQuery>
-  ): PreparedQueryRuntimeRequest {
-    return new PreparedQueryRuntimeRequest(this.runtime, build);
+  protected makeQueryMaterializer(
+    materialize: () => Promise<PreparedQuery>
+  ): QueryMaterializer {
+    return new QueryMaterializer(this.runtime, materialize);
   }
 
-  protected buildExplore(build: () => Promise<Explore>): ExploreRuntimeRequest {
-    return new ExploreRuntimeRequest(this.runtime, build);
+  protected makeExploreMaterializer(
+    materialize: () => Promise<Explore>
+  ): ExploreMaterializer {
+    return new ExploreMaterializer(this.runtime, materialize);
   }
 
-  protected buildPreparedResult(
-    build: () => Promise<PreparedResult>
-  ): PreparedResultRuntimeRequest {
-    return new PreparedResultRuntimeRequest(this.runtime, build);
+  protected makePreparedResultMaterializer(
+    materialize: () => Promise<PreparedResult>
+  ): PreparedResultMaterializer {
+    return new PreparedResultMaterializer(this.runtime, materialize);
   }
 }
 
-export class ModelRuntimeRequest extends RuntimeRequest<Model> {
-  public getQuery(): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getPreparedQuery();
+export class ModelMaterializer extends FluentState<Model> {
+  public loadFinalQuery(): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getPreparedQuery();
     });
   }
 
-  public getQueryByIndex(index: number): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getPreparedQueryByIndex(index);
+  public loadQueryByIndex(index: number): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getPreparedQueryByIndex(index);
     });
   }
 
-  public getQueryByName(name: string): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getPreparedQueryByName(name);
+  public loadQueryByName(name: string): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getPreparedQueryByName(name);
     });
   }
 
-  public makeQuery(query: QueryString | QueryUrl): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
+  public loadQuery(query: QueryString | QueryUrl): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
       const model = await this.runtime
         .getCompiler()
-        .makeModel(await this.build(), query);
+        .makeModel(await this.materialize(), query);
       return model.getPreparedQuery();
     });
+  }
+
+  public getFinalQuery(): Promise<PreparedQuery> {
+    return this.loadFinalQuery().getPreparedQuery();
+  }
+
+  public getQueryByIndex(index: number): Promise<PreparedQuery> {
+    return this.loadQueryByIndex(index).getPreparedQuery();
+  }
+
+  public getQueryByName(name: string): Promise<PreparedQuery> {
+    return this.loadQueryByName(name).getPreparedQuery();
+  }
+
+  public getQuery(query: QueryString | QueryUrl): Promise<PreparedQuery> {
+    return this.loadQuery(query).getPreparedQuery();
   }
 
   // TODO Consider formalizing this. Perhaps as a `withQuery` method,
   //      as well as a `PreparedQuery.fromQueryDefinition` if we choose to expose
   //      `InternalQuery` to the world formally. For now, this should only
   //      be used in tests.
-  public _makeQueryFromQueryDef(
-    query: InternalQuery
-  ): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      const model = await this.build();
+  public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      const model = await this.materialize();
       return new PreparedQuery(query, model._getModelDef());
     });
   }
 
-  public getExploreByName(name: string): ExploreRuntimeRequest {
-    return this.buildExplore(async () => {
-      return (await this.build()).getExploreByName(name);
+  public loadExploreByName(name: string): ExploreMaterializer {
+    return this.makeExploreMaterializer(async () => {
+      return (await this.materialize()).getExploreByName(name);
     });
+  }
+
+  public getExploreByName(name: string): Promise<Explore> {
+    return this.loadExploreByName(name).getExplore();
+  }
+
+  public getModel(): Promise<Model> {
+    return this.materialize();
   }
 }
 
-class PreparedQueryRuntimeRequest extends RuntimeRequest<PreparedQuery> {
+class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(): Promise<Result> {
-    return this.runtime.getRunner().run(await this.getSql().build());
+    return this.runtime
+      .getRunner()
+      .run(await this.loadPreparedResult().getPreparedResult());
   }
 
-  public getSql(): PreparedResultRuntimeRequest {
-    return this.buildPreparedResult(async () => {
-      return (await this.build()).getPreparedResult();
+  public loadPreparedResult(): PreparedResultMaterializer {
+    return this.makePreparedResultMaterializer(async () => {
+      return (await this.materialize()).getPreparedResult();
     });
+  }
+
+  public getPreparedResult(): Promise<PreparedResult> {
+    return this.loadPreparedResult().getPreparedResult();
+  }
+
+  public async getSql(): Promise<string> {
+    return (await this.getPreparedResult()).getSql();
+  }
+
+  public getPreparedQuery(): Promise<PreparedQuery> {
+    return this.materialize();
   }
 }
 
-class PreparedResultRuntimeRequest extends RuntimeRequest<PreparedResult> {
+class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(): Promise<Result> {
-    const preparedSql = await this.build();
+    const preparedSql = await this.materialize();
     return this.runtime.getRunner().run(preparedSql);
   }
+
+  public getPreparedResult(): Promise<PreparedResult> {
+    return this.materialize();
+  }
+
+  public async getSql(): Promise<string> {
+    return (await this.getPreparedResult()).getSql();
+  }
 }
 
-class ExploreRuntimeRequest extends RuntimeRequest<Explore> {
-  getQueryByName(name: string): PreparedQueryRuntimeRequest {
-    return this.buildQuery(async () => {
-      return (await this.build()).getQueryByName(name);
+class ExploreMaterializer extends FluentState<Explore> {
+  public loadQueryByName(name: string): QueryMaterializer {
+    return this.makeQueryMaterializer(async () => {
+      return (await this.materialize()).getQueryByName(name);
     });
+  }
+
+  public getQueryByName(name: string): Promise<PreparedQuery> {
+    return this.loadQueryByName(name).getPreparedQuery();
+  }
+
+  public getExplore(): Promise<Explore> {
+    return this.materialize();
   }
 }
 
@@ -866,4 +970,22 @@ export class DataArray {
   public toObject(): QueryData {
     return this.queryData;
   }
+}
+
+function isUrlReader(
+  thing: UrlReader | LookupSchemaReader | LookupSqlRunner
+): thing is UrlReader {
+  return "readUrl" in thing;
+}
+
+function isLookupSchemaReader(
+  thing: UrlReader | LookupSchemaReader | LookupSqlRunner
+): thing is LookupSchemaReader {
+  return "lookupSchemaReader" in thing;
+}
+
+function isLookupSqlRunner(
+  thing: UrlReader | LookupSchemaReader | LookupSqlRunner
+): thing is LookupSqlRunner {
+  return "lookupSqlRunner" in thing;
 }

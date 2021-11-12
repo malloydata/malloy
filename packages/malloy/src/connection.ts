@@ -59,7 +59,7 @@ export abstract class Connection
     return Promise.resolve(this);
   }
 
-  public lookupQueryRunner(connectionName?: string): Promise<Connection> {
+  public lookupSqlRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 

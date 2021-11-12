@@ -191,12 +191,7 @@ export function runMalloyQuery(
 
       const vscodeFiles = new VscodeUrlReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
-
-      const runtime = new Runtime({
-        urls: files,
-        schemas: BIGQUERY_CONNECTION,
-        connections: BIGQUERY_CONNECTION,
-      });
+      const runtime = new Runtime(files, BIGQUERY_CONNECTION);
 
       return (async () => {
         try {
@@ -209,31 +204,30 @@ export function runMalloyQuery(
           );
           progress.report({ increment: 20, message: "Compiling" });
 
-          let prepareSql;
+          let queryMaterializer;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
-              .makeQuery(query.text)
-              .getSql();
+            queryMaterializer = runtime
+              .loadModel(Url.fromString("file://" + query.file.uri.fsPath))
+              .loadQuery(query.text);
           } else if (query.type === "named") {
-            prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
-              .getQueryByName(query.name)
-              .getSql();
+            queryMaterializer = runtime.loadQueryByName(
+              Url.fromString("file://" + query.file.uri.fsPath),
+              query.name
+            );
           } else {
-            prepareSql = runtime
-              .makeModel(Url.fromString("file://" + query.file.uri.fsPath))
-              .getQueryByIndex(query.index)
-              .getSql();
+            queryMaterializer = runtime.loadQueryByIndex(
+              Url.fromString("file://" + query.file.uri.fsPath),
+              query.index
+            );
           }
 
           try {
-            const preparedSql = await prepareSql.build();
+            const sql = await queryMaterializer.getSql();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
-            malloyLog.appendLine(preparedSql.getSql());
+            malloyLog.appendLine(sql);
           } catch (error) {
             current.panel.webview.html = renderErrorHtml(
               new Error(error.message || "Something went wrong.")
@@ -250,7 +244,7 @@ export function runMalloyQuery(
             loadingIndicator("Running")
           );
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await prepareSql.run();
+          const queryResult = await queryMaterializer.run();
           if (canceled) return;
 
           const runEnd = performance.now();
