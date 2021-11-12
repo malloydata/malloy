@@ -16,7 +16,6 @@ export * from "./model";
 export * from "./lang";
 export {
   Malloy,
-  Runner,
   Runtime,
   EmptyURLReader,
   InMemoryURLReader,
@@ -37,6 +36,8 @@ export type {
   Result,
   DataArray,
   ModelMaterializer,
+  DocumentSymbol,
+  DocumentHighlight,
 } from "./malloy";
 export type {
   URLReader,

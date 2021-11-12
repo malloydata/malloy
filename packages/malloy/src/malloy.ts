@@ -12,7 +12,12 @@
  */
 
 import { Connection } from "./connection";
-import { LogMessage, MalloyTranslator } from "./lang";
+import {
+  DocumentHighlight as DocumentHighlightDefinition,
+  DocumentSymbol as DocumentSymbolDefinition,
+  LogMessage,
+  MalloyTranslator,
+} from "./lang";
 import {
   CompiledQuery,
   FieldTypeDef,
@@ -30,7 +35,6 @@ import {
   LookupSchemaReader,
   ModelString,
   ModelURL,
-  SQLRunner,
   QueryString,
   QueryURL,
   URL,
@@ -48,6 +52,18 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
+async function getURLAndContents(urlReader: URLReader, source: URL | string) {
+  if (source instanceof URL) {
+    const contents = await urlReader.readURL(source);
+    return { contents, url: source };
+  } else {
+    return {
+      contents: source,
+      url: URL.fromString("internal://internal.malloy"),
+    };
+  }
+}
+
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
@@ -63,6 +79,98 @@ export class Malloy {
 
   public static setLogger(log: Loggable): void {
     Malloy._log = log;
+  }
+
+  public static parse(source: string, url?: URL): Parse {
+    if (url === undefined) {
+      url = URL.fromString("internal://internal.malloy");
+    }
+    const translator = new MalloyTranslator(url.toString(), {
+      urls: { [url.toString()]: source },
+    });
+    return new Parse(translator);
+  }
+
+  public static async compile(
+    urlReader: URLReader,
+    lookupSchemaReader: LookupSchemaReader,
+    parse: Parse,
+    model?: Model
+  ): Promise<Model> {
+    const translator = parse._getTranslator();
+    translator.translate(model?._getModelDef());
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const result = translator.translate();
+      if (result.final) {
+        if (result.translated) {
+          return new Model(
+            result.translated.modelDef,
+            result.translated.queryList
+          );
+        } else {
+          const errors = result.errors || [];
+          throw new MalloyError(
+            `Error(s) compiling model: ${errors[0]?.message}.`,
+            errors
+          );
+        }
+      } else if (result.urls) {
+        for (const neededUrl of result.urls) {
+          if (neededUrl.startsWith("internal://")) {
+            throw new Error(
+              "In order to use relative imports, you must compile a file via a URL."
+            );
+          }
+          const neededText = await urlReader.readURL(URL.fromString(neededUrl));
+          const urls = { [neededUrl]: neededText };
+          translator.update({ urls });
+        }
+      } else if (result.tables) {
+        // collect tables by connection name since there may be multiple connections
+        const tablesByConnection: Map<
+          string | undefined,
+          Array<string>
+        > = new Map();
+        for (const connectionTableString of result.tables) {
+          const { connectionName, tableName } = parseTableName(
+            connectionTableString
+          );
+
+          let connectionToTablesMap = tablesByConnection.get(connectionName);
+          if (!connectionToTablesMap) {
+            connectionToTablesMap = [tableName];
+          } else {
+            connectionToTablesMap.push(tableName);
+          }
+          tablesByConnection.set(connectionName, connectionToTablesMap);
+        }
+
+        // iterate over connections, fetching schema for all missing tables
+        for (const [connectionName, tableNames] of tablesByConnection) {
+          const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
+            connectionName
+          );
+          const tables = await schemaFetcher.fetchSchemaForTables(tableNames);
+          translator.update({ tables });
+        }
+      }
+    }
+  }
+
+  public static async run(
+    lookupSQLRunner: LookupSQLRunner,
+    preparedResult: PreparedResult
+  ): Promise<Result> {
+    const sqlRunner = await lookupSQLRunner.lookupSQLRunner(
+      preparedResult.getConnectionName()
+    );
+    const result = await sqlRunner.runSQL(preparedResult.getSQL());
+    return new Result({
+      ...preparedResult._getRawQuery(),
+      result: result.rows,
+      totalRows: result.totalRows,
+    });
   }
 }
 
@@ -162,165 +270,145 @@ function parseTableName(connectionTableString: string) {
   }
 }
 
-export class Compiler {
-  private urlReader: URLReader;
-  private lookupSchemaReader: LookupSchemaReader;
+export class Parse {
+  translator: MalloyTranslator;
 
-  constructor(urlReader: URLReader, lookupSchemaReader: LookupSchemaReader) {
-    this.urlReader = urlReader;
-    this.lookupSchemaReader = lookupSchemaReader;
+  constructor(translator: MalloyTranslator) {
+    this.translator = translator;
   }
 
-  private async _compile(
-    url: URL,
-    malloy: string,
-    model?: ModelDef
-  ): Promise<{ modelDef: ModelDef; queryList: InternalQuery[] }> {
-    const translator = new MalloyTranslator(url.toString(), {
-      urls: { [url.toString()]: malloy },
-    });
-    translator.translate(model);
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      const result = translator.translate();
-      if (result.final) {
-        if (result.translated) {
-          return {
-            modelDef: result.translated.modelDef,
-            queryList: result.translated.queryList,
-          };
-        } else {
-          const errors = result.errors || [];
-          throw new MalloyError(
-            `Error(s) compiling model: ${errors[0]?.message}.`,
-            errors
-          );
-        }
-      } else if (result.urls) {
-        for (const neededURL of result.urls) {
-          if (neededURL.startsWith("internal://")) {
-            throw new Error(
-              "In order to use relative imports, you must compile a file via a URL."
-            );
-          }
-          const neededText = await this.urlReader.readURL(
-            URL.fromString(neededURL)
-          );
-          const urls = { [neededURL]: neededText };
-          translator.update({ urls });
-        }
-      } else if (result.tables) {
-        // collect tables by connection name since there may be multiple connections
-        const tablesByConnection: Map<
-          string | undefined,
-          Array<string>
-        > = new Map();
-        for (const connectionTableString of result.tables) {
-          const { connectionName, tableName } = parseTableName(
-            connectionTableString
-          );
-
-          let connectionToTablesMap = tablesByConnection.get(connectionName);
-          if (!connectionToTablesMap) {
-            connectionToTablesMap = [tableName];
-          } else {
-            connectionToTablesMap.push(tableName);
-          }
-          tablesByConnection.set(connectionName, connectionToTablesMap);
-        }
-
-        // iterate over connections, fetching schema for all missing tables
-        for (const [connectionName, tableNames] of tablesByConnection) {
-          const schemaFetcher =
-            await this.lookupSchemaReader.lookupSchemaReader(connectionName);
-          const tables = await schemaFetcher.fetchSchemaForTables(tableNames);
-          translator.update({ tables });
-        }
-      }
-    }
+  getHighlights(): DocumentHighlight[] {
+    return (this.translator.metadata().highlights || []).map(
+      (highlight) => new DocumentHighlight(highlight)
+    );
   }
 
-  private async toURLAndContents(source: URL | string) {
-    if (source instanceof URL) {
-      const contents = await this.urlReader.readURL(source);
-      return { contents, url: source };
-    } else {
-      return {
-        contents: source,
-        url: URL.fromString("internal://internal.malloy"),
-      };
-    }
+  getSymbols(): DocumentSymbol[] {
+    return (this.translator.metadata().symbols || []).map(
+      (symbol) => new DocumentSymbol(symbol)
+    );
   }
 
-  public async makeModel(model: ModelString | ModelURL): Promise<Model>;
-  public async makeModel(
-    model: ModelString | ModelURL | Model,
-    query: QueryString | QueryURL
-  ): Promise<Model>;
-  public async makeModel(
-    primaryOrBase: ModelString | ModelURL | Model,
-    maybePrimary?: ModelString | ModelURL | QueryString | QueryURL
-  ): Promise<Model> {
-    let primary: ModelString | ModelURL | QueryString | QueryURL;
-    let base: ModelString | ModelURL | Model | undefined;
-    if (maybePrimary === undefined) {
-      if (primaryOrBase instanceof Model) {
-        throw new Error(
-          "Internal error: last parameter cannot already be a compiled model."
-        );
-      }
-      primary = primaryOrBase;
-    } else {
-      primary = maybePrimary;
-      base = primaryOrBase;
-    }
-    let model: ModelDef | undefined;
-
-    if (base !== undefined) {
-      if (base instanceof Model) {
-        model = base._getModelDef();
-      } else {
-        const { url, contents } = await this.toURLAndContents(base);
-        model = (await this._compile(url, contents)).modelDef;
-      }
-    }
-
-    const { url, contents } = await this.toURLAndContents(primary);
-    const { modelDef, queryList } = await this._compile(url, contents, model);
-    return new Model(modelDef, queryList);
+  _getTranslator(): MalloyTranslator {
+    return this.translator;
   }
 }
 
-export class Runner {
-  private lookupSQLRunner: LookupSQLRunner;
+export class DocumentHighlight {
+  private range: DocumentRange;
+  private type: string;
 
-  constructor(lookupSQLRunner: LookupSQLRunner) {
-    this.lookupSQLRunner = lookupSQLRunner;
+  constructor(documentHighlight: DocumentHighlightDefinition) {
+    this.range = new DocumentRange(
+      new DocumentPosition(
+        documentHighlight.range.start.line,
+        documentHighlight.range.start.character
+      ),
+      new DocumentPosition(
+        documentHighlight.range.end.line,
+        documentHighlight.range.end.character
+      )
+    );
+    this.type = documentHighlight.type;
   }
 
-  public async run(
-    preparedSQL: PreparedResult | Promise<PreparedResult>
-  ): Promise<Result> {
-    preparedSQL = await preparedSQL;
-    const sqlRunner = await this.getSQLRunner(preparedSQL.getConnectionName());
-    return Runner.run(sqlRunner, preparedSQL);
+  getRange(): DocumentRange {
+    return this.range;
   }
 
-  public getSQLRunner(connectionName: string): Promise<SQLRunner> {
-    return this.lookupSQLRunner.lookupSQLRunner(connectionName);
+  getType(): string {
+    return this.type;
+  }
+}
+
+export class DocumentRange {
+  private start: DocumentPosition;
+  private end: DocumentPosition;
+
+  constructor(start: DocumentPosition, end: DocumentPosition) {
+    this.start = start;
+    this.end = end;
   }
 
-  public static async run(
-    sqlRunner: SQLRunner,
-    preparedSQL: PreparedResult | Promise<PreparedResult>
-  ): Promise<Result> {
-    preparedSQL = await preparedSQL;
-    const result = await sqlRunner.runSQL(preparedSQL.getSQL());
-    return new Result({
-      ...preparedSQL._getRawQuery(),
-      result: result.rows,
-      totalRows: result.totalRows,
-    });
+  public getStart(): DocumentPosition {
+    return this.start;
+  }
+
+  public getEnd(): DocumentPosition {
+    return this.end;
+  }
+
+  toJSON(): {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  } {
+    return {
+      start: this.start.toJSON(),
+      end: this.end.toJSON(),
+    };
+  }
+}
+
+export class DocumentPosition {
+  private line: number;
+  private character: number;
+
+  constructor(line: number, character: number) {
+    this.line = line;
+    this.character = character;
+  }
+
+  getLine(): number {
+    return this.line;
+  }
+
+  getCharacter(): number {
+    return this.character;
+  }
+
+  toJSON(): { line: number; character: number } {
+    return { line: this.line, character: this.character };
+  }
+}
+
+export class DocumentSymbol {
+  private range: DocumentRange;
+  private type: string;
+  private name: string;
+  private children: DocumentSymbol[];
+
+  constructor(documentSymbol: DocumentSymbolDefinition) {
+    this.range = new DocumentRange(
+      new DocumentPosition(
+        documentSymbol.range.start.line,
+        documentSymbol.range.start.character
+      ),
+      new DocumentPosition(
+        documentSymbol.range.end.line,
+        documentSymbol.range.end.character
+      )
+    );
+    this.type = documentSymbol.type;
+    this.name = documentSymbol.name;
+    this.children = documentSymbol.children.map(
+      (child) => new DocumentSymbol(child)
+    );
+  }
+
+  getRange(): DocumentRange {
+    return this.range;
+  }
+
+  getType(): string {
+    return this.type;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getChildren(): DocumentSymbol[] {
+    return this.children;
   }
 }
 
@@ -659,8 +747,9 @@ export class ExploreField extends Explore {
 }
 
 export class Runtime {
-  private compiler: Compiler;
-  private runner: Runner;
+  private urlReader: URLReader;
+  private lookupSchemaReader: LookupSchemaReader;
+  private lookupSQLRunner: LookupSQLRunner;
 
   constructor(runtime: LookupSchemaReader & LookupSQLRunner & URLReader);
   constructor(
@@ -698,14 +787,28 @@ export class Runtime {
     if (lookupSQLRunner === undefined) {
       throw new Error("A LookupSQLReader is required.");
     }
-    this.compiler = new Compiler(urlReader, lookupSchemaReader);
-    this.runner = new Runner(lookupSQLRunner);
+    this.urlReader = urlReader;
+    this.lookupSQLRunner = lookupSQLRunner;
+    this.lookupSchemaReader = lookupSchemaReader;
+  }
+
+  public getURLReader(): URLReader {
+    return this.urlReader;
+  }
+
+  public getLookupSQLRunner(): LookupSQLRunner {
+    return this.lookupSQLRunner;
+  }
+
+  public getLookupSchemaReader(): LookupSchemaReader {
+    return this.lookupSchemaReader;
   }
 
   public loadModel(source: ModelURL | ModelString): ModelMaterializer {
-    const compiler = this.getCompiler();
-    return new ModelMaterializer(this, function materialize() {
-      return compiler.makeModel(source);
+    return new ModelMaterializer(this, async () => {
+      const { url, contents } = await getURLAndContents(this.urlReader, source);
+      const parsed = Malloy.parse(contents, url);
+      return Malloy.compile(this.urlReader, this.lookupSchemaReader, parsed);
     });
   }
 
@@ -758,14 +861,6 @@ export class Runtime {
     name: string
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name).getPreparedQuery();
-  }
-
-  public getRunner(): Runner {
-    return this.runner;
-  }
-
-  public getCompiler(): Compiler {
-    return this.compiler;
   }
 }
 
@@ -831,10 +926,18 @@ export class ModelMaterializer extends FluentState<Model> {
 
   public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      const model = await this.runtime
-        .getCompiler()
-        .makeModel(await this.materialize(), query);
-      return model.getPreparedQuery();
+      const urlReader = this.runtime.getURLReader();
+      const lookupSchemaReader = this.runtime.getLookupSchemaReader();
+      const { url, contents } = await getURLAndContents(urlReader, query);
+      const parsed = Malloy.parse(contents, url);
+      const model = await this.getModel();
+      const queryModel = await Malloy.compile(
+        urlReader,
+        lookupSchemaReader,
+        parsed,
+        model
+      );
+      return queryModel.getPreparedQuery();
     });
   }
 
@@ -882,9 +985,9 @@ export class ModelMaterializer extends FluentState<Model> {
 
 class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(): Promise<Result> {
-    return this.runtime
-      .getRunner()
-      .run(await this.loadPreparedResult().getPreparedResult());
+    const lookupSQLRunner = this.runtime.getLookupSQLRunner();
+    const preparedResult = await this.getPreparedResult();
+    return Malloy.run(lookupSQLRunner, preparedResult);
   }
 
   public loadPreparedResult(): PreparedResultMaterializer {
@@ -908,8 +1011,8 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
 
 class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(): Promise<Result> {
-    const preparedSQL = await this.materialize();
-    return this.runtime.getRunner().run(preparedSQL);
+    const preparedResult = await this.getPreparedResult();
+    return Malloy.run(this.runtime.getLookupSQLRunner(), preparedResult);
   }
 
   public getPreparedResult(): Promise<PreparedResult> {
