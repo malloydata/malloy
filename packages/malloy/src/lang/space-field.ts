@@ -372,7 +372,7 @@ export class FANSPaceField extends SpaceField {
 // the expression and determine the return type
 //
 // TODO smart logic about naming this field based on the expression
-export class ExpressionFieldFromAst extends SpaceField {
+export class ExpressionFieldFromAST extends SpaceField {
   fieldName: string;
   constructor(
     readonly space: TranslationFieldSpace,

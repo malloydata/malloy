@@ -650,7 +650,7 @@ function sqlSumDistinct(
   const precision = 9;
   const uniqueInt = dialect.sqlSumDistinctHashedKey(sqlDistintKey);
   const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
-  const sumSql = `
+  const sumSQL = `
   (
     SUM(DISTINCT
       (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS NUMERIC) +
@@ -659,7 +659,7 @@ function sqlSumDistinct(
     -
      SUM(DISTINCT ${uniqueInt})
   )`;
-  let ret = `(${sumSql}/(${multiplier}*1.0))`;
+  let ret = `(${sumSQL}/(${multiplier}*1.0))`;
   ret = `CAST(${ret} as ${dialect.defaultNumberType})`;
   return ret;
 }
@@ -1664,9 +1664,9 @@ class QueryQuery extends QueryField {
             `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
           );
         }
-        const fkSql = fkDim.generateExpression(this.rootResult);
-        const pkSql = pkDim.generateExpression(this.rootResult);
-        onCondition = `${fkSql} = ${pkSql}`;
+        const fkSQL = fkDim.generateExpression(this.rootResult);
+        const pkSQL = pkDim.generateExpression(this.rootResult);
+        onCondition = `${fkSQL} = ${pkSQL}`;
       } else {
         // type == "conditionOn"
         onCondition = new QueryFieldBoolean(
@@ -2171,7 +2171,7 @@ class QueryQuery extends QueryField {
     }
 
     // calculate the ordering.
-    const obSql = [];
+    const obSQL = [];
     let orderingField;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
@@ -2186,13 +2186,13 @@ class QueryQuery extends QueryField {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
       if (resultStruct.firstSegment.type === "reduce") {
-        obSql.push(
+        obSQL.push(
           ` ${orderingField.name}__${resultStruct.groupSet} ${
             ordering.dir || "ASC"
           }`
         );
       } else if (resultStruct.firstSegment.type === "project") {
-        obSql.push(
+        obSQL.push(
           ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
             ordering.dir || "ASC"
           }`
@@ -2200,8 +2200,8 @@ class QueryQuery extends QueryField {
       }
     }
 
-    if (obSql.length > 0) {
-      orderBy = ` ORDER BY ${obSql.join(",")}`;
+    if (obSQL.length > 0) {
+      orderBy = ` ORDER BY ${obSQL.join(",")}`;
     }
 
     for (const [name, field] of resultStruct.allFields) {

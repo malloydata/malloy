@@ -19,10 +19,10 @@ import {
   StructDef,
 } from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
 
-export class HtmlPointMapRenderer extends HtmlChartRenderer {
+export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(value: QueryValue, field: FieldDef): string | number {
     switch (field.type) {
       case "number":

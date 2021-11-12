@@ -14,7 +14,7 @@
 import { DataPointer, DataValue } from "../data_table";
 import { Renderer } from "../renderer";
 
-export class HtmlLinkRenderer implements Renderer {
+export class HTMLLinkRenderer implements Renderer {
   async render(data: DataValue, _ref: DataPointer): Promise<string> {
     if (data === null) {
       return `⌀`;

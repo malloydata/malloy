@@ -36,11 +36,11 @@ import {
 
 export interface BigQueryManagerOptions {
   credentials?: {
-    clientID: string;
+    clientId: string;
     clientSecret: string;
     refreshToken: string | null;
   };
-  projectID?: string | undefined;
+  projectId?: string | undefined;
   userAgent: string;
 }
 
@@ -89,7 +89,7 @@ export class BigQueryConnection extends Connection {
   };
 
   private bigQuery: BigQuerySDK;
-  private projectID;
+  private projectId;
   private temporaryTables = new Map<string, string>();
 
   private resultCache = new Map<string, MalloyQueryData>();
@@ -124,7 +124,7 @@ export class BigQueryConnection extends Connection {
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
     // we want to use the tables API
-    this.projectID = this.bigQuery.projectId;
+    this.projectId = this.bigQuery.projectId;
 
     this.queryOptions = queryOptions;
   }
@@ -146,7 +146,7 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  public async runSql(
+  public async runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {}
   ): Promise<MalloyQueryData> {
@@ -235,36 +235,36 @@ export class BigQueryConnection extends Connection {
 
     // paths can have two or three segments
     // if there are only two segments, assume the dataset is "local" to the current billing project
-    let projectID, datasetName, tableName;
+    let projectId, datasetName, tableName;
     if (segments.length === 2) {
       [datasetName, tableName] = segments;
       if (pathPrefix !== undefined) {
-        projectID = pathPrefix;
+        projectId = pathPrefix;
       }
     } else if (segments.length === 3)
-      [projectID, datasetName, tableName] = segments;
+      [projectId, datasetName, tableName] = segments;
     else
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
       );
 
-    // TODO resolve having to set projectID - this will at some point result in "concurrency" issue
+    // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
     // temporarily tell BigQuery SDK to use the passed project ID so that API routes are correct.
     // once we're done, set it back to our project ID.
-    if (projectID) this.bigQuery.projectId = projectID;
+    if (projectId) this.bigQuery.projectId = projectId;
 
     const table = this.bigQuery.dataset(datasetName).table(tableName);
 
     try {
       const [metadata] = await table.getMetadata();
-      this.bigQuery.projectId = this.projectID;
+      this.bigQuery.projectId = this.projectId;
       return metadata.schema;
     } catch (e) {
       throw maybeRewriteError(e);
     }
   }
 
-  public async executeSqlRaw(sqlCommand: string): Promise<QueryData> {
+  public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
     const result = await this.runBigQueryJob(sqlCommand);
     return result[0];
   }

@@ -25,7 +25,7 @@ import { Query } from "@malloy-lang/malloy";
 
 const bq = new BigQueryConnection("test");
 const files = {
-  readUrl: async (url: malloy.Url) => {
+  readURL: async (url: malloy.URL) => {
     const filePath = url.toString().replace(/^file:\/\//, "");
     return await util.promisify(fs.readFile)(filePath, "utf8");
   },
@@ -36,11 +36,11 @@ function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
   query: Query
 ) {
-  return model._loadQueryFromQueryDef(query).getSql();
+  return model._loadQueryFromQueryDef(query).getSQL();
 }
 
 async function compileQuery(model: malloy.ModelMaterializer, query: string) {
-  return await model.loadQuery(query).getSql();
+  return await model.loadQuery(query).getSQL();
 }
 
 async function runQuery(model: malloy.ModelMaterializer, query: string) {
@@ -49,7 +49,7 @@ async function runQuery(model: malloy.ModelMaterializer, query: string) {
 
 async function bqCompile(sql: string): Promise<boolean> {
   try {
-    await bq.executeSqlRaw(`WITH test AS(\n${sql}) SELECT 1`);
+    await bq.executeSQLRaw(`WITH test AS(\n${sql}) SELECT 1`);
   } catch (e) {
     malloy.Malloy.log.error(`SQL: didn't compile\n=============\n${sql}`);
     throw e;

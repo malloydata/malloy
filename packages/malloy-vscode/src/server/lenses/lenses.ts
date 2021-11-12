@@ -40,7 +40,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
 
   const uri = document.uri.toString();
   const translator = new MalloyTranslator(uri, {
-    URLs: {
+    urls: {
       [uri]: document.getText(),
     },
   });

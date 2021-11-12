@@ -31,7 +31,7 @@ import {
   runQueryWithEdit,
   showLicensesCommand,
 } from "./commands";
-import { showResultJsonCommand } from "./commands/show_result_json";
+import { showResultJSONCommand } from "./commands/show_result_json";
 
 let client: LanguageClient;
 
@@ -119,8 +119,8 @@ function registerCommands(context: vscode.ExtensionContext): void {
   // Show result JSON
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "malloy.showResultJson",
-      showResultJsonCommand
+      "malloy.showResultJSON",
+      showResultJSONCommand
     )
   );
 }

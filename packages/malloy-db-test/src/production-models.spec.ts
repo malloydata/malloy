@@ -33,7 +33,7 @@ describe(`compiling server models`, () => {
         const srcURI = `model://${filePath}`;
         test(`checking ${srcURI}`, async () => {
           const src = {
-            URLs: { [srcURI]: fs.readFileSync(filePath, "utf-8") },
+            urls: { [srcURI]: fs.readFileSync(filePath, "utf-8") },
           };
           const trans = new MalloyTranslator(srcURI, src);
           expect(trans).toBeValidMalloy();
@@ -43,15 +43,15 @@ describe(`compiling server models`, () => {
             if (tr.tables) {
               const tables = await db.fetchSchemaForTables(tr.tables);
               trans.update({ tables });
-            } else if (tr.URLs) {
+            } else if (tr.urls) {
               const files: { [fileName: string]: string } = {};
-              for (const neededFile of tr.URLs) {
+              for (const neededFile of tr.urls) {
                 files[neededFile] = fs.readFileSync(
                   neededFile.replace("model://", ""),
                   "utf-8"
                 );
               }
-              trans.update({ URLs: files });
+              trans.update({ urls: files });
             } else {
               expect(trans).toBeErrorless();
               expect(tr).toHaveProperty("translated");

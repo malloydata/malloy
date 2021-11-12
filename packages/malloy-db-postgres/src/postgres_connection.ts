@@ -59,7 +59,7 @@ export class PostgresConnection extends Connection {
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJson: boolean
+    deJSON: boolean
   ): Promise<MalloyQueryData> {
     const client = new Client();
     await client.connect();
@@ -68,7 +68,7 @@ export class PostgresConnection extends Connection {
     if (result instanceof Array) {
       result = result.pop();
     }
-    if (deJson) {
+    if (deJSON) {
       for (let i = 0; i < result.rows.length; i++) {
         result.rows[i] = result.rows[i].row;
       }
@@ -116,12 +116,12 @@ export class PostgresConnection extends Connection {
     return structDef;
   }
 
-  public async executeSqlRaw(query: string): Promise<QueryData> {
+  public async executeSQLRaw(query: string): Promise<QueryData> {
     const queryData = await this.runPostgresQuery(query, 1000, 0, false);
     return queryData.rows;
   }
 
-  public async runSql(
+  public async runSQL(
     sqlCommand: string,
     pageSize = 1000,
     rowIndex = 0

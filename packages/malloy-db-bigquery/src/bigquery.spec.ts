@@ -11,7 +11,7 @@ describe("db:BigQuery", () => {
   beforeAll(() => {
     bq = new BigQueryConnection("test");
     const files = {
-      readUrl: async (url: malloy.Url) => {
+      readURL: async (url: malloy.URL) => {
         const filePath = url.toString().replace(/^file:\/\//, "");
         return await util.promisify(fs.readFile)(filePath, "utf8");
       },
@@ -20,7 +20,7 @@ describe("db:BigQuery", () => {
   });
 
   it("runs a SQL query", async () => {
-    const res = await bq.runSql(`SELECT 1 as t`);
+    const res = await bq.runSQL(`SELECT 1 as t`);
     expect(res.rows[0]["t"]).toBe(1);
   });
 
@@ -48,8 +48,8 @@ describe("db:BigQuery", () => {
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
       .loadQuery("explore carriers | reduce carrier_count")
-      .getSql();
-    const res = await bq.runSql(sql);
+      .getSQL();
+    const res = await bq.runSQL(sql);
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
@@ -59,7 +59,7 @@ describe("db:BigQuery", () => {
         "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
       )
       .loadQuery("explore carriers | reduce name")
-      .getSql();
+      .getSQL();
     const res = await bq.downloadMalloyQuery(sql);
 
     return new Promise((resolve) => {

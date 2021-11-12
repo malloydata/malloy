@@ -17,8 +17,8 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, DataTreeRoot, HtmlView } from "@malloy-lang/render";
-import { Runner, Runtime, Url, UrlReader } from "@malloy-lang/malloy";
+import { DataStyles, DataTreeRoot, HTMLView } from "@malloy-lang/render";
+import { Runner, Runtime, URL, URLReader } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import path from "path";
 import { promises as fs } from "fs";
@@ -82,7 +82,7 @@ async function fetchFile(uri: string) {
   return fs.readFile(uri.replace(/^file:\/\//, ""), "utf8");
 }
 
-class DocsUrlReader implements UrlReader {
+class DocsURLReader implements URLReader {
   private dataStyles: DataStyles = {};
   private readonly modelPath: string;
 
@@ -90,7 +90,7 @@ class DocsUrlReader implements UrlReader {
     this.modelPath = modelPath;
   }
 
-  async readUrl(url: Url): Promise<string> {
+  async readURL(url: URL): Promise<string> {
     const contents = await fetchFile(url.toString());
     addDependency(this.modelPath, url.toString().replace(/^file:\/\//, ""));
     this.dataStyles = {
@@ -119,7 +119,7 @@ export async function runCode(
   documentPath: string,
   options: RunOptions
 ): Promise<string> {
-  const urlReader = new DocsUrlReader(documentPath);
+  const urlReader = new DocsURLReader(documentPath);
   const runtime = new Runtime({
     urls: urlReader,
     schemas: BIGQUERY_CONNECTION,
@@ -151,11 +151,11 @@ export async function runCode(
   // imports don't work. It shouldn't be necessary to show relative imports
   // in runnable docs. If this changes, the `urlReader` will need to be able to
   // handle reading a fake URL for the query as well as real URLs for local files.
-  const preparedQuery = await runtime.makeQuery(fullQuery).getSql().build();
+  const preparedQuery = await runtime.makeQuery(fullQuery).getSQL().build();
   const queryResult = await Runner.run(
     {
-      runSql: (sql: string) =>
-        BIGQUERY_CONNECTION.runSql(sql, {
+      runSQL: (sql: string) =>
+        BIGQUERY_CONNECTION.runSQL(sql, {
           pageSize: options.pageSize || 5,
         }),
     },
@@ -175,7 +175,7 @@ export async function runCode(
     ...urlReader.getHackyAccumulatedDataStyles(),
   };
 
-  const result = await new HtmlView().render(
+  const result = await new HTMLView().render(
     new DataTreeRoot(
       queryResult.getData().toObject(),
       namedField._getStructDef(),

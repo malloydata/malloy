@@ -40,7 +40,7 @@ CURRENTLY HAS TWO MODES
 
 async function translateMalloy(fileSrc: string, url = "malloy://cli/stdin") {
   const mt = new MalloyTranslator(url);
-  mt.update({ URLs: { [url]: fileSrc } });
+  mt.update({ urls: { [url]: fileSrc } });
   let translating = true;
   let mr = mt.translate();
   while (translating) {

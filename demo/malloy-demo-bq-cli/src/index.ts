@@ -16,12 +16,12 @@ import { promises as fs } from "fs";
 import * as path from "path";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
-export function pathToUrl(filePath: string): malloy.Url {
-  return malloy.Url.fromString("file://" + path.resolve(filePath));
+export function pathToURL(filePath: string): malloy.URL {
+  return malloy.URL.fromString("file://" + path.resolve(filePath));
 }
 
 export function run(
-  files: malloy.UrlReader,
+  files: malloy.URLReader,
   args: string[]
 ): Promise<malloy.Result> {
   const connection = new BigQueryConnection("bigquery");
@@ -34,19 +34,19 @@ export function run(
 }
 
 function getOptions(args: string[]) {
-  let query: malloy.QueryUrl | malloy.QueryString | undefined;
-  let model: malloy.ModelUrl | malloy.ModelString | undefined;
+  let query: malloy.QueryURL | malloy.QueryString | undefined;
+  let model: malloy.ModelURL | malloy.ModelString | undefined;
   while (args.length >= 2) {
     const [option, value] = args;
     args = args.slice(2);
     if (option === "--query") {
       query = value;
     } else if (option === "--query-file") {
-      query = malloy.Url.fromString("file://" + path.resolve(value));
+      query = malloy.URL.fromString("file://" + path.resolve(value));
     } else if (option === "--model") {
       model = value;
     } else if (option === "--model-file") {
-      model = malloy.Url.fromString("file://" + path.resolve(value));
+      model = malloy.URL.fromString("file://" + path.resolve(value));
     }
   }
   if (query === undefined) {
@@ -57,7 +57,7 @@ function getOptions(args: string[]) {
 
 export async function main(): Promise<void> {
   const files = {
-    readUrl: async (url: malloy.Url) => {
+    readURL: async (url: malloy.URL) => {
       const filePath = url.toString().replace(/^file:\/\//, "");
       return fs.readFile(filePath, "utf8");
     },

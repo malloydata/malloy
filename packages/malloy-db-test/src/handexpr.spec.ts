@@ -30,8 +30,8 @@ async function validateCompilation(
       throw new Error(`Unknown database ${databaseName}`);
     }
     await (
-      await runtime.getRunner().getSqlRunner(databaseName)
-    ).runSql(`WITH test AS(\n${sql}) SELECT 1`);
+      await runtime.getRunner().getSQLRunner(databaseName)
+    ).runSQL(`WITH test AS(\n${sql}) SELECT 1`);
   } catch (e) {
     console.log(`SQL: didn't compile\n=============\n${sql}`);
     throw e;
@@ -39,11 +39,11 @@ async function validateCompilation(
   return true;
 }
 
-function compileHandQueryToSql(
+function compileHandQueryToSQL(
   model: malloy.ModelMaterializer,
   queryDef: Query
 ): Promise<string> {
-  return model._loadQueryFromQueryDef(queryDef).getSql();
+  return model._loadQueryFromQueryDef(queryDef).getSQL();
 }
 
 export const modelHandBase: StructDef = {
@@ -232,7 +232,7 @@ const handModel = bqRuntime._loadModelFromModelDef(handCodedModel);
 const databaseName = "bigquery";
 
 it(`hand query hand model - ${databaseName}`, async () => {
-  const sql = await compileHandQueryToSql(handModel, {
+  const sql = await compileHandQueryToSQL(handModel, {
     structRef: "aircraft",
     pipeline: [
       {
@@ -311,7 +311,7 @@ it(`default sort order by dir - ${databaseName}`, async () => {
 });
 
 it(`hand turtle2 - ${databaseName}`, async () => {
-  const sql = await compileHandQueryToSql(handModel, {
+  const sql = await compileHandQueryToSQL(handModel, {
     structRef: "aircraft",
     pipeline: [
       {
@@ -336,7 +336,7 @@ it(`hand turtle2 - ${databaseName}`, async () => {
 });
 
 it(`hand turtle3 - ${databaseName}`, async () => {
-  const sql = await compileHandQueryToSql(handModel, {
+  const sql = await compileHandQueryToSQL(handModel, {
     structRef: "aircraft",
     pipeline: [
       {
@@ -351,7 +351,7 @@ it(`hand turtle3 - ${databaseName}`, async () => {
 });
 
 it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
-  const sql = await compileHandQueryToSql(handModel, {
+  const sql = await compileHandQueryToSQL(handModel, {
     structRef: "aircraft",
     pipeHead: { name: "hand_turtle_pipeline" },
     pipeline: [],
@@ -620,7 +620,7 @@ it(`hand join ON - ${databaseName}`, async () => {
         },
       ],
     })
-    .getSql();
+    .getSQL();
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
   // expect(result.getData().toObject()[0].total_seats).toBe(452415);
