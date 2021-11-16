@@ -11,9 +11,9 @@
  * GNU General Public License for more details.
  */
 
-import { isDimensional, isMeasureLike } from "@malloy-lang/malloy";
+import { DataArray, isDimensional, isMeasureLike } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
-import { DataPointer, DataValue, isDataTree } from "../data_table";
+import { DataPointer, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
 
@@ -22,8 +22,8 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
     size: "medium",
   };
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataArray): Promise<string> {
+    if (!table.isArray()) {
       return "Invalid data for chart renderer.";
     }
     const metadata = table.structDef;

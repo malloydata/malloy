@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "@malloy-lang/malloy";
+import { DataArray, Field, Explore, ExploreField } from "@malloy-lang/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { Renderer } from "../renderer";
@@ -34,12 +34,11 @@ import { HTMLShapeMapRenderer } from "./shape_map";
 import { HTMLTableRenderer } from "./table";
 import { HTMLTextRenderer } from "./text";
 import { HTMLVegaSpecRenderer } from "./vega_spec";
-import { DataTreeRoot } from "../data_table";
 import { ContainerRenderer } from "./container";
 
 export class HTMLView {
-  async render(table: DataTreeRoot, dataStyles: DataStyles): Promise<string> {
-    const renderer = makeRenderer(table.structDef, dataStyles, {
+  async render(table: DataArray, dataStyles: DataStyles): Promise<string> {
+    const renderer = makeRenderer(table.getField(), dataStyles, {
       size: "large",
     });
     try {
@@ -49,7 +48,7 @@ export class HTMLView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(table, undefined);
+      return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
         return error.toString();
@@ -60,10 +59,10 @@ export class HTMLView {
   }
 }
 
-function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
-  let renderer = dataStyles[field.name];
-  if (!renderer && "resultMetadata" in field && field.resultMetadata) {
-    for (const sourceClass of field.resultMetadata.sourceClasses) {
+function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
+  let renderer = dataStyles[field.getName()];
+  if (!renderer && "getSourceClasses" in field) {
+    for (const sourceClass of field.getSourceClasses()) {
       if (!renderer) {
         renderer = dataStyles[sourceClass];
       }
@@ -72,59 +71,65 @@ function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
   return renderer;
 }
 
-function isContainer(field: FieldDef): StructDef {
-  if (field.type === "struct") {
+function isContainer(field: Field | Explore): ExploreField {
+  if (field.hasParentExplore() && field.isExploreField()) {
     return field;
   } else {
     throw new Error(
-      `${field.name} does not contain fields and cannot be rendered this way`
+      `${field.getName()} does not contain fields and cannot be rendered this way`
     );
   }
 }
 
 export function makeRenderer(
-  field: FieldDef,
+  field: Explore | Field,
   dataStyles: DataStyles,
   styleDefaults: StyleDefaults
 ): Renderer {
   const renderDef = getRendererOptions(field, dataStyles) || {};
 
-  if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
+  if (
+    renderDef.renderer === "shape_map" ||
+    field.getName().endsWith("_shape_map")
+  ) {
     return new HTMLShapeMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "point_map" ||
-    field.name.endsWith("_point_map")
+    field.getName().endsWith("_point_map")
   ) {
     return new HTMLPointMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "segment_map" ||
-    field.name.endsWith("_segment_map")
+    field.getName().endsWith("_segment_map")
   ) {
     return new HTMLSegmentMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "dashboard" ||
-    field.name.endsWith("_dashboard")
+    field.getName().endsWith("_dashboard")
   ) {
     return ContainerRenderer.make(
       HTMLDashboardRenderer,
       isContainer(field),
       dataStyles
     );
-  } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
+  } else if (
+    renderDef.renderer === "json" ||
+    field.getName().endsWith("_json")
+  ) {
     return new HTMLJSONRenderer();
   } else if (
     renderDef.renderer === "line_chart" ||
-    field.name.endsWith("_line_chart")
+    field.getName().endsWith("_line_chart")
   ) {
     return new HTMLLineChartRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "scatter_chart" ||
-    field.name.endsWith("_scatter_chart")
+    field.getName().endsWith("_scatter_chart")
   ) {
     return new HTMLScatterChartRenderer(styleDefaults);
   } else if (renderDef.renderer === "bar_chart") {
     return new HTMLBarChartRenderer(styleDefaults, renderDef);
-  } else if (field.name.endsWith("_bar_chart")) {
+  } else if (field.getName().endsWith("_bar_chart")) {
     return new HTMLBarChartRenderer(styleDefaults, {});
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
@@ -145,22 +150,33 @@ export function makeRenderer(
         throw new Error(`No Vega renderer named ${renderDef.spec_name}`);
       }
     } else {
-      throw new Error(`No top level vega spec defined for ${field.name}`);
+      throw new Error(`No top level vega spec defined for ${field.getName()}`);
     }
   } else {
     if (
       renderDef.renderer === "time" ||
-      field.type === "date" ||
-      field.type === "timestamp"
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        (field.getType() === "date" || field.getType() === "timestamp"))
     ) {
       return new HTMLDateRenderer();
     } else if (renderDef.renderer === "currency") {
       return new HTMLCurrencyRenderer();
-    } else if (renderDef.renderer === "number" || field.type === "number") {
+    } else if (
+      renderDef.renderer === "number" ||
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        field.getType() === "number")
+    ) {
       return new HTMLNumberRenderer();
     } else if (renderDef.renderer === "bytes") {
       return new HTMLBytesRenderer();
-    } else if (renderDef.renderer === "boolean" || field.type === "boolean") {
+    } else if (
+      renderDef.renderer === "boolean" ||
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        field.getType() === "boolean")
+    ) {
       return new HTMLBooleanRenderer();
     } else if (renderDef.renderer === "link") {
       return new HTMLLinkRenderer();
@@ -176,7 +192,11 @@ export function makeRenderer(
         isContainer(field),
         dataStyles
       );
-    } else if (renderDef.renderer === "table" || field.type === "struct") {
+    } else if (
+      renderDef.renderer === "table" ||
+      !field.hasParentExplore() ||
+      field.isExploreField()
+    ) {
       return ContainerRenderer.make(
         HTMLTableRenderer,
         isContainer(field),

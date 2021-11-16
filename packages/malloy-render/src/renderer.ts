@@ -11,20 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import { DataValue, DataPointer } from "./data_table";
+import { DataArray } from "@malloy-lang/malloy";
 
 export type ChildRenderers = { [fieldName: string]: Renderer };
 
 export interface Renderer {
-  render(value: DataValue, ref: DataPointer | undefined): Promise<string>;
+  render(value: DataArray): Promise<string>;
 }
 
 export abstract class RenderTree implements Renderer {
   protected abstract get childRenderers(): ChildRenderers;
 
-  // abstract render(data: QueryValue, metadata: FieldDef): Promise<string>;
-  abstract render(
-    value: DataValue,
-    ref: DataPointer | undefined
-  ): Promise<string>;
+  abstract render(value: DataArray): Promise<string>;
 }

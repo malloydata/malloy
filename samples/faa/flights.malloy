@@ -260,3 +260,5 @@ sfo_dashboard is (
   flights |
   airport_dashboard : [origin.code: 'SFO']
 );
+
+'malloy-303216.todd_pos.upload1' | project *
