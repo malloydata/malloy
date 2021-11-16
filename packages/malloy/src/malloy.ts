@@ -52,18 +52,6 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
-async function getURLAndContents(urlReader: URLReader, source: URL | string) {
-  if (source instanceof URL) {
-    const contents = await urlReader.readURL(source);
-    return { contents, url: source };
-  } else {
-    return {
-      contents: source,
-      url: URL.fromString("internal://internal.malloy"),
-    };
-  }
-}
-
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
@@ -81,7 +69,7 @@ export class Malloy {
     Malloy._log = log;
   }
 
-  public static parse(source: string, url?: URL): Parse {
+  private static _parse(source: string, url?: URL): Parse {
     if (url === undefined) {
       url = URL.fromString("internal://internal.malloy");
     }
@@ -91,12 +79,51 @@ export class Malloy {
     return new Parse(translator);
   }
 
-  public static async compile(
-    urlReader: URLReader,
-    lookupSchemaReader: LookupSchemaReader,
-    parse: Parse,
-    model?: Model
-  ): Promise<Model> {
+  public static parse({
+    url,
+    urlReader,
+  }: {
+    url: URL;
+    urlReader: URLReader;
+  }): Promise<Parse>;
+  public static parse({ source, url }: { url?: URL; source: string }): Parse;
+  public static parse({
+    url,
+    urlReader,
+    source,
+  }: {
+    url?: URL;
+    source?: string;
+    urlReader?: URLReader;
+  }): Parse | Promise<Parse> {
+    if (source !== undefined) {
+      return Malloy._parse(source, url);
+    } else {
+      if (urlReader === undefined) {
+        throw new Error("Internal Error: urlReader is required.");
+      }
+      if (url === undefined) {
+        throw new Error(
+          "Internal Error: url is required if source not present."
+        );
+      }
+      return urlReader.readURL(url).then((source) => {
+        return Malloy._parse(source, url);
+      });
+    }
+  }
+
+  public static async compile({
+    urlReader,
+    lookupSchemaReader,
+    parse,
+    model,
+  }: {
+    urlReader: URLReader;
+    lookupSchemaReader: LookupSchemaReader;
+    parse: Parse;
+    model?: Model;
+  }): Promise<Model> {
     const translator = parse._getTranslator();
     translator.translate(model?._getModelDef());
     // eslint-disable-next-line no-constant-condition
@@ -158,10 +185,13 @@ export class Malloy {
     }
   }
 
-  public static async run(
-    lookupSQLRunner: LookupSQLRunner,
-    preparedResult: PreparedResult
-  ): Promise<Result> {
+  public static async run({
+    lookupSQLRunner,
+    preparedResult,
+  }: {
+    lookupSQLRunner: LookupSQLRunner;
+    preparedResult: PreparedResult;
+  }): Promise<Result> {
     const sqlRunner = await lookupSQLRunner.lookupSQLRunner(
       preparedResult.getConnectionName()
     );
@@ -806,9 +836,20 @@ export class Runtime {
 
   public loadModel(source: ModelURL | ModelString): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      const { url, contents } = await getURLAndContents(this.urlReader, source);
-      const parsed = Malloy.parse(contents, url);
-      return Malloy.compile(this.urlReader, this.lookupSchemaReader, parsed);
+      const parse =
+        source instanceof URL
+          ? await Malloy.parse({
+              url: source,
+              urlReader: this.urlReader,
+            })
+          : Malloy.parse({
+              source,
+            });
+      return Malloy.compile({
+        urlReader: this.urlReader,
+        lookupSchemaReader: this.lookupSchemaReader,
+        parse,
+      });
     });
   }
 
@@ -928,15 +969,22 @@ export class ModelMaterializer extends FluentState<Model> {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.getURLReader();
       const lookupSchemaReader = this.runtime.getLookupSchemaReader();
-      const { url, contents } = await getURLAndContents(urlReader, query);
-      const parsed = Malloy.parse(contents, url);
+      const parse =
+        query instanceof URL
+          ? await Malloy.parse({
+              url: query,
+              urlReader: urlReader,
+            })
+          : Malloy.parse({
+              source: query,
+            });
       const model = await this.getModel();
-      const queryModel = await Malloy.compile(
+      const queryModel = await Malloy.compile({
         urlReader,
         lookupSchemaReader,
-        parsed,
-        model
-      );
+        parse,
+        model,
+      });
       return queryModel.getPreparedQuery();
     });
   }
@@ -987,7 +1035,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(): Promise<Result> {
     const lookupSQLRunner = this.runtime.getLookupSQLRunner();
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run(lookupSQLRunner, preparedResult);
+    return Malloy.run({ lookupSQLRunner, preparedResult });
   }
 
   public loadPreparedResult(): PreparedResultMaterializer {
@@ -1012,7 +1060,8 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
 class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run(this.runtime.getLookupSQLRunner(), preparedResult);
+    const lookupSQLRunner = this.runtime.getLookupSQLRunner();
+    return Malloy.run({ lookupSQLRunner, preparedResult });
   }
 
   public getPreparedResult(): Promise<PreparedResult> {

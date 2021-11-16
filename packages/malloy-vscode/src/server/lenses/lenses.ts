@@ -37,7 +37,7 @@ const explain = `
 
 export function getMalloyLenses(document: TextDocument): CodeLens[] {
   const lenses: CodeLens[] = [];
-  const symbols = Malloy.parse(document.getText()).getSymbols();
+  const symbols = Malloy.parse({ source: document.getText() }).getSymbols();
 
   let currentUnnamedQueryIndex = 0;
   symbols.forEach((symbol) => {
