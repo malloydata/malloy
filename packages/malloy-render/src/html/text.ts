@@ -14,7 +14,7 @@
 import { DataPointer, DataValue } from "../data_table";
 import { Renderer } from "../renderer";
 
-export class HtmlTextRenderer implements Renderer {
+export class HTMLTextRenderer implements Renderer {
   getText(value: DataValue): string | null {
     return `${value}`;
   }

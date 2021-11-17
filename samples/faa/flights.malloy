@@ -204,7 +204,7 @@ export define flights is (explore flights_base
         dest_code is destination_code
         dep_delay
         arr_delay
-        )
+      )
     )
   )
 

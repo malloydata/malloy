@@ -45,21 +45,23 @@ explore flights : [
 You can think of flight data as event data.  The below is a classic map/reduce roll up of the filght data by carrier and day, plane and day, and individual events for each plane.
 
 ```malloy
-  sessionize is (reduce : [carrier:'WN', dep_time: @2002-03-03]
-    dep_time.`date`
-    carrier
-    flight_count
-    plane is (reduce top 20
+sessionize is ( reduce
+  flight_date is dep_time.`date`
+  carrier
+  daily_flight_count is flight_count
+  per_plane_data is (reduce top 20
+    tail_num
+    plane_flight_count is flight_count
+    flight_legs is (reduce order by 2
       tail_num
-      flight_count
-      flights is (reduce order by 2
-        tail_num
-        dep_minute is dep_time.minute
-        origin_code
-        destination_code
-      )
+      dep_minute is dep_time.minute
+      origin_code
+      dest_code is destination_code
+      dep_delay
+      arr_delay
     )
   )
+)
 ```
 
 
@@ -74,7 +76,7 @@ explore flights : [carrier:'WN', dep_time: @2002-03-03]
 All of the queries above are executed against the following model:
 
 ```malloy
-define airports is (explore 'malloy-data.faa.airports'
+export define airports is (explore 'malloy-data.faa.airports'
   primary key code
   name is concat(code, ' - ', full_name)
   airport_count is count()
@@ -97,7 +99,20 @@ define aircraft is (explore 'malloy-data.faa.aircraft'
   aircraft_models is join on aircraft_model_code
 );
 
-export define flights is (explore 'malloy-data.faa.flights'
+export define flights_base is (explore 'malloy-data.faa.flights'
+  primary key id2
+);
+
+define aircraft_facts is (explore
+  (explore flights_base | reduce
+    tail_num
+    lifetime_flights is count()
+    lifetime_distance is distance.sum()
+  )
+  lifetime_flights_bucketed is floor(lifetime_flights/1000)*1000
+);
+
+export define flights is (explore flights_base
   primary key id2
   -- rename some fields
   origin_code renames origin
@@ -108,6 +123,7 @@ export define flights is (explore 'malloy-data.faa.flights'
   origin is join airports on origin_code
   destination is join airports on destination_code,
   aircraft is join on tail_num
+  aircraft_facts is join on tail_num
 
   -- measures
   flight_count is count()
@@ -138,7 +154,7 @@ export define flights is (explore 'malloy-data.faa.flights'
   )
 
   -- shows plane manufacturers and frequency of use
-  by_manufacturer is (reduce top 20
+  by_manufacturer is (reduce top 5
     aircraft.aircraft_models.manufacturer
     aircraft.aircraft_count
     flight_count
@@ -157,9 +173,11 @@ export define flights is (explore 'malloy-data.faa.flights'
   )
 
   seats_by_distance is (reduce
-    seats is floor(aircraft.aircraft_models.seats/5)*5 -- rounded to 5
+    -- seats rounded to 5
+    seats is floor(aircraft.aircraft_models.seats/5)*5
     flight_count
-    distance is floor(distance/20)*20 -- rounded to 20
+    -- distance rounded to 20
+    distance is floor(distance/20)*20
   )
 
   routes_map is (reduce
@@ -184,6 +202,14 @@ export define flights is (explore 'malloy-data.faa.flights'
     carriers_by_month
     routes_map
     delay_by_hour_of_day
+  )
+
+  plane_usage is (reduce order by 1 desc : [aircraft.aircraft_count > 1]
+    aircraft_facts.lifetime_flights_bucketed
+    aircraft.aircraft_count
+    flight_count
+    by_manufacturer
+    by_carrier
   )
 
   -- explore flights : [carriers.nickname : 'Southwest'] | carrier_dashboard
@@ -216,7 +242,7 @@ export define flights is (explore 'malloy-data.faa.flights'
   )
 
   -- query that you might run for to build a flight search interface
-  -- explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
+  --   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
   kayak is (reduce
     carriers is (reduce
       carriers.nickname
@@ -238,19 +264,21 @@ export define flights is (explore 'malloy-data.faa.flights'
   )
 
   -- example query that shows how you can build a map reduce job to sessionize flights
-  sessionize is (reduce : [carrier:'WN', dep_time: @2002-03-03]
-    dep_time.`date`
+  sessionize is (reduce
+    flight_date is dep_time.`date`
     carrier
-    flight_count
-    plane is (reduce top 20
+    daily_flight_count is flight_count
+    per_plane_data is (reduce top 20
       tail_num
-      flight_count
-      flights is (reduce order by 2
+      plane_flight_count is flight_count
+      flight_legs is (reduce order by 2
         tail_num
         dep_minute is dep_time.minute
         origin_code
-        destination_code
-        )
+        dest_code is destination_code
+        dep_delay
+        arr_delay
+      )
     )
   )
 

@@ -11,20 +11,20 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, isMeasureLike } from "malloy";
+import { FieldDef, isMeasureLike } from "@malloy-lang/malloy";
 import {
   BarChartRenderOptions,
   ChartSize,
   StyleDefaults,
 } from "../data_styles";
 import { DataValue, DataPointer, isDataTree } from "../data_table";
-import { HtmlVegaSpecRenderer, vegaSpecs } from "./vega_spec";
+import { HTMLVegaSpecRenderer, vegaSpecs } from "./vega_spec";
 
 function isOrdninal(f: FieldDef): boolean {
   return ["string", "date", "timestamp", "boolean"].includes(f.type);
 }
 
-export class HtmlBarChartRenderer extends HtmlVegaSpecRenderer {
+export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
   size: ChartSize;
   constructor(styleDefaults: StyleDefaults, options: BarChartRenderOptions) {
     super(styleDefaults, vegaSpecs["bar_SM"]);

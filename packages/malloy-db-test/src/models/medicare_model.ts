@@ -11,11 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "../malloy_types";
+import { StructDef } from "@malloy-lang/malloy";
 
 /** Medicare Model */
 export const medicareModel: StructDef = {
   as: "medicare_test",
+  dialect: "standardsql",
   fields: [
     // Fields in the flights table.
     { name: "id", numberType: "integer", type: "number" },
@@ -172,9 +173,9 @@ export const medicareModel: StructDef = {
       ],
     },
   ],
-  name: "lookerdata.liquor.medicare_test",
+  name: "malloy-data.malloytest.bq_medicare_test",
   primaryKey: "id",
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   structSource: { type: "table" },
   type: "struct",
 };
@@ -182,7 +183,8 @@ export const medicareModel: StructDef = {
 export const medicareStateFacts: StructDef = {
   fields: [],
   name: "medicare_state_facts",
-  structRelationship: { type: "basetable" },
+  dialect: "standardsql",
+  structRelationship: { type: "basetable", connectionName: "test" },
   structSource: {
     query: {
       structRef: "medicare_test",
@@ -203,7 +205,7 @@ export const medicareStateFacts: StructDef = {
 
 // export const medicareStateFacts: StructDef = {
 //   type: 'struct',
-//   name: '(SELECT provider_state, COUNT(DISTINCT provider_id) as num_providers FROM lookerdata.liquor.medicare_test GROUP BY 1)',
+//   name: '(SELECT provider_state, COUNT(DISTINCT provider_id) as num_providers FROM malloytest.medicare_test GROUP BY 1)',
 //   as: 'medicare_state_facts',
 //   structRelationship: {type:'basetable'},
 //   structSource: {type:'table'},

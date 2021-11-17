@@ -1,0 +1,17 @@
+{
+  "name": "@malloy-lang/db-test",
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest",
+    "build": "yarn tsc --build"
+  },
+  "dependencies": {
+    "@malloy-lang/malloy": "*",
+    "@malloy-lang/db-bigquery": "*"
+  }
+}

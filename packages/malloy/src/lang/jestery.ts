@@ -27,8 +27,8 @@ declare global {
       toTranslate(): R;
       toBeValidMalloy(): R;
       toHaveExploreErrors(...errs: string[]): R;
-      toEqualAst(result: MalloyElement): R;
-      toMakeAst(astRoot: string, wantAst: MalloyElement): R;
+      toEqualAST(result: MalloyElement): R;
+      toMakeAST(astRoot: string, wantAST: MalloyElement): R;
       toMakeQuery(query: Query): R;
     }
   }
@@ -70,13 +70,13 @@ function checkForErrors(trans: MalloyTranslator) {
 
 /**
  * Diff the readable "toString" dump of an AST to compare two ASTs
- * @param goodAst
- * @param checkAst
+ * @param goodAST
+ * @param checkAST
  * @returns MatchResult
  */
-function compareAst(goodAst: MalloyElement, checkAst: MalloyElement) {
-  const astGoalStr = goodAst.toString();
-  const astStr = checkAst?.toString() || "";
+function compareAST(goodAST: MalloyElement, checkAST: MalloyElement) {
+  const astGoalStr = goodAST.toString();
+  const astStr = checkAST?.toString() || "";
   if (astGoalStr !== astStr) {
     const diffString = jestDiff(astGoalStr, astStr, {
       contextLines: 5,
@@ -118,14 +118,14 @@ expect.extend({
     return checkForErrors(x);
   },
 
-  toEqualAst: function (checkAst: MalloyElement, goodAst: MalloyElement) {
-    return compareAst(goodAst, checkAst);
+  toEqualAST: function (checkAST: MalloyElement, goodAST: MalloyElement) {
+    return compareAST(goodAST, checkAST);
   },
 
-  toMakeAst: function (
+  toMakeAST: function (
     source: string,
     astRule: string,
-    goodAst: MalloyElement
+    goodAST: MalloyElement
   ) {
     const trans = new TestTranslator(source, astRule);
     expect(trans).toBeValidMalloy();
@@ -137,7 +137,7 @@ expect.extend({
         "jest and typescript need some time alone together to work things out"
       );
     }
-    return compareAst(goodAst, ast);
+    return compareAST(goodAST, ast);
   },
 
   toHaveExploreErrors: function (src: string, ...errs: string[]) {

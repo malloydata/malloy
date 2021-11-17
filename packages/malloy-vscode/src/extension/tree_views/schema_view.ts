@@ -13,60 +13,74 @@
 
 import * as path from "path";
 import * as vscode from "vscode";
-import { Malloy, FieldDef, MalloyTranslator, NamedMalloyObject } from "malloy";
+import {
+  Explore,
+  Runtime,
+  URL,
+  JoinRelationship,
+  Field,
+  QueryField,
+  AtomicField,
+} from "@malloy-lang/malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
 import timeIcon from "../../media/time.svg";
 import structIcon from "../../media/struct.svg";
-import turtleIcon from "../../media/turtle.svg";
+import queryIcon from "../../media/turtle.svg";
 import stringIcon from "../../media/string.svg";
 import oneToManyIcon from "../../media/one_to_many.svg";
 import manyToOneIcon from "../../media/many_to_one.svg";
 import oneToOneIcon from "../../media/one_to_one.svg";
-import { MALLOY_EXTENSION_STATE } from "../state";
+import { BIGQUERY_CONNECTION, MALLOY_EXTENSION_STATE } from "../state";
+import { VSCodeURLReader } from "../utils";
 
 export class SchemaProvider
-  implements vscode.TreeDataProvider<StructItem | FieldItem>
+  implements vscode.TreeDataProvider<ExploreItem | FieldItem>
 {
-  private readonly resultCache: Map<string, StructItem[]>;
+  private readonly resultCache: Map<string, ExploreItem[]>;
   private previousKey: string | undefined;
 
   constructor() {
     this.resultCache = new Map();
   }
 
-  getTreeItem(element: StructItem): vscode.TreeItem {
+  getTreeItem(element: ExploreItem): vscode.TreeItem {
     return element;
   }
 
   private _onDidChangeTreeData: vscode.EventEmitter<
-    (StructItem | FieldItem) | undefined
-  > = new vscode.EventEmitter<(StructItem | FieldItem) | undefined>();
+    (ExploreItem | FieldItem) | undefined
+  > = new vscode.EventEmitter<(ExploreItem | FieldItem) | undefined>();
 
   readonly onDidChangeTreeData: vscode.Event<
-    (StructItem | FieldItem) | undefined
+    (ExploreItem | FieldItem) | undefined
   > = this._onDidChangeTreeData.event;
 
   refresh(): void {
     this._onDidChangeTreeData.fire(undefined);
   }
 
-  async getChildren(element?: StructItem): Promise<(StructItem | FieldItem)[]> {
+  async getChildren(
+    element?: ExploreItem
+  ): Promise<(ExploreItem | FieldItem)[]> {
     if (element) {
-      return (element.struct.fields || []).sort(byKindThenName).map((field) => {
-        const newPath = [...element.accessPath, field.as || field.name];
-        if (field.type === "struct") {
-          return new StructItem(
-            element.topLevelExplore,
-            field,
-            newPath,
-            element.struct.fields?.length === 1
-          );
-        } else {
-          return new FieldItem(element.topLevelExplore, field, newPath);
-        }
-      });
+      return element.explore
+        .getFields()
+        .sort(byKindThenName)
+        .map((field) => {
+          const newPath = [...element.accessPath, field.getName()];
+          if (field.isExploreField()) {
+            return new ExploreItem(
+              element.topLevelExplore,
+              field,
+              newPath,
+              element.explore.getFields().length === 1
+            );
+          } else {
+            return new FieldItem(element.topLevelExplore, field, newPath);
+          }
+        });
     } else {
       const document =
         vscode.window.activeTextEditor?.document ||
@@ -84,17 +98,17 @@ export class SchemaProvider
         return this.resultCache.get(cacheKey) || [];
       }
 
-      const structs = await getStructs(document);
-      if (structs === undefined) {
+      const explores = await getStructs(document);
+      if (explores === undefined) {
         return this.resultCache.get(cacheKey) || [];
       } else {
-        const results = structs.map(
-          (struct) =>
-            new StructItem(
-              struct.as || struct.name,
-              struct,
+        const results = explores.map(
+          (explore) =>
+            new ExploreItem(
+              explore.getName(),
+              explore,
               [],
-              structs.length === 1
+              explores.length === 1
             )
         );
         this.resultCache.set(cacheKey, results);
@@ -104,70 +118,49 @@ export class SchemaProvider
   }
 }
 
-async function fetchFile(uri: string): Promise<string> {
-  return (
-    await vscode.workspace.openTextDocument(uri.replace(/^file:\/\//, ""))
-  ).getText();
-}
-
 async function getStructs(
   document: vscode.TextDocument
-): Promise<NamedMalloyObject[] | undefined> {
-  const uri = document.uri.toString();
-  const translator = new MalloyTranslator(uri, {
-    URLs: {
-      [uri]: document.getText(),
-    },
-  });
-  let done = false;
-  let nameSpace;
-  while (!done) {
-    const result = translator.translate();
-    done = result.final || false;
-    if (result.translated) {
-      nameSpace = result.translated.modelDef.structs;
-    } else if (result.URLs) {
-      for (const neededUri of result.URLs) {
-        const URLs = { [neededUri]: await fetchFile(neededUri) };
-        translator.update({ URLs });
-      }
-    } else if (result.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-      translator.update({ tables });
-    }
-  }
+): Promise<Explore[] | undefined> {
+  const uri = URL.fromString("file://" + document.uri.fsPath);
+  const files = new VSCodeURLReader();
+  try {
+    const runtime = new Runtime(files, BIGQUERY_CONNECTION);
+    const model = await runtime.getModel(uri);
 
-  if (nameSpace) {
-    return Object.values(nameSpace).sort(exploresByName);
+    return Object.values(model.getExplores()).sort(exploresByName);
+  } catch (error) {
+    return undefined;
   }
-  return undefined;
 }
 
-class StructItem extends vscode.TreeItem {
+class ExploreItem extends vscode.TreeItem {
   constructor(
     public topLevelExplore: string,
-    public struct: NamedMalloyObject,
+    public explore: Explore,
     public accessPath: string[],
     open: boolean
   ) {
     super(
-      struct.as || struct.name,
+      explore.getName(),
       open
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.Collapsed
     );
-    this.tooltip = struct.as || struct.name;
+    this.tooltip = explore.getName();
 
-    let subtype = "base";
-
-    if (struct.type === "struct") {
-      if (struct.structRelationship.type === "foreignKey") {
-        subtype = "many_to_one";
-      } else if (struct.structRelationship.type === "nested") {
-        subtype = "one_to_many";
-      } else if (struct.structRelationship.type === "inline") {
-        subtype = "one_to_one";
-      }
+    let subtype;
+    if (explore.hasParentExplore()) {
+      const relationship = explore.getJoinRelationship();
+      subtype =
+        relationship === JoinRelationship.ManyToOne
+          ? "many_to_one"
+          : relationship === JoinRelationship.OneToMany
+          ? "one_to_many"
+          : JoinRelationship.OneToOne
+          ? "one_to_one"
+          : "base";
+    } else {
+      subtype = "base";
     }
 
     this.iconPath = {
@@ -180,18 +173,18 @@ class StructItem extends vscode.TreeItem {
 class FieldItem extends vscode.TreeItem {
   constructor(
     public topLevelExplore: string,
-    public field: FieldDef,
+    public field: AtomicField | QueryField,
     public accessPath: string[]
   ) {
-    super(field.name, vscode.TreeItemCollapsibleState.None);
-    this.contextValue = field.type;
+    super(field.getName(), vscode.TreeItemCollapsibleState.None);
+    this.contextValue = this.type();
     this.tooltip = new vscode.MarkdownString(
       `
-$(symbol-field) \`${field.name}\`
+$(symbol-field) \`${field.getName()}\`
 
 **Path**: \`${this.accessPath.join(".")}\`
 
-**Type**: \`${field.type}\`
+**Type**: \`${this.type()}\`
     `,
       true
     );
@@ -204,12 +197,18 @@ $(symbol-field) \`${field.name}\`
   };
 
   iconPath = {
-    light: getIconPath(this.field.type, this.isAggregate()),
-    dark: getIconPath(this.field.type, this.isAggregate()),
+    light: getIconPath(this.type(), this.isAggregate()),
+    dark: getIconPath(this.type(), this.isAggregate()),
   };
 
   isAggregate() {
-    return "aggregate" in this.field && !!this.field.aggregate;
+    return this.field.isAtomicField() && this.field.isAggregate();
+  }
+
+  type() {
+    return this.field.isAtomicField()
+      ? this.field.getType().toString()
+      : "query";
   }
 }
 
@@ -244,8 +243,8 @@ function getIconPath(fieldType: string, isAggregate: boolean) {
       case "boolean":
         imageFileName = booleanIcon;
         break;
-      case "turtle":
-        imageFileName = turtleIcon;
+      case "query":
+        imageFileName = queryIcon;
 
         break;
       default:
@@ -264,12 +263,12 @@ export function runTurtleFromSchemaCommand(fieldItem: FieldItem): void {
   );
 }
 
-function byKindThenName(field1: FieldDef, field2: FieldDef) {
+function byKindThenName(field1: Field, field2: Field) {
   const kind1 = kindOrd(field1);
   const kind2 = kindOrd(field2);
   if (kind1 === kind2) {
-    const name1 = field1.as || field1.name;
-    const name2 = field2.as || field2.name;
+    const name1 = field1.getName();
+    const name2 = field2.getName();
     if (name1 < name2) {
       return -1;
     }
@@ -281,27 +280,24 @@ function byKindThenName(field1: FieldDef, field2: FieldDef) {
   return kind1 - kind2;
 }
 
-function kindOrd(field: FieldDef) {
-  if (field.type === "turtle") {
+function kindOrd(field: Field) {
+  if (field.isQueryField()) {
     return 0;
   }
-  if (field.type === "struct") {
+  if (field.isExploreField()) {
     return 4;
   }
-  if ("aggregate" in field && field.aggregate) {
+  if (field.isAtomicField() && field.isAggregate()) {
     return 2;
   }
   return 1;
 }
 
-function exploresByName(
-  struct1: NamedMalloyObject,
-  struct2: NamedMalloyObject
-) {
-  if (struct1.name < struct2.name) {
+function exploresByName(struct1: Explore, struct2: Explore) {
+  if (struct1.getName() < struct2.getName()) {
     return -1;
   }
-  if (struct2.name < struct1.name) {
+  if (struct2.getName() < struct1.getName()) {
     return 1;
   }
   return 0;

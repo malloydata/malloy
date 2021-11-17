@@ -12,12 +12,17 @@
  */
 
 import * as lite from "vega-lite";
-import { FieldDef, QueryData, QueryValue, StructDef } from "malloy";
+import {
+  FieldDef,
+  QueryData,
+  QueryValue,
+  StructDef,
+} from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
 
-export class HtmlSegmentMapRenderer extends HtmlChartRenderer {
+export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(value: QueryValue, field: FieldDef): string | number {
     switch (field.type) {
       case "number":

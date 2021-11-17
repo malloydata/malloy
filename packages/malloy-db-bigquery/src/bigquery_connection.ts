@@ -24,24 +24,34 @@ import bigquery from "@google-cloud/bigquery/build/src/types";
 import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
-import { Malloy } from "../malloy";
 import {
+  Malloy,
   QueryData,
   StructDef,
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
-} from "../model/malloy_types";
+  Connection,
+} from "@malloy-lang/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
-    clientID: string;
+    clientId: string;
     clientSecret: string;
     refreshToken: string | null;
   };
-  projectID?: string | undefined;
+  projectId?: string | undefined;
   userAgent: string;
 }
+
+export interface BigQueryQueryOptions {
+  pageSize: number;
+  rowIndex: number;
+}
+
+type QueryOptionsReader =
+  | Partial<BigQueryQueryOptions>
+  | (() => Partial<BigQueryQueryOptions>);
 
 // BigQuery SDK apparently throws various authentication errors from Gaxios (https://github.com/googleapis/gaxios) and from
 // @google-cloud/common (https://www.npmjs.com/package/@google-cloud/common)
@@ -72,15 +82,20 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQuery {
-  static DEFAULT_PAGE_SIZE = 10;
+export class BigQueryConnection extends Connection {
+  static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
+    pageSize: 10,
+    rowIndex: 0,
+  };
 
   private bigQuery: BigQuerySDK;
-  private projectID;
+  private projectId;
   private temporaryTables = new Map<string, string>();
 
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+
+  private queryOptions?: QueryOptionsReader;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -101,118 +116,41 @@ export class BigQuery {
     // BIGNUMERIC
   };
 
-  keywords = `
-  ALL
-  AND
-  ANY
-  ARRAY
-  AS
-  ASC
-  ASSERT_ROWS_MODIFIED
-  AT
-  BETWEEN
-  BY
-  CASE
-  CAST
-  COLLATE
-  CONTAINS
-  CREATE
-  CROSS
-  CUBE
-  CURRENT
-  DEFAULT
-  DEFINE
-  DESC
-  DISTINCT
-  ELSE
-  END
-  ENUM
-  ESCAPE
-  EXCEPT
-  EXCLUDE
-  EXISTS
-  EXTRACT
-  FALSE
-  FETCH
-  FOLLOWING
-  FOR
-  FROM
-  FULL
-  GROUP
-  GROUPING
-  GROUPS
-  HASH
-  HAVING
-  IF
-  IGNORE
-  IN
-  INNER
-  INTERSECT
-  INTERVAL
-  INTO
-  IS
-  JOIN
-  LATERAL
-  LEFT
-  LIKE
-  LIMIT
-  LOOKUP
-  MERGE
-  NATURAL
-  NEW
-  NO
-  NOT
-  NULL
-  NULLS
-  OF
-  ON
-  OR
-  ORDER
-  OUTER
-  OVER
-  PARTITION
-  PRECEDING
-  PROTO
-  RANGE
-  RECURSIVE
-  RESPECT
-  RIGHT
-  ROLLUP
-  ROWS
-  SELECT
-  SET
-  SOME
-  STRUCT
-  TABLESAMPLE
-  THEN
-  TO
-  TREAT
-  TRUE
-  UNBOUNDED
-  UNION
-  UNNEST
-  USING
-  WHEN
-  WHERE
-  WINDOW
-  WITH
-  WITHIN`.split(/\s/);
-
-  constructor() {
+  constructor(name: string, queryOptions?: QueryOptionsReader) {
+    super(name);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
     // we want to use the tables API
-    this.projectID = this.bigQuery.projectId;
+    this.projectId = this.bigQuery.projectId;
+
+    this.queryOptions = queryOptions;
   }
 
-  public async runMalloyQuery(
+  get dialectName(): string {
+    return "standardsql";
+  }
+
+  private readQueryOptions(): BigQueryQueryOptions {
+    const options = BigQueryConnection.DEFAULT_QUERY_OPTIONS;
+    if (this.queryOptions) {
+      if (this.queryOptions instanceof Function) {
+        return { ...options, ...this.queryOptions() };
+      } else {
+        return { ...options, ...this.queryOptions };
+      }
+    } else {
+      return options;
+    }
+  }
+
+  public async runSQL(
     sqlCommand: string,
-    pageSize: number = BigQuery.DEFAULT_PAGE_SIZE,
-    rowIndex = 0
+    options: Partial<BigQueryQueryOptions> = {}
   ): Promise<MalloyQueryData> {
+    const { pageSize, rowIndex } = { ...this.readQueryOptions(), ...options };
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
@@ -259,12 +197,6 @@ export class BigQuery {
     return job.getQueryResultsStream();
   }
 
-  public sqlMaybeQuoteIdentifier(identifier: string): string {
-    return this.keywords.indexOf(identifier.toUpperCase()) > 0
-      ? "`" + identifier + "`"
-      : identifier;
-  }
-
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
@@ -290,43 +222,49 @@ export class BigQuery {
 
     return this.structDefFromSchema(
       `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
-      dryRunResults.metadata.statistics.query.schema
+      dryRunResults.metadata.statistics.query.schema,
+      undefined
     );
   }
 
   public async getTableFieldSchema(
-    tablePath: string
+    tablePath: string,
+    pathPrefix: string | undefined = undefined
   ): Promise<bigquery.ITableFieldSchema> {
     const segments = tablePath.split(".");
 
     // paths can have two or three segments
     // if there are only two segments, assume the dataset is "local" to the current billing project
-    let projectID, datasetName, tableName;
-    if (segments.length === 2) [datasetName, tableName] = segments;
-    else if (segments.length === 3)
-      [projectID, datasetName, tableName] = segments;
+    let projectId, datasetName, tableName;
+    if (segments.length === 2) {
+      [datasetName, tableName] = segments;
+      if (pathPrefix !== undefined) {
+        projectId = pathPrefix;
+      }
+    } else if (segments.length === 3)
+      [projectId, datasetName, tableName] = segments;
     else
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
       );
 
-    // TODO resolve having to set projectID - this will at some point result in "concurrency" issue
+    // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
     // temporarily tell BigQuery SDK to use the passed project ID so that API routes are correct.
     // once we're done, set it back to our project ID.
-    if (projectID) this.bigQuery.projectId = projectID;
+    if (projectId) this.bigQuery.projectId = projectId;
 
     const table = this.bigQuery.dataset(datasetName).table(tableName);
 
     try {
       const [metadata] = await table.getMetadata();
-      this.bigQuery.projectId = this.projectID;
+      this.bigQuery.projectId = this.projectId;
       return metadata.schema;
     } catch (e) {
       throw maybeRewriteError(e);
     }
   }
 
-  public async runQuery(sqlCommand: string): Promise<QueryData> {
+  public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
     const result = await this.runBigQueryJob(sqlCommand);
     return result[0];
   }
@@ -447,6 +385,7 @@ export class BigQuery {
         const innerStructDef: StructDef = {
           type: "struct",
           name,
+          dialect: this.dialectName,
           structSource:
             field.mode === "REPEATED" ? { type: "nested" } : { type: "inline" },
           structRelationship:
@@ -472,50 +411,55 @@ export class BigQuery {
     }
   }
 
+  private static fullPath(
+    tablePath: string,
+    pathPrefix: string | undefined
+  ): string {
+    if (pathPrefix !== undefined && tablePath.split(".").length === 2) {
+      return `${pathPrefix}.${tablePath}`;
+    } else {
+      return tablePath;
+    }
+  }
+
   private structDefFromSchema(
     tablePath: string,
-    tableFieldSchema: bigquery.ITableFieldSchema
+    tableFieldSchema: bigquery.ITableFieldSchema,
+    pathPrefix: string | undefined
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
       name: tablePath,
-      structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      dialect: this.dialectName,
+      structSource: {
+        type: "table",
+        tablePath: BigQueryConnection.fullPath(tablePath, pathPrefix),
+      },
+      structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);
     return structDef;
   }
 
-  public async getTableStructDefs(
-    tablePaths: string[]
-  ): Promise<Map<string, StructDef>> {
-    const tableStructDefs = new Map<string, StructDef>();
-
-    for (const tablePath of tablePaths) {
-      const cachedTableStruct = this.schemaCache.get(tablePath);
-      if (cachedTableStruct) {
-        tableStructDefs.set(tablePath, cachedTableStruct);
-      } else {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        const structDef = this.structDefFromSchema(tablePath, tableFieldSchema);
-        tableStructDefs.set(tablePath, structDef);
-        this.schemaCache.set(tablePath, structDef);
-      }
-    }
-    return tableStructDefs;
-  }
-
-  public async getSchemaForMissingTables(
-    missing: string[]
+  public async fetchSchemaForTables(
+    missing: string[],
+    pathPrefix: string | undefined = undefined
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
 
     for (const tablePath of missing) {
       let inCache = this.schemaCache.get(tablePath);
       if (!inCache) {
-        const tableFieldSchema = await this.getTableFieldSchema(tablePath);
-        inCache = this.structDefFromSchema(tablePath, tableFieldSchema);
+        const tableFieldSchema = await this.getTableFieldSchema(
+          tablePath,
+          pathPrefix
+        );
+        inCache = this.structDefFromSchema(
+          tablePath,
+          tableFieldSchema,
+          pathPrefix
+        );
         this.schemaCache.set(tablePath, inCache);
       }
       tableStructDefs[tablePath] = inCache;
@@ -535,11 +479,24 @@ export class BigQuery {
         ...createQueryJobOptions,
       });
 
-      const result = await job.getQueryResults({
-        timeoutMs: 1000 * 60 * 10,
-        ...getQueryResultsOptions,
-      });
-      return result;
+      // We do a simple retry-loop here, as a temporary fix for a transient
+      // error in which sometimes requesting results from a job yields an
+      // access denied error. It seems that in these cases, simply trying again
+      // solves the problem. This is being currently investigated by
+      // @christopherswenson and @lloydtabb.
+      let lastFetchError;
+      for (let retries = 0; retries < 3; retries++) {
+        try {
+          return await job.getQueryResults({
+            timeoutMs: 1000 * 60 * 10,
+            ...getQueryResultsOptions,
+          });
+        } catch (fetchError) {
+          lastFetchError = fetchError;
+        }
+      }
+
+      throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);
     }

@@ -12,9 +12,8 @@
  */
 /* eslint-disable no-console */
 import * as readline from "readline";
-import { MalloyTranslator } from "..";
-import { Malloy } from "../..";
-import { pretty } from "../jest-factories";
+import { Malloy, MalloyTranslator } from "@malloy-lang/malloy";
+import { pretty } from "@malloy-lang/malloy/src/lang/jest-factories";
 import { readFileSync } from "fs";
 
 /*
@@ -41,12 +40,12 @@ CURRENTLY HAS TWO MODES
 
 async function translateMalloy(fileSrc: string, url = "malloy://cli/stdin") {
   const mt = new MalloyTranslator(url);
-  mt.update({ URLs: { [url]: fileSrc } });
+  mt.update({ urls: { [url]: fileSrc } });
   let translating = true;
   let mr = mt.translate();
   while (translating) {
     if (mr.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(mr.tables);
+      const tables = await Malloy.db.fetchSchemaForTables(mr.tables);
       mt.update({ tables });
     }
     if (mr.final) {

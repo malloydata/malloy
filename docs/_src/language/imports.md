@@ -35,7 +35,6 @@ For example, if you wanted to create a file <code>samples/flights_by_carrier.mal
 `flights` explore, you could write:
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 import "faa/flights.malloy"
 
 flights | reduce top 5 carrier, flight_count

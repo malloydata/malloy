@@ -55,8 +55,15 @@ export function applyBinary(
   if (oneOf(op, "+", "-")) {
     return delta(fs, left, op, right);
   }
-  if (oneOf(op, "*", "/")) {
+  if (oneOf(op, "*")) {
     return numeric(fs, left, op, right);
+  }
+  if (oneOf(op, "/")) {
+    if (fs.getDialect().divisionIsInteger) {
+      return numeric(fs, left, "*1.0/", right);
+    } else {
+      return numeric(fs, left, op, right);
+    }
   }
   left.log(`Canot use ${op} operator here`);
   return errorFor("applybinary bad operator");

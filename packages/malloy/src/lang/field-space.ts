@@ -13,6 +13,7 @@
 
 /* eslint-disable no-useless-constructor */
 import { cloneDeep } from "lodash";
+import { Dialect, getDialect } from "../dialect";
 import * as model from "../model/malloy_types";
 import {
   NameOnly,
@@ -33,7 +34,7 @@ import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
-  ExpressionFieldFromAst,
+  ExpressionFieldFromAST,
   TurtleFieldAST,
   TurtleFieldStruct,
   ColumnSpaceField,
@@ -60,6 +61,10 @@ export class FieldSpace {
 
   constructor(sourceStructDef: model.StructDef) {
     this.fromStruct = sourceStructDef;
+  }
+
+  getDialect(): Dialect {
+    return getDialect(this.fromStruct.dialect);
   }
 
   fromFieldDef(from: model.FieldDef): SpaceField {
@@ -230,7 +235,7 @@ export class TranslationFieldSpace extends FieldSpace {
     // TODO express the "three fields kinds" in a typesafe way
     // one of three kinds of fields are legal in an explore: expressions ...
     if (def instanceof ExpressionFieldDef) {
-      const exprField = new ExpressionFieldFromAst(this, def);
+      const exprField = new ExpressionFieldFromAST(this, def);
       this.setEntry(exprField.name, exprField);
       // querry (turtle) fields
     } else if (def instanceof Turtle) {
@@ -411,5 +416,47 @@ export class ProjectFieldSpace extends PipeFieldSpace {
     } else {
       super.addField(def);
     }
+  }
+}
+
+/**
+ * Used as a namespace for evaluating expressions which are supposed to contain
+ * only constants. Will obviously return "notfound" if any variable name is
+ * referenced.
+ */
+
+const constantContext: model.StructDef = {
+  type: "struct",
+  name: "constant expr eval context",
+  dialect: "invalid dialect",
+  structSource: { type: "table" },
+  structRelationship: {
+    type: "basetable",
+    connectionName: "unknown connection",
+  },
+  fields: [],
+};
+
+export class ConstantFieldSpace extends FieldSpace {
+  constructor() {
+    super(constantContext);
+  }
+
+  structDef(): model.StructDef {
+    throw new Error(
+      "Internal Compiler Error, can't make structdef from constant context"
+    );
+  }
+
+  emptyStructDef(): model.StructDef {
+    throw new Error(
+      "Internal Compiler Error, can't make structdef from constant context"
+    );
+  }
+
+  outerName(): string {
+    throw new Error(
+      "Internal Compiler Error, can't make structdef from constant context"
+    );
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "malloy-vscode",
-  "publisher": "malloy",
+  "publisher": "malloy-lang",
   "displayName": "Malloy",
   "description": "",
   "version": "0.0.1",
@@ -69,7 +69,7 @@
         }
       },
       {
-        "command": "malloy.showResultJson",
+        "command": "malloy.showResultJSON",
         "title": "Show Result JSON"
       }
     ],
@@ -84,7 +84,7 @@
       "view/item/context": [
         {
           "command": "malloy.runTurtleFromSchema",
-          "when": "view == malloySchema && viewItem == turtle",
+          "when": "view == malloySchema && viewItem == query",
           "group": "inline"
         }
       ]
@@ -123,8 +123,10 @@
   },
   "dependencies": {
     "@observablehq/plot": "^0.1.0",
-    "malloy": "*",
-    "malloy-render": "*",
+    "@malloy-lang/malloy": "*",
+    "@malloy-lang/db-bigquery": "*",
+    "@malloy-lang/db-postgres": "*",
+    "@malloy-lang/render": "*",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
     "vega-lite": "4.17.0",

@@ -11,6 +11,9 @@
       "path": "../malloy"
     },
     {
+      "path": "../malloy-db-bigquery"
+    },
+    {
       "path": "../malloy-render"
     }
   ]

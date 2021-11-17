@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "malloy";
+import { FieldDef, StructDef } from "@malloy-lang/malloy";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { ChildRenderers, RenderTree } from "../renderer";
 import { makeRenderer } from "./html_view";

@@ -392,7 +392,7 @@ export interface JoinCondition {
 
 /** types of joins. */
 export type StructRelationship =
-  | { type: "basetable" }
+  | { type: "basetable"; connectionName: string }
   | JoinForeignKey
   | JoinCondition
   | { type: "inline" }
@@ -400,11 +400,11 @@ export type StructRelationship =
 
 /** where does the struct come from? */
 export type StructSource =
-  | { type: "table" }
+  | { type: "table"; tablePath?: string }
   | { type: "nested" }
   | { type: "inline" }
   | { type: "query"; query: Query }
-  | { type: "sql" };
+  | { type: "sql"; nested?: boolean };
 
 // Inline and nested tables, cannot have a StructRelationship
 //  the relationshipo is implied
@@ -417,6 +417,7 @@ export interface StructDef extends NamedObject, ResultMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
+  dialect: string;
 }
 
 // /** the resulting structure of the query (and it's source) */
@@ -500,13 +501,7 @@ export interface ModelDef {
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
 
-export type QueryScalar =
-  | string
-  | boolean
-  | number
-  | { value: string }
-  | { type: "Buffer"; data: number[] }
-  | null;
+export type QueryScalar = string | boolean | number | Date | Buffer | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;
@@ -534,6 +529,7 @@ export interface CompiledQuery extends DrillSource {
   lastStageName: string;
   malloy: string;
   queryName?: string | undefined;
+  connectionName: string;
 }
 
 /** Result type for running a Malloy query. */

@@ -17,7 +17,7 @@ import {
   QueryScalar,
   FieldDef,
   FilterExpression,
-} from "malloy";
+} from "@malloy-lang/malloy";
 
 export type DataValue = QueryScalar | DataTree;
 

@@ -23,7 +23,7 @@ export type RenderDef =
   | ({ renderer: "text" } & TextRenderOptions)
   | ({ renderer: "currency" } & CurrencyRenderOptions)
   | ({ renderer: "time" } & TimeRenderOptions)
-  | ({ renderer: "json" } & JsonRenderOptions)
+  | ({ renderer: "json" } & JSONRenderOptions)
   | ({ renderer: "single_value" } & SingleValueRenderOptions)
   | ({ renderer: "list" } & ListRenderOptions)
   | ({ renderer: "list_detail" } & ListDetailRenderOptions)
@@ -96,7 +96,7 @@ export interface BooleanRenderOptions extends TextRenderOptions {
   boolean?: Record<string, unknown>;
 }
 
-export interface JsonRenderOptions extends DataRenderOptions {
+export interface JSONRenderOptions extends DataRenderOptions {
   json?: Record<string, unknown>;
 }
 

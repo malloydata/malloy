@@ -12,7 +12,7 @@
  */
 
 import { CodeLens } from "vscode-languageserver/node";
-import { MalloyTranslator } from "malloy";
+import { MalloyTranslator } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 const explain = `
@@ -40,7 +40,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
 
   const uri = document.uri.toString();
   const translator = new MalloyTranslator(uri, {
-    URLs: {
+    urls: {
       [uri]: document.getText(),
     },
   });

@@ -15,7 +15,7 @@ import { DataPointer, DataValue } from "../data_table";
 import { Renderer } from "../renderer";
 import { timeToString } from "./utils";
 
-export class HtmlDateRenderer implements Renderer {
+export class HTMLDateRenderer implements Renderer {
   async render(data: DataValue, ref: DataPointer): Promise<string> {
     const metadata = ref.getFieldDef();
     if (metadata.type !== "date" && metadata.type !== "timestamp") {

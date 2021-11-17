@@ -14,7 +14,7 @@
 import { DataPointer, DataTree, isDataTree } from "../data_table";
 import { Renderer } from "../renderer";
 
-export class HtmlJSONRenderer implements Renderer {
+export class HTMLJSONRenderer implements Renderer {
   async render(table: DataTree, _ref: DataPointer): Promise<string> {
     if (!isDataTree(table)) {
       return "Invalid data for chart renderer.";

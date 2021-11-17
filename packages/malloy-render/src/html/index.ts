@@ -11,4 +11,4 @@
  * GNU General Public License for more details.
  */
 
-export { HtmlView } from "./html_view";
+export { HTMLView } from "./html_view";

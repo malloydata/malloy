@@ -14,7 +14,7 @@
 import * as vscode from "vscode";
 import { MALLOY_EXTENSION_STATE } from "../state";
 
-export async function showResultJsonCommand(): Promise<void> {
+export async function showResultJSONCommand(): Promise<void> {
   const panelId = MALLOY_EXTENSION_STATE.getActiveWebviewPanelId();
   if (panelId === undefined) {
     vscode.window.showErrorMessage("No result is focused.");

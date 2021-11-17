@@ -17,7 +17,7 @@
 export type Markdown =
   | Root
   | Strong
-  | Html
+  | HTML
   | Break
   | Heading
   | Text
@@ -73,7 +73,7 @@ export interface Text {
   value: string;
 }
 
-export interface Html {
+export interface HTML {
   type: "html";
   value: string;
 }

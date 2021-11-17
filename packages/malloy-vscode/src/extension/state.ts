@@ -12,14 +12,19 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { QueryResult } from "malloy";
+import { Result } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+
+export const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
+  pageSize: 50,
+});
 
 export interface RunState {
   cancel: () => void;
   panel: WebviewPanel;
   panelId: string;
   document: TextDocument;
-  result?: QueryResult;
+  result?: Result;
 }
 
 class MalloyExtensionState {

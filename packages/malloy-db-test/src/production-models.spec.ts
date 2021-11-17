@@ -11,13 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import "./jestery";
+import "@malloy-lang/malloy/src/lang/jestery";
 import fs from "fs";
 import path from "path";
-import { Malloy } from "../malloy";
-import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
+import { MalloyTranslator, TranslateResponse } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
-const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../../samples");
+const db = new BigQueryConnection("test");
+
+const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/");
 
 describe(`compiling server models`, () => {
   let modelsFound = false;
@@ -31,27 +33,25 @@ describe(`compiling server models`, () => {
         const srcURI = `model://${filePath}`;
         test(`checking ${srcURI}`, async () => {
           const src = {
-            URLs: { [srcURI]: fs.readFileSync(filePath, "utf-8") },
+            urls: { [srcURI]: fs.readFileSync(filePath, "utf-8") },
           };
           const trans = new MalloyTranslator(srcURI, src);
           expect(trans).toBeValidMalloy();
-          let tr: TranslateResponse;
+          let tr: Partial<TranslateResponse>;
           do {
             tr = trans.translate();
             if (tr.tables) {
-              const tables = await Malloy.db.getSchemaForMissingTables(
-                tr.tables
-              );
+              const tables = await db.fetchSchemaForTables(tr.tables);
               trans.update({ tables });
-            } else if (tr.URLs) {
+            } else if (tr.urls) {
               const files: { [fileName: string]: string } = {};
-              for (const neededFile of tr.URLs) {
+              for (const neededFile of tr.urls) {
                 files[neededFile] = fs.readFileSync(
                   neededFile.replace("model://", ""),
                   "utf-8"
                 );
               }
-              trans.update({ URLs: files });
+              trans.update({ urls: files });
             } else {
               expect(trans).toBeErrorless();
               expect(tr).toHaveProperty("translated");

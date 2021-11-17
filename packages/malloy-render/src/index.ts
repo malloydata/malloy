@@ -11,6 +11,6 @@
  * GNU General Public License for more details.
  */
 
-export { HtmlView } from "./html/html_view";
+export { HTMLView } from "./html/html_view";
 export { DataStyles } from "./data_styles";
 export { DataTreeRoot } from "./data_table";

@@ -14,6 +14,41 @@
 // TODO tighten up exports
 export * from "./model";
 export * from "./lang";
-export { BigQuery, BigQueryAuthenticationError } from "./db/bigquery";
-export { Malloy } from "./malloy";
+export {
+  Malloy,
+  Runner,
+  Runtime,
+  EmptyURLReader,
+  InMemoryURLReader,
+  FixedConnectionMap,
+  MalloyError,
+  JoinRelationship,
+  SourceRelationship,
+} from "./malloy";
+export type {
+  Explore,
+  Model,
+  PreparedQuery,
+  PreparedResult,
+  Field,
+  AtomicField,
+  ExploreField,
+  QueryField,
+  Result,
+  DataArray,
+  ModelMaterializer,
+} from "./malloy";
+export type {
+  URLReader,
+  SchemaReader,
+  LookupSchemaReader,
+  SQLRunner,
+  LookupSQLRunner,
+  QueryString,
+  ModelString,
+  QueryURL,
+  ModelURL,
+} from "./runtime_types";
+export { URL } from "./runtime_types";
+export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

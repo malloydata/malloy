@@ -11,13 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { isDimensional, isMeasureLike } from "malloy";
+import { isDimensional, isMeasureLike } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
-import { HtmlTextRenderer } from "./text";
+import { HTMLTextRenderer } from "./text";
 
-export class HtmlDashboardRenderer extends ContainerRenderer {
+export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "medium",
   };
@@ -49,9 +49,9 @@ export class HtmlDashboardRenderer extends ContainerRenderer {
           table.getValue(rowNum, field.name),
           new DataPointer(table, rowNum, field.name)
         );
-        if (childRenderer instanceof HtmlDashboardRenderer) {
+        if (childRenderer instanceof HTMLDashboardRenderer) {
           renderedMeasures += rendered;
-        } else if (childRenderer instanceof HtmlTextRenderer) {
+        } else if (childRenderer instanceof HTMLTextRenderer) {
           renderedMeasures += `
             <div style="${MEASURE_BOX}">
               <div style="${TITLE}">${field.name}</div>

@@ -12,13 +12,18 @@
  */
 
 import * as lite from "vega-lite";
-import { FieldDef, QueryData, QueryValue, StructDef } from "malloy";
+import {
+  FieldDef,
+  QueryData,
+  QueryValue,
+  StructDef,
+} from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { STATE_CODES } from "./state_codes";
 import { getColorScale } from "./utils";
 
-export class HtmlShapeMapRenderer extends HtmlChartRenderer {
+export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   getDataValue(
     value: QueryValue,
     field: FieldDef,

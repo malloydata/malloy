@@ -17,10 +17,11 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, DataTreeRoot, HtmlView } from "malloy-render";
-import { Malloy, MalloyTranslator } from "malloy";
+import { DataStyles, DataTreeRoot, HTMLView } from "@malloy-lang/render";
+import { Runner, Runtime, URL, URLReader } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import path from "path";
-import fs from "fs";
+import { promises as fs } from "fs";
 import { performance } from "perf_hooks";
 import { timeString } from "./utils";
 import { log } from "./log";
@@ -78,35 +79,36 @@ export async function dataStylesForFile(
 }
 
 async function fetchFile(uri: string) {
-  return fs.readFileSync(uri.replace(/^file:\/\//, ""), "utf8");
+  return fs.readFile(uri.replace(/^file:\/\//, ""), "utf8");
 }
 
-async function compile(uri: string, malloy: string, documentPath: string) {
-  let dataStyles = await dataStylesForFile(uri, malloy);
-  const translator = new MalloyTranslator(uri, {
-    URLs: { [uri]: malloy },
-  });
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const result = translator.translate();
-    if (result.final) {
-      return { result, dataStyles };
-    } else if (result.URLs) {
-      for (const neededUri of result.URLs) {
-        const neededText = await fetchFile(neededUri);
-        translator.update({ URLs: { [neededUri]: neededText } });
-        addDependency(neededUri.replace(/^file:\/\//, ""), documentPath);
-        dataStyles = {
-          ...dataStyles,
-          ...(await dataStylesForFile(neededUri, neededText)),
-        };
-      }
-    } else if (result.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-      translator.update({ tables });
-    }
+class DocsURLReader implements URLReader {
+  private dataStyles: DataStyles = {};
+  private readonly modelPath: string;
+
+  constructor(modelPath: string) {
+    this.modelPath = modelPath;
+  }
+
+  async readURL(url: URL): Promise<string> {
+    const contents = await fetchFile(url.toString());
+    addDependency(this.modelPath, url.toString().replace(/^file:\/\//, ""));
+    this.dataStyles = {
+      ...this.dataStyles,
+      ...(await dataStylesForFile(url.toString(), contents)),
+    };
+
+    return contents;
+  }
+
+  getHackyAccumulatedDataStyles() {
+    return this.dataStyles;
   }
 }
+
+const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
+  pageSize: 5,
+});
 
 /*
  * Run a `query` appearing within a document at `documentPath` with `options`,
@@ -117,7 +119,12 @@ export async function runCode(
   documentPath: string,
   options: RunOptions
 ): Promise<string> {
-  const malloy = new Malloy();
+  const urlReader = new DocsURLReader(documentPath);
+  const runtime = new Runtime({
+    urls: urlReader,
+    schemas: BIGQUERY_CONNECTION,
+    connections: BIGQUERY_CONNECTION,
+  });
   // Here, we assume that docs queries that reference a model only care about
   // things _exported_ from that model. In other words, a query with
   // `"source": "something.malloy" is equivalent to prepending the query with
@@ -131,76 +138,58 @@ export async function runCode(
   // it may be a good idea to force something to be exported if it needs to be
   // queried in a docs snippet.
   const fullQuery = options.source
-    ? `import "${path.join(SAMPLES_PATH, options.source)}"\n${query}`
+    ? `import "file://${path.resolve(
+        path.join(SAMPLES_PATH, options.source)
+      )}"\n${query}`
     : query;
-
-  let compiledQuery;
-  let styles;
-  const fakeUri = "file://" + path.join(SAMPLES_PATH, "__QUERY__.malloy");
-  const { result, dataStyles } = await compile(
-    fakeUri,
-    fullQuery,
-    documentPath
-  );
-  if (result?.translated) {
-    const q =
-      result.translated.queryList[result.translated.queryList.length - 1];
-    compiledQuery = await malloy.compileQuery(q);
-    styles = dataStyles;
-  } else if (result?.errors) {
-    throw new Error(result.errors[0].message);
-  }
-
-  if (!compiledQuery) {
-    throw new Error("Could not compile query.");
-  }
 
   const querySummary = `"${query.split("\n").join(" ").substring(0, 50)}..."`;
   log(`  >> Running query ${querySummary}`);
   const runStartTime = performance.now();
-  const queryResult = await malloy.runCompiledQuery(
-    compiledQuery,
-    options.pageSize || 5
+
+  // Docs are compiled from source, not from a URL. This means that relative
+  // imports don't work. It shouldn't be necessary to show relative imports
+  // in runnable docs. If this changes, the `urlReader` will need to be able to
+  // handle reading a fake URL for the query as well as real URLs for local files.
+  const preparedQuery = await runtime.makeQuery(fullQuery).getSQL().build();
+  const queryResult = await Runner.run(
+    {
+      runSQL: (sql: string) =>
+        BIGQUERY_CONNECTION.runSQL(sql, {
+          pageSize: options.pageSize || 5,
+        }),
+    },
+    preparedQuery
   );
+
   log(
     `  >> Finished running query ${querySummary} in ${timeString(
       runStartTime,
       performance.now()
     )}`
   );
-  const data = queryResult.result;
-  const field = queryResult.structs.find(
-    (s) => s.name === queryResult.lastStageName
+  const namedField = queryResult.getResultExplore();
+
+  const dataStyles = {
+    ...options.dataStyles,
+    ...urlReader.getHackyAccumulatedDataStyles(),
+  };
+
+  const result = await new HTMLView().render(
+    new DataTreeRoot(
+      queryResult.getData().toObject(),
+      namedField._getStructDef(),
+      queryResult._getSourceExploreName(),
+      queryResult._getSourceFilters() || []
+    ),
+    dataStyles
   );
-  if (field) {
-    const namedField = {
-      ...field,
-      name: queryResult.queryName || field.name,
-    };
 
-    const dataStyles = {
-      ...options.dataStyles,
-      ...styles,
-    };
-
-    const result = await new HtmlView().render(
-      new DataTreeRoot(
-        data,
-        namedField,
-        queryResult.sourceExplore,
-        queryResult.sourceFilters || []
-      ),
-      dataStyles
-    );
-
-    return `<div class="result-outer ${options.size || "small"}">
-      <div class="result-middle">
-        <div class="result-inner">
-          ${result}
-        </div>
+  return `<div class="result-outer ${options.size || "small"}">
+    <div class="result-middle">
+      <div class="result-inner">
+        ${result}
       </div>
-    </div>`;
-  }
-  log(`  !! Error: query did not contain a field.`);
-  return `<div class="error">Error: query did not contain a field.</div>`;
+    </div>
+  </div>`;
 }

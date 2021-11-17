@@ -11,12 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "malloy";
+import { FieldDef, StructDef } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
 import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
 
-export class HtmlListRenderer extends ContainerRenderer {
+export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "small",
   };

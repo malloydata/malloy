@@ -12,9 +12,9 @@
  */
 
 import { DataValue } from "../data_table";
-import { HtmlNumberRenderer } from "./number";
+import { HTMLNumberRenderer } from "./number";
 
-export class HtmlPercentRenderer extends HtmlNumberRenderer {
+export class HTMLPercentRenderer extends HTMLNumberRenderer {
   getText(data: DataValue): string | null {
     const num = this.getNumber(data);
 
