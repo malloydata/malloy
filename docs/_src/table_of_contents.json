@@ -61,11 +61,7 @@
           "link": "/language/filters.md"
         },
         {
-          "title": "Time Ranges",
-          "link": "/language/time-ranges.md"
-        },
-        {
-          "title": "Nesting",
+          "title": "Nested Queries",
           "link": "/language/nesting.md"
         },
         {
@@ -75,10 +71,6 @@
         {
           "title": "Imports and Exports",
           "link": "/language/imports.md"
-        },
-        {
-          "title": "Apply Operator",
-          "link": "/language/apply.md"
         }
       ]
     },
