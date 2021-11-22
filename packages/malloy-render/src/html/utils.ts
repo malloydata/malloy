@@ -11,68 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { TimeTimeframe } from "@malloy-lang/malloy";
-
-function numberFixedDigits(value: number, digits: number) {
-  return value.toString().padStart(digits, "0");
-}
-
-export function timeToString(time: Date, timeframe: TimeTimeframe): string {
-  switch (timeframe) {
-    case "year": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 4);
-      return `${year}`;
-    }
-    case "quarter": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const quarter = Math.trunc(time.getUTCMonth() / 4) + 1;
-      return `${year}-Q${quarter}`;
-    }
-    case "month": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      return `${year}-${month}`;
-    }
-    case "week": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      return `WK${year}-${month}-${day}`;
-    }
-    case "day":
-    case "date": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      return `${year}-${month}-${day}`;
-    }
-    case "hour": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      const hour = numberFixedDigits(time.getUTCHours(), 2);
-      return `${year}-${month}-${day} ${hour}:00`;
-    }
-    case "minute": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      const hour = numberFixedDigits(time.getUTCHours(), 2);
-      const minute = numberFixedDigits(time.getUTCMinutes(), 2);
-      return `${year}-${month}-${day} ${hour}:${minute}`;
-    }
-    case "second": {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      const hour = numberFixedDigits(time.getUTCHours(), 2);
-      const minute = numberFixedDigits(time.getUTCMinutes(), 2);
-      const second = numberFixedDigits(time.getUTCSeconds(), 2);
-      return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
-    }
-  }
-  return "";
-}
+import { DateTimeframe, TimestampTimeframe } from "@malloy-lang/malloy";
 
 export function getColorScale(
   type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,
@@ -118,5 +57,74 @@ export function getColorScale(
               "#80868B",
             ],
           };
+  }
+}
+
+function numberFixedDigits(value: number, digits: number) {
+  return value.toString().padStart(digits, "0");
+}
+
+export function timeToString(
+  time: Date,
+  timeframe: DateTimeframe | TimestampTimeframe
+): string {
+  switch (timeframe) {
+    case TimestampTimeframe.Year:
+    case DateTimeframe.Year: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 4);
+      return `${year}`;
+    }
+    case TimestampTimeframe.Quarter:
+    case DateTimeframe.Quarter: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 4);
+      const quarter = Math.floor(time.getUTCMonth() / 3) + 1;
+      return `${year}-Q${quarter}`;
+    }
+    case TimestampTimeframe.Month:
+    case DateTimeframe.Month: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 2);
+      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      return `${year}-${month}`;
+    }
+    case TimestampTimeframe.Week:
+    case DateTimeframe.Week: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 2);
+      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      const day = numberFixedDigits(time.getUTCDate(), 2);
+      return `WK${year}-${month}-${day}`;
+    }
+    case DateTimeframe.Date:
+    case TimestampTimeframe.Date: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 2);
+      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      const day = numberFixedDigits(time.getUTCDate(), 2);
+      return `${year}-${month}-${day}`;
+    }
+    case TimestampTimeframe.Hour: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 2);
+      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      const day = numberFixedDigits(time.getUTCDate(), 2);
+      const hour = numberFixedDigits(time.getUTCHours(), 2);
+      return `${year}-${month}-${day} ${hour}:00 for 1 hour`;
+    }
+    case TimestampTimeframe.Minute: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 2);
+      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      const day = numberFixedDigits(time.getUTCDate(), 2);
+      const hour = numberFixedDigits(time.getUTCHours(), 2);
+      const minute = numberFixedDigits(time.getUTCMinutes(), 2);
+      return `${year}-${month}-${day} ${hour}:${minute}`;
+    }
+    case TimestampTimeframe.Second: {
+      const year = numberFixedDigits(time.getUTCFullYear(), 2);
+      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      const day = numberFixedDigits(time.getUTCDate(), 2);
+      const hour = numberFixedDigits(time.getUTCHours(), 2);
+      const minute = numberFixedDigits(time.getUTCMinutes(), 2);
+      const second = numberFixedDigits(time.getUTCSeconds(), 2);
+      return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+    }
+    default:
+      throw new Error("Unknown timeframe.");
   }
 }

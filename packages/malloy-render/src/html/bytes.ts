@@ -11,20 +11,19 @@
  * GNU General Public License for more details.
  */
 
-import { DataValue } from "../data_table";
+import { DataColumn } from "@malloy-lang/malloy";
 import { HTMLTextRenderer } from "./text";
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
-  getText(data: DataValue): string | null {
-    if (data === null) {
+  getText(data: DataColumn): string | null {
+    if (data.isNull()) {
       return null;
     }
 
-    // TODO when the `malloy-server` sends this down, it was converted from a Buffer to a
-    //      { type: "Buffer", data: number[] }, but here it's just a Buffer. A mapper should
-    //      map the data returned from BigQuery to be fully JSON-serializable, instead of including
-    //      the buffer as-is.
-    const typedData = data as unknown as number[];
-    return Buffer.from(new Uint8Array(typedData)).toString("base64");
+    if (!data.isBytes()) {
+      throw new Error("Invalid data for bytes renderer");
+    }
+
+    return data.getValue().toString("base64");
   }
 }

@@ -11,14 +11,14 @@
  * GNU General Public License for more details.
  */
 
-import { DataPointer, DataTree, isDataTree } from "../data_table";
+import { DataColumn } from "@malloy-lang/malloy";
 import { Renderer } from "../renderer";
 
 export class HTMLJSONRenderer implements Renderer {
-  async render(table: DataTree, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataColumn): Promise<string> {
+    if (!table.isArray() && !table.isRecord()) {
       return "Invalid data for chart renderer.";
     }
-    return `<pre>${JSON.stringify(table.rows, undefined, 2)}</pre>`;
+    return `<pre>${JSON.stringify(table.toObject(), undefined, 2)}</pre>`;
   }
 }

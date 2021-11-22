@@ -11,19 +11,19 @@
  * GNU General Public License for more details.
  */
 
-import { DataValue } from "../data_table";
+import { DataColumn } from "@malloy-lang/malloy";
 import { HTMLTextRenderer } from "./text";
 
 export class HTMLBooleanRenderer extends HTMLTextRenderer {
-  getText(data: DataValue): string | null {
-    if (data === null) {
+  getText(data: DataColumn): string | null {
+    if (data.isNull()) {
       return null;
     }
 
-    if (typeof data !== "boolean") {
+    if (!data.isBoolean()) {
       throw new Error("Invalid type for boolean renderer.");
     }
 
-    return `${data}`;
+    return `${data.getValue()}`;
   }
 }

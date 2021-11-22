@@ -15,7 +15,7 @@ import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
-import { DataStyles, HTMLView, DataTreeRoot } from "@malloy-lang/render";
+import { DataStyles, HTMLView } from "@malloy-lang/render";
 import { loadingIndicator, renderErrorHTML, wrapHTMLSnippet } from "../html";
 import {
   BIGQUERY_CONNECTION,
@@ -268,14 +268,8 @@ export function runMalloyQuery(
 
               if (resultExplore) {
                 // TODO replace the DataTree with DataArray
-                const table = new DataTreeRoot(
-                  data.toObject(),
-                  resultExplore._getStructDef(),
-                  queryResult._getSourceExploreName(),
-                  queryResult._getSourceFilters()
-                );
                 current.panel.webview.html = wrapHTMLSnippet(
-                  css + (await new HTMLView().render(table, styles))
+                  css + (await new HTMLView().render(data, styles))
                 );
 
                 const renderEnd = performance.now();

@@ -11,15 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import { DataPointer, DataValue } from "../data_table";
+import { DataColumn } from "@malloy-lang/malloy";
 import { Renderer } from "../renderer";
 
 export class HTMLTextRenderer implements Renderer {
-  getText(value: DataValue): string | null {
-    return `${value}`;
+  getText(value: DataColumn): string | null {
+    return `${value.getValue()}`;
   }
 
-  async render(value: DataValue, _ref: DataPointer): Promise<string> {
+  async render(value: DataColumn): Promise<string> {
     const text = this.getText(value);
     if (text === null) {
       return `⌀`;

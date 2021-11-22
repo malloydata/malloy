@@ -73,6 +73,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .run();
     // console.log(JSON.stringify(result.getData().toObject(), undefined, 2));
     // console.log(result.getSQL());
+
     expect(result.getData().toObject()[0].total_seats).toBe(452415);
     expect(result.getData().toObject()[0].total_seats2).toBe(452415);
     expect(result.getData().toObject()[0].boeing_seats).toBe(252771);

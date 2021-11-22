@@ -11,17 +11,25 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, isMeasureLike } from "@malloy-lang/malloy";
+import { DataColumn, Field } from "@malloy-lang/malloy";
+import { AtomicFieldType } from "@malloy-lang/malloy/src/malloy";
 import {
   BarChartRenderOptions,
   ChartSize,
   StyleDefaults,
 } from "../data_styles";
-import { DataValue, DataPointer, isDataTree } from "../data_table";
 import { HTMLVegaSpecRenderer, vegaSpecs } from "./vega_spec";
 
-function isOrdninal(f: FieldDef): boolean {
-  return ["string", "date", "timestamp", "boolean"].includes(f.type);
+function isOrdninal(field: Field): boolean {
+  return (
+    field.isAtomicField() &&
+    [
+      AtomicFieldType.String,
+      AtomicFieldType.Date,
+      AtomicFieldType.Timestamp,
+      AtomicFieldType.Boolean,
+    ].includes(field.getType())
+  );
 }
 
 export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
@@ -31,25 +39,29 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
     this.size = options.size || this.styleDefaults.size || "medium";
   }
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataColumn): Promise<string> {
+    if (!table.isArray()) {
       throw new Error("Invalid type for chart renderer");
     }
-    if (table.structDef.fields.length < 2) {
+    const fields = table.getField().getFields();
+    if (fields.length < 2) {
       return "Need at least 2 fields for a bar chart.";
     }
     let specName = "bar_";
-    if (isOrdninal(table.structDef.fields[0])) {
+    if (isOrdninal(fields[0])) {
       specName += "S";
-    } else if (table.structDef.fields[0].type === "number") {
+    } else if (
+      fields[0].isAtomicField() &&
+      fields[0].getType() === AtomicFieldType.Number
+    ) {
       specName += "N";
     } else {
       return "Invalid type for first field of a bar_chart";
     }
     specName += "M";
-    if (table.structDef.fields.length >= 3) {
-      const field = table.structDef.fields[2];
-      if (isMeasureLike(field)) {
+    if (fields.length >= 3) {
+      const field = fields[2];
+      if (field.isMeasureLike()) {
         specName += "M";
       } else if (isOrdninal(field)) {
         specName += "S";
@@ -63,6 +75,6 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
       return `Unknown renderer ${specName}`;
     }
     this.spec = spec;
-    return super.render(table, _ref);
+    return super.render(table);
   }
 }

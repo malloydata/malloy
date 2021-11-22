@@ -12,64 +12,52 @@
  */
 
 import * as lite from "vega-lite";
-import {
-  FieldDef,
-  QueryData,
-  QueryValue,
-  StructDef,
-} from "@malloy-lang/malloy";
+import { DataArray, DataColumn, Field } from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
-  getDataValue(value: QueryValue, field: FieldDef): string | number {
-    switch (field.type) {
-      case "number":
-        return value as number;
-      case "timestamp":
-      case "date":
-      case "string":
-        return value as string;
-      default:
-        throw new Error("Invalid field type for bar chart.");
+  getDataValue(data: DataColumn): string | number {
+    if (data.isNumber() || data.isString()) {
+      return data.getValue();
     }
+    throw new Error("Invalid field type for bar chart.");
   }
 
-  getDataType(field: FieldDef): "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
-      case "string":
+  getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
+    if (field.isAtomicField()) {
+      if (field.isString()) {
         return "nominal";
-      case "number":
+      } else if (field.isNumber()) {
         return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+      }
+      // TODO dates nominal?
     }
+    throw new Error("Invalid field type for bar chart.");
   }
 
-  getVegaLiteSpec(data: QueryValue, metadata: StructDef): lite.TopLevelSpec {
-    if (data === null) {
+  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+    if (data.isNull()) {
       throw new Error("Expected struct value not to be null.");
     }
 
-    const typedData = data as QueryData;
+    const fields = data.getField().getFields();
 
-    const lat1Field = metadata.fields[0];
-    const lon1Field = metadata.fields[1];
-    const lat2Field = metadata.fields[2];
-    const lon2Field = metadata.fields[3];
-    const colorField = metadata.fields[4];
+    const lat1Field = fields[0];
+    const lon1Field = fields[1];
+    const lat2Field = fields[2];
+    const lon2Field = fields[3];
+    const colorField = fields[4];
 
     const colorType = colorField ? this.getDataType(colorField) : undefined;
 
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.name,
+            field: colorField.getName(),
             type: colorType,
-            axis: { title: colorField.name },
+            axis: { title: colorField.getName() },
             scale: getColorScale(colorType, false),
           }
         : undefined;
@@ -78,11 +66,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
       width: 250,
       height: 200,
       data: {
-        values: this.mapData(
-          typedData,
-          [lat1Field, lon1Field, lat2Field, lon2Field, colorField],
-          metadata
-        ),
+        values: this.mapData(data),
       },
       projection: {
         type: "albersUsa",
@@ -105,10 +89,10 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
         {
           mark: "line",
           encoding: {
-            latitude: { field: lat1Field.name, type: "quantitative" },
-            longitude: { field: lon1Field.name, type: "quantitative" },
-            latitude2: { field: lat2Field.name, type: "quantitative" },
-            longitude2: { field: lon2Field.name, type: "quantitative" },
+            latitude: { field: lat1Field.getName(), type: "quantitative" },
+            longitude: { field: lon1Field.getName(), type: "quantitative" },
+            latitude2: { field: lat2Field.getName(), type: "quantitative" },
+            longitude2: { field: lon2Field.getName(), type: "quantitative" },
             color: colorDef,
           },
         },

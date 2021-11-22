@@ -20,11 +20,17 @@ import {
 } from "./lang";
 import {
   CompiledQuery,
+  FieldBooleanDef,
+  FieldDateDef,
+  FieldNumberDef,
+  FieldStringDef,
+  FieldTimestampDef,
   FieldTypeDef,
   FilterExpression,
   ModelDef,
   Query as InternalQuery,
   QueryData,
+  QueryDataRow,
   QueryModel,
   QueryResult,
   StructDef,
@@ -166,11 +172,14 @@ export class Malloy {
       preparedResult.getConnectionName()
     );
     const result = await sqlRunner.runSQL(preparedResult.getSQL());
-    return new Result({
-      ...preparedResult._getRawQuery(),
-      result: result.rows,
-      totalRows: result.totalRows,
-    });
+    return new Result(
+      {
+        ...preparedResult._getRawQuery(),
+        result: result.rows,
+        totalRows: result.totalRows,
+      },
+      preparedResult._getModelDef()
+    );
   }
 }
 
@@ -254,10 +263,13 @@ export class PreparedQuery {
   public getPreparedResult(): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
     const translatedQuery = queryModel.compileQuery(this._query);
-    return new PreparedResult({
-      queryName: this.name || translatedQuery.queryName,
-      ...translatedQuery,
-    });
+    return new PreparedResult(
+      {
+        queryName: this.name || translatedQuery.queryName,
+        ...translatedQuery,
+      },
+      this._modelDef
+    );
   }
 }
 
@@ -414,9 +426,11 @@ export class DocumentSymbol {
 
 export class PreparedResult {
   protected inner: CompiledQuery;
+  protected modelDef: ModelDef;
 
-  constructor(query: CompiledQuery) {
+  constructor(query: CompiledQuery, modelDef: ModelDef) {
     this.inner = query;
+    this.modelDef = modelDef;
   }
 
   public getConnectionName(): string {
@@ -425,6 +439,10 @@ export class PreparedResult {
 
   public _getRawQuery(): CompiledQuery {
     return this.inner;
+  }
+
+  public _getModelDef(): ModelDef {
+    return this.modelDef;
   }
 
   public getSQL(): string {
@@ -441,6 +459,15 @@ export class PreparedResult {
       name: this.inner.queryName || explore.name,
     };
     return new Explore(namedExplore);
+  }
+
+  public getSourceExplore(): Explore {
+    const name = this.inner.sourceExplore;
+    const explore = this.modelDef.structs[name];
+    if (explore === undefined) {
+      throw new Error("Malformed query result.");
+    }
+    return new Explore(explore);
   }
 
   public _getSourceExploreName(): string {
@@ -522,20 +549,81 @@ export enum SourceRelationship {
   Inline = "inline",
 }
 
+class Entity {
+  private readonly name: string;
+  protected readonly parent?: Explore;
+  private readonly source?: Entity;
+
+  constructor(name: string, parent?: Explore, source?: Entity) {
+    this.name = name;
+    this.parent = parent;
+    this.source = source;
+  }
+
+  public getSource(): Entity | undefined {
+    return this.source;
+  }
+
+  public getName(): string {
+    return this.name;
+  }
+
+  public getSourceClasses(): string[] {
+    const sourceClasses = [];
+    const source = this.getSource();
+    if (source) {
+      sourceClasses.push(source.getName());
+    }
+    sourceClasses.push(this.getName());
+    return sourceClasses;
+  }
+
+  public hasParentExplore(): this is Field {
+    return this.parent !== undefined;
+  }
+
+  isExplore(): this is Explore {
+    return this instanceof Explore;
+  }
+
+  isQuery(): this is Query {
+    return this instanceof QueryField;
+  }
+
+  isMeasureLike(): boolean {
+    return (
+      this.hasParentExplore() && (!this.isAtomicField() || this.isAggregate())
+    );
+  }
+
+  isDimensional(): boolean {
+    return (
+      this.hasParentExplore() && this.isAtomicField() && !this.isAggregate()
+    );
+  }
+}
+
 export type Field = AtomicField | QueryField | ExploreField;
 
-export class Explore {
+export class Explore extends Entity {
   protected readonly structDef: StructDef;
   protected readonly parentExplore?: Explore;
   private fields: Map<string, Field> | undefined;
+  private sourceExplore: Explore | undefined;
 
   public getName(): string {
     return this.structDef.as || this.structDef.name;
   }
 
-  constructor(structDef: StructDef, parentExplore?: Explore) {
+  constructor(structDef: StructDef, parentExplore?: Explore, source?: Explore) {
+    super(structDef.as || structDef.name, parentExplore, source);
     this.structDef = structDef;
     this.parentExplore = parentExplore;
+    this.sourceExplore = source;
+  }
+
+  public getSource(): Explore | undefined {
+    return this.sourceExplore;
   }
 
   public _getStructDef(): StructDef {
@@ -569,16 +657,29 @@ export class Explore {
   }
 
   private getFieldMap(): Map<string, Field> {
+    const sourceExplore = this.getSource();
+    const sourceFields = sourceExplore?.getFieldMap() || new Map();
     if (this.fields === undefined) {
       this.fields = new Map(
         this.structDef.fields.map((fieldDef) => {
           const name = fieldDef.as || fieldDef.name;
+          const sourceField = sourceFields.get(fieldDef.name);
           if (fieldDef.type === "struct") {
-            return [name, new ExploreField(fieldDef, this)];
+            return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === "turtle") {
-            return [name, new QueryField(fieldDef)];
+            return [name, new QueryField(fieldDef, this, sourceField)];
           } else {
-            return [name, new AtomicField(fieldDef)];
+            if (fieldDef.type === "string") {
+              return [name, new StringField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "number") {
+              return [name, new NumberField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "date") {
+              return [name, new DateField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "timestamp") {
+              return [name, new TimestampField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "boolean") {
+              return [name, new BooleanField(fieldDef, this, sourceField)];
+            }
           }
         }) as [string, Field][]
       );
@@ -624,6 +725,11 @@ export class Explore {
   public hasParentExplore(): this is ExploreField {
     return this instanceof ExploreField;
   }
+
+  // TODO wrapper type for FilterExpression
+  getFilters(): FilterExpression[] {
+    return this.structDef.resultMetadata?.filterList || [];
+  }
 }
 
 export enum AtomicFieldType {
@@ -634,15 +740,18 @@ export enum AtomicFieldType {
   Timestamp = "timestamp",
 }
 
-export class AtomicField {
-  private fieldTypeDef: FieldTypeDef;
+export class AtomicField extends Entity {
+  protected fieldTypeDef: FieldTypeDef;
+  protected parent: Explore;
 
-  constructor(fieldTypeDef: FieldTypeDef) {
+  constructor(
+    fieldTypeDef: FieldTypeDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldTypeDef.as || fieldTypeDef.name, parent, source);
     this.fieldTypeDef = fieldTypeDef;
-  }
-
-  public getName(): string {
-    return this.fieldTypeDef.as || this.fieldTypeDef.name;
+    this.parent = parent;
   }
 
   public getType(): AtomicFieldType {
@@ -675,17 +784,198 @@ export class AtomicField {
   public isAggregate(): boolean {
     return !!this.fieldTypeDef.aggregate;
   }
+
+  public getSourceField(): Field {
+    throw new Error();
+  }
+
+  public getSourceClasses(): string[] {
+    const sourceField = this.fieldTypeDef.name || this.fieldTypeDef.as;
+    return sourceField ? [sourceField] : [];
+  }
+
+  public hasParentExplore(): this is Field {
+    return true;
+  }
+
+  public isDimensional(): boolean {
+    return true;
+  }
+
+  public isMeasurelike(): false {
+    return false;
+  }
+
+  public isString(): this is StringField {
+    return this instanceof StringField;
+  }
+
+  public isNumber(): this is NumberField {
+    return this instanceof NumberField;
+  }
+
+  public isDate(): this is DateField {
+    return this instanceof DateField;
+  }
+
+  public isBoolean(): this is BooleanField {
+    return this instanceof BooleanField;
+  }
+
+  public isTimestamp(): this is TimestampField {
+    return this instanceof TimestampField;
+  }
+
+  getParentExplore(): Explore {
+    return this.parent;
+  }
+
+  getExpression(): string {
+    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.getName();
+  }
 }
 
-export class QueryField {
-  private turtleDef: TurtleDef;
+export enum DateTimeframe {
+  Date = "date",
+  Week = "week",
+  Month = "month",
+  Quarter = "quarter",
+  Year = "year",
+}
 
-  constructor(turtleDef: TurtleDef) {
+export enum TimestampTimeframe {
+  Date = "date",
+  Week = "week",
+  Month = "month",
+  Quarter = "quarter",
+  Year = "year",
+  Second = "second",
+  Hour = "hour",
+  Minute = "minute",
+}
+
+export class DateField extends AtomicField {
+  private fieldDateDef: FieldDateDef;
+  constructor(
+    fieldDateDef: FieldDateDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldDateDef, parent, source);
+    this.fieldDateDef = fieldDateDef;
+  }
+
+  getTimeframe(): DateTimeframe | undefined {
+    if (this.fieldDateDef.timeframe === undefined) {
+      return undefined;
+    }
+    switch (this.fieldDateDef.timeframe) {
+      case "date":
+        return DateTimeframe.Date;
+      case "week":
+        return DateTimeframe.Week;
+      case "month":
+        return DateTimeframe.Month;
+      case "quarter":
+        return DateTimeframe.Quarter;
+      case "year":
+        return DateTimeframe.Year;
+    }
+  }
+}
+
+export class TimestampField extends AtomicField {
+  private fieldTimestampDef: FieldTimestampDef;
+  constructor(
+    fieldTimestampDef: FieldTimestampDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldTimestampDef, parent, source);
+    this.fieldTimestampDef = fieldTimestampDef;
+  }
+
+  getTimeframe(): TimestampTimeframe | undefined {
+    if (this.fieldTimestampDef.timeframe === undefined) {
+      return undefined;
+    }
+    switch (this.fieldTimestampDef.timeframe) {
+      case "date":
+        return TimestampTimeframe.Date;
+      case "week":
+        return TimestampTimeframe.Week;
+      case "month":
+        return TimestampTimeframe.Month;
+      case "quarter":
+        return TimestampTimeframe.Quarter;
+      case "year":
+        return TimestampTimeframe.Year;
+      case "second":
+        return TimestampTimeframe.Second;
+      case "hour":
+        return TimestampTimeframe.Hour;
+      case "minute":
+        return TimestampTimeframe.Minute;
+    }
+  }
+}
+
+export class NumberField extends AtomicField {
+  private fieldNumberDef: FieldNumberDef;
+  constructor(
+    fieldNumberDef: FieldNumberDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldNumberDef, parent, source);
+    this.fieldNumberDef = fieldNumberDef;
+  }
+}
+
+export class BooleanField extends AtomicField {
+  private fieldBooleanDef: FieldBooleanDef;
+  constructor(
+    fieldBooleanDef: FieldBooleanDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldBooleanDef, parent, source);
+    this.fieldBooleanDef = fieldBooleanDef;
+  }
+}
+
+export class StringField extends AtomicField {
+  private fieldStringDef: FieldStringDef;
+  constructor(
+    fieldStringDef: FieldStringDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldStringDef, parent, source);
+    this.fieldStringDef = fieldStringDef;
+  }
+}
+
+export class Query extends Entity {
+  protected turtleDef: TurtleDef;
+  private sourceQuery?: Query;
+
+  constructor(turtleDef: TurtleDef, parent?: Explore, source?: Query) {
+    super(turtleDef.as || turtleDef.name, parent, source);
     this.turtleDef = turtleDef;
   }
 
-  public getName(): string {
-    return this.turtleDef.as || this.turtleDef.name;
+  public getSource(): Query | undefined {
+    return this.sourceQuery;
+  }
+}
+
+export class QueryField extends Query {
+  protected parent: Explore;
+
+  constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
+    super(turtleDef, parent, source);
+    this.parent = parent;
   }
 
   public isQueryField(): this is QueryField {
@@ -699,6 +989,31 @@ export class QueryField {
   public isAtomicField(): this is AtomicField {
     return false;
   }
+
+  public isDimensional(): false {
+    return false;
+  }
+
+  public isMeasurelike(): true {
+    return true;
+  }
+
+  public getSourceClasses(): string[] {
+    const sourceField = this.turtleDef.name || this.turtleDef.as;
+    return sourceField ? [sourceField] : [];
+  }
+
+  public hasParentExplore(): this is Field {
+    return true;
+  }
+
+  getParentExplore(): Explore {
+    return this.parent;
+  }
+
+  getExpression(): string {
+    return this.getName();
+  }
 }
 
 export enum JoinRelationship {
@@ -710,8 +1025,8 @@ export enum JoinRelationship {
 export class ExploreField extends Explore {
   protected parentExplore: Explore;
 
-  constructor(structDef: StructDef, parentExplore: Explore) {
-    super(structDef, parentExplore);
+  constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
+    super(structDef, parentExplore, source);
     this.parentExplore = parentExplore;
   }
 
@@ -743,6 +1058,11 @@ export class ExploreField extends Explore {
 
   public getParentExplore(): Explore {
     return this.parentExplore;
+  }
+
+  public getSourceClasses(): string[] {
+    const sourceField = this.structDef.name || this.structDef.as;
+    return sourceField ? [sourceField] : [];
   }
 }
 
@@ -1043,8 +1363,8 @@ class ExploreMaterializer extends FluentState<Explore> {
 export class Result extends PreparedResult {
   protected inner: QueryResult;
 
-  constructor(queryResult: QueryResult) {
-    super(queryResult);
+  constructor(queryResult: QueryResult, modelDef: ModelDef) {
+    super(queryResult, modelDef);
     this.inner = queryResult;
   }
 
@@ -1057,11 +1377,234 @@ export class Result extends PreparedResult {
   }
 }
 
-export class DataArray {
+export type DataColumn =
+  | DataArray
+  | DataRecord
+  | DataString
+  | DataBoolean
+  | DataNumber
+  | DataDate
+  | DataTimestamp
+  | DataNull
+  | DataBytes;
+
+abstract class Data<T> {
+  protected field: Field | Explore;
+
+  constructor(field: Field | Explore) {
+    this.field = field;
+  }
+
+  getField(): Field | Explore {
+    return this.field;
+  }
+
+  abstract getValue(): T;
+
+  isString(): this is DataString {
+    return this instanceof DataString;
+  }
+
+  asString(): DataString {
+    if (this.isString()) {
+      return this;
+    }
+    throw new Error("Not a string.");
+  }
+
+  isBoolean(): this is DataBoolean {
+    return this instanceof DataBoolean;
+  }
+
+  asBoolean(): DataBoolean {
+    if (this.isBoolean()) {
+      return this;
+    }
+    throw new Error("Not a boolean.");
+  }
+
+  isNumber(): this is DataNumber {
+    return this instanceof DataNumber;
+  }
+
+  asNumber(): DataNumber {
+    if (this.isNumber()) {
+      return this;
+    }
+    throw new Error("Not a number.");
+  }
+
+  isTimestamp(): this is DataTimestamp {
+    return this instanceof DataTimestamp;
+  }
+
+  asTimestamp(): DataTimestamp {
+    if (this.isTimestamp()) {
+      return this;
+    }
+    throw new Error("Not a timestamp.");
+  }
+
+  isDate(): this is DataDate {
+    return this instanceof DataDate;
+  }
+
+  asDate(): DataDate {
+    if (this.isDate()) {
+      return this;
+    }
+    throw new Error("Not a date.");
+  }
+
+  isNull(): this is DataNull {
+    return this instanceof DataNull;
+  }
+
+  isBytes(): this is DataBytes {
+    return this instanceof DataBytes;
+  }
+
+  asBytes(): DataBytes {
+    if (this.isBytes()) {
+      return this;
+    }
+    throw new Error("Not bytes.");
+  }
+
+  isRecord(): this is DataRecord {
+    return this instanceof DataRecord;
+  }
+
+  asRecord(): DataRecord {
+    if (this.isRecord()) {
+      return this;
+    }
+    throw new Error("Not a record.");
+  }
+
+  isArray(): this is DataArray {
+    return this instanceof DataArray;
+  }
+
+  asArray(): DataArray {
+    if (this.isArray()) {
+      return this;
+    }
+    throw new Error("Not an array.");
+  }
+}
+
+class ScalarData<T> extends Data<T> {
+  private value: T;
+  protected field: AtomicField;
+
+  constructor(value: T, field: AtomicField) {
+    super(field);
+    this.value = value;
+    this.field = field;
+  }
+
+  getValue(): T {
+    return this.value;
+  }
+
+  getField(): AtomicField {
+    return this.field;
+  }
+}
+
+class DataString extends ScalarData<string> {
+  protected field: StringField;
+
+  constructor(value: string, field: StringField) {
+    super(value, field);
+    this.field = field;
+  }
+
+  getField(): StringField {
+    return this.field;
+  }
+}
+
+class DataBoolean extends ScalarData<boolean> {
+  protected field: BooleanField;
+
+  constructor(value: boolean, field: BooleanField) {
+    super(value, field);
+    this.field = field;
+  }
+
+  getField(): BooleanField {
+    return this.field;
+  }
+}
+
+class DataNumber extends ScalarData<number> {
+  protected field: NumberField;
+
+  constructor(value: number, field: NumberField) {
+    super(value, field);
+    this.field = field;
+  }
+
+  getField(): NumberField {
+    return this.field;
+  }
+}
+
+class DataTimestamp extends ScalarData<Date> {
+  protected field: TimestampField;
+
+  constructor(value: Date, field: TimestampField) {
+    super(value, field);
+    this.field = field;
+  }
+
+  getValue(): Date {
+    // TODO properly map the data from BQ/Postgres types
+    return new Date((super.getValue() as unknown as { value: string }).value);
+  }
+
+  getField(): TimestampField {
+    return this.field;
+  }
+}
+
+class DataDate extends ScalarData<Date> {
+  protected field: DateField;
+
+  constructor(value: Date, field: DateField) {
+    super(value, field);
+    this.field = field;
+  }
+
+  getValue(): Date {
+    // TODO properly map the data from BQ/Postgres types
+    return new Date((super.getValue() as unknown as { value: string }).value);
+  }
+
+  getField(): DateField {
+    return this.field;
+  }
+}
+
+class DataBytes extends ScalarData<Buffer> {}
+
+class DataNull extends Data<null> {
+  getValue(): null {
+    return null;
+  }
+}
+
+export class DataArray
+  extends Data<DataColumn[]>
+  implements Iterable<DataRecord>
+{
   private queryData: QueryData;
   protected field: Explore;
 
   constructor(queryData: QueryData, field: Explore) {
+    super(field);
     this.queryData = queryData;
     this.field = field;
   }
@@ -1072,6 +1615,81 @@ export class DataArray {
 
   public toObject(): QueryData {
     return this.queryData;
+  }
+
+  getRowByIndex(index: number): DataRecord {
+    return new DataRecord(this.queryData[index], this.field);
+  }
+
+  getRowCount(): number {
+    return this.queryData.length;
+  }
+
+  getValue(): DataColumn[] {
+    throw new Error("Not implemented;");
+  }
+
+  [Symbol.iterator](): Iterator<DataRecord> {
+    let currentIndex = 0;
+    const queryData = this.queryData;
+    const getRow = (index: number) => this.getRowByIndex(index);
+    return {
+      next(): IteratorResult<DataRecord> {
+        if (currentIndex < queryData.length) {
+          return { value: getRow(currentIndex++), done: false };
+        } else {
+          return { value: undefined, done: true };
+        }
+      },
+    };
+  }
+}
+
+class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
+  private queryDataRow: QueryDataRow;
+  protected field: Explore;
+
+  constructor(queryDataRow: QueryDataRow, field: Explore) {
+    super(field);
+    this.queryDataRow = queryDataRow;
+    this.field = field;
+  }
+
+  toObject(): QueryDataRow {
+    return this.queryDataRow;
+  }
+
+  getColumn(fieldName: string): DataColumn {
+    const field = this.field.getFieldByName(fieldName);
+    const value = this.queryDataRow[fieldName];
+    if (value === null) {
+      return new DataNull(field);
+    }
+    if (field.isAtomicField()) {
+      if (field.isBoolean()) {
+        return new DataBoolean(value as boolean, field);
+      } else if (field.isDate()) {
+        return new DataDate(value as Date, field);
+      } else if (field.isTimestamp()) {
+        return new DataTimestamp(value as Date, field);
+      } else if (field.isNumber()) {
+        return new DataNumber(value as number, field);
+      } else if (field.isString()) {
+        return new DataString(value as string, field);
+      }
+    } else if (field.isExploreField()) {
+      if (value instanceof Array) {
+        return new DataArray(value, field);
+      } else {
+        return new DataRecord(value as QueryDataRow, field);
+      }
+    }
+    // TODO crs
+    throw new Error("Oops");
+  }
+
+  getValue(): { [fieldName: string]: DataColumn } {
+    throw new Error("Not implemented;");
   }
 }
 

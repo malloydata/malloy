@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { QueryData, StructDef } from "@malloy-lang/malloy";
+import { DataArray } from "@malloy-lang/malloy";
 import * as lite from "vega-lite";
 import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
@@ -20,50 +20,45 @@ import { DEFAULT_SPEC } from "./vega_spec";
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
 
-  getVegaLiteSpec(data: QueryData, metadata: StructDef): lite.TopLevelSpec {
-    const xField = metadata.fields[0];
-    const yField = metadata.fields[1];
-    const colorField = metadata.fields[2];
-    const sizeField = metadata.fields[3];
-    const shapeField = metadata.fields[4];
+  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+    const fields = data.getField().getFields();
+    const xField = fields[0];
+    const yField = fields[1];
+    const colorField = fields[2];
+    const sizeField = fields[3];
+    const shapeField = fields[4];
 
-    const xType = this.getDataType(xField, metadata);
-    const yType = this.getDataType(yField, metadata);
-    const colorType = colorField
-      ? this.getDataType(colorField, metadata)
-      : undefined;
-    const sizeType = sizeField
-      ? this.getDataType(sizeField, metadata)
-      : undefined;
-    const shapeType = shapeField
-      ? this.getDataType(shapeField, metadata)
-      : undefined;
+    const xType = this.getDataType(xField);
+    const yType = this.getDataType(yField);
+    const colorType = colorField ? this.getDataType(colorField) : undefined;
+    const sizeType = sizeField ? this.getDataType(sizeField) : undefined;
+    const shapeType = shapeField ? this.getDataType(shapeField) : undefined;
 
     const mark = this.getMark();
 
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.name,
+            field: colorField.getName(),
             type: colorType,
-            axis: { title: colorField.name },
+            axis: { title: colorField.getName() },
             scale: getColorScale(colorType, mark === "bar"),
           }
         : { value: "#4285F4" };
 
     const sizeDef = sizeField
       ? {
-          field: sizeField.name,
+          field: sizeField.getName(),
           type: sizeType,
-          axis: { title: sizeField.name },
+          axis: { title: sizeField.getName() },
         }
       : undefined;
 
     const shapeDef = shapeField
       ? {
-          field: shapeField.name,
+          field: shapeField.getName(),
           type: shapeType,
-          axis: { title: shapeField.name },
+          axis: { title: shapeField.getName() },
         }
       : undefined;
 
@@ -71,17 +66,17 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
     const ySort = yType === "nominal" ? null : undefined;
 
     const xDef = {
-      field: xField.name,
+      field: xField.getName(),
       type: xType,
       sort: xSort,
-      axis: { title: xField.name },
+      axis: { title: xField.getName() },
     };
 
     const yDef = {
-      field: yField.name,
+      field: yField.getName(),
       type: yType,
       sort: ySort,
-      axis: { title: yField.name },
+      axis: { title: yField.getName() },
     };
 
     return {
@@ -89,11 +84,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       width: 150,
       height: 100,
       data: {
-        values: this.mapData(
-          data,
-          [xField, yField, colorField, sizeField, shapeField],
-          metadata
-        ),
+        values: this.mapData(data),
       },
       mark,
       encoding: {

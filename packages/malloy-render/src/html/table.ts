@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { DataColumn } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
-import { DataPointer, DataValue, isDataTree } from "../data_table";
 // import { getDrillPath, getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLNumberRenderer } from "./number";
@@ -22,13 +22,15 @@ export class HTMLTableRenderer extends ContainerRenderer {
     size: "small",
   };
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataColumn): Promise<string> {
+    if (!table.isArray()) {
       throw new Error("Invalid type for Table Renderer");
     }
     const header = table
-      .getFieldNames()
-      .map((name) => {
+      .getField()
+      .getFields()
+      .map((field) => {
+        const name = field.getName();
         const childRenderer = this.childRenderers[name];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
         return `<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
@@ -37,14 +39,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
       })
       .join("\n");
     let renderedBody = "";
-    for (let rowNum = 0; rowNum < table.rows.length; rowNum++) {
+    for (const row of table) {
       let renderedRow = "";
-      for (const fieldName of table.getFieldNames()) {
-        const childRenderer = this.childRenderers[fieldName];
+      for (const field of table.getField().getFields()) {
+        const childRenderer = this.childRenderers[field.getName()];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
         const rendered = await childRenderer.render(
-          table.getValue(rowNum, fieldName),
-          new DataPointer(table, rowNum, fieldName)
+          row.getColumn(field.getName())
         );
         renderedRow += `<td style="padding: ${
           childRenderer instanceof HTMLTableRenderer ? "0" : "8px"
