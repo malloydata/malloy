@@ -12,7 +12,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { HighlightType, MalloyTranslator } from "@malloy-lang/malloy";
+import { HighlightType, Malloy } from "@malloy-lang/malloy";
 import {
   SemanticTokens,
   SemanticTokensBuilder,
@@ -42,36 +42,35 @@ export const TOKEN_MODIFIERS = ["declaration", "documentation"];
 export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const tokensBuilder = new SemanticTokensBuilder();
 
-  const uri = document.uri.toString();
   const text = document.getText();
   const textLines = text.split("\n");
-  const translator = new MalloyTranslator(uri, {
-    urls: {
-      [uri]: text,
-    },
-  });
+  const parse = Malloy.parse({ source: text });
 
-  const metadata = translator.metadata();
-  const highlights = metadata.highlights || [];
+  const highlights = parse.getHighlights();
 
   highlights.forEach((highlight) => {
     for (
-      let line = highlight.range.start.line;
-      line <= highlight.range.end.line;
+      let line = highlight.getRange().getStart().getLine();
+      line <= highlight.getRange().getEnd().getLine();
       line++
     ) {
       const lineText = textLines[line];
       let length;
       let start;
-      if (highlight.range.start.line === highlight.range.end.line) {
+      if (
+        highlight.getRange().getStart().getLine() ===
+        highlight.getRange().getEnd().getLine()
+      ) {
         length =
-          highlight.range.end.character - highlight.range.start.character;
-        start = highlight.range.start.character;
-      } else if (line === highlight.range.start.line) {
-        length = lineText.length - highlight.range.start.character;
-        start = highlight.range.start.character;
-      } else if (line === highlight.range.end.line) {
-        length = highlight.range.end.character;
+          highlight.getRange().getEnd().getCharacter() -
+          highlight.getRange().getStart().getCharacter();
+        start = highlight.getRange().getStart().getCharacter();
+      } else if (line === highlight.getRange().getStart().getLine()) {
+        length =
+          lineText.length - highlight.getRange().getStart().getCharacter();
+        start = highlight.getRange().getStart().getCharacter();
+      } else if (line === highlight.getRange().getEnd().getLine()) {
+        length = highlight.getRange().getEnd().getCharacter();
         start = 0;
       } else {
         length = lineText.length;
@@ -81,7 +80,7 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
         line,
         start,
         length,
-        TOKEN_TYPES.indexOf(mapTypes(highlight.type)),
+        TOKEN_TYPES.indexOf(mapTypes(highlight.getType())),
         0
       );
     }

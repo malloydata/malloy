@@ -12,7 +12,7 @@
  */
 
 import { CodeLens } from "vscode-languageserver/node";
-import { MalloyTranslator } from "@malloy-lang/malloy";
+import { Malloy } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 const explain = `
@@ -37,31 +37,22 @@ const explain = `
 
 export function getMalloyLenses(document: TextDocument): CodeLens[] {
   const lenses: CodeLens[] = [];
-
-  const uri = document.uri.toString();
-  const translator = new MalloyTranslator(uri, {
-    urls: {
-      [uri]: document.getText(),
-    },
-  });
-
-  const metadata = translator.metadata();
-  const symbols = metadata.symbols || [];
+  const symbols = Malloy.parse({ source: document.getText() }).getSymbols();
 
   let currentUnnamedQueryIndex = 0;
   symbols.forEach((symbol) => {
-    if (symbol.type === "query") {
+    if (symbol.getType() === "query") {
       lenses.push({
-        range: symbol.range,
+        range: symbol.getRange().toJSON(),
         command: {
           title: "Run",
           command: "malloy.runNamedQuery",
-          arguments: [symbol.name],
+          arguments: [symbol.getName()],
         },
       });
-    } else if (symbol.type === "unnamed_query") {
+    } else if (symbol.getType() === "unnamed_query") {
       lenses.push({
-        range: symbol.range,
+        range: symbol.getRange().toJSON(),
         command: {
           title: "Run",
           command: "malloy.runQueryFile",
@@ -69,11 +60,11 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         },
       });
       currentUnnamedQueryIndex++;
-    } else if (symbol.type === "explore") {
-      const children = symbol.children;
-      const exploreName = symbol.name;
+    } else if (symbol.getType() === "explore") {
+      const children = symbol.getChildren();
+      const exploreName = symbol.getName();
       lenses.push({
-        range: symbol.range,
+        range: symbol.getRange().toJSON(),
         command: {
           title: "Query",
           command: "malloy.runQueryWithEdit",
@@ -81,7 +72,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         },
       });
       lenses.push({
-        range: symbol.range,
+        range: symbol.getRange().toJSON(),
         command: {
           title: "Preview",
           command: "malloy.runQuery",
@@ -92,7 +83,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         },
       });
       lenses.push({
-        range: symbol.range,
+        range: symbol.getRange().toJSON(),
         command: {
           title: "Explain",
           command: "malloy.runQuery",
@@ -103,10 +94,10 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         },
       });
       children.forEach((child) => {
-        if (child.type === "turtle") {
-          const turtleName = child.name;
+        if (child.getType() === "turtle") {
+          const turtleName = child.getName();
           lenses.push({
-            range: child.range,
+            range: child.getRange().toJSON(),
             command: {
               title: "Run",
               command: "malloy.runQuery",
@@ -117,7 +108,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
             },
           });
           lenses.push({
-            range: child.range,
+            range: child.getRange().toJSON(),
             command: {
               title: "Edit and Run",
               command: "malloy.runQueryWithEdit",

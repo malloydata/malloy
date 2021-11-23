@@ -14,36 +14,31 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   DocumentSymbol as MalloyDocumentSymbol,
-  MalloyTranslator,
+  Malloy,
 } from "@malloy-lang/malloy";
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 
 function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
+  const type = symbol.getType();
   return {
-    name: symbol.name,
-    range: symbol.range,
-    detail: symbol.type,
+    name: symbol.getName(),
+    range: symbol.getRange().toJSON(),
+    detail: symbol.getType(),
     kind:
-      symbol.type === "explore"
+      type === "explore"
         ? SymbolKind.Namespace
-        : symbol.type === "turtle"
+        : type === "turtle"
         ? SymbolKind.Class
-        : symbol.type === "join"
+        : type === "join"
         ? SymbolKind.Interface
         : SymbolKind.Field,
-    selectionRange: symbol.range,
-    children: symbol.children.map(mapSymbol),
+    selectionRange: symbol.getRange().toJSON(),
+    children: symbol.getChildren().map(mapSymbol),
   };
 }
 
 export function getMalloySymbols(document: TextDocument): DocumentSymbol[] {
-  const uri = document.uri.toString();
-  const translator = new MalloyTranslator(uri, {
-    urls: {
-      [uri]: document.getText(),
-    },
-  });
-
-  const metadata = translator.metadata();
-  return metadata.symbols?.map(mapSymbol) || [];
+  return Malloy.parse({ source: document.getText() })
+    .getSymbols()
+    .map(mapSymbol);
 }
