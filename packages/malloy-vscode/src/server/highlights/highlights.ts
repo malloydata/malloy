@@ -44,7 +44,7 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
 
   const text = document.getText();
   const textLines = text.split("\n");
-  const parse = Malloy.parse(text);
+  const parse = Malloy.parse({ source: text });
 
   const highlights = parse.getHighlights();
 

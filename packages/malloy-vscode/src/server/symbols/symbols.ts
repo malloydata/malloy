@@ -38,5 +38,7 @@ function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
 }
 
 export function getMalloySymbols(document: TextDocument): DocumentSymbol[] {
-  return Malloy.parse(document.getText()).getSymbols().map(mapSymbol);
+  return Malloy.parse({ source: document.getText() })
+    .getSymbols()
+    .map(mapSymbol);
 }
