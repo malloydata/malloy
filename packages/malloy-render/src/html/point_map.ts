@@ -12,20 +12,27 @@
  */
 
 import * as lite from "vega-lite";
-import { DataArray, DataColumn, Field } from "@malloy-lang/malloy";
+import {
+  DataArray,
+  DataColumn,
+  Field,
+  TimestampTimeframe,
+} from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
-import { getColorScale } from "./utils";
+import { getColorScale, timeToString } from "./utils";
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
     if (data.isNumber() || data.isString()) {
       return data.getValue();
     } else if (data.isTimestamp() || data.isDate()) {
-      // TODO crs
-      return data.getValue() as unknown as string;
+      return timeToString(
+        data.getValue(),
+        data.getField().getTimeframe() || TimestampTimeframe.Second
+      );
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for point map chart.");
   }
 
   getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {

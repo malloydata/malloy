@@ -2205,8 +2205,9 @@ class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         return new DataRecord(value as QueryDataRow, field);
       }
     }
-    // TODO crs
-    throw new Error("Oops");
+    throw new Error(
+      `Internal Error: could not construct data column for field '${fieldName}'.`
+    );
   }
 
   getValue(): { [fieldName: string]: DataColumn } {
