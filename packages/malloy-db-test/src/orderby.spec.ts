@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import { rows } from "./runtimes";
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes } from "./runtimes";
 
@@ -58,8 +57,10 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(rows(result)[0].big).toBe(false);
-    expect(rows(result)[0].model_count).toBe(58451);
+    expect(result.getData().getRow(0).getColumn("big").getValue()).toBe(false);
+    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
+      58451
+    );
   });
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
@@ -76,8 +77,10 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(rows(result)[0].big).toBe(false);
-    expect(rows(result)[0].model_count).toBe(58500);
+    expect(result.getData().getRow(0).getColumn("big").getValue()).toBe(false);
+    expect(
+      result.getData().getRow(0).getColumn("model_couunt").getValue()
+    ).toBe(58500);
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
@@ -91,7 +94,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(rows(result)[0].j_names).toBe(1358);
+    expect(result.getData().getRow(0).getColumn("j_names").getValue()).toBe(
+      1358
+    );
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -171,7 +176,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(rows(result)[0].model_count).toBe(102);
+    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
+      102
+    );
   });
 
   it(`modeled having complex - ${databaseName}`, async () => {
@@ -193,7 +200,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(rows(result)[0].model_count).toBe(102);
+    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
+      102
+    );
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {

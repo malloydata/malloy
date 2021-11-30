@@ -49,7 +49,7 @@ function getTableFilters(
     .filter((field) => field.isDimensional());
 
   for (const dim of dimensions) {
-    const value = table.getRowByIndex(row).getColumn(dim.getName());
+    const value = table.getRow(row).getColumn(dim.getName());
     // if we have an expression, use it instead of the name of the field.
     const key =
       dim.isAtomicField() || dim.isQueryField()
@@ -85,7 +85,7 @@ export function getDrillFilters(root: DataArray, path: string): string[] {
     getTableFilters(dataTable, rowNum, filters);
     if (nextTableFieldName) {
       dataTable = dataTable
-        .getRowByIndex(rowNum)
+        .getRow(rowNum)
         .getColumn(nextTableFieldName)
         .asArray();
     }

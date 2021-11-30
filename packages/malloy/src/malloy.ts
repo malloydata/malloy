@@ -902,6 +902,24 @@ export class Explore extends Entity {
             } else if (fieldDef.type === "number") {
               return [name, new NumberField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === "date") {
+              // TODO this is a hack
+              // Is this a bug? The extraction functions don't seem like they should return a
+              // field of type "date". Rather, they should be of type "number".
+              if (
+                fieldDef.timeframe &&
+                ["day", "day_of_month", "day_of_week", "day_of_year"].includes(
+                  fieldDef.timeframe
+                )
+              ) {
+                return [
+                  name,
+                  new NumberField(
+                    { ...fieldDef, type: "number" },
+                    this,
+                    sourceField
+                  ),
+                ];
+              }
               return [name, new DateField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === "timestamp") {
               return [name, new TimestampField(fieldDef, this, sourceField)];
@@ -2101,7 +2119,11 @@ export class DataArray
     return this.queryData;
   }
 
-  getRowByIndex(index: number): DataRecord {
+  getPath(...path: (number | string)[]): DataColumn {
+    return getPath(this, path);
+  }
+
+  getRow(index: number): DataRecord {
     return new DataRecord(this.queryData[index], this.field);
   }
 
@@ -2116,7 +2138,7 @@ export class DataArray
   [Symbol.iterator](): Iterator<DataRecord> {
     let currentIndex = 0;
     const queryData = this.queryData;
-    const getRow = (index: number) => this.getRowByIndex(index);
+    const getRow = (index: number) => this.getRow(index);
     return {
       next(): IteratorResult<DataRecord> {
         if (currentIndex < queryData.length) {
@@ -2127,6 +2149,17 @@ export class DataArray
       },
     };
   }
+}
+
+function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
+  for (const segment of path) {
+    if (typeof segment === "number") {
+      data = data.asArray().getRow(segment);
+    } else {
+      data = data.asRecord().getColumn(segment);
+    }
+  }
+  return data;
 }
 
 class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
@@ -2141,6 +2174,10 @@ class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
 
   toObject(): QueryDataRow {
     return this.queryDataRow;
+  }
+
+  getPath(...path: (number | string)[]): DataColumn {
+    return getPath(this, path);
   }
 
   getColumn(fieldName: string): DataColumn {
