@@ -78,9 +78,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
       )
       .run();
     expect(result.getData().getRow(0).getColumn("big").getValue()).toBe(false);
-    expect(
-      result.getData().getRow(0).getColumn("model_couunt").getValue()
-    ).toBe(58500);
+    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
+      58500
+    );
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
