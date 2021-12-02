@@ -885,9 +885,9 @@ export class Explore extends Entity {
   }
 
   private getFieldMap(): Map<string, Field> {
-    const sourceExplore = this.getSource();
-    const sourceFields = sourceExplore?.getFieldMap() || new Map();
     if (this.fields === undefined) {
+      const sourceExplore = this.getSource();
+      const sourceFields = sourceExplore?.getFieldMap() || new Map();
       this.fields = new Map(
         this.structDef.fields.map((fieldDef) => {
           const name = fieldDef.as || fieldDef.name;
