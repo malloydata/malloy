@@ -23,12 +23,10 @@ import { HTMLVegaSpecRenderer, vegaSpecs } from "./vega_spec";
 function isOrdninal(field: Field): boolean {
   return (
     field.isAtomicField() &&
-    [
-      AtomicFieldType.String,
-      AtomicFieldType.Date,
-      AtomicFieldType.Timestamp,
-      AtomicFieldType.Boolean,
-    ].includes(field.getType())
+    (field.isString() ||
+      field.isDate() ||
+      field.isTimestamp() ||
+      field.isBoolean())
   );
 }
 
@@ -43,7 +41,7 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
     if (!table.isArray()) {
       throw new Error("Invalid type for chart renderer");
     }
-    const fields = table.getField().getFields();
+    const fields = table.field.fields;
     if (fields.length < 2) {
       return "Need at least 2 fields for a bar chart.";
     }
@@ -52,7 +50,7 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
       specName += "S";
     } else if (
       fields[0].isAtomicField() &&
-      fields[0].getType() === AtomicFieldType.Number
+      fields[0].type === AtomicFieldType.Number
     ) {
       specName += "N";
     } else {

@@ -15,12 +15,12 @@ import { DataColumn } from "@malloy-lang/malloy";
 import { Renderer } from "../renderer";
 
 export class HTMLTextRenderer implements Renderer {
-  getText(value: DataColumn): string | null {
-    return `${value.getValue()}`;
+  getText(data: DataColumn): string | null {
+    return `${data.value}`;
   }
 
-  async render(value: DataColumn): Promise<string> {
-    const text = this.getText(value);
+  async render(data: DataColumn): Promise<string> {
+    const text = this.getText(data);
     if (text === null) {
       return `⌀`;
     }

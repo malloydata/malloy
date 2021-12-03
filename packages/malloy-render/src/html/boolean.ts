@@ -20,10 +20,6 @@ export class HTMLBooleanRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    if (!data.isBoolean()) {
-      throw new Error("Invalid type for boolean renderer.");
-    }
-
-    return `${data.getValue()}`;
+    return `${data.boolean.value}`;
   }
 }

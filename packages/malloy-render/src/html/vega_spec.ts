@@ -418,7 +418,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
       data.isNumber() ||
       data.isString()
     ) {
-      return data.getValue();
+      return data.value;
     } else {
       throw new Error("Invalid field type for bar chart.");
     }
@@ -438,7 +438,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   translateField(explore: Explore, fieldString: string): string {
     const m = fieldString.match(/#\{(?<fieldnum>\d+)\}/);
     if (m && m.groups) {
-      return explore.getFields()[parseInt(m.groups["fieldnum"]) - 1].getName();
+      return explore.fields[parseInt(m.groups["fieldnum"]) - 1].name;
     }
     return fieldString;
   }
@@ -488,7 +488,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
 
     const newSpec = cloneDeep(this.spec);
 
-    this.translateFields(newSpec as unknown as DataContainer, data.getField());
+    this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
       values: this.mapData(data),
     };

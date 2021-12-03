@@ -43,7 +43,7 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
       data.isNumber() ||
       data.isString()
     ) {
-      return data.getValue();
+      return data.value;
     } else {
       throw new Error("Invalid field type for bar chart.");
     }

@@ -26,11 +26,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
     if (!table.isArray()) {
       throw new Error("Invalid type for Table Renderer");
     }
-    const header = table
-      .getField()
-      .getFields()
+    const header = table.field.fields
       .map((field) => {
-        const name = field.getName();
+        const name = field.name;
         const childRenderer = this.childRenderers[name];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
         return `<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
@@ -41,12 +39,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
     let renderedBody = "";
     for (const row of table) {
       let renderedRow = "";
-      for (const field of table.getField().getFields()) {
-        const childRenderer = this.childRenderers[field.getName()];
+      for (const field of table.field.fields) {
+        const childRenderer = this.childRenderers[field.name];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
-        const rendered = await childRenderer.render(
-          row.getColumn(field.getName())
-        );
+        const rendered = await childRenderer.render(row.cell(field));
         renderedRow += `<td style="padding: ${
           childRenderer instanceof HTMLTableRenderer ? "0" : "8px"
         }; vertical-align: top; border-bottom: 1px solid #eaeaea; ${

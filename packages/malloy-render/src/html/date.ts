@@ -30,9 +30,9 @@ export class HTMLDateRenderer implements Renderer {
     }
 
     const timeframe =
-      data.getField().getTimeframe() ||
+      data.field.timeframe ||
       (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Date);
 
-    return timeToString(data.getValue(), timeframe);
+    return timeToString(data.value, timeframe);
   }
 }

@@ -30,7 +30,7 @@ async function validateCompilation(
       throw new Error(`Unknown database ${databaseName}`);
     }
     await (
-      await runtime.getLookupSQLRunner().lookupSQLRunner(databaseName)
+      await runtime.lookupSQLRunner.lookupSQLRunner(databaseName)
     ).runSQL(`WITH test AS(\n${sql}) SELECT 1`);
   } catch (e) {
     console.log(`SQL: didn't compile\n=============\n${sql}`);
@@ -263,7 +263,7 @@ it(`hand query hand model - ${databaseName}`, async () => {
   });
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
-  // expect(result.getData().toObject()[0].total_seats).toBe(452415);
+  // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
 it(`hand turtle - ${databaseName}`, async () => {
@@ -274,7 +274,7 @@ it(`hand turtle - ${databaseName}`, async () => {
       pipeline: [],
     })
     .run();
-  expect(result.getData().toObject()[0].aircraft_count).toBe(3599);
+  expect(result.data.value[0].aircraft_count).toBe(3599);
 });
 
 it(`hand turtle malloy - ${databaseName}`, async () => {
@@ -285,7 +285,7 @@ explore aircraft | hand_turtle
 `
     )
     .run();
-  expect(result.getData().toObject()[0].aircraft_count).toBe(3599);
+  expect(result.data.value[0].aircraft_count).toBe(3599);
 });
 
 it(`default sort order - ${databaseName}`, async () => {
@@ -296,7 +296,7 @@ it(`default sort order - ${databaseName}`, async () => {
     `
     )
     .run();
-  expect(result.getData().toObject()[0].aircraft_count).toBe(367);
+  expect(result.data.value[0].aircraft_count).toBe(367);
 });
 
 it(`default sort order by dir - ${databaseName}`, async () => {
@@ -307,7 +307,7 @@ it(`default sort order by dir - ${databaseName}`, async () => {
     `
     )
     .run();
-  expect(result.getData().toObject()[0].aircraft_count).toBe(1);
+  expect(result.data.value[0].aircraft_count).toBe(1);
 });
 
 it(`hand turtle2 - ${databaseName}`, async () => {
@@ -332,7 +332,7 @@ it(`hand turtle2 - ${databaseName}`, async () => {
   });
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
-  // expect(result.getData().toObject()[0].total_seats).toBe(452415);
+  // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
 it(`hand turtle3 - ${databaseName}`, async () => {
@@ -347,7 +347,7 @@ it(`hand turtle3 - ${databaseName}`, async () => {
   });
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
-  // expect(result.getData().toObject()[0].total_seats).toBe(452415);
+  // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
 it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
@@ -359,7 +359,7 @@ it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
   // console.log(result.sql);
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
-  // expect(result.getData().toObject()[0].total_seats).toBe(452415);
+  // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
 it(`hand: turtle is pipeline - ${databaseName}`, async () => {
@@ -406,14 +406,7 @@ it(`hand: turtle is pipeline - ${databaseName}`, async () => {
       ],
     })
     .run();
-  // console.log(result.sql);
-  // await bqCompile(databaseName, result.sql);
-  // console.log(result.sql);
-  // console.log(result.getData().toObject()[0]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  expect((result.getData().toObject()[0] as any).pipe[0].total_aircraft).toBe(
-    61
-  );
+  expect(result.data.path(0, "pipe", 0, "total_aircraft").value).toBe(61);
 });
 
 // Hand model basic calculations for sum, filtered sum, without a join.
@@ -432,12 +425,12 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
     )
     .run();
   // console.log(result.sql);
-  expect(result.getData().toObject()[0].total_seats).toBe(18294);
-  expect(result.getData().toObject()[0].total_seats2).toBe(31209);
-  expect(result.getData().toObject()[0].total_seats3).toBe(18294);
-  expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
-  expect(result.getData().toObject()[0].boeing_seats2).toBe(6244);
-  expect(result.getData().toObject()[0].boeing_seats3).toBe(6244);
+  expect(result.data.value[0].total_seats).toBe(18294);
+  expect(result.data.value[0].total_seats2).toBe(31209);
+  expect(result.data.value[0].total_seats3).toBe(18294);
+  expect(result.data.value[0].boeing_seats).toBe(6244);
+  expect(result.data.value[0].boeing_seats2).toBe(6244);
+  expect(result.data.value[0].boeing_seats3).toBe(6244);
 });
 
 it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
@@ -450,7 +443,7 @@ it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
     )
     .run();
   // console.log(result.sql);
-  expect(result.getData().toObject()[0].total_seats3).toBe(18294);
+  expect(result.data.value[0].total_seats3).toBe(18294);
 });
 
 // WORKs: (hand coded model):
@@ -465,8 +458,8 @@ it(`hand: expression fixups. - ${databaseName}`, async () => {
           `
     )
     .run();
-  expect(result.getData().toObject()[0].total_seats).toBe(18294);
-  expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
+  expect(result.data.value[0].total_seats).toBe(18294);
+  expect(result.data.value[0].boeing_seats).toBe(6244);
 });
 
 it(`model: filtered measures - ${databaseName}`, async () => {
@@ -478,7 +471,7 @@ it(`model: filtered measures - ${databaseName}`, async () => {
           `
     )
     .run();
-  expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
+  expect(result.data.value[0].boeing_seats).toBe(6244);
 });
 
 // does the filter force a join?
@@ -491,7 +484,7 @@ it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
           `
     )
     .run();
-  expect(result.getData().toObject()[0].boeing_aircraft).toBe(69);
+  expect(result.data.value[0].boeing_aircraft).toBe(69);
 });
 
 // Works: Generate query using named alias.
@@ -514,7 +507,7 @@ it(`hand: filtered measures - ${databaseName}`, async () => {
     })
     .run();
   // console.log(result.sql);
-  expect(result.getData().toObject()[0].boeing_seats).toBe(6244);
+  expect(result.data.value[0].boeing_seats).toBe(6244);
 });
 
 /** Flight model */
@@ -623,7 +616,7 @@ it(`hand join ON - ${databaseName}`, async () => {
     .getSQL();
   await validateCompilation(databaseName, sql);
   // console.log(result.sql);
-  // expect(result.getData().toObject()[0].total_seats).toBe(452415);
+  // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
 it(`hand join symmetric agg - ${databaseName}`, async () => {
@@ -640,9 +633,9 @@ it(`hand join symmetric agg - ${databaseName}`, async () => {
     .run();
   // await bqCompile(databaseName, result.sql);
   // console.log(result.sql);
-  // console.log(result.getData().toObject());
-  expect(result.getData().toObject()[0].total_seats).toBe(452415);
-  expect(result.getData().toObject()[0].aircraft_count).toBe(62644);
+  // console.log(result.data.value);
+  expect(result.data.value[0].total_seats).toBe(452415);
+  expect(result.data.value[0].aircraft_count).toBe(62644);
 });
 
 it(`hand join foreign key filtered inner - ${databaseName}`, async () => {
@@ -659,7 +652,7 @@ it(`hand join foreign key filtered inner - ${databaseName}`, async () => {
     .run();
   // await bqCompile(databaseName, result.sql);
   // console.log(result.sql);
-  // console.log(result.getData().toObject());
-  expect(result.getData().toObject()[0].total_seats).toBe(7448);
-  expect(result.getData().toObject()[0].aircraft_count).toBe(544);
+  // console.log(result.data.value);
+  expect(result.data.value[0].total_seats).toBe(7448);
+  expect(result.data.value[0].aircraft_count).toBe(544);
 });

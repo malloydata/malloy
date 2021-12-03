@@ -519,7 +519,7 @@ describe("expression tests", () => {
     | PROJECT state.code.code LIMIT 1
     `
     );
-    expect(result.getData().toObject()[0].code).toBe("ALB");
+    expect(result.data.value[0].code).toBe("ALB");
   });
 
   it("flights.search_index", async () => {
@@ -619,7 +619,7 @@ describe("expression tests", () => {
         ],
       })
       .run();
-    expect(result.getData().toObject()[0].num_providers).toBe(296);
+    expect(result.data.value[0].num_providers).toBe(296);
   });
 
   // const faa2: TestDeclaration[] = [
@@ -652,7 +652,7 @@ describe("expression tests", () => {
         pipeline: [],
       })
       .run();
-    expect(result.getData().toObject()[0].c).toBe(202656);
+    expect(result.data.value[0].c).toBe(202656);
   });
 });
 
@@ -694,7 +694,7 @@ describe("airport_tests", () => {
       a is count(*)
     `
     );
-    expect(result.getData().toObject()[0].a).toBe(19793);
+    expect(result.data.value[0].a).toBe(19793);
   });
 
   it("turtle_from_hell", async () => {
@@ -732,7 +732,7 @@ describe("airport_tests", () => {
 
     `
     );
-    expect(result.getData().toObject()[0].county).toBe("ZAVALA");
+    expect(result.data.value[0].county).toBe("ZAVALA");
   });
 
   it("nested_project", async () => {
@@ -746,7 +746,7 @@ describe("airport_tests", () => {
     | project stuff.elevation limit 1
     `
     );
-    expect(result.getData().toObject()[0].elevation).toBe(1836);
+    expect(result.data.value[0].elevation).toBe(1836);
   });
 
   it("nested_sums", async () => {
@@ -770,8 +770,8 @@ describe("airport_tests", () => {
     `
     );
     // console.log(result.sql);
-    expect(result.getData().toObject()[0].sum_state).toBe(19793);
-    expect(result.getData().toObject()[0].sum_fac).toBe(19793);
+    expect(result.data.value[0].sum_state).toBe(19793);
+    expect(result.data.value[0].sum_fac).toBe(19793);
   });
 
   it("pipeline_as_declared_turtle", async () => {
@@ -788,7 +788,7 @@ describe("airport_tests", () => {
         explore my_airports | pipe_turtle
     `
     );
-    expect(result.getData().toObject()[0].a).toBe(19793);
+    expect(result.data.value[0].a).toBe(19793);
   });
 
   it("pipeline Turtle", async () => {
@@ -814,7 +814,7 @@ describe("airport_tests", () => {
 
     expect(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (result.getData().toObject()[0] as any).pipe_turtle[0].total_airports
+      (result.data.value[0] as any).pipe_turtle[0].total_airports
     ).toBe(1845);
   });
 
@@ -834,7 +834,7 @@ describe("airport_tests", () => {
     //       by_state.*
     // `);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // expect((result.getData().toObject()[0] as any).pipe_turtle[0].total_airports).toBe(1845);
+    // expect((result.data.value[0] as any).pipe_turtle[0].total_airports).toBe(1845);
   });
 
   it.skip("crossjoined turtles as turtle", async () => {
@@ -856,7 +856,7 @@ describe("airport_tests", () => {
     //       )
     // `);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    // expect((result.getData().toObject()[0] as any).pipe_turtle[0].total_airports).toBe(1845);
+    // expect((result.data.value[0] as any).pipe_turtle[0].total_airports).toBe(1845);
   });
 
   it("string_expressions", async () => {
@@ -869,7 +869,7 @@ describe("airport_tests", () => {
         limit 10
     `
     );
-    expect(result.getData().toObject()[0].lower_state).toBe("wy");
+    expect(result.data.value[0].lower_state).toBe("wy");
   });
 
   it("half_count", async () => {
@@ -880,7 +880,7 @@ describe("airport_tests", () => {
         half is airport_count/2.0
     `
     );
-    expect(result.getData().toObject()[0].half).toBe(9896.5);
+    expect(result.data.value[0].half).toBe(9896.5);
   });
 });
 
@@ -895,7 +895,7 @@ describe("sql injection tests", () => {
       flights | reduce test is 'foo\\''
     `
     );
-    expect(result.getData().toObject()[0].test).toBe("foo'");
+    expect(result.data.value[0].test).toBe("foo'");
   });
 
   test("string filter escapes quotes", async () => {
@@ -905,7 +905,7 @@ describe("sql injection tests", () => {
       flights | reduce test is count() : [carrier: 'foo\\'']
     `
     );
-    expect(result.getData().toObject()[0].test).toBe(0);
+    expect(result.data.value[0].test).toBe(0);
   });
 
   test("string literal escapes backslashes", async () => {
@@ -915,7 +915,7 @@ describe("sql injection tests", () => {
       flights | reduce test is 'foo\\\\\\''
     `
     );
-    expect(result.getData().toObject()[0].test).toBe("foo\\'");
+    expect(result.data.value[0].test).toBe("foo\\'");
   });
 
   test("string filter escapes backslashes", async () => {
@@ -925,7 +925,7 @@ describe("sql injection tests", () => {
       flights | reduce test is count() : [carrier: 'foo\\\\\\'']
     `
     );
-    expect(result.getData().toObject()[0].test).toBe(0);
+    expect(result.data.value[0].test).toBe(0);
   });
 
   test("comment in string", async () => {
@@ -935,7 +935,7 @@ describe("sql injection tests", () => {
       flights | reduce test is 'foo \\\\'--'
     `
     );
-    expect(result.getData().toObject()[0].test).toBe("foo \\");
+    expect(result.data.value[0].test).toBe("foo \\");
   });
 
   test("comment in string filter", async () => {
@@ -962,6 +962,6 @@ describe("sql injection tests", () => {
       flights | reduce test is 'foo \\\\'--'
     `
     );
-    expect(result.getData().toObject()[0].test).toBe("foo \\");
+    expect(result.data.value[0].test).toBe("foo \\");
   });
 });

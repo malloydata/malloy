@@ -26,7 +26,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       return "Invalid data for chart renderer.";
     }
 
-    const fields = table.getField().getFields();
+    const fields = table.field.fields;
     const dimensions = fields.filter(
       (field) => field.isAtomicField() && field.isDimensional()
     );
@@ -38,22 +38,20 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
     for (const row of table) {
       let renderedDimensions = "";
       for (const field of dimensions) {
-        const renderer = this.childRenderers[field.getName()];
-        const rendered = await renderer.render(row.getColumn(field.getName()));
-        renderedDimensions += `<div style="${DIMENSION_BOX}"><div style="${DIMENSION_TITLE}">${field.getName()}</div><div style="${VERTICAL_CENTER}">${rendered}</div></div>\n`;
+        const renderer = this.childRenderers[field.name];
+        const rendered = await renderer.render(row.cell(field));
+        renderedDimensions += `<div style="${DIMENSION_BOX}"><div style="${DIMENSION_TITLE}">${field.name}</div><div style="${VERTICAL_CENTER}">${rendered}</div></div>\n`;
       }
       let renderedMeasures = "";
       for (const field of measures) {
-        const childRenderer = this.childRenderers[field.getName()];
-        const rendered = await childRenderer.render(
-          row.getColumn(field.getName())
-        );
+        const childRenderer = this.childRenderers[field.name];
+        const rendered = await childRenderer.render(row.cell(field));
         if (childRenderer instanceof HTMLDashboardRenderer) {
           renderedMeasures += rendered;
         } else if (childRenderer instanceof HTMLTextRenderer) {
           renderedMeasures += `
             <div style="${MEASURE_BOX}">
-              <div style="${TITLE}">${field.getName()}</div>
+              <div style="${TITLE}">${field.name}</div>
               <div style="${VERTICAL_CENTER}">
                 <div style="${SINGLE_VALUE}">
                   ${rendered}
@@ -63,7 +61,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         } else {
           renderedMeasures += `
             <div style="${MEASURE_BOX}">
-              <div style="${TITLE}">${field.getName()}</div>
+              <div style="${TITLE}">${field.name}</div>
               <div style="${VERTICAL_CENTER}">
                 <div style="${HORIZONTAL_CENTER}">
                   ${rendered}

@@ -17,8 +17,8 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, DataTreeRoot, HTMLView } from "@malloy-lang/render";
-import { Runner, Runtime, URL, URLReader } from "@malloy-lang/malloy";
+import { DataStyles, HTMLView } from "@malloy-lang/render";
+import { Malloy, Runtime, URL, URLReader } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import path from "path";
 import { promises as fs } from "fs";
@@ -120,11 +120,7 @@ export async function runCode(
   options: RunOptions
 ): Promise<string> {
   const urlReader = new DocsURLReader(documentPath);
-  const runtime = new Runtime({
-    urls: urlReader,
-    schemas: BIGQUERY_CONNECTION,
-    connections: BIGQUERY_CONNECTION,
-  });
+  const runtime = new Runtime(urlReader, BIGQUERY_CONNECTION);
   // Here, we assume that docs queries that reference a model only care about
   // things _exported_ from that model. In other words, a query with
   // `"source": "something.malloy" is equivalent to prepending the query with
@@ -151,16 +147,16 @@ export async function runCode(
   // imports don't work. It shouldn't be necessary to show relative imports
   // in runnable docs. If this changes, the `urlReader` will need to be able to
   // handle reading a fake URL for the query as well as real URLs for local files.
-  const preparedQuery = await runtime.makeQuery(fullQuery).getSQL().build();
-  const queryResult = await Runner.run(
-    {
+  const preparedResult = await runtime.loadQuery(fullQuery).getPreparedResult();
+  const queryResult = await Malloy.run({
+    sqlRunner: {
       runSQL: (sql: string) =>
         BIGQUERY_CONNECTION.runSQL(sql, {
           pageSize: options.pageSize || 5,
         }),
     },
-    preparedQuery
-  );
+    preparedResult,
+  });
 
   log(
     `  >> Finished running query ${querySummary} in ${timeString(
@@ -168,22 +164,13 @@ export async function runCode(
       performance.now()
     )}`
   );
-  const namedField = queryResult.getResultExplore();
 
   const dataStyles = {
     ...options.dataStyles,
     ...urlReader.getHackyAccumulatedDataStyles(),
   };
 
-  const result = await new HTMLView().render(
-    new DataTreeRoot(
-      queryResult.getData().toObject(),
-      namedField._getStructDef(),
-      queryResult._getSourceExploreName(),
-      queryResult._getSourceFilters() || []
-    ),
-    dataStyles
-  );
+  const result = await new HTMLView().render(queryResult.data, dataStyles);
 
   return `<div class="result-outer ${options.size || "small"}">
     <div class="result-middle">

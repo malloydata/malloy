@@ -20,7 +20,7 @@ import { getColorScale } from "./utils";
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
     if (data.isNumber() || data.isString()) {
-      return data.getValue();
+      return data.value;
     }
     throw new Error("Invalid field type for bar chart.");
   }
@@ -42,7 +42,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
       throw new Error("Expected struct value not to be null.");
     }
 
-    const fields = data.getField().getFields();
+    const fields = data.field.fields;
 
     const lat1Field = fields[0];
     const lon1Field = fields[1];
@@ -55,9 +55,9 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.getName(),
+            field: colorField.name,
             type: colorType,
-            axis: { title: colorField.getName() },
+            axis: { title: colorField.name },
             scale: getColorScale(colorType, false),
           }
         : undefined;
@@ -89,10 +89,10 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
         {
           mark: "line",
           encoding: {
-            latitude: { field: lat1Field.getName(), type: "quantitative" },
-            longitude: { field: lon1Field.getName(), type: "quantitative" },
-            latitude2: { field: lat2Field.getName(), type: "quantitative" },
-            longitude2: { field: lon2Field.getName(), type: "quantitative" },
+            latitude: { field: lat1Field.name, type: "quantitative" },
+            longitude: { field: lon1Field.name, type: "quantitative" },
+            latitude2: { field: lat2Field.name, type: "quantitative" },
+            longitude2: { field: lon2Field.name, type: "quantitative" },
             color: colorDef,
           },
         },

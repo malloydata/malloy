@@ -71,27 +71,19 @@ expressionModels.forEach((expressionModel, databaseName) => {
       `
       )
       .run();
-    expect(result.getData().getPath(0, "total_seats").getValue()).toBe(452415);
-    expect(result.getData().getPath(0, "total_seats2").getValue()).toBe(452415);
-    expect(result.getData().getPath(0, "boeing_seats").getValue()).toBe(252771);
-    expect(result.getData().getPath(0, "boeing_seats2").getValue()).toBe(
-      252771
-    );
-    expect(result.getData().getPath(0, "boeing_seats3").getValue()).toBe(
-      252771
+    expect(result.data.path(0, "total_seats").value).toBe(452415);
+    expect(result.data.path(0, "total_seats2").value).toBe(452415);
+    expect(result.data.path(0, "boeing_seats").value).toBe(252771);
+    expect(result.data.path(0, "boeing_seats2").value).toBe(252771);
+    expect(result.data.path(0, "boeing_seats3").value).toBe(252771);
+    expect(Math.floor(result.data.path(0, "percent_boeing").number.value)).toBe(
+      55
     );
     expect(
-      Math.floor(
-        result.getData().getPath(0, "percent_boeing").asNumber().getValue()
-      )
+      Math.floor(result.data.path(0, "percent_boeing2").number.value)
     ).toBe(55);
-    expect(
-      Math.floor(
-        result.getData().getPath(0, "percent_boeing2").asNumber().getValue()
-      )
-    ).toBe(55);
-    // expect(result.getData().getPath(0, "percent_boeing_floor").getValue()).toBe(55);
-    // expect(result.getData().getPath(0, "percent_boeing_floor2").getValue()).toBe(55);
+    // expect(result.data.path(0, "percent_boeing_floor").value).toBe(55);
+    // expect(result.data.path(0, "percent_boeing_floor2").value).toBe(55);
   });
   // Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
   it(`Floor() -or any function bustage with aggregates - ${databaseName}`, async () => {
@@ -104,12 +96,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
       `
       )
       .run();
-    expect(result.getData().getPath(0, "percent_boeing_floor").getValue()).toBe(
-      55
-    );
-    expect(
-      result.getData().getPath(0, "percent_boeing_floor2").getValue()
-    ).toBe(55);
+    expect(result.data.path(0, "percent_boeing_floor").value).toBe(55);
+    expect(result.data.path(0, "percent_boeing_floor2").value).toBe(55);
   });
 
   // BROKEN:
@@ -124,8 +112,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
       )
       .run();
-    expect(result.getData().getPath(0, "total_seats").getValue()).toBe(18294);
-    expect(result.getData().getPath(0, "boeing_seats").getValue()).toBe(6244);
+    expect(result.data.path(0, "total_seats").value).toBe(18294);
+    expect(result.data.path(0, "boeing_seats").value).toBe(6244);
   });
 
   // turtle expressions
@@ -139,10 +127,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       )
       .run();
     expect(
-      result
-        .getData()
-        .getPath(0, "by_manufacturer", 0, "manufacturer")
-        .getValue()
+      result.data.path(0, "by_manufacturer", 0, "manufacturer").value
     ).toBe("CESSNA");
   });
 
@@ -156,9 +141,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
             `
       )
       .run();
-    expect(result.getData().getPath(0, "b", 0, "manufacturer").getValue()).toBe(
-      "BEECH"
-    );
+    expect(result.data.path(0, "b", 0, "manufacturer").value).toBe("BEECH");
   });
 
   // having.
@@ -173,7 +156,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
       )
       .run();
-    expect(result.getData().getPath(0, "aircraft_count").getValue()).toBe(91);
+    expect(result.data.path(0, "aircraft_count").value).toBe(91);
   });
 
   it(`model: turtle having2 - ${databaseName}`, async () => {
@@ -191,9 +174,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getPath(0, "by_state", 0, "state").getValue()).toBe(
-      "VA"
-    );
+    expect(result.data.path(0, "by_state", 0, "state").value).toBe("VA");
   });
 
   it(`model: turtle having on main - ${databaseName}`, async () => {
@@ -216,12 +197,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(
-      result
-        .getData()
-        .getPath(0, "by_state", 0, "by_city", 0, "city")
-        .getValue()
-    ).toBe("ALBUQUERQUE");
+    expect(result.data.path(0, "by_state", 0, "by_city", 0, "city").value).toBe(
+      "ALBUQUERQUE"
+    );
   });
 
   // bigquery doesn't like to partition by floats,
@@ -241,9 +219,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       `
       )
       .run();
-    expect(result.getData().getPath(0, "aircraft_model_count").getValue()).toBe(
-      448
-    );
+    expect(result.data.path(0, "aircraft_model_count").value).toBe(448);
   });
 
   it(`model: aggregate functions distinct min max - ${databaseName}`, async () => {
@@ -264,24 +240,16 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getPath(0, "distinct_seats").getValue()).toBe(187);
-    expect(
-      result.getData().getPath(0, "boeing_distinct_seats").getValue()
-    ).toBe(85);
-    expect(result.getData().getPath(0, "min_seats").getValue()).toBe(0);
-    expect(result.getData().getPath(0, "cessna_min_seats").getValue()).toBe(1);
-    expect(result.getData().getPath(0, "max_seats").getValue()).toBe(660);
-    expect(result.getData().getPath(0, "min_code").getValue()).toBe("0030109");
-    expect(result.getData().getPath(0, "cessna_max_seats").getValue()).toBe(14);
-    expect(result.getData().getPath(0, "boeing_min_model").getValue()).toBe(
-      "100"
-    );
-    expect(result.getData().getPath(0, "max_model").getValue()).toBe(
-      "ZWEIFEL PA18"
-    );
-    expect(result.getData().getPath(0, "boeing_max_model").getValue()).toBe(
-      "YL-15"
-    );
+    expect(result.data.path(0, "distinct_seats").value).toBe(187);
+    expect(result.data.path(0, "boeing_distinct_seats").value).toBe(85);
+    expect(result.data.path(0, "min_seats").value).toBe(0);
+    expect(result.data.path(0, "cessna_min_seats").value).toBe(1);
+    expect(result.data.path(0, "max_seats").value).toBe(660);
+    expect(result.data.path(0, "min_code").value).toBe("0030109");
+    expect(result.data.path(0, "cessna_max_seats").value).toBe(14);
+    expect(result.data.path(0, "boeing_min_model").value).toBe("100");
+    expect(result.data.path(0, "max_model").value).toBe("ZWEIFEL PA18");
+    expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
   });
 
   it(`model: dates - ${databaseName}`, async () => {
@@ -307,48 +275,38 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getPath(0, "t_date").getValue()).toEqual(
-      new Date("2020-03-02")
-    );
-    expect(result.getData().getPath(0, "t_date_month").getValue()).toEqual(
+    expect(result.data.path(0, "t_date").value).toEqual(new Date("2020-03-02"));
+    expect(result.data.path(0, "t_date_month").value).toEqual(
       new Date("2020-03-01")
     );
-    expect(result.getData().getPath(0, "t_date_year").getValue()).toEqual(
+    expect(result.data.path(0, "t_date_year").value).toEqual(
       new Date("2020-01-01")
     );
-    expect(
-      result.getData().getPath(0, "t_date_day_of_year").getValue()
-    ).toEqual(62);
-    expect(
-      result.getData().getPath(0, "t_date_day_of_month").getValue()
-    ).toEqual(2);
-    expect(result.getData().getPath(0, "t_timestamp").getValue()).toEqual(
+    expect(result.data.path(0, "t_date_day_of_year").value).toEqual(62);
+    expect(result.data.path(0, "t_date_day_of_month").value).toEqual(2);
+    expect(result.data.path(0, "t_timestamp").value).toEqual(
       new Date("2020-03-02T12:35:56.000Z")
     );
-    expect(
-      result.getData().getPath(0, "t_timestamp_second").getValue()
-    ).toEqual(new Date("2020-03-02T12:35:56.000Z"));
-    expect(
-      result.getData().getPath(0, "t_timestamp_minute").getValue()
-    ).toEqual(new Date("2020-03-02T12:35:00.000Z"));
-    expect(result.getData().getPath(0, "t_timestamp_hour").getValue()).toEqual(
+    expect(result.data.path(0, "t_timestamp_second").value).toEqual(
+      new Date("2020-03-02T12:35:56.000Z")
+    );
+    expect(result.data.path(0, "t_timestamp_minute").value).toEqual(
+      new Date("2020-03-02T12:35:00.000Z")
+    );
+    expect(result.data.path(0, "t_timestamp_hour").value).toEqual(
       new Date("2020-03-02T12:00:00.000Z")
     );
-    expect(result.getData().getPath(0, "t_timestamp_date").getValue()).toEqual(
+    expect(result.data.path(0, "t_timestamp_date").value).toEqual(
       new Date("2020-03-02")
     );
-    expect(result.getData().getPath(0, "t_timestamp_month").getValue()).toEqual(
+    expect(result.data.path(0, "t_timestamp_month").value).toEqual(
       new Date("2020-03-01")
     );
-    expect(result.getData().getPath(0, "t_timestamp_year").getValue()).toEqual(
+    expect(result.data.path(0, "t_timestamp_year").value).toEqual(
       new Date("2020-01-01")
     );
-    expect(
-      result.getData().getPath(0, "t_timestamp_day_of_year").getValue()
-    ).toEqual(62);
-    expect(
-      result.getData().getPath(0, "t_timestamp_day_of_month").getValue()
-    ).toEqual(2);
+    expect(result.data.path(0, "t_timestamp_day_of_year").value).toEqual(62);
+    expect(result.data.path(0, "t_timestamp_day_of_month").value).toEqual(2);
   });
 
   it.skip("defines in model", async () => {
@@ -374,8 +332,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
     // TODO The result explore should really be unnamed. This test currently
     //      inspects inner information because we have no way to have unnamed
     //       explores today.
-    // expect(result.getResultExplore().getName()).toBe(undefined);
-    expect(result._getQueryResult().queryName).toBe(undefined);
+    // expect(result.getResultExplore().name).toBe(undefined);
+    expect(result._queryResult.queryName).toBe(undefined);
   });
 
   it(`named query metadata named - ${databaseName}`, async () => {
@@ -386,7 +344,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getResultExplore().getName()).toBe("by_manufacturer");
+    expect(result.resultExplore.name).toBe("by_manufacturer");
   });
 
   it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
@@ -398,8 +356,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
       )
       .run();
     // TODO Same as above -- this test should check the explore name
-    // expect(result.getResultExplore().getName()).toBe(undefined);
-    expect(result._getQueryResult().queryName).toBe(undefined);
+    // expect(result.getResultExplore().name).toBe(undefined);
+    expect(result._queryResult.queryName).toBe(undefined);
   });
 
   it(`filtered explores - ${databaseName}`, async () => {
@@ -412,7 +370,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getPath(0, "m_count").getValue()).toBe(63);
+    expect(result.data.path(0, "m_count").value).toBe(63);
   });
 
   it(`query with aliasname used twice - ${databaseName}`, async () => {
@@ -436,7 +394,7 @@ aircraft_count
     `
       )
       .run();
-    expect(result.getData().getPath(0, "first_three").getValue()).toBe("SAN");
+    expect(result.data.path(0, "first_three").value).toBe("SAN");
   });
 
   it.skip("join foreign_key reverse", async () => {
@@ -460,7 +418,7 @@ aircraft_count
     `
       )
       .run();
-    expect(result.getData().getPath(0, "first_three").getValue()).toBe("SAN");
+    expect(result.data.path(0, "first_three").value).toBe("SAN");
   });
 
   it(`joined filtered explores - ${databaseName}`, async () => {
@@ -484,8 +442,8 @@ aircraft_count
         `
       )
       .run();
-    expect(result.getData().getPath(0, "model_count").getValue()).toBe(244);
-    expect(result.getData().getPath(0, "aircraft_count").getValue()).toBe(3599);
+    expect(result.data.path(0, "model_count").value).toBe(244);
+    expect(result.data.path(0, "aircraft_count").value).toBe(3599);
   });
 
   it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
@@ -529,7 +487,7 @@ aircraft_count
         `
       )
       .run();
-    expect(result.getData().getPath(0, "model_count").getValue()).toBe(60461);
-    expect(result.getData().getPath(0, "b_count").getValue()).toBe(355);
+    expect(result.data.path(0, "model_count").value).toBe(60461);
+    expect(result.data.path(0, "b_count").value).toBe(355);
   });
 });

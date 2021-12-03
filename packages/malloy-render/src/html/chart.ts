@@ -34,10 +34,8 @@ export abstract class HTMLChartRenderer implements Renderer {
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;
       } = {};
-      for (const field of data.getField().getFields()) {
-        mappedRow[field.getName()] = this.getDataValue(
-          row.getColumn(field.getName())
-        );
+      for (const field of data.field.fields) {
+        mappedRow[field.name] = this.getDataValue(row.cell(field));
       }
       mappedRows.push(mappedRow);
     }

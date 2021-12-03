@@ -17,7 +17,7 @@ it("accessors are not too expensive", async () => {
     let withAccessorTime;
     {
       const start = performance.now();
-      const inner = result.getData().toObject()[0].inner;
+      const inner = result.data.value[0].inner;
       let total = 0;
       let count = 0;
       for (const row of inner as malloy.QueryData) {
@@ -32,11 +32,11 @@ it("accessors are not too expensive", async () => {
     }
     {
       const start = performance.now();
-      const inner = result.getData().getRow(0).getColumn("inner").asArray();
+      const inner = result.data.row(0).cell("inner").array;
       let total = 0;
       let count = 0;
       for (const row of inner) {
-        total += row.getColumn("distance").asNumber().getValue();
+        total += row.cell("distance").number.value;
         count += 1;
       }
       withAccessorTime = performance.now() - start;

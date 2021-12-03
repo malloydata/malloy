@@ -35,10 +35,11 @@ import { HTMLTableRenderer } from "./table";
 import { HTMLTextRenderer } from "./text";
 import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
+import { AtomicFieldType } from "@malloy-lang/malloy/src/malloy";
 
 export class HTMLView {
   async render(table: DataArray, dataStyles: DataStyles): Promise<string> {
-    const renderer = makeRenderer(table.getField(), dataStyles, {
+    const renderer = makeRenderer(table.field, dataStyles, {
       size: "large",
     });
     try {
@@ -60,9 +61,9 @@ export class HTMLView {
 }
 
 function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
-  let renderer = dataStyles[field.getName()];
-  if (!renderer && "getSourceClasses" in field) {
-    for (const sourceClass of field.getSourceClasses()) {
+  let renderer = dataStyles[field.name];
+  if (!renderer) {
+    for (const sourceClass of field.sourceClasses) {
       if (!renderer) {
         renderer = dataStyles[sourceClass];
       }
@@ -76,7 +77,7 @@ function isContainer(field: Field | Explore): Explore {
     return field;
   } else {
     throw new Error(
-      `${field.getName()} does not contain fields and cannot be rendered this way`
+      `${field.name} does not contain fields and cannot be rendered this way`
     );
   }
 }
@@ -88,48 +89,42 @@ export function makeRenderer(
 ): Renderer {
   const renderDef = getRendererOptions(field, dataStyles) || {};
 
-  if (
-    renderDef.renderer === "shape_map" ||
-    field.getName().endsWith("_shape_map")
-  ) {
+  if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
     return new HTMLShapeMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "point_map" ||
-    field.getName().endsWith("_point_map")
+    field.name.endsWith("_point_map")
   ) {
     return new HTMLPointMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "segment_map" ||
-    field.getName().endsWith("_segment_map")
+    field.name.endsWith("_segment_map")
   ) {
     return new HTMLSegmentMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "dashboard" ||
-    field.getName().endsWith("_dashboard")
+    field.name.endsWith("_dashboard")
   ) {
     return ContainerRenderer.make(
       HTMLDashboardRenderer,
       isContainer(field),
       dataStyles
     );
-  } else if (
-    renderDef.renderer === "json" ||
-    field.getName().endsWith("_json")
-  ) {
+  } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
     return new HTMLJSONRenderer();
   } else if (
     renderDef.renderer === "line_chart" ||
-    field.getName().endsWith("_line_chart")
+    field.name.endsWith("_line_chart")
   ) {
     return new HTMLLineChartRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "scatter_chart" ||
-    field.getName().endsWith("_scatter_chart")
+    field.name.endsWith("_scatter_chart")
   ) {
     return new HTMLScatterChartRenderer(styleDefaults);
   } else if (renderDef.renderer === "bar_chart") {
     return new HTMLBarChartRenderer(styleDefaults, renderDef);
-  } else if (field.getName().endsWith("_bar_chart")) {
+  } else if (field.name.endsWith("_bar_chart")) {
     return new HTMLBarChartRenderer(styleDefaults, {});
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
@@ -150,14 +145,15 @@ export function makeRenderer(
         throw new Error(`No Vega renderer named ${renderDef.spec_name}`);
       }
     } else {
-      throw new Error(`No top level vega spec defined for ${field.getName()}`);
+      throw new Error(`No top level vega spec defined for ${field.name}`);
     }
   } else {
     if (
       renderDef.renderer === "time" ||
       (field.hasParentExplore() &&
         field.isAtomicField() &&
-        (field.getType() === "date" || field.getType() === "timestamp"))
+        (field.type === AtomicFieldType.Date ||
+          field.type === AtomicFieldType.Timestamp))
     ) {
       return new HTMLDateRenderer();
     } else if (renderDef.renderer === "currency") {
@@ -166,7 +162,7 @@ export function makeRenderer(
       renderDef.renderer === "number" ||
       (field.hasParentExplore() &&
         field.isAtomicField() &&
-        field.getType() === "number")
+        field.type === AtomicFieldType.Number)
     ) {
       return new HTMLNumberRenderer();
     } else if (renderDef.renderer === "bytes") {
@@ -175,7 +171,7 @@ export function makeRenderer(
       renderDef.renderer === "boolean" ||
       (field.hasParentExplore() &&
         field.isAtomicField() &&
-        field.getType() === "boolean")
+        field.type === AtomicFieldType.Boolean)
     ) {
       return new HTMLBooleanRenderer();
     } else if (renderDef.renderer === "link") {

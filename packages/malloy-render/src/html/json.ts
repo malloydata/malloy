@@ -19,6 +19,6 @@ export class HTMLJSONRenderer implements Renderer {
     if (!table.isArray() && !table.isRecord()) {
       return "Invalid data for chart renderer.";
     }
-    return `<pre>${JSON.stringify(table.toObject(), undefined, 2)}</pre>`;
+    return `<pre>${JSON.stringify(table.value, undefined, 2)}</pre>`;
   }
 }

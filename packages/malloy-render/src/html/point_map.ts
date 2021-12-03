@@ -25,11 +25,11 @@ import { getColorScale, timeToString } from "./utils";
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
     if (data.isNumber() || data.isString()) {
-      return data.getValue();
+      return data.value;
     } else if (data.isTimestamp() || data.isDate()) {
       return timeToString(
-        data.getValue(),
-        data.getField().getTimeframe() || TimestampTimeframe.Second
+        data.value,
+        data.field.timeframe || TimestampTimeframe.Second
       );
     }
     throw new Error("Invalid field type for point map chart.");
@@ -51,7 +51,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       throw new Error("Expected struct value not to be null.");
     }
 
-    const fields = data.getField().getFields();
+    const fields = data.field.fields;
 
     const latField = fields[0];
     const lonField = fields[1];
@@ -66,26 +66,26 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.getName(),
+            field: colorField.name,
             type: colorType,
-            axis: { title: colorField.getName() },
+            axis: { title: colorField.name },
             scale: getColorScale(colorType, false),
           }
         : undefined;
 
     const sizeDef = sizeField
       ? {
-          field: sizeField.getName(),
+          field: sizeField.name,
           type: sizeType,
-          axis: { title: sizeField.getName() },
+          axis: { title: sizeField.name },
         }
       : { value: 5 };
 
     const shapeDef = shapeField
       ? {
-          field: shapeField.getName(),
+          field: shapeField.name,
           type: shapeType,
-          axis: { title: shapeField.getName() },
+          axis: { title: shapeField.name },
         }
       : { value: "circle" };
 
@@ -116,8 +116,8 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         {
           mark: "point",
           encoding: {
-            latitude: { field: latField.getName(), type: "quantitative" },
-            longitude: { field: lonField.getName(), type: "quantitative" },
+            latitude: { field: latField.name, type: "quantitative" },
+            longitude: { field: lonField.name, type: "quantitative" },
             size: sizeDef,
             color: colorDef,
             shape: shapeDef,

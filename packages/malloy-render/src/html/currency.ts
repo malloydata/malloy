@@ -23,7 +23,7 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
     // TODO get this from renderer options
     const unitText = "$";
 
-    const numText = data.getValue().toLocaleString("en-US", {
+    const numText = data.number.value.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });

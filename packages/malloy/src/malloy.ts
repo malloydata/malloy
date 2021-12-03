@@ -45,6 +45,7 @@ import {
   QueryURL,
   URL,
   URLReader,
+  SQLRunner,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -153,8 +154,8 @@ export class Malloy {
     parse: Parse;
     model?: Model;
   }): Promise<Model> {
-    const translator = parse._getTranslator();
-    translator.translate(model?._getModelDef());
+    const translator = parse._translator;
+    translator.translate(model?._modelDef);
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const result = translator.translate();
@@ -227,18 +228,41 @@ export class Malloy {
   }: {
     lookupSQLRunner: LookupSQLRunner;
     preparedResult: PreparedResult;
+  }): Promise<Result>;
+  public static async run({
+    sqlRunner,
+    preparedResult,
+  }: {
+    sqlRunner: SQLRunner;
+    preparedResult: PreparedResult;
+  }): Promise<Result>;
+  public static async run({
+    sqlRunner,
+    lookupSQLRunner,
+    preparedResult,
+  }: {
+    sqlRunner?: SQLRunner;
+    lookupSQLRunner?: LookupSQLRunner;
+    preparedResult: PreparedResult;
   }): Promise<Result> {
-    const sqlRunner = await lookupSQLRunner.lookupSQLRunner(
-      preparedResult.getConnectionName()
-    );
-    const result = await sqlRunner.runSQL(preparedResult.getSQL());
+    if (sqlRunner === undefined) {
+      if (lookupSQLRunner === undefined) {
+        throw new Error(
+          "Internal Error: sqlRunner or lookupSqlRunner must be provided."
+        );
+      }
+      sqlRunner = await lookupSQLRunner.lookupSQLRunner(
+        preparedResult.connectionName
+      );
+    }
+    const result = await sqlRunner.runSQL(preparedResult.sql);
     return new Result(
       {
-        ...preparedResult._getRawQuery(),
+        ...preparedResult._rawQuery,
         result: result.rows,
         totalRows: result.totalRows,
       },
-      preparedResult._getModelDef()
+      preparedResult._modelDef
     );
   }
 }
@@ -308,7 +332,7 @@ export class Model {
    *
    * @returns A prepared query.
    */
-  public getPreparedQuery(): PreparedQuery {
+  public get preparedQuery(): PreparedQuery {
     if (this.queryList.length < 0) {
       throw new Error("Model has no queries.");
     }
@@ -333,13 +357,13 @@ export class Model {
    *
    * @returns An array of `Explore`s contained in the model.
    */
-  public getExplores(): Explore[] {
+  public get explores(): Explore[] {
     return Object.keys(this.modelDef.structs).map((name) =>
       this.getExploreByName(name)
     );
   }
 
-  public _getModelDef(): ModelDef {
+  public get _modelDef(): ModelDef {
     return this.modelDef;
   }
 }
@@ -363,7 +387,7 @@ export class PreparedQuery {
    *
    * @returns A fully-prepared query (which contains the generated SQL).
    */
-  public getPreparedResult(): PreparedResult {
+  public get preparedResult(): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
@@ -403,7 +427,7 @@ export class Parse {
    *
    * @returns An array of document highlights.
    */
-  public getHighlights(): DocumentHighlight[] {
+  public get highlights(): DocumentHighlight[] {
     return (this.translator.metadata().highlights || []).map(
       (highlight) => new DocumentHighlight(highlight)
     );
@@ -417,13 +441,13 @@ export class Parse {
    *
    * @returns An array of document symbols.
    */
-  public getSymbols(): DocumentSymbol[] {
+  public get symbols(): DocumentSymbol[] {
     return (this.translator.metadata().symbols || []).map(
       (symbol) => new DocumentSymbol(symbol)
     );
   }
 
-  public _getTranslator(): MalloyTranslator {
+  public get _translator(): MalloyTranslator {
     return this.translator;
   }
 }
@@ -435,11 +459,11 @@ export class Parse {
  * and may be used for syntax highlighting in an IDE, for example.
  */
 export class DocumentHighlight {
-  private range: DocumentRange;
-  private type: string;
+  private _range: DocumentRange;
+  private _type: string;
 
   constructor(documentHighlight: DocumentHighlightDefinition) {
-    this.range = new DocumentRange(
+    this._range = new DocumentRange(
       new DocumentPosition(
         documentHighlight.range.start.line,
         documentHighlight.range.start.character
@@ -449,21 +473,21 @@ export class DocumentHighlight {
         documentHighlight.range.end.character
       )
     );
-    this.type = documentHighlight.type;
+    this._type = documentHighlight.type;
   }
 
   /**
    * @returns The range of characters this highlight spans within its source document.
    */
-  getRange(): DocumentRange {
-    return this.range;
+  get range(): DocumentRange {
+    return this._range;
   }
 
   /**
    * @returns The type of highlight, which may be any `HighlightType`.
    */
-  getType(): string {
-    return this.type;
+  get type(): string {
+    return this._type;
   }
 }
 
@@ -471,26 +495,26 @@ export class DocumentHighlight {
  * A range of characters within a Malloy document.
  */
 export class DocumentRange {
-  private start: DocumentPosition;
-  private end: DocumentPosition;
+  private _start: DocumentPosition;
+  private _end: DocumentPosition;
 
   constructor(start: DocumentPosition, end: DocumentPosition) {
-    this.start = start;
-    this.end = end;
+    this._start = start;
+    this._end = end;
   }
 
   /**
    * @returns The position of the first character in the range.
    */
-  public getStart(): DocumentPosition {
-    return this.start;
+  public get start(): DocumentPosition {
+    return this._start;
   }
 
   /**
    * @returns The position of the last character in the range.
    */
-  public getEnd(): DocumentPosition {
-    return this.end;
+  public get end(): DocumentPosition {
+    return this._end;
   }
 
   /**
@@ -511,26 +535,26 @@ export class DocumentRange {
  * A position within a Malloy document.
  */
 export class DocumentPosition {
-  private line: number;
-  private character: number;
+  private _line: number;
+  private _character: number;
 
   constructor(line: number, character: number) {
-    this.line = line;
-    this.character = character;
+    this._line = line;
+    this._character = character;
   }
 
   /**
    * @returns The line number of the position.
    */
-  public getLine(): number {
-    return this.line;
+  public get line(): number {
+    return this._line;
   }
 
   /**
    * @returns The character index on the line `this.getLine()`.
    */
-  public getCharacter(): number {
-    return this.character;
+  public get character(): number {
+    return this._character;
   }
 
   /**
@@ -547,13 +571,13 @@ export class DocumentPosition {
  * Represents any object defined (e.g. `Query`s and `Explore`s) in the document.
  */
 export class DocumentSymbol {
-  private range: DocumentRange;
-  private type: string;
-  private name: string;
-  private children: DocumentSymbol[];
+  private _range: DocumentRange;
+  private _type: string;
+  private _name: string;
+  private _children: DocumentSymbol[];
 
   constructor(documentSymbol: DocumentSymbolDefinition) {
-    this.range = new DocumentRange(
+    this._range = new DocumentRange(
       new DocumentPosition(
         documentSymbol.range.start.line,
         documentSymbol.range.start.character
@@ -563,9 +587,9 @@ export class DocumentSymbol {
         documentSymbol.range.end.character
       )
     );
-    this.type = documentSymbol.type;
-    this.name = documentSymbol.name;
-    this.children = documentSymbol.children.map(
+    this._type = documentSymbol.type;
+    this._name = documentSymbol.name;
+    this._children = documentSymbol.children.map(
       (child) => new DocumentSymbol(child)
     );
   }
@@ -573,8 +597,8 @@ export class DocumentSymbol {
   /**
    * @returns The range of characters in the source Malloy document that define this symbol.
    */
-  public getRange(): DocumentRange {
-    return this.range;
+  public get range(): DocumentRange {
+    return this._range;
   }
 
   /**
@@ -582,8 +606,8 @@ export class DocumentSymbol {
    *
    * Possible values are: `"explore"`, `"query"`, `"field"`, `"turtle"`, `"join"`, or `"unnamed_query"`.
    */
-  public getType(): string {
-    return this.type;
+  public get type(): string {
+    return this._type;
   }
 
   /**
@@ -591,16 +615,16 @@ export class DocumentSymbol {
    *
    * For type `"unnamed_query"`, `getName()` is `"unnamed_query"`.
    */
-  public getName(): string {
-    return this.name;
+  public get name(): string {
+    return this._name;
   }
 
   /**
    * @returns An array of document symbols defined inside this document symbol,
    * e.g. fields in an `Explore`.
    */
-  public getChildren(): DocumentSymbol[] {
-    return this.children;
+  public get children(): DocumentSymbol[] {
+    return this._children;
   }
 }
 
@@ -619,15 +643,15 @@ export class PreparedResult {
   /**
    * @returns The name of the connection this query should be run against.
    */
-  public getConnectionName(): string {
+  public get connectionName(): string {
     return this.inner.connectionName;
   }
 
-  public _getRawQuery(): CompiledQuery {
+  public get _rawQuery(): CompiledQuery {
     return this.inner;
   }
 
-  public _getModelDef(): ModelDef {
+  public get _modelDef(): ModelDef {
     return this.modelDef;
   }
 
@@ -635,14 +659,14 @@ export class PreparedResult {
    * @returns The SQL that should be run against the SQL runner
    * with the connection name `this.getConnectionName()`.
    */
-  public getSQL(): string {
+  public get sql(): string {
     return this.inner.sql;
   }
 
   /**
    * @returns The `Explore` representing the data that will be returned by running this query.
    */
-  public getResultExplore(): Explore {
+  public get resultExplore(): Explore {
     if (this.inner.structs.length === 0) {
       throw new Error("Malformed query result.");
     }
@@ -654,7 +678,7 @@ export class PreparedResult {
     return new Explore(namedExplore);
   }
 
-  public getSourceExplore(): Explore {
+  public get sourceExplore(): Explore {
     const name = this.inner.sourceExplore;
     const explore = this.modelDef.structs[name];
     if (explore === undefined) {
@@ -663,11 +687,11 @@ export class PreparedResult {
     return new Explore(explore);
   }
 
-  public _getSourceExploreName(): string {
+  public get _sourceExploreName(): string {
     return this.inner.sourceExplore;
   }
 
-  public _getSourceFilters(): FilterExpression[] {
+  public get _sourceFilters(): FilterExpression[] {
     return this.inner.sourceFilters || [];
   }
 }
@@ -779,36 +803,35 @@ export enum SourceRelationship {
 }
 
 class Entity {
-  private readonly name: string;
-  protected readonly parent?: Explore;
-  private readonly source?: Entity;
+  private readonly _name: string;
+  protected readonly _parent?: Explore;
+  private readonly _source?: Entity;
 
   constructor(name: string, parent?: Explore, source?: Entity) {
-    this.name = name;
-    this.parent = parent;
-    this.source = source;
+    this._name = name;
+    this._parent = parent;
+    this._source = source;
   }
 
-  public getSource(): Entity | undefined {
+  public get source(): Entity | undefined {
     return this.source;
   }
 
-  public getName(): string {
-    return this.name;
+  public get name(): string {
+    return this._name;
   }
 
-  public getSourceClasses(): string[] {
+  public get sourceClasses(): string[] {
     const sourceClasses = [];
-    const source = this.getSource();
-    if (source) {
-      sourceClasses.push(source.getName());
+    if (this.source) {
+      sourceClasses.push(this.source.name);
     }
-    sourceClasses.push(this.getName());
+    sourceClasses.push(this.name);
     return sourceClasses;
   }
 
   public hasParentExplore(): this is Field {
-    return this.parent !== undefined;
+    return this._parent !== undefined;
   }
 
   isExplore(): this is Explore {
@@ -835,26 +858,26 @@ class Entity {
 export type Field = AtomicField | QueryField | ExploreField;
 
 export class Explore extends Entity {
-  protected readonly structDef: StructDef;
-  protected readonly parentExplore?: Explore;
-  private fields: Map<string, Field> | undefined;
+  protected readonly _structDef: StructDef;
+  protected readonly _parentExplore?: Explore;
+  private _fieldMap: Map<string, Field> | undefined;
   private sourceExplore: Explore | undefined;
 
   constructor(structDef: StructDef, parentExplore?: Explore, source?: Explore) {
     super(structDef.as || structDef.name, parentExplore, source);
-    this.structDef = structDef;
-    this.parentExplore = parentExplore;
+    this._structDef = structDef;
+    this._parentExplore = parentExplore;
     this.sourceExplore = source;
   }
 
-  public getSource(): Explore | undefined {
+  public get source(): Explore | undefined {
     return this.sourceExplore;
   }
 
   /**
    * @returns The name of the entity.
    */
-  public getName(): string {
+  public get name(): string {
     return this.structDef.as || this.structDef.name;
   }
 
@@ -869,10 +892,10 @@ export class Explore extends Entity {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.getModelDef());
+    return new PreparedQuery(internalQuery, this.modelDef);
   }
 
-  private getModelDef(): ModelDef {
+  private get modelDef(): ModelDef {
     return {
       name: "generated_model",
       exports: [],
@@ -881,14 +904,13 @@ export class Explore extends Entity {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.getModelDef(), []);
+    return new Model(this.modelDef, []);
   }
 
-  private getFieldMap(): Map<string, Field> {
-    if (this.fields === undefined) {
-      const sourceExplore = this.getSource();
-      const sourceFields = sourceExplore?.getFieldMap() || new Map();
-      this.fields = new Map(
+  private get fieldMap(): Map<string, Field> {
+    if (this._fieldMap === undefined) {
+      const sourceFields = this.source?.fieldMap || new Map();
+      this._fieldMap = new Map(
         this.structDef.fields.map((fieldDef) => {
           const name = fieldDef.as || fieldDef.name;
           const sourceField = sourceFields.get(fieldDef.name);
@@ -930,30 +952,30 @@ export class Explore extends Entity {
         }) as [string, Field][]
       );
     }
-    return this.fields;
+    return this._fieldMap;
   }
 
-  public getFields(): Field[] {
-    return [...this.getFieldMap().values()];
+  public get fields(): Field[] {
+    return [...this.fieldMap.values()];
   }
 
   public getFieldByName(fieldName: string): Field {
-    const field = this.getFieldMap().get(fieldName);
+    const field = this.fieldMap.get(fieldName);
     if (field === undefined) {
       throw new Error(`No such field ${fieldName}.`);
     }
     return field;
   }
 
-  public getPrimaryKey(): string | undefined {
+  public get primaryKey(): string | undefined {
     return this.structDef.primaryKey;
   }
 
-  public getParentExplore(): Explore | undefined {
-    return this.parentExplore;
+  public get parentExplore(): Explore | undefined {
+    return this._parentExplore;
   }
 
-  public getSourceRelationship(): SourceRelationship {
+  public get sourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
       case "condition":
         return SourceRelationship.Condition;
@@ -973,12 +995,12 @@ export class Explore extends Entity {
   }
 
   // TODO wrapper type for FilterExpression
-  getFilters(): FilterExpression[] {
+  get filters(): FilterExpression[] {
     return this.structDef.resultMetadata?.filterList || [];
   }
 
-  public _getStructDef(): StructDef {
-    return this.structDef;
+  public get structDef(): StructDef {
+    return this._structDef;
   }
 }
 
@@ -1004,7 +1026,7 @@ export class AtomicField extends Entity {
     this.parent = parent;
   }
 
-  public getType(): AtomicFieldType {
+  public get type(): AtomicFieldType {
     switch (this.fieldTypeDef.type) {
       case "string":
         return AtomicFieldType.String;
@@ -1035,11 +1057,12 @@ export class AtomicField extends Entity {
     return !!this.fieldTypeDef.aggregate;
   }
 
-  public getSourceField(): Field {
+  public get sourceField(): Field {
+    // TODO
     throw new Error();
   }
 
-  public getSourceClasses(): string[] {
+  public get sourceClasses(): string[] {
     const sourceField = this.fieldTypeDef.name || this.fieldTypeDef.as;
     return sourceField ? [sourceField] : [];
   }
@@ -1076,12 +1099,12 @@ export class AtomicField extends Entity {
     return this instanceof TimestampField;
   }
 
-  getParentExplore(): Explore {
+  get parentExplore(): Explore {
     return this.parent;
   }
 
-  getExpression(): string {
-    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.getName();
+  get expression(): string {
+    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.name;
   }
 }
 
@@ -1115,7 +1138,7 @@ export class DateField extends AtomicField {
     this.fieldDateDef = fieldDateDef;
   }
 
-  getTimeframe(): DateTimeframe | undefined {
+  get timeframe(): DateTimeframe | undefined {
     if (this.fieldDateDef.timeframe === undefined) {
       return undefined;
     }
@@ -1145,7 +1168,7 @@ export class TimestampField extends AtomicField {
     this.fieldTimestampDef = fieldTimestampDef;
   }
 
-  getTimeframe(): TimestampTimeframe | undefined {
+  get timeframe(): TimestampTimeframe | undefined {
     if (this.fieldTimestampDef.timeframe === undefined) {
       return undefined;
     }
@@ -1215,7 +1238,7 @@ export class Query extends Entity {
     this.turtleDef = turtleDef;
   }
 
-  public getSource(): Query | undefined {
+  public get source(): Query | undefined {
     return this.sourceQuery;
   }
 }
@@ -1248,7 +1271,7 @@ export class QueryField extends Query {
     return true;
   }
 
-  public getSourceClasses(): string[] {
+  public get sourceClasses(): string[] {
     const sourceField = this.turtleDef.name || this.turtleDef.as;
     return sourceField ? [sourceField] : [];
   }
@@ -1257,12 +1280,12 @@ export class QueryField extends Query {
     return true;
   }
 
-  getParentExplore(): Explore {
+  get parentExplore(): Explore {
     return this.parent;
   }
 
-  getExpression(): string {
-    return this.getName();
+  get expression(): string {
+    return this.name;
   }
 }
 
@@ -1273,14 +1296,14 @@ export enum JoinRelationship {
 }
 
 export class ExploreField extends Explore {
-  protected parentExplore: Explore;
+  protected _parentExplore: Explore;
 
   constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
     super(structDef, parentExplore, source);
-    this.parentExplore = parentExplore;
+    this._parentExplore = parentExplore;
   }
 
-  public getJoinRelationship(): JoinRelationship {
+  public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
       case "condition":
       case "foreignKey":
@@ -1306,11 +1329,11 @@ export class ExploreField extends Explore {
     return false;
   }
 
-  public getParentExplore(): Explore {
-    return this.parentExplore;
+  public get parentExplore(): Explore {
+    return this._parentExplore;
   }
 
-  public getSourceClasses(): string[] {
+  public get sourceClasses(): string[] {
     const sourceField = this.structDef.name || this.structDef.as;
     return sourceField ? [sourceField] : [];
   }
@@ -1320,9 +1343,9 @@ export class ExploreField extends Explore {
  * An environment for compiling and running Malloy queries.
  */
 export class Runtime {
-  private urlReader: URLReader;
-  private lookupSchemaReader: LookupSchemaReader;
-  private lookupSQLRunner: LookupSQLRunner;
+  private _urlReader: URLReader;
+  private _lookupSchemaReader: LookupSchemaReader;
+  private _lookupSQLRunner: LookupSQLRunner;
 
   constructor(runtime: LookupSchemaReader & LookupSQLRunner & URLReader);
   constructor(
@@ -1360,30 +1383,30 @@ export class Runtime {
     if (lookupSQLRunner === undefined) {
       throw new Error("A LookupSQLReader is required.");
     }
-    this.urlReader = urlReader;
-    this.lookupSQLRunner = lookupSQLRunner;
-    this.lookupSchemaReader = lookupSchemaReader;
+    this._urlReader = urlReader;
+    this._lookupSQLRunner = lookupSQLRunner;
+    this._lookupSchemaReader = lookupSchemaReader;
   }
 
   /**
    * @returns The `URLReader` for this runtime instance.
    */
-  public getURLReader(): URLReader {
-    return this.urlReader;
+  public get urlReader(): URLReader {
+    return this._urlReader;
   }
 
   /**
    * @returns The `LookupSQLRunner` for this runtime instance.
    */
-  public getLookupSQLRunner(): LookupSQLRunner {
-    return this.lookupSQLRunner;
+  public get lookupSQLRunner(): LookupSQLRunner {
+    return this._lookupSQLRunner;
   }
 
   /**
    * @returns The `LookupSchemaReader` for this runtime instance.
    */
-  public getLookupSchemaReader(): LookupSchemaReader {
-    return this.lookupSchemaReader;
+  public get lookupSchemaReader(): LookupSchemaReader {
+    return this._lookupSchemaReader;
   }
 
   /**
@@ -1572,7 +1595,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadFinalQuery(): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getPreparedQuery();
+      return (await this.materialize()).preparedQuery;
     });
   }
 
@@ -1611,8 +1634,8 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      const urlReader = this.runtime.getURLReader();
-      const lookupSchemaReader = this.runtime.getLookupSchemaReader();
+      const urlReader = this.runtime.urlReader;
+      const lookupSchemaReader = this.runtime.lookupSchemaReader;
       const parse =
         query instanceof URL
           ? await Malloy.parse({
@@ -1629,7 +1652,7 @@ export class ModelMaterializer extends FluentState<Model> {
         parse,
         model,
       });
-      return queryModel.getPreparedQuery();
+      return queryModel.preparedQuery;
     });
   }
 
@@ -1679,7 +1702,7 @@ export class ModelMaterializer extends FluentState<Model> {
   public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.materialize();
-      return new PreparedQuery(query, model._getModelDef());
+      return new PreparedQuery(query, model._modelDef);
     });
   }
 
@@ -1728,7 +1751,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
    * @returns The query results from running this loaded query.
    */
   async run(): Promise<Result> {
-    const lookupSQLRunner = this.runtime.getLookupSQLRunner();
+    const lookupSQLRunner = this.runtime.lookupSQLRunner;
     const preparedResult = await this.getPreparedResult();
     return Malloy.run({ lookupSQLRunner, preparedResult });
   }
@@ -1741,7 +1764,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
    */
   public loadPreparedResult(): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
-      return (await this.materialize()).getPreparedResult();
+      return (await this.materialize()).preparedResult;
     });
   }
 
@@ -1760,7 +1783,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
    * @returns A promise of the SQL string.
    */
   public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).getSQL();
+    return (await this.getPreparedResult()).sql;
   }
 
   /**
@@ -1786,7 +1809,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
    */
   async run(): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
-    const lookupSQLRunner = this.runtime.getLookupSQLRunner();
+    const lookupSQLRunner = this.runtime.lookupSQLRunner;
     return Malloy.run({ lookupSQLRunner, preparedResult });
   }
 
@@ -1805,7 +1828,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
    * @returns A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).getSQL();
+    return (await this.getPreparedResult()).sql;
   }
 }
 
@@ -1861,15 +1884,15 @@ export class Result extends PreparedResult {
     this.inner = queryResult;
   }
 
-  public _getQueryResult(): QueryResult {
+  public get _queryResult(): QueryResult {
     return this.inner;
   }
 
   /**
    * @returns The result data.
    */
-  public getData(): DataArray {
-    return new DataArray(this.inner.result, this.getResultExplore());
+  public get data(): DataArray {
+    return new DataArray(this.inner.result, this.resultExplore);
   }
 }
 
@@ -1885,23 +1908,23 @@ export type DataColumn =
   | DataBytes;
 
 abstract class Data<T> {
-  protected field: Field | Explore;
+  protected _field: Field | Explore;
 
   constructor(field: Field | Explore) {
-    this.field = field;
+    this._field = field;
   }
 
-  getField(): Field | Explore {
+  get field(): Field | Explore {
     return this.field;
   }
 
-  abstract getValue(): T;
+  public abstract get value(): T;
 
   isString(): this is DataString {
     return this instanceof DataString;
   }
 
-  asString(): DataString {
+  get string(): DataString {
     if (this.isString()) {
       return this;
     }
@@ -1912,7 +1935,7 @@ abstract class Data<T> {
     return this instanceof DataBoolean;
   }
 
-  asBoolean(): DataBoolean {
+  get boolean(): DataBoolean {
     if (this.isBoolean()) {
       return this;
     }
@@ -1923,7 +1946,7 @@ abstract class Data<T> {
     return this instanceof DataNumber;
   }
 
-  asNumber(): DataNumber {
+  get number(): DataNumber {
     if (this.isNumber()) {
       return this;
     }
@@ -1934,7 +1957,7 @@ abstract class Data<T> {
     return this instanceof DataTimestamp;
   }
 
-  asTimestamp(): DataTimestamp {
+  get timestamp(): DataTimestamp {
     if (this.isTimestamp()) {
       return this;
     }
@@ -1945,7 +1968,7 @@ abstract class Data<T> {
     return this instanceof DataDate;
   }
 
-  asDate(): DataDate {
+  get date(): DataDate {
     if (this.isDate()) {
       return this;
     }
@@ -1960,7 +1983,7 @@ abstract class Data<T> {
     return this instanceof DataBytes;
   }
 
-  asBytes(): DataBytes {
+  get bytes(): DataBytes {
     if (this.isBytes()) {
       return this;
     }
@@ -1971,7 +1994,7 @@ abstract class Data<T> {
     return this instanceof DataRecord;
   }
 
-  asRecord(): DataRecord {
+  get record(): DataRecord {
     if (this.isRecord()) {
       return this;
     }
@@ -1982,7 +2005,7 @@ abstract class Data<T> {
     return this instanceof DataArray;
   }
 
-  asArray(): DataArray {
+  get array(): DataArray {
     if (this.isArray()) {
       return this;
     }
@@ -1991,124 +2014,121 @@ abstract class Data<T> {
 }
 
 class ScalarData<T> extends Data<T> {
-  private value: T;
-  protected field: AtomicField;
+  private _value: T;
+  protected _field: AtomicField;
 
   constructor(value: T, field: AtomicField) {
     super(field);
-    this.value = value;
-    this.field = field;
+    this._value = value;
+    this._field = field;
   }
 
-  getValue(): T {
+  public get value(): T {
     return this.value;
   }
 
-  getField(): AtomicField {
-    return this.field;
+  get field(): AtomicField {
+    return this._field;
   }
 }
 
 class DataString extends ScalarData<string> {
-  protected field: StringField;
+  protected _field: StringField;
 
   constructor(value: string, field: StringField) {
     super(value, field);
-    this.field = field;
+    this._field = field;
   }
 
-  getField(): StringField {
-    return this.field;
+  get field(): StringField {
+    return this._field;
   }
 }
 
 class DataBoolean extends ScalarData<boolean> {
-  protected field: BooleanField;
+  protected _field: BooleanField;
 
   constructor(value: boolean, field: BooleanField) {
     super(value, field);
-    this.field = field;
+    this._field = field;
   }
 
-  getField(): BooleanField {
-    return this.field;
+  get field(): BooleanField {
+    return this._field;
   }
 }
 
 class DataNumber extends ScalarData<number> {
-  protected field: NumberField;
+  protected _field: NumberField;
 
   constructor(value: number, field: NumberField) {
     super(value, field);
-    this.field = field;
+    this._field = field;
   }
 
-  getField(): NumberField {
-    return this.field;
+  get field(): NumberField {
+    return this._field;
   }
 }
 
 class DataTimestamp extends ScalarData<Date> {
-  protected field: TimestampField;
+  protected _field: TimestampField;
 
   constructor(value: Date, field: TimestampField) {
     super(value, field);
-    this.field = field;
+    this._field = field;
   }
 
-  getValue(): Date {
+  public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    return new Date((super.getValue() as unknown as { value: string }).value);
+    return new Date((super.value as unknown as { value: string }).value);
   }
 
-  getField(): TimestampField {
-    return this.field;
+  get field(): TimestampField {
+    return this._field;
   }
 }
 
 class DataDate extends ScalarData<Date> {
-  protected field: DateField;
+  protected _field: DateField;
 
   constructor(value: Date, field: DateField) {
     super(value, field);
-    this.field = field;
+    this._field = field;
   }
 
-  getValue(): Date {
+  public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    return new Date((super.getValue() as unknown as { value: string }).value);
+    return new Date((super.value as unknown as { value: string }).value);
   }
 
-  getField(): DateField {
-    return this.field;
+  get field(): DateField {
+    return this._field;
   }
 }
 
 class DataBytes extends ScalarData<Buffer> {}
 
 class DataNull extends Data<null> {
-  getValue(): null {
+  public get value(): null {
     return null;
   }
 }
 
-export class DataArray
-  extends Data<DataColumn[]>
-  implements Iterable<DataRecord>
-{
+export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   private queryData: QueryData;
-  protected field: Explore;
+  protected _field: Explore;
 
   constructor(queryData: QueryData, field: Explore) {
     super(field);
     this.queryData = queryData;
-    this.field = field;
+    this._field = field;
   }
 
   /**
    * @returns The `Explore` that describes the structure of this data.
    */
-  public getField(): Explore {
+  public get field(): Explore {
     return this.field;
   }
 
@@ -2119,26 +2139,26 @@ export class DataArray
     return this.queryData;
   }
 
-  getPath(...path: (number | string)[]): DataColumn {
+  path(...path: (number | string)[]): DataColumn {
     return getPath(this, path);
   }
 
-  getRow(index: number): DataRecord {
+  row(index: number): DataRecord {
     return new DataRecord(this.queryData[index], this.field);
   }
 
-  getRowCount(): number {
+  get rowCount(): number {
     return this.queryData.length;
   }
 
-  getValue(): DataColumn[] {
-    throw new Error("Not implemented;");
+  public get value(): QueryData {
+    return this.toObject();
   }
 
   [Symbol.iterator](): Iterator<DataRecord> {
     let currentIndex = 0;
     const queryData = this.queryData;
-    const getRow = (index: number) => this.getRow(index);
+    const getRow = (index: number) => this.row(index);
     return {
       next(): IteratorResult<DataRecord> {
         if (currentIndex < queryData.length) {
@@ -2154,9 +2174,9 @@ export class DataArray
 function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
   for (const segment of path) {
     if (typeof segment === "number") {
-      data = data.asArray().getRow(segment);
+      data = data.array.row(segment);
     } else {
-      data = data.asRecord().getColumn(segment);
+      data = data.record.cell(segment);
     }
   }
   return data;
@@ -2164,24 +2184,26 @@ function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
 
 class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
   private queryDataRow: QueryDataRow;
-  protected field: Explore;
+  protected _field: Explore;
 
   constructor(queryDataRow: QueryDataRow, field: Explore) {
     super(field);
     this.queryDataRow = queryDataRow;
-    this.field = field;
+    this._field = field;
   }
 
   toObject(): QueryDataRow {
     return this.queryDataRow;
   }
 
-  getPath(...path: (number | string)[]): DataColumn {
+  path(...path: (number | string)[]): DataColumn {
     return getPath(this, path);
   }
 
-  getColumn(fieldName: string): DataColumn {
-    const field = this.field.getFieldByName(fieldName);
+  cell(fieldOrName: string | Field): DataColumn {
+    const fieldName =
+      typeof fieldOrName === "string" ? fieldOrName : fieldOrName.name;
+    const field = this._field.getFieldByName(fieldName);
     const value = this.queryDataRow[fieldName];
     if (value === null) {
       return new DataNull(field);
@@ -2210,7 +2232,7 @@ class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
     );
   }
 
-  getValue(): { [fieldName: string]: DataColumn } {
+  public get value(): { [fieldName: string]: DataColumn } {
     throw new Error("Not implemented;");
   }
 }

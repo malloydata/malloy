@@ -62,5 +62,5 @@ export async function main(): Promise<void> {
       return fs.readFile(filePath, "utf8");
     },
   };
-  console.log((await run(files, process.argv)).getData().toObject());
+  console.log((await run(files, process.argv)).data.value);
 }

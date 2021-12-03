@@ -46,31 +46,24 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const textLines = text.split("\n");
   const parse = Malloy.parse({ source: text });
 
-  const highlights = parse.getHighlights();
-
-  highlights.forEach((highlight) => {
+  parse.highlights.forEach((highlight) => {
     for (
-      let line = highlight.getRange().getStart().getLine();
-      line <= highlight.getRange().getEnd().getLine();
+      let line = highlight.range.start.line;
+      line <= highlight.range.end.line;
       line++
     ) {
       const lineText = textLines[line];
       let length;
       let start;
-      if (
-        highlight.getRange().getStart().getLine() ===
-        highlight.getRange().getEnd().getLine()
-      ) {
+      if (highlight.range.start.line === highlight.range.end.line) {
         length =
-          highlight.getRange().getEnd().getCharacter() -
-          highlight.getRange().getStart().getCharacter();
-        start = highlight.getRange().getStart().getCharacter();
-      } else if (line === highlight.getRange().getStart().getLine()) {
-        length =
-          lineText.length - highlight.getRange().getStart().getCharacter();
-        start = highlight.getRange().getStart().getCharacter();
-      } else if (line === highlight.getRange().getEnd().getLine()) {
-        length = highlight.getRange().getEnd().getCharacter();
+          highlight.range.end.character - highlight.range.start.character;
+        start = highlight.range.start.character;
+      } else if (line === highlight.range.start.line) {
+        length = lineText.length - highlight.range.start.character;
+        start = highlight.range.start.character;
+      } else if (line === highlight.range.end.line) {
+        length = highlight.range.end.character;
         start = 0;
       } else {
         length = lineText.length;
@@ -80,7 +73,7 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
         line,
         start,
         length,
-        TOKEN_TYPES.indexOf(mapTypes(highlight.getType())),
+        TOKEN_TYPES.indexOf(mapTypes(highlight.type)),
         0
       );
     }

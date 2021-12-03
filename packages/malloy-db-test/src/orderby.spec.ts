@@ -26,7 +26,7 @@ async function validateCompilation(
       throw new Error(`Unknown database ${databaseName}`);
     }
     await (
-      await runtime.getLookupSQLRunner().lookupSQLRunner(databaseName)
+      await runtime.lookupSQLRunner.lookupSQLRunner(databaseName)
     ).runSQL(`WITH test AS(\n${sql}) SELECT 1`);
   } catch (e) {
     console.log(`SQL: didn't compile\n=============\n${sql}`);
@@ -57,10 +57,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getRow(0).getColumn("big").getValue()).toBe(false);
-    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
-      58451
-    );
+    expect(result.data.row(0).cell("big").value).toBe(false);
+    expect(result.data.row(0).cell("model_count").value).toBe(58451);
   });
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
@@ -77,10 +75,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getRow(0).getColumn("big").getValue()).toBe(false);
-    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
-      58500
-    );
+    expect(result.data.row(0).cell("big").value).toBe(false);
+    expect(result.data.row(0).cell("model_count").value).toBe(58500);
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
@@ -94,9 +90,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getRow(0).getColumn("j_names").getValue()).toBe(
-      1358
-    );
+    expect(result.data.row(0).cell("j_names").value).toBe(1358);
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -176,9 +170,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
-      102
-    );
+    expect(result.data.row(0).cell("model_count").value).toBe(102);
   });
 
   it(`modeled having complex - ${databaseName}`, async () => {
@@ -200,9 +192,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.getData().getRow(0).getColumn("model_count").getValue()).toBe(
-      102
-    );
+    expect(result.data.row(0).cell("model_count").value).toBe(102);
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {

@@ -263,8 +263,8 @@ export function runMalloyQuery(
             setTimeout(async () => {
               const renderBegin = runEnd;
 
-              const data = queryResult.getData();
-              const resultExplore = queryResult.getResultExplore();
+              const data = queryResult.data;
+              const resultExplore = queryResult.resultExplore;
 
               if (resultExplore) {
                 // TODO replace the DataTree with DataArray

@@ -20,10 +20,6 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    if (!data.isNumber()) {
-      throw new Error("Invalid type for number renderer.");
-    }
-
-    return data.getValue().toLocaleString();
+    return data.number.value.toLocaleString();
   }
 }

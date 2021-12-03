@@ -21,7 +21,7 @@ export class HTMLListRenderer extends ContainerRenderer {
   };
 
   getValueField(struct: Explore): Field {
-    return struct.getFields()[0];
+    return struct.fields[0];
   }
 
   getDetailField(_struct: Explore): Field | undefined {
@@ -32,26 +32,22 @@ export class HTMLListRenderer extends ContainerRenderer {
     if (!table.isArray()) {
       return "Invalid data for chart renderer.";
     }
-    if (table.getRowCount() === 0) {
+    if (table.rowCount === 0) {
       return "⌀";
     }
 
-    const valueField = this.getValueField(table.getField());
-    const detailField = this.getDetailField(table.getField());
+    const valueField = this.getValueField(table.field);
+    const detailField = this.getDetailField(table.field);
 
     const renderedItems = [];
     for (const row of table) {
       let renderedItem = "";
-      const childRenderer = this.childRenderers[valueField.getName()];
-      const rendered = await childRenderer.render(
-        row.getColumn(valueField.getName())
-      );
+      const childRenderer = this.childRenderers[valueField.name];
+      const rendered = await childRenderer.render(row.cell(valueField));
       renderedItem += rendered;
       if (detailField) {
-        const childRenderer = this.childRenderers[detailField.getName()];
-        const rendered = await childRenderer.render(
-          row.getColumn(detailField.getName())
-        );
+        const childRenderer = this.childRenderers[detailField.name];
+        const rendered = await childRenderer.render(row.cell(detailField));
         renderedItem += ` (${rendered})`;
       }
       renderedItems.push(renderedItem);

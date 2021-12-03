@@ -39,37 +39,28 @@ function getTableFilters(
   row: number,
   dest: FilterItem[]
 ): void {
-  for (const f of table.getField().getFilters() || []) {
+  for (const f of table.field.filters || []) {
     dest.push({ key: f.source, value: undefined });
   }
 
-  const dimensions = table
-    .getField()
-    .getFields()
-    .filter((field) => field.isDimensional());
+  const dimensions = table.field.fields.filter((field) =>
+    field.isDimensional()
+  );
 
   for (const dim of dimensions) {
-    const value = table.getRow(row).getColumn(dim.getName());
+    const cell = table.row(row).cell(dim);
     // if we have an expression, use it instead of the name of the field.
     const key =
-      dim.isAtomicField() || dim.isQueryField()
-        ? dim.getExpression()
-        : undefined;
-    if (key && !value.isArray()) {
-      if (value.isNull()) {
+      dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
+    if (key && !cell.isArray()) {
+      if (cell.isNull()) {
         dest.push({ key, value: "= null" });
-      } else if (value.isString()) {
-        dest.push({ key, value: filterQuote(value.getValue()) });
-      } else if (value.isNumber() || value.isBoolean()) {
-        dest.push({ key, value: value.getValue().toString() });
-      } else if (value.isTimestamp() || value.isDate()) {
-        dest.push(
-          timestampToDateFilter(
-            key,
-            value.getValue(),
-            value.getField().getTimeframe()
-          )
-        );
+      } else if (cell.isString()) {
+        dest.push({ key, value: filterQuote(cell.value) });
+      } else if (cell.isNumber() || cell.isBoolean()) {
+        dest.push({ key, value: cell.value.toString() });
+      } else if (cell.isTimestamp() || cell.isDate()) {
+        dest.push(timestampToDateFilter(key, cell.value, cell.field.timeframe));
       }
     }
   }
@@ -84,10 +75,7 @@ export function getDrillFilters(root: DataArray, path: string): string[] {
     const rowNum = parseInt(rowNumString);
     getTableFilters(dataTable, rowNum, filters);
     if (nextTableFieldName) {
-      dataTable = dataTable
-        .getRow(rowNum)
-        .getColumn(nextTableFieldName)
-        .asArray();
+      dataTable = dataTable.row(rowNum).cell(nextTableFieldName).array;
     }
   }
 
@@ -103,7 +91,7 @@ export function getDrillFilters(root: DataArray, path: string): string[] {
 }
 
 export function getDrillQuery(root: DataArray, path: string): string {
-  let ret = `${root.getField().getSource()?.getName()} `;
+  let ret = `${root.field.source?.name} `;
   const filters = getDrillFilters(root, path);
   if (filters.length) {
     ret += `:\n  [\n  ${filters.join(",\n  ")}\n  ]\n`;

@@ -22,8 +22,8 @@ export abstract class ContainerRenderer extends RenderTree {
 
   makeChildRenderers(explore: Explore, dataStyles: DataStyles): void {
     const result: ChildRenderers = {};
-    explore.getFields().forEach((field: Field) => {
-      result[field.getName()] = makeRenderer(
+    explore.fields.forEach((field: Field) => {
+      result[field.name] = makeRenderer(
         field,
         dataStyles,
         this.childrenStyleDefaults

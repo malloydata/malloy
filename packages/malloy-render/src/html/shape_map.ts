@@ -20,28 +20,25 @@ import { getColorScale } from "./utils";
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: Explore): Field {
-    return explore.getFields()[0];
+    return explore.fields[0];
   }
 
   private getColorField(explore: Explore): Field {
-    return explore.getFields()[1];
+    return explore.fields[1];
   }
 
   getDataValue(data: DataColumn): string | number | undefined {
     if (data.isNumber()) {
-      return data.getValue();
+      return data.value;
     } else if (data.isString()) {
-      if (
-        data.getField() ===
-        this.getRegionField(data.getField().getParentExplore())
-      ) {
-        const id = STATE_CODES[data.getValue()];
+      if (data.field === this.getRegionField(data.field.parentExplore)) {
+        const id = STATE_CODES[data.value];
         if (id === undefined) {
           return undefined;
         }
         return id;
       } else {
-        return data.getValue();
+        return data.value;
       }
     } else {
       throw new Error("Invalid field type for bar chart.");
@@ -53,7 +50,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
       if (field.isDate() || field.isTimestamp()) {
         return "nominal";
       } else if (field.isString()) {
-        if (field === this.getRegionField(field.getParentExplore())) {
+        if (field === this.getRegionField(field.parentExplore)) {
           return "quantitative";
         } else {
           return "nominal";
@@ -74,23 +71,23 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
       throw new Error("Invalid data for shape map");
     }
 
-    const regionField = this.getRegionField(data.getField());
-    const colorField = this.getColorField(data.getField());
+    const regionField = this.getRegionField(data.field);
+    const colorField = this.getColorField(data.field);
 
     const colorType = colorField ? this.getDataType(colorField) : undefined;
 
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.getName(),
+            field: colorField.name,
             type: colorType,
-            axis: { title: colorField.getName() },
+            axis: { title: colorField.name },
             scale: getColorScale(colorType, false),
           }
         : undefined;
 
     const mapped = this.mapData(data).filter(
-      (row) => row[regionField.getName()] !== undefined
+      (row) => row[regionField.name] !== undefined
     );
 
     return {
@@ -118,7 +115,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
         {
           transform: [
             {
-              lookup: regionField.getName(),
+              lookup: regionField.name,
               from: {
                 data: {
                   values: usAtlas,

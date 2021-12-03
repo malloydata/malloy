@@ -21,7 +21,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.getField().getFields();
+    const fields = data.field.fields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
@@ -39,26 +39,26 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.getName(),
+            field: colorField.name,
             type: colorType,
-            axis: { title: colorField.getName() },
+            axis: { title: colorField.name },
             scale: getColorScale(colorType, mark === "bar"),
           }
         : { value: "#4285F4" };
 
     const sizeDef = sizeField
       ? {
-          field: sizeField.getName(),
+          field: sizeField.name,
           type: sizeType,
-          axis: { title: sizeField.getName() },
+          axis: { title: sizeField.name },
         }
       : undefined;
 
     const shapeDef = shapeField
       ? {
-          field: shapeField.getName(),
+          field: shapeField.name,
           type: shapeType,
-          axis: { title: shapeField.getName() },
+          axis: { title: shapeField.name },
         }
       : undefined;
 
@@ -66,17 +66,17 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
     const ySort = yType === "nominal" ? null : undefined;
 
     const xDef = {
-      field: xField.getName(),
+      field: xField.name,
       type: xType,
       sort: xSort,
-      axis: { title: xField.getName() },
+      axis: { title: xField.name },
     };
 
     const yDef = {
-      field: yField.getName(),
+      field: yField.name,
       type: yType,
       sort: ySort,
-      axis: { title: yField.getName() },
+      axis: { title: yField.name },
     };
 
     return {

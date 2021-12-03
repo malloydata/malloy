@@ -20,10 +20,6 @@ export class HTMLBytesRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    if (!data.isBytes()) {
-      throw new Error("Invalid data for bytes renderer");
-    }
-
-    return data.getValue().toString("base64");
+    return data.bytes.value.toString("base64");
   }
 }
