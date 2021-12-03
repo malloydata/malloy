@@ -1915,7 +1915,7 @@ abstract class Data<T> {
   }
 
   get field(): Field | Explore {
-    return this.field;
+    return this._field;
   }
 
   public abstract get value(): T;
@@ -2024,7 +2024,7 @@ class ScalarData<T> extends Data<T> {
   }
 
   public get value(): T {
-    return this.value;
+    return this._value;
   }
 
   get field(): AtomicField {
@@ -2129,7 +2129,7 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
    * @returns The `Explore` that describes the structure of this data.
    */
   public get field(): Explore {
-    return this.field;
+    return this._field;
   }
 
   /**
