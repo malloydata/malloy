@@ -11,11 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { DataValue } from "../data_table";
+import { DataColumn } from "@malloy-lang/malloy";
 import { HTMLNumberRenderer } from "./number";
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
-  getText(data: DataValue): string | null {
+  getText(data: DataColumn): string | null {
     const num = this.getNumber(data);
 
     return num === null

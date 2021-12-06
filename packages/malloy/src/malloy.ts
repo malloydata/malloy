@@ -20,11 +20,17 @@ import {
 } from "./lang";
 import {
   CompiledQuery,
+  FieldBooleanDef,
+  FieldDateDef,
+  FieldNumberDef,
+  FieldStringDef,
+  FieldTimestampDef,
   FieldTypeDef,
   FilterExpression,
   ModelDef,
   Query as InternalQuery,
   QueryData,
+  QueryDataRow,
   QueryModel,
   QueryResult,
   StructDef,
@@ -39,6 +45,7 @@ import {
   QueryURL,
   URL,
   URLReader,
+  SQLRunner,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -147,8 +154,8 @@ export class Malloy {
     parse: Parse;
     model?: Model;
   }): Promise<Model> {
-    const translator = parse._getTranslator();
-    translator.translate(model?._getModelDef());
+    const translator = parse._translator;
+    translator.translate(model?._modelDef);
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const result = translator.translate();
@@ -221,16 +228,42 @@ export class Malloy {
   }: {
     lookupSQLRunner: LookupSQLRunner;
     preparedResult: PreparedResult;
+  }): Promise<Result>;
+  public static async run({
+    sqlRunner,
+    preparedResult,
+  }: {
+    sqlRunner: SQLRunner;
+    preparedResult: PreparedResult;
+  }): Promise<Result>;
+  public static async run({
+    sqlRunner,
+    lookupSQLRunner,
+    preparedResult,
+  }: {
+    sqlRunner?: SQLRunner;
+    lookupSQLRunner?: LookupSQLRunner;
+    preparedResult: PreparedResult;
   }): Promise<Result> {
-    const sqlRunner = await lookupSQLRunner.lookupSQLRunner(
-      preparedResult.getConnectionName()
+    if (sqlRunner === undefined) {
+      if (lookupSQLRunner === undefined) {
+        throw new Error(
+          "Internal Error: sqlRunner or lookupSqlRunner must be provided."
+        );
+      }
+      sqlRunner = await lookupSQLRunner.lookupSQLRunner(
+        preparedResult.connectionName
+      );
+    }
+    const result = await sqlRunner.runSQL(preparedResult.sql);
+    return new Result(
+      {
+        ...preparedResult._rawQuery,
+        result: result.rows,
+        totalRows: result.totalRows,
+      },
+      preparedResult._modelDef
     );
-    const result = await sqlRunner.runSQL(preparedResult.getSQL());
-    return new Result({
-      ...preparedResult._getRawQuery(),
-      result: result.rows,
-      totalRows: result.totalRows,
-    });
   }
 }
 
@@ -299,7 +332,7 @@ export class Model {
    *
    * @returns A prepared query.
    */
-  public getPreparedQuery(): PreparedQuery {
+  public get preparedQuery(): PreparedQuery {
     if (this.queryList.length < 0) {
       throw new Error("Model has no queries.");
     }
@@ -324,13 +357,13 @@ export class Model {
    *
    * @returns An array of `Explore`s contained in the model.
    */
-  public getExplores(): Explore[] {
+  public get explores(): Explore[] {
     return Object.keys(this.modelDef.structs).map((name) =>
       this.getExploreByName(name)
     );
   }
 
-  public _getModelDef(): ModelDef {
+  public get _modelDef(): ModelDef {
     return this.modelDef;
   }
 }
@@ -354,13 +387,16 @@ export class PreparedQuery {
    *
    * @returns A fully-prepared query (which contains the generated SQL).
    */
-  public getPreparedResult(): PreparedResult {
+  public get preparedResult(): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
     const translatedQuery = queryModel.compileQuery(this._query);
-    return new PreparedResult({
-      queryName: this.name || translatedQuery.queryName,
-      ...translatedQuery,
-    });
+    return new PreparedResult(
+      {
+        queryName: this.name || translatedQuery.queryName,
+        ...translatedQuery,
+      },
+      this._modelDef
+    );
   }
 }
 
@@ -391,7 +427,7 @@ export class Parse {
    *
    * @returns An array of document highlights.
    */
-  public getHighlights(): DocumentHighlight[] {
+  public get highlights(): DocumentHighlight[] {
     return (this.translator.metadata().highlights || []).map(
       (highlight) => new DocumentHighlight(highlight)
     );
@@ -405,13 +441,13 @@ export class Parse {
    *
    * @returns An array of document symbols.
    */
-  public getSymbols(): DocumentSymbol[] {
+  public get symbols(): DocumentSymbol[] {
     return (this.translator.metadata().symbols || []).map(
       (symbol) => new DocumentSymbol(symbol)
     );
   }
 
-  public _getTranslator(): MalloyTranslator {
+  public get _translator(): MalloyTranslator {
     return this.translator;
   }
 }
@@ -423,11 +459,11 @@ export class Parse {
  * and may be used for syntax highlighting in an IDE, for example.
  */
 export class DocumentHighlight {
-  private range: DocumentRange;
-  private type: string;
+  private _range: DocumentRange;
+  private _type: string;
 
   constructor(documentHighlight: DocumentHighlightDefinition) {
-    this.range = new DocumentRange(
+    this._range = new DocumentRange(
       new DocumentPosition(
         documentHighlight.range.start.line,
         documentHighlight.range.start.character
@@ -437,21 +473,21 @@ export class DocumentHighlight {
         documentHighlight.range.end.character
       )
     );
-    this.type = documentHighlight.type;
+    this._type = documentHighlight.type;
   }
 
   /**
    * @returns The range of characters this highlight spans within its source document.
    */
-  getRange(): DocumentRange {
-    return this.range;
+  get range(): DocumentRange {
+    return this._range;
   }
 
   /**
    * @returns The type of highlight, which may be any `HighlightType`.
    */
-  getType(): string {
-    return this.type;
+  get type(): string {
+    return this._type;
   }
 }
 
@@ -459,26 +495,26 @@ export class DocumentHighlight {
  * A range of characters within a Malloy document.
  */
 export class DocumentRange {
-  private start: DocumentPosition;
-  private end: DocumentPosition;
+  private _start: DocumentPosition;
+  private _end: DocumentPosition;
 
   constructor(start: DocumentPosition, end: DocumentPosition) {
-    this.start = start;
-    this.end = end;
+    this._start = start;
+    this._end = end;
   }
 
   /**
    * @returns The position of the first character in the range.
    */
-  public getStart(): DocumentPosition {
-    return this.start;
+  public get start(): DocumentPosition {
+    return this._start;
   }
 
   /**
    * @returns The position of the last character in the range.
    */
-  public getEnd(): DocumentPosition {
-    return this.end;
+  public get end(): DocumentPosition {
+    return this._end;
   }
 
   /**
@@ -499,26 +535,26 @@ export class DocumentRange {
  * A position within a Malloy document.
  */
 export class DocumentPosition {
-  private line: number;
-  private character: number;
+  private _line: number;
+  private _character: number;
 
   constructor(line: number, character: number) {
-    this.line = line;
-    this.character = character;
+    this._line = line;
+    this._character = character;
   }
 
   /**
    * @returns The line number of the position.
    */
-  public getLine(): number {
-    return this.line;
+  public get line(): number {
+    return this._line;
   }
 
   /**
    * @returns The character index on the line `this.getLine()`.
    */
-  public getCharacter(): number {
-    return this.character;
+  public get character(): number {
+    return this._character;
   }
 
   /**
@@ -535,13 +571,13 @@ export class DocumentPosition {
  * Represents any object defined (e.g. `Query`s and `Explore`s) in the document.
  */
 export class DocumentSymbol {
-  private range: DocumentRange;
-  private type: string;
-  private name: string;
-  private children: DocumentSymbol[];
+  private _range: DocumentRange;
+  private _type: string;
+  private _name: string;
+  private _children: DocumentSymbol[];
 
   constructor(documentSymbol: DocumentSymbolDefinition) {
-    this.range = new DocumentRange(
+    this._range = new DocumentRange(
       new DocumentPosition(
         documentSymbol.range.start.line,
         documentSymbol.range.start.character
@@ -551,9 +587,9 @@ export class DocumentSymbol {
         documentSymbol.range.end.character
       )
     );
-    this.type = documentSymbol.type;
-    this.name = documentSymbol.name;
-    this.children = documentSymbol.children.map(
+    this._type = documentSymbol.type;
+    this._name = documentSymbol.name;
+    this._children = documentSymbol.children.map(
       (child) => new DocumentSymbol(child)
     );
   }
@@ -561,8 +597,8 @@ export class DocumentSymbol {
   /**
    * @returns The range of characters in the source Malloy document that define this symbol.
    */
-  public getRange(): DocumentRange {
-    return this.range;
+  public get range(): DocumentRange {
+    return this._range;
   }
 
   /**
@@ -570,8 +606,8 @@ export class DocumentSymbol {
    *
    * Possible values are: `"explore"`, `"query"`, `"field"`, `"turtle"`, `"join"`, or `"unnamed_query"`.
    */
-  public getType(): string {
-    return this.type;
+  public get type(): string {
+    return this._type;
   }
 
   /**
@@ -579,16 +615,16 @@ export class DocumentSymbol {
    *
    * For type `"unnamed_query"`, `getName()` is `"unnamed_query"`.
    */
-  public getName(): string {
-    return this.name;
+  public get name(): string {
+    return this._name;
   }
 
   /**
    * @returns An array of document symbols defined inside this document symbol,
    * e.g. fields in an `Explore`.
    */
-  public getChildren(): DocumentSymbol[] {
-    return this.children;
+  public get children(): DocumentSymbol[] {
+    return this._children;
   }
 }
 
@@ -597,30 +633,40 @@ export class DocumentSymbol {
  */
 export class PreparedResult {
   protected inner: CompiledQuery;
+  protected modelDef: ModelDef;
 
-  constructor(query: CompiledQuery) {
+  constructor(query: CompiledQuery, modelDef: ModelDef) {
     this.inner = query;
+    this.modelDef = modelDef;
   }
 
   /**
    * @returns The name of the connection this query should be run against.
    */
-  public getConnectionName(): string {
+  public get connectionName(): string {
     return this.inner.connectionName;
+  }
+
+  public get _rawQuery(): CompiledQuery {
+    return this.inner;
+  }
+
+  public get _modelDef(): ModelDef {
+    return this.modelDef;
   }
 
   /**
    * @returns The SQL that should be run against the SQL runner
    * with the connection name `this.getConnectionName()`.
    */
-  public getSQL(): string {
+  public get sql(): string {
     return this.inner.sql;
   }
 
   /**
    * @returns The `Explore` representing the data that will be returned by running this query.
    */
-  public getResultExplore(): Explore {
+  public get resultExplore(): Explore {
     if (this.inner.structs.length === 0) {
       throw new Error("Malformed query result.");
     }
@@ -632,15 +678,20 @@ export class PreparedResult {
     return new Explore(namedExplore);
   }
 
-  public _getRawQuery(): CompiledQuery {
-    return this.inner;
+  public get sourceExplore(): Explore {
+    const name = this.inner.sourceExplore;
+    const explore = this.modelDef.structs[name];
+    if (explore === undefined) {
+      throw new Error("Malformed query result.");
+    }
+    return new Explore(explore);
   }
 
-  public _getSourceExploreName(): string {
+  public get _sourceExploreName(): string {
     return this.inner.sourceExplore;
   }
 
-  public _getSourceFilters(): FilterExpression[] {
+  public get _sourceFilters(): FilterExpression[] {
     return this.inner.sourceFilters || [];
   }
 }
@@ -751,25 +802,82 @@ export enum SourceRelationship {
   Inline = "inline",
 }
 
+class Entity {
+  private readonly _name: string;
+  protected readonly _parent?: Explore;
+  private readonly _source?: Entity;
+
+  constructor(name: string, parent?: Explore, source?: Entity) {
+    this._name = name;
+    this._parent = parent;
+    this._source = source;
+  }
+
+  public get source(): Entity | undefined {
+    return this.source;
+  }
+
+  public get name(): string {
+    return this._name;
+  }
+
+  public get sourceClasses(): string[] {
+    const sourceClasses = [];
+    if (this.source) {
+      sourceClasses.push(this.source.name);
+    }
+    sourceClasses.push(this.name);
+    return sourceClasses;
+  }
+
+  public hasParentExplore(): this is Field {
+    return this._parent !== undefined;
+  }
+
+  isExplore(): this is Explore {
+    return this instanceof Explore;
+  }
+
+  isQuery(): this is Query {
+    return this instanceof QueryField;
+  }
+
+  isMeasureLike(): boolean {
+    return (
+      this.hasParentExplore() && (!this.isAtomicField() || this.isAggregate())
+    );
+  }
+
+  isDimensional(): boolean {
+    return (
+      this.hasParentExplore() && this.isAtomicField() && !this.isAggregate()
+    );
+  }
+}
+
 export type Field = AtomicField | QueryField | ExploreField;
 
-/**
- * An explore contained within a Malloy document.
- */
-export class Explore {
-  protected readonly structDef: StructDef;
-  protected readonly parentExplore?: Explore;
-  private fields: Map<string, Field> | undefined;
+export class Explore extends Entity {
+  protected readonly _structDef: StructDef;
+  protected readonly _parentExplore?: Explore;
+  private _fieldMap: Map<string, Field> | undefined;
+  private sourceExplore: Explore | undefined;
 
-  constructor(structDef: StructDef, parentExplore?: Explore) {
-    this.structDef = structDef;
-    this.parentExplore = parentExplore;
+  constructor(structDef: StructDef, parentExplore?: Explore, source?: Explore) {
+    super(structDef.as || structDef.name, parentExplore, source);
+    this._structDef = structDef;
+    this._parentExplore = parentExplore;
+    this.sourceExplore = source;
+  }
+
+  public get source(): Explore | undefined {
+    return this.sourceExplore;
   }
 
   /**
-   * @returns The name of the explore.
+   * @returns The name of the entity.
    */
-  public getName(): string {
+  public get name(): string {
     return this.structDef.as || this.structDef.name;
   }
 
@@ -784,10 +892,10 @@ export class Explore {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.getModelDef());
+    return new PreparedQuery(internalQuery, this.modelDef);
   }
 
-  private getModelDef(): ModelDef {
+  private get modelDef(): ModelDef {
     return {
       name: "generated_model",
       exports: [],
@@ -796,48 +904,78 @@ export class Explore {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.getModelDef(), []);
+    return new Model(this.modelDef, []);
   }
 
-  private getFieldMap(): Map<string, Field> {
-    if (this.fields === undefined) {
-      this.fields = new Map(
+  private get fieldMap(): Map<string, Field> {
+    if (this._fieldMap === undefined) {
+      const sourceFields = this.source?.fieldMap || new Map();
+      this._fieldMap = new Map(
         this.structDef.fields.map((fieldDef) => {
           const name = fieldDef.as || fieldDef.name;
+          const sourceField = sourceFields.get(fieldDef.name);
           if (fieldDef.type === "struct") {
-            return [name, new ExploreField(fieldDef, this)];
+            return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === "turtle") {
-            return [name, new QueryField(fieldDef)];
+            return [name, new QueryField(fieldDef, this, sourceField)];
           } else {
-            return [name, new AtomicField(fieldDef)];
+            if (fieldDef.type === "string") {
+              return [name, new StringField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "number") {
+              return [name, new NumberField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "date") {
+              // TODO this is a hack
+              // Is this a bug? The extraction functions don't seem like they should return a
+              // field of type "date". Rather, they should be of type "number".
+              if (
+                fieldDef.timeframe &&
+                ["day", "day_of_month", "day_of_week", "day_of_year"].includes(
+                  fieldDef.timeframe
+                )
+              ) {
+                return [
+                  name,
+                  new NumberField(
+                    { ...fieldDef, type: "number" },
+                    this,
+                    sourceField
+                  ),
+                ];
+              }
+              return [name, new DateField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "timestamp") {
+              return [name, new TimestampField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "boolean") {
+              return [name, new BooleanField(fieldDef, this, sourceField)];
+            }
           }
         }) as [string, Field][]
       );
     }
-    return this.fields;
+    return this._fieldMap;
   }
 
-  public getFields(): Field[] {
-    return [...this.getFieldMap().values()];
+  public get fields(): Field[] {
+    return [...this.fieldMap.values()];
   }
 
   public getFieldByName(fieldName: string): Field {
-    const field = this.getFieldMap().get(fieldName);
+    const field = this.fieldMap.get(fieldName);
     if (field === undefined) {
       throw new Error(`No such field ${fieldName}.`);
     }
     return field;
   }
 
-  public getPrimaryKey(): string | undefined {
+  public get primaryKey(): string | undefined {
     return this.structDef.primaryKey;
   }
 
-  public getParentExplore(): Explore | undefined {
-    return this.parentExplore;
+  public get parentExplore(): Explore | undefined {
+    return this._parentExplore;
   }
 
-  public getSourceRelationship(): SourceRelationship {
+  public get sourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
       case "condition":
         return SourceRelationship.Condition;
@@ -856,8 +994,13 @@ export class Explore {
     return this instanceof ExploreField;
   }
 
-  public _getStructDef(): StructDef {
-    return this.structDef;
+  // TODO wrapper type for FilterExpression
+  get filters(): FilterExpression[] {
+    return this.structDef.resultMetadata?.filterList || [];
+  }
+
+  public get structDef(): StructDef {
+    return this._structDef;
   }
 }
 
@@ -869,18 +1012,21 @@ export enum AtomicFieldType {
   Timestamp = "timestamp",
 }
 
-export class AtomicField {
-  private fieldTypeDef: FieldTypeDef;
+export class AtomicField extends Entity {
+  protected fieldTypeDef: FieldTypeDef;
+  protected parent: Explore;
 
-  constructor(fieldTypeDef: FieldTypeDef) {
+  constructor(
+    fieldTypeDef: FieldTypeDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldTypeDef.as || fieldTypeDef.name, parent, source);
     this.fieldTypeDef = fieldTypeDef;
+    this.parent = parent;
   }
 
-  public getName(): string {
-    return this.fieldTypeDef.as || this.fieldTypeDef.name;
-  }
-
-  public getType(): AtomicFieldType {
+  public get type(): AtomicFieldType {
     switch (this.fieldTypeDef.type) {
       case "string":
         return AtomicFieldType.String;
@@ -910,17 +1056,199 @@ export class AtomicField {
   public isAggregate(): boolean {
     return !!this.fieldTypeDef.aggregate;
   }
+
+  public get sourceField(): Field {
+    // TODO
+    throw new Error();
+  }
+
+  public get sourceClasses(): string[] {
+    const sourceField = this.fieldTypeDef.name || this.fieldTypeDef.as;
+    return sourceField ? [sourceField] : [];
+  }
+
+  public hasParentExplore(): this is Field {
+    return true;
+  }
+
+  public isDimensional(): boolean {
+    return true;
+  }
+
+  public isMeasurelike(): false {
+    return false;
+  }
+
+  public isString(): this is StringField {
+    return this instanceof StringField;
+  }
+
+  public isNumber(): this is NumberField {
+    return this instanceof NumberField;
+  }
+
+  public isDate(): this is DateField {
+    return this instanceof DateField;
+  }
+
+  public isBoolean(): this is BooleanField {
+    return this instanceof BooleanField;
+  }
+
+  public isTimestamp(): this is TimestampField {
+    return this instanceof TimestampField;
+  }
+
+  get parentExplore(): Explore {
+    return this.parent;
+  }
+
+  get expression(): string {
+    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.name;
+  }
 }
 
-export class QueryField {
-  private turtleDef: TurtleDef;
+export enum DateTimeframe {
+  Date = "date",
+  Week = "week",
+  Month = "month",
+  Quarter = "quarter",
+  Year = "year",
+}
 
-  constructor(turtleDef: TurtleDef) {
+export enum TimestampTimeframe {
+  Date = "date",
+  Week = "week",
+  Month = "month",
+  Quarter = "quarter",
+  Year = "year",
+  Second = "second",
+  Hour = "hour",
+  Minute = "minute",
+}
+
+export class DateField extends AtomicField {
+  private fieldDateDef: FieldDateDef;
+  constructor(
+    fieldDateDef: FieldDateDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldDateDef, parent, source);
+    this.fieldDateDef = fieldDateDef;
+  }
+
+  get timeframe(): DateTimeframe | undefined {
+    if (this.fieldDateDef.timeframe === undefined) {
+      return undefined;
+    }
+    switch (this.fieldDateDef.timeframe) {
+      case "date":
+        return DateTimeframe.Date;
+      case "week":
+        return DateTimeframe.Week;
+      case "month":
+        return DateTimeframe.Month;
+      case "quarter":
+        return DateTimeframe.Quarter;
+      case "year":
+        return DateTimeframe.Year;
+    }
+  }
+}
+
+export class TimestampField extends AtomicField {
+  private fieldTimestampDef: FieldTimestampDef;
+  constructor(
+    fieldTimestampDef: FieldTimestampDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldTimestampDef, parent, source);
+    this.fieldTimestampDef = fieldTimestampDef;
+  }
+
+  get timeframe(): TimestampTimeframe | undefined {
+    if (this.fieldTimestampDef.timeframe === undefined) {
+      return undefined;
+    }
+    switch (this.fieldTimestampDef.timeframe) {
+      case "date":
+        return TimestampTimeframe.Date;
+      case "week":
+        return TimestampTimeframe.Week;
+      case "month":
+        return TimestampTimeframe.Month;
+      case "quarter":
+        return TimestampTimeframe.Quarter;
+      case "year":
+        return TimestampTimeframe.Year;
+      case "second":
+        return TimestampTimeframe.Second;
+      case "hour":
+        return TimestampTimeframe.Hour;
+      case "minute":
+        return TimestampTimeframe.Minute;
+    }
+  }
+}
+
+export class NumberField extends AtomicField {
+  private fieldNumberDef: FieldNumberDef;
+  constructor(
+    fieldNumberDef: FieldNumberDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldNumberDef, parent, source);
+    this.fieldNumberDef = fieldNumberDef;
+  }
+}
+
+export class BooleanField extends AtomicField {
+  private fieldBooleanDef: FieldBooleanDef;
+  constructor(
+    fieldBooleanDef: FieldBooleanDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldBooleanDef, parent, source);
+    this.fieldBooleanDef = fieldBooleanDef;
+  }
+}
+
+export class StringField extends AtomicField {
+  private fieldStringDef: FieldStringDef;
+  constructor(
+    fieldStringDef: FieldStringDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldStringDef, parent, source);
+    this.fieldStringDef = fieldStringDef;
+  }
+}
+
+export class Query extends Entity {
+  protected turtleDef: TurtleDef;
+  private sourceQuery?: Query;
+
+  constructor(turtleDef: TurtleDef, parent?: Explore, source?: Query) {
+    super(turtleDef.as || turtleDef.name, parent, source);
     this.turtleDef = turtleDef;
   }
 
-  public getName(): string {
-    return this.turtleDef.as || this.turtleDef.name;
+  public get source(): Query | undefined {
+    return this.sourceQuery;
+  }
+}
+
+export class QueryField extends Query {
+  protected parent: Explore;
+
+  constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
+    super(turtleDef, parent, source);
+    this.parent = parent;
   }
 
   public isQueryField(): this is QueryField {
@@ -934,6 +1262,31 @@ export class QueryField {
   public isAtomicField(): this is AtomicField {
     return false;
   }
+
+  public isDimensional(): false {
+    return false;
+  }
+
+  public isMeasurelike(): true {
+    return true;
+  }
+
+  public get sourceClasses(): string[] {
+    const sourceField = this.turtleDef.name || this.turtleDef.as;
+    return sourceField ? [sourceField] : [];
+  }
+
+  public hasParentExplore(): this is Field {
+    return true;
+  }
+
+  get parentExplore(): Explore {
+    return this.parent;
+  }
+
+  get expression(): string {
+    return this.name;
+  }
 }
 
 export enum JoinRelationship {
@@ -943,14 +1296,14 @@ export enum JoinRelationship {
 }
 
 export class ExploreField extends Explore {
-  protected parentExplore: Explore;
+  protected _parentExplore: Explore;
 
-  constructor(structDef: StructDef, parentExplore: Explore) {
-    super(structDef, parentExplore);
-    this.parentExplore = parentExplore;
+  constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
+    super(structDef, parentExplore, source);
+    this._parentExplore = parentExplore;
   }
 
-  public getJoinRelationship(): JoinRelationship {
+  public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
       case "condition":
       case "foreignKey":
@@ -976,8 +1329,13 @@ export class ExploreField extends Explore {
     return false;
   }
 
-  public getParentExplore(): Explore {
-    return this.parentExplore;
+  public get parentExplore(): Explore {
+    return this._parentExplore;
+  }
+
+  public get sourceClasses(): string[] {
+    const sourceField = this.structDef.name || this.structDef.as;
+    return sourceField ? [sourceField] : [];
   }
 }
 
@@ -985,9 +1343,9 @@ export class ExploreField extends Explore {
  * An environment for compiling and running Malloy queries.
  */
 export class Runtime {
-  private urlReader: URLReader;
-  private lookupSchemaReader: LookupSchemaReader;
-  private lookupSQLRunner: LookupSQLRunner;
+  private _urlReader: URLReader;
+  private _lookupSchemaReader: LookupSchemaReader;
+  private _lookupSQLRunner: LookupSQLRunner;
 
   constructor(runtime: LookupSchemaReader & LookupSQLRunner & URLReader);
   constructor(
@@ -1025,30 +1383,30 @@ export class Runtime {
     if (lookupSQLRunner === undefined) {
       throw new Error("A LookupSQLReader is required.");
     }
-    this.urlReader = urlReader;
-    this.lookupSQLRunner = lookupSQLRunner;
-    this.lookupSchemaReader = lookupSchemaReader;
+    this._urlReader = urlReader;
+    this._lookupSQLRunner = lookupSQLRunner;
+    this._lookupSchemaReader = lookupSchemaReader;
   }
 
   /**
    * @returns The `URLReader` for this runtime instance.
    */
-  public getURLReader(): URLReader {
-    return this.urlReader;
+  public get urlReader(): URLReader {
+    return this._urlReader;
   }
 
   /**
    * @returns The `LookupSQLRunner` for this runtime instance.
    */
-  public getLookupSQLRunner(): LookupSQLRunner {
-    return this.lookupSQLRunner;
+  public get lookupSQLRunner(): LookupSQLRunner {
+    return this._lookupSQLRunner;
   }
 
   /**
    * @returns The `LookupSchemaReader` for this runtime instance.
    */
-  public getLookupSchemaReader(): LookupSchemaReader {
-    return this.lookupSchemaReader;
+  public get lookupSchemaReader(): LookupSchemaReader {
+    return this._lookupSchemaReader;
   }
 
   /**
@@ -1237,7 +1595,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadFinalQuery(): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getPreparedQuery();
+      return (await this.materialize()).preparedQuery;
     });
   }
 
@@ -1276,8 +1634,8 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      const urlReader = this.runtime.getURLReader();
-      const lookupSchemaReader = this.runtime.getLookupSchemaReader();
+      const urlReader = this.runtime.urlReader;
+      const lookupSchemaReader = this.runtime.lookupSchemaReader;
       const parse =
         query instanceof URL
           ? await Malloy.parse({
@@ -1294,7 +1652,7 @@ export class ModelMaterializer extends FluentState<Model> {
         parse,
         model,
       });
-      return queryModel.getPreparedQuery();
+      return queryModel.preparedQuery;
     });
   }
 
@@ -1344,7 +1702,7 @@ export class ModelMaterializer extends FluentState<Model> {
   public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.materialize();
-      return new PreparedQuery(query, model._getModelDef());
+      return new PreparedQuery(query, model._modelDef);
     });
   }
 
@@ -1393,7 +1751,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
    * @returns The query results from running this loaded query.
    */
   async run(): Promise<Result> {
-    const lookupSQLRunner = this.runtime.getLookupSQLRunner();
+    const lookupSQLRunner = this.runtime.lookupSQLRunner;
     const preparedResult = await this.getPreparedResult();
     return Malloy.run({ lookupSQLRunner, preparedResult });
   }
@@ -1406,7 +1764,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
    */
   public loadPreparedResult(): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
-      return (await this.materialize()).getPreparedResult();
+      return (await this.materialize()).preparedResult;
     });
   }
 
@@ -1425,7 +1783,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
    * @returns A promise of the SQL string.
    */
   public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).getSQL();
+    return (await this.getPreparedResult()).sql;
   }
 
   /**
@@ -1451,7 +1809,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
    */
   async run(): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
-    const lookupSQLRunner = this.runtime.getLookupSQLRunner();
+    const lookupSQLRunner = this.runtime.lookupSQLRunner;
     return Malloy.run({ lookupSQLRunner, preparedResult });
   }
 
@@ -1470,7 +1828,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
    * @returns A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).getSQL();
+    return (await this.getPreparedResult()).sql;
   }
 }
 
@@ -1521,40 +1879,257 @@ class ExploreMaterializer extends FluentState<Explore> {
 export class Result extends PreparedResult {
   protected inner: QueryResult;
 
-  constructor(queryResult: QueryResult) {
-    super(queryResult);
+  constructor(queryResult: QueryResult, modelDef: ModelDef) {
+    super(queryResult, modelDef);
     this.inner = queryResult;
   }
 
-  public _getQueryResult(): QueryResult {
+  public get _queryResult(): QueryResult {
     return this.inner;
   }
 
   /**
    * @returns The result data.
    */
-  public getData(): DataArray {
-    return new DataArray(this.inner.result, this.getResultExplore());
+  public get data(): DataArray {
+    return new DataArray(this.inner.result, this.resultExplore);
   }
 }
 
-/**
- * An array of query result data along with associated metadata.
- */
-export class DataArray {
+export type DataColumn =
+  | DataArray
+  | DataRecord
+  | DataString
+  | DataBoolean
+  | DataNumber
+  | DataDate
+  | DataTimestamp
+  | DataNull
+  | DataBytes;
+
+abstract class Data<T> {
+  protected _field: Field | Explore;
+
+  constructor(field: Field | Explore) {
+    this._field = field;
+  }
+
+  get field(): Field | Explore {
+    return this._field;
+  }
+
+  public abstract get value(): T;
+
+  isString(): this is DataString {
+    return this instanceof DataString;
+  }
+
+  get string(): DataString {
+    if (this.isString()) {
+      return this;
+    }
+    throw new Error("Not a string.");
+  }
+
+  isBoolean(): this is DataBoolean {
+    return this instanceof DataBoolean;
+  }
+
+  get boolean(): DataBoolean {
+    if (this.isBoolean()) {
+      return this;
+    }
+    throw new Error("Not a boolean.");
+  }
+
+  isNumber(): this is DataNumber {
+    return this instanceof DataNumber;
+  }
+
+  get number(): DataNumber {
+    if (this.isNumber()) {
+      return this;
+    }
+    throw new Error("Not a number.");
+  }
+
+  isTimestamp(): this is DataTimestamp {
+    return this instanceof DataTimestamp;
+  }
+
+  get timestamp(): DataTimestamp {
+    if (this.isTimestamp()) {
+      return this;
+    }
+    throw new Error("Not a timestamp.");
+  }
+
+  isDate(): this is DataDate {
+    return this instanceof DataDate;
+  }
+
+  get date(): DataDate {
+    if (this.isDate()) {
+      return this;
+    }
+    throw new Error("Not a date.");
+  }
+
+  isNull(): this is DataNull {
+    return this instanceof DataNull;
+  }
+
+  isBytes(): this is DataBytes {
+    return this instanceof DataBytes;
+  }
+
+  get bytes(): DataBytes {
+    if (this.isBytes()) {
+      return this;
+    }
+    throw new Error("Not bytes.");
+  }
+
+  isRecord(): this is DataRecord {
+    return this instanceof DataRecord;
+  }
+
+  get record(): DataRecord {
+    if (this.isRecord()) {
+      return this;
+    }
+    throw new Error("Not a record.");
+  }
+
+  isArray(): this is DataArray {
+    return this instanceof DataArray;
+  }
+
+  get array(): DataArray {
+    if (this.isArray()) {
+      return this;
+    }
+    throw new Error("Not an array.");
+  }
+}
+
+class ScalarData<T> extends Data<T> {
+  protected _value: T;
+  protected _field: AtomicField;
+
+  constructor(value: T, field: AtomicField) {
+    super(field);
+    this._value = value;
+    this._field = field;
+  }
+
+  public get value(): T {
+    return this._value;
+  }
+
+  get field(): AtomicField {
+    return this._field;
+  }
+}
+
+class DataString extends ScalarData<string> {
+  protected _field: StringField;
+
+  constructor(value: string, field: StringField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): StringField {
+    return this._field;
+  }
+}
+
+class DataBoolean extends ScalarData<boolean> {
+  protected _field: BooleanField;
+
+  constructor(value: boolean, field: BooleanField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): BooleanField {
+    return this._field;
+  }
+}
+
+class DataNumber extends ScalarData<number> {
+  protected _field: NumberField;
+
+  constructor(value: number, field: NumberField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): NumberField {
+    return this._field;
+  }
+}
+
+class DataTimestamp extends ScalarData<Date> {
+  protected _field: TimestampField;
+
+  constructor(value: Date, field: TimestampField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  public get value(): Date {
+    // TODO properly map the data from BQ/Postgres types
+    return new Date((this._value as unknown as { value: string }).value);
+  }
+
+  get field(): TimestampField {
+    return this._field;
+  }
+}
+
+class DataDate extends ScalarData<Date> {
+  protected _field: DateField;
+
+  constructor(value: Date, field: DateField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  public get value(): Date {
+    // TODO properly map the data from BQ/Postgres types
+    return new Date((this._value as unknown as { value: string }).value);
+  }
+
+  get field(): DateField {
+    return this._field;
+  }
+}
+
+class DataBytes extends ScalarData<Buffer> {}
+
+class DataNull extends Data<null> {
+  public get value(): null {
+    return null;
+  }
+}
+
+export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   private queryData: QueryData;
-  protected field: Explore;
+  protected _field: Explore;
 
   constructor(queryData: QueryData, field: Explore) {
+    super(field);
     this.queryData = queryData;
-    this.field = field;
+    this._field = field;
   }
 
   /**
    * @returns The `Explore` that describes the structure of this data.
    */
-  public getField(): Explore {
-    return this.field;
+  public get field(): Explore {
+    return this._field;
   }
 
   /**
@@ -1562,6 +2137,103 @@ export class DataArray {
    */
   public toObject(): QueryData {
     return this.queryData;
+  }
+
+  path(...path: (number | string)[]): DataColumn {
+    return getPath(this, path);
+  }
+
+  row(index: number): DataRecord {
+    return new DataRecord(this.queryData[index], this.field);
+  }
+
+  get rowCount(): number {
+    return this.queryData.length;
+  }
+
+  public get value(): QueryData {
+    return this.toObject();
+  }
+
+  [Symbol.iterator](): Iterator<DataRecord> {
+    let currentIndex = 0;
+    const queryData = this.queryData;
+    const getRow = (index: number) => this.row(index);
+    return {
+      next(): IteratorResult<DataRecord> {
+        if (currentIndex < queryData.length) {
+          return { value: getRow(currentIndex++), done: false };
+        } else {
+          return { value: undefined, done: true };
+        }
+      },
+    };
+  }
+}
+
+function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
+  for (const segment of path) {
+    if (typeof segment === "number") {
+      data = data.array.row(segment);
+    } else {
+      data = data.record.cell(segment);
+    }
+  }
+  return data;
+}
+
+class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
+  private queryDataRow: QueryDataRow;
+  protected _field: Explore;
+
+  constructor(queryDataRow: QueryDataRow, field: Explore) {
+    super(field);
+    this.queryDataRow = queryDataRow;
+    this._field = field;
+  }
+
+  toObject(): QueryDataRow {
+    return this.queryDataRow;
+  }
+
+  path(...path: (number | string)[]): DataColumn {
+    return getPath(this, path);
+  }
+
+  cell(fieldOrName: string | Field): DataColumn {
+    const fieldName =
+      typeof fieldOrName === "string" ? fieldOrName : fieldOrName.name;
+    const field = this._field.getFieldByName(fieldName);
+    const value = this.queryDataRow[fieldName];
+    if (value === null) {
+      return new DataNull(field);
+    }
+    if (field.isAtomicField()) {
+      if (field.isBoolean()) {
+        return new DataBoolean(value as boolean, field);
+      } else if (field.isDate()) {
+        return new DataDate(value as Date, field);
+      } else if (field.isTimestamp()) {
+        return new DataTimestamp(value as Date, field);
+      } else if (field.isNumber()) {
+        return new DataNumber(value as number, field);
+      } else if (field.isString()) {
+        return new DataString(value as string, field);
+      }
+    } else if (field.isExploreField()) {
+      if (value instanceof Array) {
+        return new DataArray(value, field);
+      } else {
+        return new DataRecord(value as QueryDataRow, field);
+      }
+    }
+    throw new Error(
+      `Internal Error: could not construct data column for field '${fieldName}'.`
+    );
+  }
+
+  public get value(): { [fieldName: string]: DataColumn } {
+    throw new Error("Not implemented;");
   }
 }
 

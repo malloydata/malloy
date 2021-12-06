@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "@malloy-lang/malloy";
+import { DataArray, Field, Explore } from "@malloy-lang/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { Renderer } from "../renderer";
@@ -35,12 +35,12 @@ import { HTMLShapeMapRenderer } from "./shape_map";
 import { HTMLTableRenderer } from "./table";
 import { HTMLTextRenderer } from "./text";
 import { HTMLVegaSpecRenderer } from "./vega_spec";
-import { DataTreeRoot } from "../data_table";
 import { ContainerRenderer } from "./container";
+import { AtomicFieldType } from "@malloy-lang/malloy/src/malloy";
 
 export class HTMLView {
-  async render(table: DataTreeRoot, dataStyles: DataStyles): Promise<string> {
-    const renderer = makeRenderer(table.structDef, dataStyles, {
+  async render(table: DataArray, dataStyles: DataStyles): Promise<string> {
+    const renderer = makeRenderer(table.field, dataStyles, {
       size: "large",
     });
     try {
@@ -50,7 +50,7 @@ export class HTMLView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(table, undefined);
+      return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
         return error.toString();
@@ -61,10 +61,10 @@ export class HTMLView {
   }
 }
 
-function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
+function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
   let renderer = dataStyles[field.name];
-  if (!renderer && "resultMetadata" in field && field.resultMetadata) {
-    for (const sourceClass of field.resultMetadata.sourceClasses) {
+  if (!renderer) {
+    for (const sourceClass of field.sourceClasses) {
       if (!renderer) {
         renderer = dataStyles[sourceClass];
       }
@@ -73,8 +73,8 @@ function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
   return renderer;
 }
 
-function isContainer(field: FieldDef): StructDef {
-  if (field.type === "struct") {
+function isContainer(field: Field | Explore): Explore {
+  if (field.isExplore()) {
     return field;
   } else {
     throw new Error(
@@ -84,7 +84,7 @@ function isContainer(field: FieldDef): StructDef {
 }
 
 export function makeRenderer(
-  field: FieldDef,
+  field: Explore | Field,
   dataStyles: DataStyles,
   styleDefaults: StyleDefaults
 ): Renderer {
@@ -151,19 +151,31 @@ export function makeRenderer(
   } else {
     if (
       renderDef.renderer === "time" ||
-      field.type === "date" ||
-      field.type === "timestamp"
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        (field.type === AtomicFieldType.Date ||
+          field.type === AtomicFieldType.Timestamp))
     ) {
       return new HTMLDateRenderer();
     } else if (renderDef.renderer === "currency") {
       return new HTMLCurrencyRenderer();
     } else if (renderDef.renderer === "percent") {
       return new HTMLPercentRenderer();
-    } else if (renderDef.renderer === "number" || field.type === "number") {
+    } else if (
+      renderDef.renderer === "number" ||
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        field.type === AtomicFieldType.Number)
+    ) {
       return new HTMLNumberRenderer();
     } else if (renderDef.renderer === "bytes") {
       return new HTMLBytesRenderer();
-    } else if (renderDef.renderer === "boolean" || field.type === "boolean") {
+    } else if (
+      renderDef.renderer === "boolean" ||
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        field.type === AtomicFieldType.Boolean)
+    ) {
       return new HTMLBooleanRenderer();
     } else if (renderDef.renderer === "link") {
       return new HTMLLinkRenderer();
@@ -179,7 +191,11 @@ export function makeRenderer(
         isContainer(field),
         dataStyles
       );
-    } else if (renderDef.renderer === "table" || field.type === "struct") {
+    } else if (
+      renderDef.renderer === "table" ||
+      !field.hasParentExplore() ||
+      field.isExploreField()
+    ) {
       return ContainerRenderer.make(
         HTMLTableRenderer,
         isContainer(field),

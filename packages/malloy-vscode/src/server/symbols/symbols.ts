@@ -19,11 +19,11 @@ import {
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 
 function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
-  const type = symbol.getType();
+  const type = symbol.type;
   return {
-    name: symbol.getName(),
-    range: symbol.getRange().toJSON(),
-    detail: symbol.getType(),
+    name: symbol.name,
+    range: symbol.range.toJSON(),
+    detail: symbol.type,
     kind:
       type === "explore"
         ? SymbolKind.Namespace
@@ -32,13 +32,11 @@ function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
         : type === "join"
         ? SymbolKind.Interface
         : SymbolKind.Field,
-    selectionRange: symbol.getRange().toJSON(),
-    children: symbol.getChildren().map(mapSymbol),
+    selectionRange: symbol.range.toJSON(),
+    children: symbol.children.map(mapSymbol),
   };
 }
 
 export function getMalloySymbols(document: TextDocument): DocumentSymbol[] {
-  return Malloy.parse({ source: document.getText() })
-    .getSymbols()
-    .map(mapSymbol);
+  return Malloy.parse({ source: document.getText() }).symbols.map(mapSymbol);
 }

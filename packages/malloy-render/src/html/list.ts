@@ -11,9 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "@malloy-lang/malloy";
+import { DataColumn, Field, Explore } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
-import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
 
 export class HTMLListRenderer extends ContainerRenderer {
@@ -21,41 +20,34 @@ export class HTMLListRenderer extends ContainerRenderer {
     size: "small",
   };
 
-  getValueField(struct: StructDef): FieldDef {
+  getValueField(struct: Explore): Field {
     return struct.fields[0];
   }
 
-  getDetailField(_struct: StructDef): FieldDef | undefined {
+  getDetailField(_struct: Explore): Field | undefined {
     return undefined;
   }
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataColumn): Promise<string> {
+    if (!table.isArray()) {
       return "Invalid data for chart renderer.";
     }
-    if (table.rows.length === 0) {
+    if (table.rowCount === 0) {
       return "⌀";
     }
-    const metadata = table.structDef;
 
-    const valueField = this.getValueField(metadata);
-    const detailField = this.getDetailField(metadata);
+    const valueField = this.getValueField(table.field);
+    const detailField = this.getDetailField(table.field);
 
     const renderedItems = [];
-    for (let rowNum = 0; rowNum < table.rows.length; rowNum++) {
+    for (const row of table) {
       let renderedItem = "";
       const childRenderer = this.childRenderers[valueField.name];
-      const rendered = await childRenderer.render(
-        table.getValue(rowNum, valueField.name),
-        new DataPointer(table, rowNum, valueField.name)
-      );
+      const rendered = await childRenderer.render(row.cell(valueField));
       renderedItem += rendered;
       if (detailField) {
         const childRenderer = this.childRenderers[detailField.name];
-        const rendered = await childRenderer.render(
-          table.getValue(rowNum, detailField.name),
-          new DataPointer(table, rowNum, detailField.name)
-        );
+        const rendered = await childRenderer.render(row.cell(detailField));
         renderedItem += ` (${rendered})`;
       }
       renderedItems.push(renderedItem);

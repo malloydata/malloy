@@ -12,8 +12,29 @@
  */
 
 // TODO tighten up exports
-export * from "./model";
-export * from "./lang";
+export {
+  // Currently needed only by tests
+  ModelDef,
+  Fragment,
+  Query,
+  // Needed for DB
+  StructDef,
+  NamedStructDefs,
+  MalloyQueryData,
+  AtomicFieldType,
+  QueryData,
+  FieldTypeDef,
+  // Needed for drills in render
+  FilterExpression,
+} from "./model";
+export {
+  // Neede for VSCode extension
+  HighlightType,
+  LogMessage,
+  // Needed for tests only
+  MalloyTranslator,
+  TranslateResponse,
+} from "./lang";
 export {
   Malloy,
   Runtime,
@@ -23,6 +44,8 @@ export {
   MalloyError,
   JoinRelationship,
   SourceRelationship,
+  DateTimeframe,
+  TimestampTimeframe,
 } from "./malloy";
 export type {
   Explore,
@@ -35,6 +58,7 @@ export type {
   QueryField,
   Result,
   DataArray,
+  DataColumn,
   ModelMaterializer,
   DocumentSymbol,
   DocumentHighlight,

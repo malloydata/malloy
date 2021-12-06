@@ -89,5 +89,5 @@ export function getRuntimes(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rows(qr: Result): any[] {
-  return qr.getData().toObject();
+  return qr.data.value;
 }

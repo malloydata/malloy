@@ -11,23 +11,19 @@
  * GNU General Public License for more details.
  */
 
-import { DataValue } from "../data_table";
+import { DataColumn } from "@malloy-lang/malloy";
 import { HTMLTextRenderer } from "./text";
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
-  getNumber(data: DataValue): number | null {
-    if (data === null) {
+  getNumber(data: DataColumn): number | null {
+    if (data.isNull()) {
       return null;
     }
 
-    if (typeof data !== "number") {
-      throw new Error("Invalid type for number renderer.");
-    }
-
-    return data;
+    return data.number.value;
   }
 
-  getText(data: DataValue): string | null {
+  getText(data: DataColumn): string | null {
     const num = this.getNumber(data);
 
     return num === null ? num : num.toLocaleString();

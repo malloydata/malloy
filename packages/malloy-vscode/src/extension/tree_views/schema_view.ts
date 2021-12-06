@@ -65,22 +65,19 @@ export class SchemaProvider
     element?: ExploreItem
   ): Promise<(ExploreItem | FieldItem)[]> {
     if (element) {
-      return element.explore
-        .getFields()
-        .sort(byKindThenName)
-        .map((field) => {
-          const newPath = [...element.accessPath, field.getName()];
-          if (field.isExploreField()) {
-            return new ExploreItem(
-              element.topLevelExplore,
-              field,
-              newPath,
-              element.explore.getFields().length === 1
-            );
-          } else {
-            return new FieldItem(element.topLevelExplore, field, newPath);
-          }
-        });
+      return element.explore.fields.sort(byKindThenName).map((field) => {
+        const newPath = [...element.accessPath, field.name];
+        if (field.isExploreField()) {
+          return new ExploreItem(
+            element.topLevelExplore,
+            field,
+            newPath,
+            element.explore.fields.length === 1
+          );
+        } else {
+          return new FieldItem(element.topLevelExplore, field, newPath);
+        }
+      });
     } else {
       const document =
         vscode.window.activeTextEditor?.document ||
@@ -104,12 +101,7 @@ export class SchemaProvider
       } else {
         const results = explores.map(
           (explore) =>
-            new ExploreItem(
-              explore.getName(),
-              explore,
-              [],
-              explores.length === 1
-            )
+            new ExploreItem(explore.name, explore, [], explores.length === 1)
         );
         this.resultCache.set(cacheKey, results);
         return results;
@@ -127,7 +119,7 @@ async function getStructs(
     const runtime = new Runtime(files, BIGQUERY_CONNECTION);
     const model = await runtime.getModel(uri);
 
-    return Object.values(model.getExplores()).sort(exploresByName);
+    return Object.values(model.explores).sort(exploresByName);
   } catch (error) {
     return undefined;
   }
@@ -141,16 +133,16 @@ class ExploreItem extends vscode.TreeItem {
     open: boolean
   ) {
     super(
-      explore.getName(),
+      explore.name,
       open
         ? vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.Collapsed
     );
-    this.tooltip = explore.getName();
+    this.tooltip = explore.name;
 
     let subtype;
     if (explore.hasParentExplore()) {
-      const relationship = explore.getJoinRelationship();
+      const relationship = explore.joinRelationship;
       subtype =
         relationship === JoinRelationship.ManyToOne
           ? "many_to_one"
@@ -176,11 +168,11 @@ class FieldItem extends vscode.TreeItem {
     public field: AtomicField | QueryField,
     public accessPath: string[]
   ) {
-    super(field.getName(), vscode.TreeItemCollapsibleState.None);
+    super(field.name, vscode.TreeItemCollapsibleState.None);
     this.contextValue = this.type();
     this.tooltip = new vscode.MarkdownString(
       `
-$(symbol-field) \`${field.getName()}\`
+$(symbol-field) \`${field.name}\`
 
 **Path**: \`${this.accessPath.join(".")}\`
 
@@ -206,9 +198,7 @@ $(symbol-field) \`${field.getName()}\`
   }
 
   type() {
-    return this.field.isAtomicField()
-      ? this.field.getType().toString()
-      : "query";
+    return this.field.isAtomicField() ? this.field.type.toString() : "query";
   }
 }
 
@@ -267,8 +257,8 @@ function byKindThenName(field1: Field, field2: Field) {
   const kind1 = kindOrd(field1);
   const kind2 = kindOrd(field2);
   if (kind1 === kind2) {
-    const name1 = field1.getName();
-    const name2 = field2.getName();
+    const name1 = field1.name;
+    const name2 = field2.name;
     if (name1 < name2) {
       return -1;
     }
@@ -294,10 +284,10 @@ function kindOrd(field: Field) {
 }
 
 function exploresByName(struct1: Explore, struct2: Explore) {
-  if (struct1.getName() < struct2.getName()) {
+  if (struct1.name < struct2.name) {
     return -1;
   }
-  if (struct2.getName() < struct1.getName()) {
+  if (struct2.name < struct1.name) {
     return 1;
   }
   return 0;

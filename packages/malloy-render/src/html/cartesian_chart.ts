@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { QueryData, StructDef } from "@malloy-lang/malloy";
+import { DataArray } from "@malloy-lang/malloy";
 import * as lite from "vega-lite";
 import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
@@ -20,24 +20,19 @@ import { DEFAULT_SPEC } from "./vega_spec";
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
 
-  getVegaLiteSpec(data: QueryData, metadata: StructDef): lite.TopLevelSpec {
-    const xField = metadata.fields[0];
-    const yField = metadata.fields[1];
-    const colorField = metadata.fields[2];
-    const sizeField = metadata.fields[3];
-    const shapeField = metadata.fields[4];
+  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+    const fields = data.field.fields;
+    const xField = fields[0];
+    const yField = fields[1];
+    const colorField = fields[2];
+    const sizeField = fields[3];
+    const shapeField = fields[4];
 
-    const xType = this.getDataType(xField, metadata);
-    const yType = this.getDataType(yField, metadata);
-    const colorType = colorField
-      ? this.getDataType(colorField, metadata)
-      : undefined;
-    const sizeType = sizeField
-      ? this.getDataType(sizeField, metadata)
-      : undefined;
-    const shapeType = shapeField
-      ? this.getDataType(shapeField, metadata)
-      : undefined;
+    const xType = this.getDataType(xField);
+    const yType = this.getDataType(yField);
+    const colorType = colorField ? this.getDataType(colorField) : undefined;
+    const sizeType = sizeField ? this.getDataType(sizeField) : undefined;
+    const shapeType = shapeField ? this.getDataType(shapeField) : undefined;
 
     const mark = this.getMark();
 
@@ -89,11 +84,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       width: 150,
       height: 100,
       data: {
-        values: this.mapData(
-          data,
-          [xField, yField, colorField, sizeField, shapeField],
-          metadata
-        ),
+        values: this.mapData(data),
       },
       mark,
       encoding: {
