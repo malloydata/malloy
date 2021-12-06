@@ -1,17 +1,8 @@
-# What is an "Aggregating Subquery?"
+# Nested Queries
 
-Aggregating Subqueries are queries nested in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, queries can be named and referenced in other queries. The technical term of "Aggregating Subquery" is a bit of a mouthful, so we more often refer to it as "nesting a query," or a "nested subtable."
+Nested queries, more formally known as "aggregating subqueries" are queries included in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, queries can be named and referenced in other queries. The technical term "aggregating subquery" is a bit of a mouthful, so we more often refer to it as a "nested query."
 
-An Aggregating Subquery utilizes a Named Query, which might look like this when defined in the model, or within a query:
-
-```malloy
-  airports_by_facility is (reduce
-    fac_type
-    airport_count
-    )
-```
-
-When a Named Query is nested inside of another query, this forms a nested subtable.
+When a named query is nested inside of another query, it produces an aggregating subquery and the results include a nested subtable.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
@@ -24,14 +15,9 @@ explore airports | reduce
   )
 ```
 
-This named query can additionally be used to build out other computations, for example:
-
-```malloy
-  airports_in_ca is airports_by_facility [ state : 'CA' ]
-```
-
 ## Nesting Nested Queries
-Aggregating subqueries can be nested infinitely
+
+Aggregating subqueries can be nested infinitely, meaning that a nested query can contain another nested query.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
@@ -49,7 +35,8 @@ explore airports
   )
 ```
 
-## Filter
+## Filtering Nested Queries
+
 Filters can be applied at any level within nested queries.
 
 ```malloy

@@ -11,21 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import { DataColumn } from "@malloy-lang/malloy";
-import { HTMLTextRenderer } from "./text";
+import { DataValue } from "../data_table";
+import { HTMLNumberRenderer } from "./number";
 
-export class HTMLNumberRenderer extends HTMLTextRenderer {
-  getNumber(data: DataColumn): number | null {
-    if (data.isNull()) {
-      return null;
-    }
-
-    return data.number.value;
-  }
-
-  getText(data: DataColumn): string | null {
+export class HTMLPercentRenderer extends HTMLNumberRenderer {
+  getText(data: DataValue): string | null {
     const num = this.getNumber(data);
 
-    return num === null ? num : num.toLocaleString();
+    return num === null
+      ? num
+      : (num * 100).toLocaleString("en", { maximumFractionDigits: 2 }) + "%";
   }
 }

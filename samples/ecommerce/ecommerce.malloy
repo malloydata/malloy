@@ -1,6 +1,6 @@
 --! styles ecommerce.styles.json
 
-define users is (explore 'malloy-data.ecomm.users'
+export define users is (explore 'malloy-data.ecomm.users'
   primary key id
   user_count is count()
 );
@@ -124,3 +124,9 @@ export define order_items is (explore order_items_base
     )
   )
 );
+
+explore order_items
+| reduce average_age is users.age.avg()
+
+explore users
+| reduce average_age is age.avg()

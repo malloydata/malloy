@@ -20,6 +20,7 @@ import { HTMLBooleanRenderer } from "./boolean";
 import { HTMLJSONRenderer } from "./json";
 import { HTMLBytesRenderer } from "./bytes";
 import { HTMLCurrencyRenderer } from "./currency";
+import { HTMLPercentRenderer } from "./percent";
 import { HTMLDashboardRenderer } from "./dashboard";
 import { HTMLDateRenderer } from "./date";
 import { HTMLLineChartRenderer } from "./line_chart";
@@ -165,6 +166,8 @@ export function makeRenderer(
         field.type === AtomicFieldType.Number)
     ) {
       return new HTMLNumberRenderer();
+    } else if (renderDef.renderer === "percent") {
+      return new HTMLPercentRenderer();
     } else if (renderDef.renderer === "bytes") {
       return new HTMLBytesRenderer();
     } else if (
