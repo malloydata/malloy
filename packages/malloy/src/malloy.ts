@@ -2014,7 +2014,7 @@ abstract class Data<T> {
 }
 
 class ScalarData<T> extends Data<T> {
-  private _value: T;
+  protected _value: T;
   protected _field: AtomicField;
 
   constructor(value: T, field: AtomicField) {
@@ -2081,7 +2081,7 @@ class DataTimestamp extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    return new Date((super.value as unknown as { value: string }).value);
+    return new Date((this._value as unknown as { value: string }).value);
   }
 
   get field(): TimestampField {
@@ -2099,7 +2099,7 @@ class DataDate extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    return new Date((super.value as unknown as { value: string }).value);
+    return new Date((this._value as unknown as { value: string }).value);
   }
 
   get field(): DateField {
