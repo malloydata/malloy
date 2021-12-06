@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DataArray, Field, Explore, ExploreField } from "@malloy-lang/malloy";
+import { DataArray, Field, Explore } from "@malloy-lang/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { Renderer } from "../renderer";
