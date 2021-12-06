@@ -20,6 +20,7 @@ import { HTMLBooleanRenderer } from "./boolean";
 import { HTMLJSONRenderer } from "./json";
 import { HTMLBytesRenderer } from "./bytes";
 import { HTMLCurrencyRenderer } from "./currency";
+import { HTMLPercentRenderer } from "./percent";
 import { HTMLDashboardRenderer } from "./dashboard";
 import { HTMLDateRenderer } from "./date";
 import { HTMLLineChartRenderer } from "./line_chart";
@@ -156,6 +157,8 @@ export function makeRenderer(
       return new HTMLDateRenderer();
     } else if (renderDef.renderer === "currency") {
       return new HTMLCurrencyRenderer();
+    } else if (renderDef.renderer === "percent") {
+      return new HTMLPercentRenderer();
     } else if (renderDef.renderer === "number" || field.type === "number") {
       return new HTMLNumberRenderer();
     } else if (renderDef.renderer === "bytes") {

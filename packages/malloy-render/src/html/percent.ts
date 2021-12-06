@@ -12,24 +12,14 @@
  */
 
 import { DataValue } from "../data_table";
-import { HTMLTextRenderer } from "./text";
+import { HTMLNumberRenderer } from "./number";
 
-export class HTMLNumberRenderer extends HTMLTextRenderer {
-  getNumber(data: DataValue): number | null {
-    if (data === null) {
-      return null;
-    }
-
-    if (typeof data !== "number") {
-      throw new Error("Invalid type for number renderer.");
-    }
-
-    return data;
-  }
-
+export class HTMLPercentRenderer extends HTMLNumberRenderer {
   getText(data: DataValue): string | null {
     const num = this.getNumber(data);
 
-    return num === null ? num : num.toLocaleString();
+    return num === null
+      ? num
+      : (num * 100).toLocaleString("en", { maximumFractionDigits: 2 }) + "%";
   }
 }

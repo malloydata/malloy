@@ -11,12 +11,12 @@ define carriers is (explore 'malloy-data.faa.carriers'
   carrier_count is count()
 );
 
-define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
+export define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
   primary key aircraft_model_code
   aircraft_model_count is count()
 );
 
-define aircraft is (explore 'malloy-data.faa.aircraft'
+export define aircraft is (explore 'malloy-data.faa.aircraft'
   primary key tail_num
   aircraft_count is count()
   -- joins
@@ -260,3 +260,10 @@ sfo_dashboard is (
   flights |
   airport_dashboard : [origin.code: 'SFO']
 );
+
+explore aircraft
+| reduce
+  average_seats1 is avg(aircraft_models.seats)
+
+explore flights : [dep_time: @2003 to @2005] 
+| reduce order by dep_month desc dep_month is dep_time.month

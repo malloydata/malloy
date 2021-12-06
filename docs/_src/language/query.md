@@ -1,41 +1,110 @@
-# Queries in malloy
+# Queries
 
-The basic syntax for a query in Malloy consists of a [_explore_](explore.md)
-and a "pipeline" of or more _stages_ seperated by a vertical bar,
-the data defined in the original shape is transformed by each stage.
+The basic syntax for a query in Malloy consists of a source
+and a "pipeline" of one or more _stages_ seperated by a vertical bar (or "pipe"). The shape of the data defined in the original explore is transformed by each stage.
 
-* query: `explore` [_explorename_](explore.md) | _stage_ [ | _stage_ ... ]
+```malloy
+flights | reduce carrier, flight_count is count()
+```
 
-## Pipeline
+## Sources
 
-A pipeline transforms a shape, and is made up of a series of stages. A [Named Query](nesting.md)), which has a pipeline
-inside of it, can be the first stage in a pipleline
+The source of a query can be a table, an [explore](explore.md), or a [named query](statement.md#queries).
 
+**A query against a table**
 
-* stage: _namedQuery_ | _normalStage_
-* namedStage : _namedQuery_ [_filters_](filters.md)
-* normalStage : ( `reduce` | `project` | `index` ) [_filters_](filters.md) _ordering_ _fields_
+```malloy
+'malloy-data.faa.flights' | reduce flight_count is count()
+```
 
-## Fields
+**A query against an explore**
 
-In a shape (not in a stage), a field can be renamed.
+```malloy
+flights | reduce total_distance is sum(distance)
+```
 
-* _newFieldName_ `renames` _existingFieldName_
+**A query starting from another query**
+```malloy
+flights_by_carrier | project carrier limit 10
+```
 
-In a shape, and in a stage, a new field can be introduced. Refer to the
-[Expressions](expressions.md) page for more information on
-Malloy expressions.
+When a query is defined as part of an explore or inside
+another query stage, the source is implicit.
 
-* _field_ _name_ `is` _expression_
+```malloy
+flights | reduce
+  dep_year is dep_time.year
+  by_carrier is (reduce
+    carrier,
+    flight_count is count()
+  )
+```
 
-You can also define a [named query](nesting.md). Just as in a query,
-only the first of a named query pipeline can be the name of another named query.
+## Pipelines
 
-* _namedQuery_ `is`  `(` _normalStage_  `|` _normalStage_ ... `)`
+A pipeline transforms the shape of an explore, and is made up of a series of stages.
 
-In a stage, it is also legal to simply list field names
-which should be passed on from the previous stage to the next one.
-Simple wildcard expressions `*`, `**`, and _joinName_.`*` are
-legal in these lists
+A typical stage is either a `reduce`, `project`, or `index` transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.
 
-* _fieldNameOrWildCard_ [ `,` _fieldNameOrWildCard_ ... ]
+```malloy
+flights | reduce
+  : [ distance > 1000 ]            -- Filters
+  top 2 order by flight_count desc -- Ordering/limiting
+  carrier, flight_count is count() -- Fields
+```
+
+A reference to a [named query](nesting.md) (which defines its own pipeline) can be the first stage in a pipleline.
+
+```malloy
+flights | by_carrier
+```
+
+### Fields
+
+In a query stage, fields (dimensions, measures, or nested
+queries) may be specified either by referencing an existing
+name or defining them inline.
+
+```malloy
+flights | reduce
+  carrier
+  flight_count is count()
+```
+
+When referencing existing fields, wildcard expressions `*`, `**`, and `some_join.*` may be used.
+
+<!-- TODO explain what these all do. -->
+
+See the [Fields](fields.md) section for more information
+about the different kinds of fields and how they can be
+defined.
+
+### Filters
+
+Filters specified at the top level of query stage apply to
+the whole stage.
+
+```malloy
+flights | reduce : [ distance > 1000 ]
+  distance
+  flight_count
+```
+
+Filters may also be applied to a [query's source](), an [entire explore](explore.md#filtering-explores), or to a [measure](expressions.md).
+
+<!-- TODO: improve link for filtering a measure. -->
+
+See the [Filters](filters.md) section for more information.
+
+### Ordering and Limiting
+
+Query stages may also include ordering and limiting
+specifications.
+
+```malloy
+flights | reduce top 10
+  carrier
+  flight_count
+```
+
+For detailed information on ordering and limiting, see the [Ordering and Limiting](order_by.md) section.
