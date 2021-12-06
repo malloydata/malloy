@@ -159,6 +159,8 @@ export function makeRenderer(
       return new HTMLDateRenderer();
     } else if (renderDef.renderer === "currency") {
       return new HTMLCurrencyRenderer();
+    } else if (renderDef.renderer === "percent") {
+      return new HTMLPercentRenderer();
     } else if (
       renderDef.renderer === "number" ||
       (field.hasParentExplore() &&
@@ -166,8 +168,6 @@ export function makeRenderer(
         field.type === AtomicFieldType.Number)
     ) {
       return new HTMLNumberRenderer();
-    } else if (renderDef.renderer === "percent") {
-      return new HTMLPercentRenderer();
     } else if (renderDef.renderer === "bytes") {
       return new HTMLBytesRenderer();
     } else if (
