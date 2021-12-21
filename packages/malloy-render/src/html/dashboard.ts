@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DataArray } from "@malloy-lang/malloy";
+import { DataArrayOrRecord } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
@@ -21,9 +21,9 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
     size: "medium",
   };
 
-  async render(table: DataArray): Promise<string> {
-    if (!table.isArray()) {
-      return "Invalid data for chart renderer.";
+  async render(table: DataArrayOrRecord): Promise<string> {
+    if (!table.isArrayOrRecord()) {
+      return "Invalid data for dashboard renderer.";
     }
 
     const fields = table.field.intrinsicFields;

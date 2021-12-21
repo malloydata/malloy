@@ -1928,6 +1928,8 @@ export type DataColumn =
   | DataNull
   | DataBytes;
 
+export type DataArrayOrRecord = DataArray | DataRecord;
+
 abstract class Data<T> {
   protected _field: Field | Explore;
 
@@ -2031,6 +2033,13 @@ abstract class Data<T> {
       return this;
     }
     throw new Error("Not an array.");
+  }
+
+  isArrayOrRecord(): DataArrayOrRecord {
+    if (this instanceof DataArray || this instanceof DataRecord) {
+      return this;
+    }
+    throw new Error("No Array or Record");
   }
 }
 
@@ -2255,6 +2264,32 @@ class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
 
   public get value(): { [fieldName: string]: DataColumn } {
     throw new Error("Not implemented;");
+  }
+
+  // Non repeating values show up as DataRecords
+  public get field(): Explore {
+    return this._field;
+  }
+
+  // Allow iteration over non repeating values to simplify end user code.
+  [Symbol.iterator](): Iterator<DataRecord> {
+    let returned = false;
+    const getSelf = () => {
+      return this;
+    };
+    return {
+      next(): IteratorResult<DataRecord> {
+        if (!returned) {
+          returned = true;
+          return {
+            value: getSelf(),
+            done: false,
+          };
+        } else {
+          return { value: undefined, done: true };
+        }
+      },
+    };
   }
 }
 
