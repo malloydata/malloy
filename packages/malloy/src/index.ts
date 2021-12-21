@@ -59,6 +59,7 @@ export type {
   Result,
   DataArray,
   DataColumn,
+  DataArrayOrRecord,
   ModelMaterializer,
   DocumentSymbol,
   DocumentHighlight,
