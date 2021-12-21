@@ -802,7 +802,7 @@ export enum SourceRelationship {
   Inline = "inline",
 }
 
-class Entity {
+abstract class Entity {
   private readonly _name: string;
   protected readonly _parent?: Explore;
   private readonly _source?: Entity;
@@ -853,6 +853,8 @@ class Entity {
       this.hasParentExplore() && this.isAtomicField() && !this.isAggregate()
     );
   }
+
+  public abstract isIntrinsic(): boolean;
 }
 
 export type Field = AtomicField | QueryField | ExploreField;
@@ -872,6 +874,13 @@ export class Explore extends Entity {
 
   public get source(): Explore | undefined {
     return this.sourceExplore;
+  }
+
+  public isIntrinsic(): boolean {
+    return (
+      this._structDef.structSource.type === "inline" ||
+      this._structDef.structSource.type === "nested"
+    );
   }
 
   /**
@@ -955,8 +964,12 @@ export class Explore extends Entity {
     return this._fieldMap;
   }
 
-  public get fields(): Field[] {
+  public get allFields(): Field[] {
     return [...this.fieldMap.values()];
+  }
+
+  public get intrinsicFields(): Field[] {
+    return [...this.fieldMap.values()].filter((f) => f.isIntrinsic());
   }
 
   public getFieldByName(fieldName: string): Field {
@@ -1039,6 +1052,10 @@ export class AtomicField extends Entity {
       case "number":
         return AtomicFieldType.Number;
     }
+  }
+
+  public isIntrinsic(): boolean {
+    return this.fieldTypeDef.e === undefined;
   }
 
   public isQueryField(): this is QueryField {
@@ -1240,6 +1257,10 @@ export class Query extends Entity {
 
   public get source(): Query | undefined {
     return this.sourceQuery;
+  }
+
+  public isIntrinsic(): boolean {
+    return false;
   }
 }
 
