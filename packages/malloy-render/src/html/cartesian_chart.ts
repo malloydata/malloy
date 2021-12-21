@@ -21,7 +21,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
-    const fields = data.field.fields;
+    const fields = data.field.intrinsicFields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];

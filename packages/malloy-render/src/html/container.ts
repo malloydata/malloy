@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Explore, ExploreField, Field } from "@malloy-lang/malloy";
+import { Explore, Field } from "@malloy-lang/malloy";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { ChildRenderers, RenderTree } from "../renderer";
 import { makeRenderer } from "./html_view";
@@ -22,7 +22,7 @@ export abstract class ContainerRenderer extends RenderTree {
 
   makeChildRenderers(explore: Explore, dataStyles: DataStyles): void {
     const result: ChildRenderers = {};
-    explore.fields.forEach((field: Field) => {
+    explore.intrinsicFields.forEach((field: Field) => {
       result[field.name] = makeRenderer(
         field,
         dataStyles,

@@ -26,7 +26,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       return "Invalid data for chart renderer.";
     }
 
-    const fields = table.field.fields;
+    const fields = table.field.intrinsicFields;
     const dimensions = fields.filter(
       (field) => field.isAtomicField() && field.isDimensional()
     );

@@ -65,14 +65,14 @@ export class SchemaProvider
     element?: ExploreItem
   ): Promise<(ExploreItem | FieldItem)[]> {
     if (element) {
-      return element.explore.fields.sort(byKindThenName).map((field) => {
+      return element.explore.allFields.sort(byKindThenName).map((field) => {
         const newPath = [...element.accessPath, field.name];
         if (field.isExploreField()) {
           return new ExploreItem(
             element.topLevelExplore,
             field,
             newPath,
-            element.explore.fields.length === 1
+            element.explore.allFields.length === 1
           );
         } else {
           return new FieldItem(element.topLevelExplore, field, newPath);
