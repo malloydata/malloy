@@ -1199,14 +1199,15 @@ class QueryQuery extends QueryField {
     let field: QuerySomething;
     // if it is a string
     if (typeof f === "string") {
-      field = this.parent.getFieldByName(f);
+      field = this.parent.getQueryFieldByName(f);
     } else if ("type" in f) {
       field = this.parent.makeQueryField(f);
     }
     // or FilteredAliasedName or a hacked timestamp field.
     else if ("name" in f && "as" in f) {
-      as = f.as;
-      field = this.parent.getFieldByName(f.name);
+      field = this.parent.getQueryFieldByName(f.name, f.as);
+      // QueryFieldStructs return new names...
+      as = field.fieldDef.as || f.as;
       // Types of aliased fields.
       // turtles
       // Timestamps and Dates (are just fine to leave as is).
@@ -1412,16 +1413,16 @@ class QueryQuery extends QueryField {
             );
           }
         }
-      } else if (field instanceof QueryStruct) {
-        // this could probably be optimized.  We are adding the primary key of the joined structure
-        //  instead of the foreignKey.  We have to do this in at least the INNER join case
-        //  so i'm just going to let the SQL database do the optimization (which is pretty rudimentary)
-        const pkFieldDef = field.getAsQueryField();
-        resultStruct.addField(as, pkFieldDef, {
-          resultIndex,
-          type: "result",
-        });
-        resultStruct.addStructToJoin(field, false);
+        // } else if (field instanceof QueryStruct) {
+        //   // this could probably be optimized.  We are adding the primary key of the joined structure
+        //   //  instead of the foreignKey.  We have to do this in at least the INNER join case
+        //   //  so i'm just going to let the SQL database do the optimization (which is pretty rudimentary)
+        //   const pkFieldDef = field.getAsQueryField();
+        //   resultStruct.addField(as, pkFieldDef, {
+        //     resultIndex,
+        //     type: "result",
+        //   });
+        //   resultStruct.addStructToJoin(field, false);
       }
       // else if (
       //   this.firstSegment.type === "project" &&
@@ -2669,14 +2670,17 @@ class QueryStruct extends QueryNode {
 
   // when structs are referenced in queries, incorporate the
   //  primary key of struct and add the struct as a join to the result.
-  getAsQueryField(): QueryFieldStruct {
+  getAsQueryField(name: string): QueryFieldStruct {
     if (this.fieldDef.primaryKey === undefined) {
       throw new Error(
         `Joined explores can only be included in queries if a primary key is defined: '${this.getFullOutputName()}' has no primary key`
       );
     }
-    const pk = this.getPrimaryKeyField(this.fieldDef);
-    return new QueryFieldStruct(pk.fieldDef, this);
+    const pkDef = {
+      ...this.getPrimaryKeyField(this.fieldDef).fieldDef,
+      as: `${name}_id`,
+    };
+    return new QueryFieldStruct(pkDef, this);
   }
 
   // return the name of the field in SQL
@@ -2912,6 +2916,18 @@ class QueryStruct extends QueryNode {
       ret = r;
     }
     return ret;
+  }
+
+  // structs referenced in queries are converted to fields.
+  getQueryFieldByName(
+    name: string,
+    as: string | undefined = undefined
+  ): QuerySomething {
+    let field = this.getFieldByName(name);
+    if (field instanceof QueryStruct) {
+      field = field.getAsQueryField(as || name);
+    }
+    return field;
   }
 
   getDimensionOrMeasureByName(name: string): QueryAtomicField {

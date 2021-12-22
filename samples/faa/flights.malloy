@@ -265,5 +265,29 @@ explore aircraft
 | reduce
   average_seats1 is avg(aircraft_models.seats)
 
-explore flights : [dep_time: @2003 to @2005] 
+explore flights : [dep_time: @2003 to @2005]
 | reduce order by dep_month desc dep_month is dep_time.month
+
+
+explore flights : [dep_time: @2003 to @2005]
+| reduce
+  carriers
+  flight_count
+
+
+explore flights : [dep_time: @2003 to @2005]
+| reduce : [ carriers.carrier_count > 10]
+  destination
+  flight_count
+  by_carrier is (reduce order by 2 desc limit 1
+    carriers
+    flight_count
+  )
+-- | reduce order by 1
+--   by_carrier.carriers.nickname
+--   destination_count is destination.count()
+--   total_flights is by_carrier.flight_count.sum()
+--   destinations is (reduce
+--     destination.full_name
+--     flight_count is by_carrier.flight_count.sum()
+--   )
