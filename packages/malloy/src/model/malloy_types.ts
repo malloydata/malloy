@@ -182,6 +182,20 @@ export interface FieldAtomicDef
   type: AtomicFieldType;
 }
 
+// this field definition represents something in the database.
+export function FieldIsIntrinsic(f: FieldDef): boolean {
+  if (isAtomicFieldType(f.type) && !hasExpression(f)) {
+    return true;
+  } else if (
+    f.type === "struct" &&
+    (f.structSource.type === "inline" || f.structSource.type === "nested")
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 /** Scalar String Field */
 export interface FieldStringDef extends FieldAtomicDef {
   type: "string";

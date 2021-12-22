@@ -22,6 +22,7 @@ import {
   CompiledQuery,
   FieldBooleanDef,
   FieldDateDef,
+  FieldIsIntrinsic,
   FieldNumberDef,
   FieldStringDef,
   FieldTimestampDef,
@@ -877,10 +878,7 @@ export class Explore extends Entity {
   }
 
   public isIntrinsic(): boolean {
-    return (
-      this._structDef.structSource.type === "inline" ||
-      this._structDef.structSource.type === "nested"
-    );
+    return FieldIsIntrinsic(this._structDef);
   }
 
   /**
@@ -1055,7 +1053,7 @@ export class AtomicField extends Entity {
   }
 
   public isIntrinsic(): boolean {
-    return this.fieldTypeDef.e === undefined;
+    return FieldIsIntrinsic(this.fieldTypeDef);
   }
 
   public isQueryField(): this is QueryField {

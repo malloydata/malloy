@@ -1413,6 +1413,9 @@ class QueryQuery extends QueryField {
           }
         }
       } else if (field instanceof QueryStruct) {
+        // this could probably be optimized.  We are adding the primary key of the joined structure
+        //  instead of the foreignKey.  We have to do this in at least the INNER join case
+        //  so i'm just going to let the SQL database do the optimization (which is pretty rudimentary)
         const pkFieldDef = field.getAsQueryField();
         resultStruct.addField(as, pkFieldDef, {
           resultIndex,
