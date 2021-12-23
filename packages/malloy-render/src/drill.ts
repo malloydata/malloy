@@ -43,7 +43,7 @@ function getTableFilters(
     dest.push({ key: f.source, value: undefined });
   }
 
-  const dimensions = table.field.fields.filter((field) =>
+  const dimensions = table.field.intrinsicFields.filter((field) =>
     field.isDimensional()
   );
 

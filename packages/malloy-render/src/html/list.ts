@@ -21,7 +21,7 @@ export class HTMLListRenderer extends ContainerRenderer {
   };
 
   getValueField(struct: Explore): Field {
-    return struct.fields[0];
+    return struct.intrinsicFields[0];
   }
 
   getDetailField(_struct: Explore): Field | undefined {

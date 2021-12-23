@@ -536,6 +536,23 @@ class QueryFieldString extends QueryAtomicField {}
 class QueryFieldNumber extends QueryAtomicField {}
 class QueryFieldBoolean extends QueryAtomicField {}
 
+// in a query a struct can be referenced.  The struct will
+//  emit the primary key field in the actual result set and
+//  will include the StructDef as a foreign key join in the output
+//  StructDef.
+class QueryFieldStruct extends QueryAtomicField {
+  getName() {
+    return getIdentifier(this.fieldDef);
+  }
+
+  getAsJoinedStructDef(foreignKeyName: string): StructDef {
+    return {
+      ...this.parent.fieldDef,
+      structRelationship: { type: "foreignKey", foreignKey: foreignKeyName },
+    };
+  }
+}
+
 const timeframeBQMap = {
   hour_of_day: "HOUR",
   day_of_month: "DAY",
@@ -672,14 +689,16 @@ type FieldUsage =
   | { type: "where" }
   | { type: "dependant" };
 
+type FieldInstanceType = "field" | "query";
+
 interface FieldInstance {
-  type: string;
+  type: FieldInstanceType;
   groupSet: number;
   root(): FieldInstanceResultRoot;
 }
 
 class FieldInstanceField implements FieldInstance {
-  type = "field";
+  type: FieldInstanceType = "field";
   f: QueryField;
   // the output index of this field (1 based)
   fieldUsage: FieldUsage;
@@ -706,7 +725,7 @@ class FieldInstanceField implements FieldInstance {
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
 
 class FieldInstanceResult implements FieldInstance {
-  type = "struct";
+  type: FieldInstanceType = "query";
   allFields = new Map<string, FieldInstance>();
   groupSet = 0;
   depth = 0;
@@ -726,7 +745,7 @@ class FieldInstanceResult implements FieldInstance {
   addField(as: string, field: QueryField, usage: FieldUsage) {
     let fi;
     if ((fi = this.allFields.get(as))) {
-      if (fi.type === "struct") {
+      if (fi.type === "query") {
         throw new Error(
           `Redefinition of field ${field.fieldDef.name} as struct`
         );
@@ -795,7 +814,7 @@ class FieldInstanceResult implements FieldInstance {
     let isComplex = false;
     let children: number[] = [this.groupSet];
     for (const [_name, fi] of this.allFields) {
-      if (fi.type === "struct") {
+      if (fi.type === "query") {
         const fir = fi as FieldInstanceResult;
         isComplex = true;
         if (fir.firstSegment.type === "reduce") {
@@ -1180,14 +1199,22 @@ class QueryQuery extends QueryField {
     let field: QuerySomething;
     // if it is a string
     if (typeof f === "string") {
-      field = this.parent.getFieldByName(f);
+      field = this.parent.getQueryFieldByName(f);
     } else if ("type" in f) {
       field = this.parent.makeQueryField(f);
     }
     // or FilteredAliasedName or a hacked timestamp field.
     else if ("name" in f && "as" in f) {
-      as = f.as;
-      field = this.parent.getFieldByName(f.name);
+      field = this.parent.getQueryFieldByName(f.name, f.as);
+      // QueryFieldStructs return new names...
+      as = field.fieldDef.as || f.as;
+
+      if (field instanceof QueryFieldStruct) {
+        throw new Error(
+          "Syntax currently disallowed. Semantics up for discussion"
+        );
+      }
+
       // Types of aliased fields.
       // turtles
       // Timestamps and Dates (are just fine to leave as is).
@@ -1384,7 +1411,6 @@ class QueryQuery extends QueryField {
           resultIndex,
           type: "result",
         });
-        // LTNOTE: There is no common parent for FieldScalarDef and FieldAggregateDef
         this.addDependancies(resultStruct, field);
 
         if (isAggregateField(field)) {
@@ -1394,14 +1420,25 @@ class QueryQuery extends QueryField {
             );
           }
         }
-      } else if (
-        this.firstSegment.type === "project" &&
-        field instanceof QueryStruct
-      ) {
-        // TODO lloyd refactor or comment why we do nothing here
-      } else {
-        throw new Error(`'${as}' cannot be used as in this way.`);
+        // } else if (field instanceof QueryStruct) {
+        //   // this could probably be optimized.  We are adding the primary key of the joined structure
+        //   //  instead of the foreignKey.  We have to do this in at least the INNER join case
+        //   //  so i'm just going to let the SQL database do the optimization (which is pretty rudimentary)
+        //   const pkFieldDef = field.getAsQueryField();
+        //   resultStruct.addField(as, pkFieldDef, {
+        //     resultIndex,
+        //     type: "result",
+        //   });
+        //   resultStruct.addStructToJoin(field, false);
       }
+      // else if (
+      //   this.firstSegment.type === "project" &&
+      //   field instanceof QueryStruct
+      // ) {
+      //   // TODO lloyd refactor or comment why we do nothing here
+      // } else {
+      //   throw new Error(`'${as}' cannot be used as in this way.`);
+      // }
       resultIndex++;
     }
     this.expandFilters(resultStruct);
@@ -1542,6 +1579,9 @@ class QueryQuery extends QueryField {
         fields.push(structDef);
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
+          if (fi.f instanceof QueryFieldStruct) {
+            fields.push(fi.f.getAsJoinedStructDef(name));
+          }
           // if there is only one dimension, it is the primaryKey
           //  if there are more, primaryKey is undefined.
           if (isScalarField(fi.f)) {
@@ -1910,7 +1950,7 @@ class QueryQuery extends QueryField {
   generateSQLWhereChildren(resultStruct: FieldInstanceResult): AndChain {
     const wheres = new AndChain();
     for (const [, field] of resultStruct.allFields) {
-      if (field.type === "struct") {
+      if (field.type === "query") {
         const fir = field as FieldInstanceResult;
         const turtleWhere = this.generateSQLFilters(fir, "where");
         if (turtleWhere.present()) {
@@ -2635,6 +2675,21 @@ class QueryStruct extends QueryNode {
     }
   }
 
+  // when structs are referenced in queries, incorporate the
+  //  primary key of struct and add the struct as a join to the result.
+  getAsQueryField(name: string): QueryFieldStruct {
+    if (this.fieldDef.primaryKey === undefined) {
+      throw new Error(
+        `Joined explores can only be included in queries if a primary key is defined: '${this.getFullOutputName()}' has no primary key`
+      );
+    }
+    const pkDef = {
+      ...this.getPrimaryKeyField(this.fieldDef).fieldDef,
+      as: `${name}_id`,
+    };
+    return new QueryFieldStruct(pkDef, this);
+  }
+
   // return the name of the field in SQL
   getIdentifier(): string {
     // if it is the root table, use provided alias if we have one.
@@ -2868,6 +2923,18 @@ class QueryStruct extends QueryNode {
       ret = r;
     }
     return ret;
+  }
+
+  // structs referenced in queries are converted to fields.
+  getQueryFieldByName(
+    name: string,
+    as: string | undefined = undefined
+  ): QuerySomething {
+    let field = this.getFieldByName(name);
+    if (field instanceof QueryStruct) {
+      field = field.getAsQueryField(as || name);
+    }
+    return field;
   }
 
   getDimensionOrMeasureByName(name: string): QueryAtomicField {

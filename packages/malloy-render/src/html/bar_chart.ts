@@ -41,7 +41,7 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
     if (!table.isArray()) {
       throw new Error("Invalid type for chart renderer");
     }
-    const fields = table.field.fields;
+    const fields = table.field.intrinsicFields;
     if (fields.length < 2) {
       return "Need at least 2 fields for a bar chart.";
     }

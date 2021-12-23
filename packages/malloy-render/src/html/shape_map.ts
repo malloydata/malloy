@@ -20,11 +20,11 @@ import { getColorScale } from "./utils";
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: Explore): Field {
-    return explore.fields[0];
+    return explore.intrinsicFields[0];
   }
 
   private getColorField(explore: Explore): Field {
-    return explore.fields[1];
+    return explore.intrinsicFields[1];
   }
 
   getDataValue(data: DataColumn): string | number | undefined {
