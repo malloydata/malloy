@@ -490,4 +490,35 @@ aircraft_count
     expect(result.data.path(0, "model_count").value).toBe(60461);
     expect(result.data.path(0, "b_count").value).toBe(355);
   });
+
+  it(`group by explore - simple group by`, async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+        explore aircraft | reduce
+          aircraft_models
+          aircraft_count
+    `
+      )
+      .run();
+    expect(result.data.path(0, "aircraft_count").value).toBe(58);
+    expect(result.data.path(0, "aircraft_models_id").value).toBe("7102802");
+  });
+
+  it(`group by explore - pipeline`, async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+        explore aircraft | reduce
+          aircraft_models
+          aircraft_count
+        | reduce
+          aircraft_models.manufacturer
+          aircraft_count is aircraft_count.sum()
+    `
+      )
+      .run();
+    expect(result.data.path(0, "aircraft_count").value).toBe(1048);
+    expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
+  });
 });
