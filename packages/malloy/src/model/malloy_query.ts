@@ -1208,6 +1208,13 @@ class QueryQuery extends QueryField {
       field = this.parent.getQueryFieldByName(f.name, f.as);
       // QueryFieldStructs return new names...
       as = field.fieldDef.as || f.as;
+
+      if (field instanceof QueryFieldStruct) {
+        throw new Error(
+          "Syntax currently disallowed. Semantics up for discussion"
+        );
+      }
+
       // Types of aliased fields.
       // turtles
       // Timestamps and Dates (are just fine to leave as is).
