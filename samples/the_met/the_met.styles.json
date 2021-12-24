@@ -1,0 +1,11 @@
+{
+  "by_object_era": {
+    "renderer": "bar_chart"
+  },
+  "by_country": {
+    "renderer": "list_detail"
+  },
+  "by_classification": {
+    "renderer": "list_detail"
+  }
+}

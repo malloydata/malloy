@@ -1,0 +1,61 @@
+--! styles the_met.styles.json
+
+define met_objects is (explore 'bigquery-public-data.the_met.objects' 
+  -- eliminate some bad data
+  : [object_begin_date < 2031 & > -8000]
+
+  images is join (explore 'bigquery-public-data.the_met.images' primary key object_id) on object_id
+
+  object_count is count()
+  object_era is FLOOR(object_begin_date/100)*100
+  image_count is images.count()
+
+  by_classification is (reduce
+    classification
+    object_count
+  )
+
+  by_department is (reduce
+    department
+    object_count
+  )
+
+  by_artist is (reduce
+    artist_display_name
+    object_count
+    image_count
+  )
+
+  by_object_date is (reduce
+    object_begin_date
+    object_count
+  )
+
+  by_object_era is (reduce order by 1 desc
+    object_era
+    object_count
+  )
+
+  image_list is (reduce
+    images.title
+    images.original_image_url
+  )
+
+  by_country is (reduce
+    country
+    object_count
+  )
+
+  over_view_dashboard is (reduce
+    object_count
+    department_dashboard is (reduce
+      department
+      object_count
+      image_count
+      by_country
+      by_object_era
+      by_classification
+    )
+    
+  )
+)
