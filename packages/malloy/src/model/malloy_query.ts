@@ -2677,7 +2677,7 @@ class QueryStruct extends QueryNode {
 
   // when structs are referenced in queries, incorporate the
   //  primary key of struct and add the struct as a join to the result.
-  getAsQueryField(name: string): QueryFieldStruct {
+  getAsQueryField(): QueryFieldStruct {
     if (this.fieldDef.primaryKey === undefined) {
       throw new Error(
         `Joined explores can only be included in queries if a primary key is defined: '${this.getFullOutputName()}' has no primary key`
@@ -2685,7 +2685,7 @@ class QueryStruct extends QueryNode {
     }
     const pkDef = {
       ...this.getPrimaryKeyField(this.fieldDef).fieldDef,
-      as: `${name}_id`,
+      as: `${getIdentifier(this.fieldDef)}_id`,
     };
     return new QueryFieldStruct(pkDef, this);
   }
@@ -2932,7 +2932,7 @@ class QueryStruct extends QueryNode {
   ): QuerySomething {
     let field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
-      field = field.getAsQueryField(as || name);
+      field = field.getAsQueryField();
     }
     return field;
   }

@@ -521,4 +521,28 @@ aircraft_count
     expect(result.data.path(0, "aircraft_count").value).toBe(1048);
     expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
+
+  it(`group by explore - pipeline 2 levels`, async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+      define f is (explore 'malloytest.flights'
+        a is join (explore 'malloytest.aircraft' primary key tail_num
+          state_facts is join (explore 'malloytest.state_facts' primary key state ) on state
+        ) on tail_num
+      )
+
+      explore f | reduce
+        a.state_facts
+        flight_count is count()
+      | reduce
+        state_facts.popular_name
+        flight_count is flight_count.sum()
+    `
+      )
+      .run();
+    // console.log(result.data.toObject());
+    expect(result.data.path(0, "flight_count").value).toBe(199726);
+    expect(result.data.path(0, "popular_name").value).toBe("Isabella");
+  });
 });
