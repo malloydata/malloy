@@ -2683,11 +2683,24 @@ class QueryStruct extends QueryNode {
         `Joined explores can only be included in queries if a primary key is defined: '${this.getFullOutputName()}' has no primary key`
       );
     }
-    const pkDef = {
-      ...this.getPrimaryKeyField(this.fieldDef).fieldDef,
-      as: `${getIdentifier(this.fieldDef)}_id`,
+
+    const pkField = this.getPrimaryKeyField(this.fieldDef);
+    const pkType = pkField.fieldDef.type;
+    if (pkType !== "string" && pkType !== "number") {
+      throw new Error(`Unknown Primary key data type for ${name}`);
+    }
+    const fieldDef: FieldDef = {
+      type: pkType,
+      name: `${getIdentifier(this.fieldDef)}_id`,
+      e: [
+        {
+          type: "field",
+          // path: pkField.getFullOutputName(),
+          path: pkField.getIdentifier(),
+        },
+      ],
     };
-    return new QueryFieldStruct(pkDef, this);
+    return new QueryFieldStruct(fieldDef, this);
   }
 
   // return the name of the field in SQL
