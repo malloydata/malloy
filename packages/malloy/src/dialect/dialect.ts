@@ -79,6 +79,7 @@ export abstract class Dialect {
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
+  abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(alias: string): string;
 

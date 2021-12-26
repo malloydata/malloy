@@ -186,4 +186,11 @@ export class PostgresDialect extends Dialect {
   sqlMaybeQuoteIdentifier(identifier: string): string {
     return identifier;
   }
+
+  // The simple way to do this is to add a comment on the table
+  //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html
+  //  and have a reaper that read comments.
+  sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
+    throw new Error("Not implemented Yet");
+  }
 }

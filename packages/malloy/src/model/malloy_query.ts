@@ -101,23 +101,15 @@ class StageWriter {
     return id;
   }
 
-  addPDT(baseName: string, _dialect: Dialect): string {
+  addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const fn =
+    const tableName =
       "scratch." +
       baseName +
       crypto.createHash("md5").update(sql).digest("hex");
-    this.root().pdts.push(`
-CREATE TABLE IF NOT EXISTS \`${fn}\`
-OPTIONS (
-   expiration_timestamp=TIMESTAMP_ADD(current_timestamp(),  INTERVAL 1 hour)
-)
-AS (
-${indent(sql)}
-);
-  `);
-    return fn;
+    this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
+    return tableName;
   }
 
   // combine all the stages except the last one into a WITH statement
