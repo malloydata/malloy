@@ -3,7 +3,7 @@ set -euxo pipefail
 
 
 nix-shell --pure --command "$(cat <<NIXCMD
-  cat /etc/passwds
+  cat /etc/passwd
   export PGHOST=localhost
   cd postgres_test
   bash postgres_init.sh
