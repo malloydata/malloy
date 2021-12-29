@@ -10,3 +10,5 @@ copies the test data in `malloytest-postgres.sql.gz` into the database.
 **postgres_start.sh** - starts the postgres server, once it has been installed (use after a reboot, for example)
 
 **postgres_stop.sh** - stops the postgres server
+
+**state_fact.sql** - example file on how to insert data from json

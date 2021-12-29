@@ -527,12 +527,10 @@ aircraft_count
     expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
 
-  (databaseName === "postgres" ? it.skip : it)(
-    `group by explore - pipeline 2 levels - ${databaseName}`,
-    async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `
+  it(`group by explore - pipeline 2 levels - ${databaseName}`, async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
       define f is (explore 'malloytest.flights'
         a is join (explore 'malloytest.aircraft' primary key tail_num
           state_facts is join (explore 'malloytest.state_facts' primary key state ) on state
@@ -546,11 +544,10 @@ aircraft_count
         state_facts.popular_name
         flight_count is flight_count.sum()
     `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.path(0, "flight_count").value).toBe(199726);
-      expect(result.data.path(0, "popular_name").value).toBe("Isabella");
-    }
-  );
+      )
+      .run();
+    // console.log(result.data.toObject());
+    expect(result.data.path(0, "flight_count").value).toBe(199726);
+    expect(result.data.path(0, "popular_name").value).toBe("Isabella");
+  });
 });
