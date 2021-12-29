@@ -1,0 +1,1 @@
+pg_dump -n malloytest | gzip > malloytest-postgres.sql.gz

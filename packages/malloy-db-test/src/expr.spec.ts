@@ -17,9 +17,9 @@
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes } from "./runtimes";
 
-// const runtimes = getRuntimes(["bigquery"]);
-// const runtimes = getRuntimes(["postgres"]);
-const runtimes = getRuntimes();
+const runtimes = getRuntimes(["bigquery"]);
+// const runtimes = getRuntimes(["postgres", "bigquery"]);
+// const runtimes = getRuntimes();
 
 const expressionModelText = `
 export define aircraft_models is (explore 'malloytest.aircraft_models'
@@ -252,10 +252,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
   });
 
-  it(`model: dates - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+  (databaseName === "postgres" ? it.skip : it)(
+    `model: dates - ${databaseName}`,
+    async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
         explore 'malloytest.alltypes' | reduce
           t_date,
           t_date.\`month\`,
@@ -273,41 +275,44 @@ expressionModels.forEach((expressionModel, databaseName) => {
           t_timestamp.day_of_year,
 
         `
-      )
-      .run();
-    expect(result.data.path(0, "t_date").value).toEqual(new Date("2020-03-02"));
-    expect(result.data.path(0, "t_date_month").value).toEqual(
-      new Date("2020-03-01")
-    );
-    expect(result.data.path(0, "t_date_year").value).toEqual(
-      new Date("2020-01-01")
-    );
-    expect(result.data.path(0, "t_date_day_of_year").value).toEqual(62);
-    expect(result.data.path(0, "t_date_day_of_month").value).toEqual(2);
-    expect(result.data.path(0, "t_timestamp").value).toEqual(
-      new Date("2020-03-02T12:35:56.000Z")
-    );
-    expect(result.data.path(0, "t_timestamp_second").value).toEqual(
-      new Date("2020-03-02T12:35:56.000Z")
-    );
-    expect(result.data.path(0, "t_timestamp_minute").value).toEqual(
-      new Date("2020-03-02T12:35:00.000Z")
-    );
-    expect(result.data.path(0, "t_timestamp_hour").value).toEqual(
-      new Date("2020-03-02T12:00:00.000Z")
-    );
-    expect(result.data.path(0, "t_timestamp_date").value).toEqual(
-      new Date("2020-03-02")
-    );
-    expect(result.data.path(0, "t_timestamp_month").value).toEqual(
-      new Date("2020-03-01")
-    );
-    expect(result.data.path(0, "t_timestamp_year").value).toEqual(
-      new Date("2020-01-01")
-    );
-    expect(result.data.path(0, "t_timestamp_day_of_year").value).toEqual(62);
-    expect(result.data.path(0, "t_timestamp_day_of_month").value).toEqual(2);
-  });
+        )
+        .run();
+      expect(result.data.path(0, "t_date").value).toEqual(
+        new Date("2020-03-02")
+      );
+      expect(result.data.path(0, "t_date_month").value).toEqual(
+        new Date("2020-03-01")
+      );
+      expect(result.data.path(0, "t_date_year").value).toEqual(
+        new Date("2020-01-01")
+      );
+      expect(result.data.path(0, "t_date_day_of_year").value).toEqual(62);
+      expect(result.data.path(0, "t_date_day_of_month").value).toEqual(2);
+      expect(result.data.path(0, "t_timestamp").value).toEqual(
+        new Date("2020-03-02T12:35:56.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_second").value).toEqual(
+        new Date("2020-03-02T12:35:56.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_minute").value).toEqual(
+        new Date("2020-03-02T12:35:00.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_hour").value).toEqual(
+        new Date("2020-03-02T12:00:00.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_date").value).toEqual(
+        new Date("2020-03-02")
+      );
+      expect(result.data.path(0, "t_timestamp_month").value).toEqual(
+        new Date("2020-03-01")
+      );
+      expect(result.data.path(0, "t_timestamp_year").value).toEqual(
+        new Date("2020-01-01")
+      );
+      expect(result.data.path(0, "t_timestamp_day_of_year").value).toEqual(62);
+      expect(result.data.path(0, "t_timestamp_day_of_month").value).toEqual(2);
+    }
+  );
 
   it.skip("defines in model", async () => {
     // const result1 = await model.makeQuery(`
@@ -491,7 +496,7 @@ aircraft_count
     expect(result.data.path(0, "b_count").value).toBe(355);
   });
 
-  it(`group by explore - simple group by`, async () => {
+  it(`group by explore - simple group by - ${databaseName}`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -505,7 +510,7 @@ aircraft_count
     expect(result.data.path(0, "aircraft_models_id").value).toBe("7102802");
   });
 
-  it(`group by explore - pipeline`, async () => {
+  it(`group by explore - pipeline - ${databaseName}`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -522,7 +527,7 @@ aircraft_count
     expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
 
-  it(`group by explore - pipeline 2 levels`, async () => {
+  it(`group by explore - pipeline 2 levels - ${databaseName}`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
