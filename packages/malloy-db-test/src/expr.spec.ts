@@ -17,8 +17,8 @@
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes } from "./runtimes";
 
-// const runtimes = getRuntimes(["bigquery"]);
-const runtimes = getRuntimes(["postgres", "bigquery"]);
+const runtimes = getRuntimes(["bigquery"]);
+// const runtimes = getRuntimes(["postgres", "bigquery"]);
 // const runtimes = getRuntimes();
 
 const expressionModelText = `
