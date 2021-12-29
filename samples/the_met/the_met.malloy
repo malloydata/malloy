@@ -10,6 +10,8 @@ define met_objects is (explore 'bigquery-public-data.the_met.objects'
   object_era is FLOOR(object_begin_date/100)*100
   image_count is images.count()
 
+  image_thumb is REPLACE(images.original_image_url,'original', 'web-thumb')
+
   by_classification is (reduce
     classification
     object_count
@@ -39,11 +41,17 @@ define met_objects is (explore 'bigquery-public-data.the_met.objects'
   image_list is (reduce
     images.title
     images.original_image_url
+    image_thumb
   )
 
   by_country is (reduce
     country
     object_count
+  )
+
+  random_image_list is (reduce limit 20 :[image_thumb != null]
+    image_thumb
+    x is 1
   )
 
   over_view_dashboard is (reduce
@@ -55,7 +63,18 @@ define met_objects is (explore 'bigquery-public-data.the_met.objects'
       by_country
       by_object_era
       by_classification
+      random_image_list
+    )  
+  )
+
+  department_dashboard is (reduce : [department: 'Photographs', object_begin_date > 1900]
+    artist_count is count(distinct artist_display_name)
+    object_count
+    image_count
+    by_artist is (reduce limit 30
+      artist_display_name
+      object_count
+      random_image_list
     )
-    
   )
 )
