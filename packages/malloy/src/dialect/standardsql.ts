@@ -127,6 +127,18 @@ export class StandardSQLDialect extends Dialect {
     )}));\n`;
   }
 
+  sqlCreateTableAsSelect(tableName: string, sql: string): string {
+    return `
+CREATE TABLE IF NOT EXISTS \`${tableName}\`
+OPTIONS (
+    expiration_timestamp=TIMESTAMP_ADD(current_timestamp(),  INTERVAL 1 hour)
+)
+AS (
+${indent(sql)}
+);
+`;
+  }
+
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
     return `SELECT ARRAY((SELECT AS STRUCT * FROM ${lastStageName}))\n`;
   }

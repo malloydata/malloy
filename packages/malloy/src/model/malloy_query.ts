@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import * as crypto from "crypto";
 import { cloneDeep, upperCase } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
@@ -59,83 +60,91 @@ import { indent, AndChain } from "./utils";
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
 class StageWriter {
-  withs = new Map<string, string>();
-  udfs = new Map<string, string>();
+  withs: string[] = [];
+  udfs: string[] = [];
+  pdts: string[] = [];
+  stagePrefix = "__stage";
+  parent: StageWriter | undefined;
 
-  addStage(name: string, sql: string): string {
-    const id = `__${name}${this.withs.size}`;
-    this.withs.set(id, sql);
-    return id;
+  constructor(parent: StageWriter | undefined) {
+    this.parent = parent;
+  }
+
+  getName(id: number) {
+    return `${this.stagePrefix}${id}`;
+  }
+
+  root(): StageWriter {
+    if (this.parent === undefined) {
+      return this;
+    } else {
+      return this.parent.root();
+    }
+  }
+
+  addStage(sql: string): string {
+    this.withs.push(sql);
+    return this.getName(this.withs.length - 1);
   }
 
   addUDF(stageWriter: StageWriter, dialect: Dialect): string {
     // eslint-disable-next-line prefer-const
-    let { sql, lastStageName } = stageWriter.combineStages(undefined);
+    let { sql, lastStageName } = stageWriter.combineStages(true);
     if (lastStageName === undefined) {
       throw new Error("Internal Error: no stage to combine");
     }
     sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
 
-    const id = `${dialect.udfPrefix}${this.udfs.size}`;
+    const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
     sql = dialect.sqlCreateFunction(id, sql);
-    this.udfs.set(id, sql);
+    this.root().udfs.push(sql);
     return id;
   }
 
-  combineStages(stages: string[] | undefined): {
+  addPDT(baseName: string, dialect: Dialect): string {
+    const sql =
+      this.combineStages(false).sql + this.withs[this.withs.length - 1];
+    const tableName =
+      "scratch." +
+      baseName +
+      crypto.createHash("md5").update(sql).digest("hex");
+    this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
+    return tableName;
+  }
+
+  // combine all the stages except the last one into a WITH statement
+  //  return SQL and the last stage name
+  combineStages(includeLastStage: boolean): {
     sql: string;
     lastStageName: string | undefined;
   } {
-    let lastStageName;
-    if (!stages) {
-      stages = Array.from(this.withs.keys());
-    }
+    let lastStageName = this.getName(0);
     let prefix = `WITH `;
     let w = "";
-    for (const name of stages) {
-      const sql = this.withs.get(name);
+    for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
+      const sql = this.withs[i];
+      lastStageName = this.getName(i);
       if (sql === undefined) {
-        throw new Error(`Expected sql WITH to be present for stage ${name}.`);
+        throw new Error(
+          `Expected sql WITH to be present for stage ${lastStageName}.`
+        );
       }
-      w += `${prefix}${name} AS (\n${indent(sql)})\n`;
+      w += `${prefix}${lastStageName} AS (\n${indent(sql)})\n`;
       prefix = ", ";
-      lastStageName = name;
     }
     return { sql: w, lastStageName };
   }
 
   /** emit the SQL for all the stages.  */
   generateSQLStages(): string {
-    const udfs = Array.from(this.udfs.values()).join(`\n`);
-    const stages = Array.from(this.withs.keys());
-    const lastStage = stages.pop();
-    const sql = this.combineStages(stages).sql;
-    if (lastStage) {
-      return udfs + sql + this.withs.get(lastStage);
-    } else {
+    const lastStageNum = this.withs.length - 1;
+    if (lastStageNum < 0) {
       throw new Error("No SQL generated");
     }
-  }
-
-  /** emit the SQL for all the stages.  */
-  generateSQLStagesAsUDF(): string {
-    let prefix = `WITH `;
-    let w = "";
-    const stages = Array.from(this.withs.keys());
-    const lastStage = stages.pop();
-    for (const name of stages) {
-      const sql = this.withs.get(name);
-      if (sql === undefined) {
-        throw new Error(`Expected sql WITH to be present for stage ${name}.`);
-      }
-      w += `${prefix}${name} AS (\n${indent(sql)})\n`;
-      prefix = ", ";
-    }
-    if (lastStage) {
-      return w + this.withs.get(lastStage);
-    } else {
-      throw new Error("No SQL generated");
-    }
+    const udfs = this.udfs.join(`\n`);
+    const pdts = this.pdts.join(`\n`);
+    const sql = this.combineStages(false).sql;
+    return udfs + pdts + sql + this.withs[lastStageNum];
   }
 }
 
@@ -1205,7 +1214,7 @@ class QueryQuery extends QueryField {
     }
     // or FilteredAliasedName or a hacked timestamp field.
     else if ("name" in f && "as" in f) {
-      field = this.parent.getQueryFieldByName(f.name, f.as);
+      field = this.parent.getQueryFieldByName(f.name);
       // QueryFieldStructs return new names...
       as = field.fieldDef.as || f.as;
 
@@ -1564,7 +1573,7 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceResult) {
         const { structDef } = this.generateTurtlePipelineSQL(
           fi,
-          new StageWriter()
+          new StageWriter(undefined)
         );
 
         // LTNOTE: This is probably broken now.  Need to look at the last stage
@@ -1881,7 +1890,7 @@ class QueryQuery extends QueryField {
     if (this.firstSegment.limit) {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
-    this.resultStage = stageWriter.addStage("stage", s);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -2008,7 +2017,6 @@ class QueryQuery extends QueryField {
     }
     if (resultsWithHaving.length > 0) {
       lastStageName = stageWriter.addStage(
-        "stage",
         `SELECT\n  *,\n  ${fields.join(",\n  ")} \nFROM ${lastStageName}`
       );
       const havings = new AndChain();
@@ -2020,7 +2028,6 @@ class QueryQuery extends QueryField {
         );
       }
       lastStageName = stageWriter.addStage(
-        "stage",
         `SELECT *\nFROM ${lastStageName}\nWHERE NOT (${havings.sqlOr()})`
       );
     }
@@ -2051,7 +2058,7 @@ class QueryQuery extends QueryField {
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
 
     // generate the stage
-    const resultStage = stageWriter.addStage("stage", s);
+    const resultStage = stageWriter.addStage(s);
 
     // generate stages for havings and limits
     this.resultStage = this.generateSQLHavingLimit(stageWriter, resultStage);
@@ -2129,7 +2136,7 @@ class QueryQuery extends QueryField {
     if (f.dimensionIndexes.length > 0) {
       s += `GROUP BY ${f.dimensionIndexes.join(",")}\n`;
     }
-    this.resultStage = stageWriter.addStage("stage", s);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -2186,7 +2193,7 @@ class QueryQuery extends QueryField {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
 
-    this.resultStage = stageWriter.addStage("stage", s);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -2200,7 +2207,7 @@ class QueryQuery extends QueryField {
     const limit: number | undefined = resultStruct.firstSegment.limit;
 
     // If the turtle is a pipeline, generate a UDF to compute it.
-    const newStageWriter = new StageWriter();
+    const newStageWriter = new StageWriter(stageWriter);
     const { hasPipeline } = this.generateTurtlePipelineSQL(
       resultStruct,
       newStageWriter
@@ -2526,9 +2533,8 @@ class QueryQueryIndex extends QueryQuery {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
     // console.log(s);
-    const resultStage = stageWriter.addStage("stage", s);
+    const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
-      "stage",
       `SELECT
   field_name,
   field_type,
@@ -2889,11 +2895,23 @@ class QueryStruct extends QueryNode {
         return `UNNEST(this.fieldDef.name)`;
       case "inline":
         return "";
-      case "query":
-        return this.model.loadQuery(
-          this.fieldDef.structSource.query,
-          stageWriter
-        ).lastStageName;
+      case "query": {
+        // cache derived table.
+        const name = getIdentifier(this.fieldDef);
+        // this is a hack for now.  Need some way to denote this table
+        //  should be cached.
+        if (name.includes("cache")) {
+          const dtStageWriter = new StageWriter(stageWriter);
+          this.model.loadQuery(this.fieldDef.structSource.query, dtStageWriter);
+          return dtStageWriter.addPDT(name, this.dialect);
+        } else {
+          // returns the stage name.
+          return this.model.loadQuery(
+            this.fieldDef.structSource.query,
+            stageWriter
+          ).lastStageName;
+        }
+      }
       default:
         throw new Error(`unknown structSource ${this.fieldDef}`);
     }
@@ -2939,10 +2957,7 @@ class QueryStruct extends QueryNode {
   }
 
   // structs referenced in queries are converted to fields.
-  getQueryFieldByName(
-    name: string,
-    as: string | undefined = undefined
-  ): QuerySomething {
+  getQueryFieldByName(name: string): QuerySomething {
     let field = this.getFieldByName(name);
     if (field instanceof QueryStruct) {
       field = field.getAsQueryField();
@@ -3151,7 +3166,7 @@ export class QueryModel {
     const malloy = "";
 
     if (!stageWriter) {
-      stageWriter = new StageWriter();
+      stageWriter = new StageWriter(undefined);
     }
 
     const turtleDef: TurtleDefPlus = {
@@ -3168,7 +3183,6 @@ export class QueryModel {
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && struct.dialect.hasFinalStage) {
       ret.lastStageName = stageWriter.addStage(
-        "__stage",
         struct.dialect.sqlFinalStage(ret.lastStageName)
       );
     }
@@ -3195,7 +3209,6 @@ export class QueryModel {
         : "(need to figure this out)";
     if (this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
-        "__stage",
         this.dialect.sqlFinalStage(ret.lastStageName)
       );
     }
