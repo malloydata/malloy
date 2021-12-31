@@ -23,7 +23,7 @@ import { PostgresConnection } from "@malloy-lang/db-postgres";
 
 import { env } from "process";
 
-class BigQueryTestConnection extends BigQueryConnection {
+export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
   public async fetchSchemaForTables(
     missing: string[]
@@ -41,7 +41,7 @@ class BigQueryTestConnection extends BigQueryConnection {
   }
 }
 
-class PostgresTestConnection extends PostgresConnection {
+export class PostgresTestConnection extends PostgresConnection {
   // we probably need a better way to do this.
 
   public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
