@@ -33,7 +33,7 @@ class FindExternalReferences implements MalloyListener {
     }
   }
 
-  enterQuotedURL(pcx: parser.QuotedURLContext) {
+  enterImportURL(pcx: parser.ImportURLContext) {
     const url = JSON.parse(pcx.JSON_STRING().text);
     if (!this.needImports[url]) {
       this.needImports[url] = rangeFromContext(pcx);

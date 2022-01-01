@@ -29,7 +29,7 @@ import {
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { MalloyToAST } from "./src_to_ast";
+import { MalloyToAST } from "./parse-to-ast";
 import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
@@ -73,6 +73,7 @@ export interface ParseMalloy {
   sourceURL: string;
   root: ParseTree;
   tokens: CommonTokenStream;
+  malloyVersion: string;
 }
 
 function runParser(
@@ -100,6 +101,7 @@ function runParser(
     sourceURL: sourceURL,
     root: parseFunc.call(malloyParser) as ParseTree,
     tokens: tokenStream,
+    malloyVersion: "0.2.0-beta",
   };
 }
 
@@ -199,9 +201,10 @@ export abstract class MalloyTranslation {
         const _checkFull = new URL(this.sourceURL);
         this.urlIsFullPath = true;
       } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
         this.urlIsFullPath = false;
         this.root.logger.log({
-          message: `Could not compute full path URL: ${e.message}`,
+          message: `Could not compute full path URL: ${msg}`,
           sourceURL: this.sourceURL,
         });
       }
@@ -379,13 +382,14 @@ export abstract class MalloyTranslation {
     if (mustResolve) {
       return mustResolve;
     }
-    const parse = this.getParseResponse()?.parse;
+    const parseResponse = this.getParseResponse();
     // Errors in self or children will show up here ..
     if (this.root.logger.hasErrors()) {
       this.astResponse = this.fatalErrors();
       return this.astResponse;
     }
 
+    const parse = parseResponse.parse;
     if (!parse) {
       throw new Error(
         "TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser"
@@ -471,6 +475,7 @@ export abstract class MalloyTranslation {
       return this.translateResponse;
     }
 
+    astResponse.ast.setTranslator(this);
     if (this.grammarRule === "malloyDocument") {
       if (astResponse.ast instanceof ast.Document) {
         const doc = astResponse.ast;

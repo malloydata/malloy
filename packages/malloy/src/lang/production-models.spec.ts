@@ -25,7 +25,7 @@ describe(`compiling server models`, () => {
     const projectPath = path.join(SAMPLE_PROJECT_ROOT, dir);
     if (!fs.statSync(projectPath).isDirectory()) continue;
     for (const fn of fs.readdirSync(projectPath)) {
-      if (fn.endsWith(".malloy")) {
+      if (fn.endsWith("_beta.malloy")) {
         modelsFound = true;
         const filePath = path.join(projectPath, fn);
         const srcURI = `model://${filePath}`;

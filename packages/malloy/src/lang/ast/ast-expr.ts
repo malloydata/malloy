@@ -17,6 +17,7 @@
  */
 
 import {
+  By,
   AggregateFragment,
   AtomicFieldType,
   FieldTypeDef,
@@ -27,7 +28,6 @@ import {
 import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
-  FieldName,
   Filter,
   MalloyElement,
   compose,
@@ -183,15 +183,16 @@ export class ConstantSubExpression extends ExpressionDef {
   }
 }
 
-export class ExpressionFieldDef extends MalloyElement {
-  elementType = "expressionField";
+export class ExprFieldDecl extends MalloyElement {
+  elementType = "exprFieldDecl";
+  isMeasure?: boolean;
+
   constructor(
     readonly expr: ExpressionDef,
-    readonly fieldName: FieldName,
+    readonly defineName: string,
     readonly exprSrc?: string
   ) {
     super({ expr });
-    this.has({ fieldName });
   }
 
   fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
@@ -363,7 +364,7 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
 }
 
 export class ExprIdReference extends ExpressionDef {
-  elementType = "id reference";
+  elementType = "ExpressionIdReference";
   constructor(readonly refString: string) {
     super();
   }
@@ -820,13 +821,24 @@ export class ExprCast extends ExpressionDef {
   }
 }
 
-export class By extends MalloyElement {
+export class TopBy extends MalloyElement {
   elementType = "topBy";
   constructor(readonly by: string | ExpressionDef) {
     super();
     if (by instanceof ExpressionDef) {
       this.has({ by });
     }
+  }
+
+  getBy(fs: FieldSpace): By {
+    if (this.by instanceof ExpressionDef) {
+      const byExpr = this.by.getExpression(fs);
+      if (!byExpr.aggregate) {
+        this.log("top by expression must be an aggregate");
+      }
+      return { by: "expression", e: compressExpr(byExpr.value) };
+    }
+    return { by: "name", name: this.by };
   }
 }
 

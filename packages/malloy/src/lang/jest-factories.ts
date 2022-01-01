@@ -47,14 +47,11 @@ export function mkExprIdRef(s: string) {
   return new ast.ExprIdReference(s);
 }
 export function mkFieldDef(expr: string) {
-  return new ast.ExpressionFieldDef(mkExprIdRef(expr), mkFieldName("test"));
+  return new ast.ExprFieldDecl(mkExprIdRef(expr), "test");
 }
 export const aExpr = mkExprIdRef("a");
 export function mkExprStringDef(str: string) {
-  return new ast.ExpressionFieldDef(
-    new ast.ExprString(str),
-    mkFieldName("test")
-  );
+  return new ast.ExprFieldDecl(new ast.ExprString(str), "test");
 }
 export const caFilter = new ast.Filter([
   new ast.FilterElement(
@@ -187,7 +184,7 @@ class TestRoot extends MalloyElement implements NameSpace {
     const struct = this.modelDef.structs[name];
     if (struct.type == "struct") {
       const exported = this.modelDef.exports.includes(name);
-      return { struct, exported };
+      return { entry: struct, exported };
     }
   }
 
@@ -261,6 +258,14 @@ export class TestTranslator extends MalloyTranslator {
   get nameSpace(): Record<string, NamedMalloyObject> {
     const gotModel = this.translate();
     return gotModel?.translated?.modelDef.structs || {};
+  }
+
+  exploreFor(exploreName: string): StructDef {
+    const explore = this.nameSpace[exploreName];
+    if (explore && explore.type === "struct") {
+      return explore;
+    }
+    throw new Error(`Expected model to contain explore '${exploreName}'`);
   }
 }
 

@@ -113,10 +113,6 @@ A query is either a grouping/aggregating gesture, which would look like this ...
 
 A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha-malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
 
-## Farewell `|`
-
-The pipe symbols is removed from the language. In an explore definition, there can not be a chain of queries, there is only the declarations of filters, joins, dimensions, measures, and queries.
-
 ## Filters are `where:` and `having:`
 
 The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
@@ -125,9 +121,18 @@ The magic `: []` syntax for filters is gone. An explore or a project query can h
       where: [ dep_time >= @2001 ]
     }
 
-## Query syntax (the `->`)
+## Farewell `|`
 
-There is an operator, `->`, which as a left hand side takes en explore and for the right hand side takes a query definition ...
+The pipe symbols is removed from the language.
+
+In an explore definition, there can not be a chain of queries, there are only the declarations of filters, joins, dimensions, measures, and queries.
+
+## Query syntax (`->`)
+
+There is a similar new symbol `->` for building chains of queries when defining a query object. The `->` reads more like on operator on the explore to the left and less like a filter on the data in the explore to the left.
+
+The "_exploreSpec `->` _querySpec_" describes a query. An explore spec can be as simple as an explore names, or as complex as a full explore definition.
+
 ```
     -- Invent a new query ... by running it ...
     flights->{
@@ -147,13 +152,25 @@ There is an operator, `->`, which as a left hand side takes en explore and for t
 ```
 ```
     -- Save redefined query as a top level item
-    query: long_flights_by_carrier is flights->by_carrier {
+    query: long_flights_by_carrier is from flights->by_carrier {
         aggregate: long_flights is flight_count { where: arr_time > dep_time + 1 hour }
     }
     -- above will have a run button ...
     -- TBD: How I invoke a top level query in the scratch query
     -- space of a malloy file like the above invocations
 ```
+
+Like the pipelines of alpha Malloy, a query can be chained to a new query, but only the first query in a chain is allowed to be a named reference to an existing query.
+
+```
+flights -> by_carrier -> {
+    // put the carrier code
+    join: carriers { primary_key: nickname } on nickname
+    project {
+        *,
+        code is carrier.code
+    }
+}
 
 ## { where: ... shorthand }
 
@@ -219,6 +236,30 @@ Because an explore can no longer have a `| reduce` in the definition, there need
 
     -- ... make user->user_order_facts a top level entity for joins etc
     -- but add new dimension
-    explore: user_order_facts is (users->user_order_facts) {
+    explore: user_order_facts is from(users->user_order_facts) {
         dimension: super_user is lifetime_value > 1000
     }
+
+# NEW QUERY EXAMPLES
+
+There were a number of sentences which were ambiguous, in addidtion the ability
+to write a query which is pipeline had been left out of the language.
+
+Two major changes to get here ...
+
+* All queries start with `->`
+* Nameless queries are declared with `query:`
+
+1) explore: eName is eName1 { }
+2) explore: eName is from(->qName) { }
+3) query: qName is ->qName1->subQName { }
+4) query: qName is eName->subQName { }
+THERE IS NO 5) query: ->qName->sq6
+6) query: ->qName
+7) query: ->qName->{ fullQuery }
+8) query: eName->{ fullQuery }
+9) query: eName->subQName
+10) explore: eName is eName1 {
+      query: subQuery is -> { firstStage } -> { secondStage }
+   }
+11) explore: eName is from(eName1->qName {qRefine}) { eRefine }

@@ -463,7 +463,7 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedMalloyObject = StructDef;
+export type NamedMalloyObject = StructDef | Query;
 
 /** Result of parsing a model file */
 export interface ModelDef {

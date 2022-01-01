@@ -1,0 +1,217 @@
+explore: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+  dimension: name is concat(code, ' - ', full_name)
+  measure: airport_count is count()
+}
+
+explore: carriers is table('malloy-data.faa.carriers') {
+  primary_key: code
+  measure: carrier_count is count()
+}
+
+explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+  primary_key: aircraft_model_code
+  measure: aircraft_model_count is count()
+}
+
+explore: aircraft is table('malloy-data.faa.aircraft') {
+  primary_key: tail_num
+  measure: aircraft_count is count()
+  join: aircraft_models on aircraft_model_code
+}
+
+explore: flights is table('malloy-data.faa.flights') {
+  primary_key: id2
+  rename: origin_code is origin
+  rename: destination_code is destination
+
+  join: carriers on carrier
+  join: origin is airports on origin_code
+  join: destination is airports on destination_code
+  join: aircraft on tail_num
+
+  measure: [
+    flight_count is count()
+    total_distance is sum(distance)
+    seats_for_sale is sum(aircraft.aircraft_models.seats)
+    seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
+    -- average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
+    -- average_seats is aircraft.aircraft_models.seats.avg()
+  ]
+
+  query: measures is {
+    aggregate: [
+      flight_count, aircraft.aircraft_count
+      dest_count is destination.airport_count
+      origin_count is origin.airport_count
+    ]
+  }
+
+  -- shows carriers and number of destinations (bar chart)
+  query: by_carrier is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+    aggregate: destination_count is destination.count()
+  }
+
+  -- shows year over year growth (line chart)
+  query: year_over_year is {
+    group_by: dep_month is month(dep_time)
+    aggregate: flight_count
+    group_by: dep_year is dep_time.year
+  }
+
+  -- shows plane manufacturers and frequency of use
+  query: by_manufacturer is {
+    top: 5
+    group_by: aircraft.aircraft_models.manufacturer
+    aggregate: [ aircraft.aircraft_count, flight_count ]
+  }
+
+  query: delay_by_hour_of_day is {
+    where: dep_delay >30
+    group_by: dep_hour is hour(dep_time)
+    aggregate: flight_count
+    group_by: delay is FLOOR(dep_delay)/30 * 30
+  }
+
+  query: carriers_by_month is {
+    group_by: dep_month is dep_time.month
+    aggregate: flight_count
+    group_by: carriers.nickname
+  }
+
+  query: seats_by_distance is {
+    -- seats rounded to 5
+    group_by: seats is floor(aircraft.aircraft_models.seats/5)*5
+    aggregate: flight_count
+    -- distance rounded to 20
+    group_by: distance is floor(distance/20)*20
+  }
+
+  query: routes_map is {
+    group_by: [
+      origin.latitude, origin.longitude
+      latitude2 is destination.latitude, longitude2 is destination.longitude
+    ]
+    aggregate: flight_count
+  }
+
+  query: destinations_by_month is {
+    group_by: dep_month is dep_time.`month`
+    aggregate: flight_count
+    group_by: destination.name
+  }
+
+  -- explore flights : [origin.code : 'SJC'] | airport_dashboard
+  query: airport_dashboard is {
+    top: 10
+    group_by: code is destination_code
+    group_by: destination is destination.full_name
+    aggregate: flight_count
+    nest: carriers_by_month
+    nest: routes_map
+    nest: delay_by_hour_of_day
+  }
+
+  -- explore flights : [carriers.nickname : 'Southwest'] | carrier_dashboard
+  query: carrier_dashboard is {
+    aggregate: destination_count is destination.airport_count
+    aggregate: flight_count
+    nest: by_manufacturer
+    nest: by_month is {
+      group_by: dep_month is dep_time.month
+      aggregate: flight_count
+    }
+    nest: hubs is {
+      top: 10
+      where: destination.airport_count > 1
+      group_by: hub is origin.name
+      aggregate: destination_count is destination.airport_count
+    }
+
+    nest: origin_dashboard is {
+      top: 10
+      group_by: code is origin_code
+      group_by: origin is origin.full_name
+      group_by: origin.city
+      aggregate: flight_count
+      nest: destinations_by_month
+      nest: routes_map
+      nest: year_over_year
+    }
+  }
+
+  query: detail is {
+    top: 30 by dep_time
+    project: [
+      id2, dep_time, tail_num, carrier, origin_code, destination_code, distance, aircraft.aircraft_model_code
+    ]
+  }
+
+-- query that you might run for to build a flight search interface
+--   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
+  query: kayak is {
+    nest: carriers is {
+      group_by: carriers.nickname
+      aggregate: flight_count
+    }
+    nest: by_hour is {
+      order_by: 1
+      group_by: dep_hour is hour(dep_time)
+      aggregate: flight_count
+    }
+    nest: flights is {
+      group_by: [
+        dep_minute is dep_time.minute
+        carriers.name
+        flight_num
+        origin_code
+        destination_code
+        aircraft.aircraft_models.manufacturer
+        aircraft.aircraft_models.model
+      ]
+    }
+  }
+
+-- example query that shows how you can build a map reduce job to sessionize flights
+  query: sessionize is {
+    group_by: flight_date is dep_time.`date`
+    group_by: carrier
+    aggregate: daily_flight_count is flight_count
+    nest: per_plane_data is {
+      top: 20
+      group_by: tail_num
+      aggregate: plane_flight_count is flight_count
+      nest: flight_legs is {
+        order_by: 2
+        group_by: tail_num
+        group_by: dep_minute is dep_time.minute
+        group_by: origin_code
+        group_by: dest_code is destination_code
+        group_by: dep_delay
+        group_by: arr_delay
+      }
+    }
+  }
+
+}
+
+query: sessionize_delta_southwest is
+  flights -> sessionize { where: [carrier:'WN' | 'DL', dep_time: @2002-03-03] }
+
+query: kayak_query_sj_to_la is
+  flights -> kayak {
+    where: [
+      origin.code: 'SJC',
+      destination.code: 'LAX'|'BUR',
+      dep_time: @2004-01-01
+    ]
+  }
+
+query: flights -> carrier_dashbaord {? carriers.nickname: 'Southwest' }
+query: flights -> carrier_dashboard {? carriers.nickname: 'Jetblue' }
+
+query: flights -> airport_dashboard {? origin.code: 'SJC' }
+query: flights -> airport_dashboard {?  origin.code: 'SFO' }
+query: flights -> airport_dashboard {?  origin.code: 'SFO' }

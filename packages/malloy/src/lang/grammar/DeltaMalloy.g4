@@ -10,272 +10,51 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-grammar Malloy;
+grammar DeltaMalloy;
 
-malloyDocument: malloyStatement* EOF;
-
-malloyStatement
-  : defineExploreStatement
-  | defineQuery
-  | importStatement
+malloyDocument
+  : propStatement* EOF
   ;
 
-defineExploreStatement
-  : EXPLORE exploreDefinitionList
+propStatement
+  : id COLON propertyValue
   ;
 
-defineQuery
-  : QUERY topLevelQueryDefs
-  | QUERY query
+propertyValue
+  : scalarValue
+  | OBRACK (scalarValue COMMA?)* CBRACK
   ;
 
-importStatement
-  : IMPORT importURL
-  ;
-
-importURL
-  : JSON_STRING
-  ;
-
-topLevelQueryDefs
-  : topLevelQueryDef
-  | OBRACK (topLevelQueryDef COMMA?)* CBRACK
-  ;
-
-topLevelQueryDef
-  : queryName IS query
-  ;
-
-query
-  : exploreRoot ARROW pipelineFromName              # exploreArrowQuery
-  | ARROW queryName queryProperties? pipeElement*   # arrowQuery
-  ;
-
-pipelineFromName
-  : firstSegment pipeElement*
-  ;
-
-exploreRoot
-  : (exploreName | exploreTable) exploreProperties?
-  ;
-
-firstSegment
-  : queryProperties
-  | exploreQueryName queryProperties?
-  ;
-
-pipeElement
-  : ARROW queryProperties
-  ;
-
-exploreTable
-  : TABLE OPAREN tableName CPAREN
-  ;
-
-queryProperties
-  : filterShortcut
-  | OCURLY queryStatement* CCURLY
-  ;
-
-filterShortcut
-  : OCURLY QMARK fieldExpr CCURLY
-  ;
-
-exploreQueryName : id;
-queryName : id;
-
-exploreDefinitionList
-  : OBRACK (exploreDefinition COMMA?)* CBRACK   # defineManyExplores
-  | exploreDefinition                           # defineOneExplore
-  ;
-
-exploreDefinition
-  : exploreNameDef IS explore
-  ;
-
-explore
-  : exploreSource exploreProperties?
-  ;
-
-exploreSource
-  : exploreName                                   # NamedSource
-  | exploreTable                                  # TableSource
-  | FROM OPAREN query CPAREN                      # QuerySource
-  ;
-
-exploreNameDef: id;
-exploreName: id;
-
-exploreProperties
-  : OCURLY exploreStatement* CCURLY
-  | filterShortcut
-  ;
-
-exploreStatement
-  : DIMENSION dimensionDefList         # defExploreDimension
-  | MEASURE measureDefList             # defExploreMeasure
-  | JOIN joinList                      # defExploreJoin
-  | whereStatement                     # defExploreWhere
-  | havingStatement                    # defExploreHaving
-  | PRIMARY_KEY fieldName              # defExplorePrimaryKey
-  | RENAME fieldName IS fieldName      # defExploreRename
-  | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
-  | QUERY subQueryDefList              # defExploreQuery
-  ;
-
-dimensionDefList
-  : OBRACK (dimensionDef COMMA?)* CBRACK
-  | dimensionDef
-  ;
-
-measureDefList
-  : OBRACK (measureDef COMMA?)* CBRACK
-  | measureDef
-  ;
-
-fieldDef
-  : fieldNameDef IS fieldExpr
-  ;
-
-fieldNameDef: id;
-joinNameDef: id;
-
-measureDef: fieldDef;
-
-joinList
-  : OCURLY (joinDef COMMA?)* CCURLY
-  | joinDef
-  ;
-
-joinDef
-  : joinNameDef IS explore ON fieldName
-  | joinNameDef ON fieldName
-  ;
-
-filterStatement
-  : whereStatement
-  | havingStatement
-  ;
-
-filteredBy
-  : filterShortcut                       # filterByShortcut
-  | OCURLY whereStatement CCURLY         # filterByWhere
-  ;
-
-filterClauseList
-  : fieldExpr
-  | OBRACK fieldExprList CBRACK
-  ;
-
-whereStatement
-  : WHERE filterClauseList
-  ;
-
-havingStatement
-  : HAVING filterClauseList
-  ;
-
-subQueryDefList
-  : OCURLY (exploreQueryDef COMMA?)* CCURLY
-  | exploreQueryDef
-  ;
-
-exploreQueryNameDef: id;
-
-exploreQueryDef
-  : exploreQueryNameDef IS pipelineFromName
-  ;
-
-// indexStatement
-//   : INDEX fieldCollection
-//   ;
-
-groupByStatement
-  : GROUP_BY groupByList
-  ;
-
-groupByList
-  : OBRACK (groupByEntry COMMA?)* CBRACK
-  | groupByEntry
-  ;
-
-dimensionDef: fieldDef;
-
-groupByEntry
-  : fieldPath
-  | dimensionDef
-  ;
-
-queryStatement
-  : groupByStatement
-  | projectStatement
-//| indexStatement
-  | aggregateStatement
-  | topStatement
-  | limitStatement
-  | orderByStatement
-  | whereStatement
-  | havingStatement
-  | nestStatement
-//| exploreStatement
-  ;
-
-nestStatement
-  : NEST nestedQueryList
-  ;
-
-nestedQueryList
-  : nestEntry
-  | OBRACK (nestEntry COMMA?)* CBRACK
-  ;
-
-nestEntry
-  : queryName                       # nestExisting
-  | queryName IS pipelineFromName   # nestDef
-  ;
-
-aggregateStatement
-  : AGGREGATE aggregateList
-  ;
-
-aggregateEntry
-  : fieldPath
-  | measureDef
-  ;
-
-aggregateList
-  : OBRACK (aggregateEntry COMMA?)* CBRACK
-  | aggregateEntry
-  ;
-
-projectStatement
-  : PROJECT fieldCollection
-  ;
-
-orderByStatement
-  : ORDER_BY ordering
-  ;
-
-ordering
+scalarValue
   : orderBySpec
-  | OBRACK orderBySpec (COMMA orderBySpec)* COMMA? CBRACK
+  | STAR
+  | topSpec
+  | fieldExpr
+  | id IS scalarValue
+  | joinSpec
+  | scalarValue ARROW scalarValue
+  | scalarValue refinement
+  | refinement
+  | TABLE STRING_LITERAL
+  | OPAREN scalarValue CPAREN
+  ;
+
+refinement
+  : OCURLY propStatement* CCURLY
+  ;
+
+joinSpec
+  : id IS scalarValue ON id
+  | id ON id
   ;
 
 orderBySpec
-  : (INTEGER_LITERAL | fieldName) ( ASC | DESC ) ?
+  : (INTEGER_LITERAL|id) ( ASC | DESC )
   ;
 
-limitStatement
-  : LIMIT INTEGER_LITERAL
-  ;
-
-bySpec
-  : BY fieldName
-  | BY fieldExpr
-  ;
-
-topStatement
-  : TOP INTEGER_LITERAL bySpec?
+topSpec
+  : INTEGER_LITERAL BY id
+  | INTEGER_LITERAL BY fieldExpr
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
@@ -301,9 +80,6 @@ dateLiteral
   | LITERAL_YEAR           # literalYear
   ;
 
-tableName
-  : STRING_LITERAL;
-
 id
   : IDENTIFIER
   | OBJECT_NAME_LITERAL
@@ -315,7 +91,7 @@ timeframe
 
 fieldExpr
   : fieldPath                                              # exprFieldPath
-  | fieldExpr OCURLY filteredBy CCURLY                     # exprFilter
+  | fieldExpr refinement                                   # exprRefine
   | literal                                                # exprLiteral
   | MINUS fieldExpr                                        # exprMinus
   | fieldExpr timeframe                                    # exprDuration
@@ -362,101 +138,11 @@ fieldExprList
   : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
-fieldNameList
-  : fieldName ( COMMA fieldName)* COMMA
-  ;
-
-fieldCollection
-  : collectionMember
-  | OBRACK (collectionMember COMMA?)* COMMA? CBRACK
-  ;
-
-collectionMember
-  : fieldPath                         # nameMember
-  | (fieldPath DOT)? (STAR|STARSTAR)  # wildMember
-  | fieldDef                          # newMember
-  ;
-
-// Possibly wasted work adding semantics to "id" references
+// Syntactically same as a field name, but semantically, might be a parameter
 fieldPath
-  : fieldName
-  | joinPath DOT joinField
+  : id ( DOT id )*
   ;
 
-joinPath
-  : joinName (DOT joinName)*
-  ;
-
-joinField
-  : id
-  ;
-
-joinName:
-  id
-  ;
-
-fieldName
-  : id
-  ;
-
-json
-  : jsonValue
-  ;
-
-jsonValue
-   : JSON_STRING
-   | INTEGER_LITERAL
-   | NUMERIC_LITERAL
-   | jsonObject
-   | jsonArray
-   | TRUE
-   | FALSE
-   | NULL
-   ;
-
-jsonObject
-   : OCURLY jsonProperty (COMMA jsonProperty)* CCURLY
-   | OCURLY CCURLY
-   ;
-
-jsonProperty
-   : JSON_STRING COLON jsonValue
-   ;
-
-jsonArray
-   : OBRACK jsonValue (COMMA jsonValue)* CBRACK
-   | OBRACK CBRACK
-   ;
-
-JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
-
-fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
-fragment UNICODE: 'u' HEX HEX HEX HEX;
-fragment HEX: [0-9a-fA-F];
-fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
-
-// colon keywords ...
-ACCEPT: A C C E P T ':';
-AGGREGATE: A G G R E G A T E ':';
-DIMENSION: D I M E N S I O N ':';
-EXCEPT: E X C E P T ':';
-EXPLORE: E X P L O R E ':';
-GROUP_BY: G R O U P '_' B Y ':';
-HAVING: H A V I N G ':';
-INDEX: I N D E X ':';
-JOIN: J O I N ':';
-LIMIT: L I M I T ':';
-MEASURE: M E A S U R E ':';
-NEST: N E S T ':';
-ORDER_BY: O R D E R '_' B Y ':';
-PRIMARY_KEY: P R I M A R Y '_' K E Y ':';
-PROJECT: P R O J E C T ':';
-QUERY: Q U E R Y ':';
-RENAME: R E N A M E ':';
-TOP: T O P ':';
-WHERE: W H E R E ':';
-
-// bare keywords
 AND: A N D ;
 AS: A S ;
 ASC: A S C ;
@@ -479,10 +165,7 @@ FOR: F O R;
 FROM: F R O M ;
 HAS: H A S ;
 HOUR: H O U R S?;
-IMPORT: I M P O R T;
 IS: I S ;
-JSON: J S O N;
-LAST: L A S T ;
 MAX: M A X;
 MIN: M I N;
 MINUTE: M I N U T E S?;
@@ -501,11 +184,9 @@ STRING: S T R I N G;
 SUM: S U M ;
 TABLE: T A B L E;
 THEN: T H E N ;
-THIS: T H I S;
 TIMESTAMP: T I M E S T A M P;
 TO: T O;
 TRUE: T R U E ;
-TURTLE: T U R T L E;
 WEEK: W E E K S?;
 WHEN: W H E N ;
 YEAR: Y E A R S?;
@@ -521,7 +202,6 @@ fragment SPACE_CHAR: [ \u000B\t\r\n];
 
 AMPER: '&';
 ARROW: '->';
-FAT_ARROW: '=>';
 OPAREN: '(' ;
 CPAREN: ')' ;
 OBRACK: '[' ;

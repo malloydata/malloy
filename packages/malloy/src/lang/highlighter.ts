@@ -141,9 +141,9 @@ export function passForHighlights(
       case MalloyParser.HACKY_REGEX:
         register(token, HighlightType.Literal.RegularExpression);
         break;
-      case MalloyParser.REDUCE:
-        register(token, HighlightType.Transformation.Reduce);
-        break;
+      // case MalloyParser.REDUCE:
+      //   register(token, HighlightType.Transformation.Reduce);
+      //   break;
       case MalloyParser.PROJECT:
         register(token, HighlightType.Transformation.Project);
         break;
@@ -156,9 +156,9 @@ export function passForHighlights(
       case MalloyParser.TOP:
         register(token, HighlightType.Keyword.Top);
         break;
-      case MalloyParser.ORDER:
-        register(token, HighlightType.Keyword.Order);
-        break;
+      // case MalloyParser.ORDER:
+      //   register(token, HighlightType.Keyword.Order);
+      //   break;
       case MalloyParser.BY:
         register(token, HighlightType.Keyword.By);
         break;
@@ -168,33 +168,33 @@ export function passForHighlights(
       case MalloyParser.DISTINCT:
         register(token, HighlightType.Keyword.AggregateModifier.Distinct);
         break;
-      case MalloyParser.FIELDS:
-        register(token, HighlightType.Label.Fields);
-        break;
-      case MalloyParser.JOINS:
-        register(token, HighlightType.Label.Joins);
-        break;
+      // case MalloyParser.FIELDS:
+      //   register(token, HighlightType.Label.Fields);
+      //   break;
+      // case MalloyParser.JOINS:
+      //   register(token, HighlightType.Label.Joins);
+      //   break;
       case MalloyParser.JOIN:
         register(token, HighlightType.Keyword.Join);
         break;
       case MalloyParser.ON:
         register(token, HighlightType.Keyword.On);
         break;
-      case MalloyParser.RENAMES:
-        register(token, HighlightType.Keyword.Renames);
-        break;
-      case MalloyParser.PRIMARY:
-        register(token, HighlightType.Keyword.Primary);
-        break;
-      case MalloyParser.KEY:
-        register(token, HighlightType.Keyword.Key);
-        break;
-      case MalloyParser.DEFINE:
-        register(token, HighlightType.Keyword.Define);
-        break;
-      case MalloyParser.EXPORT:
-        register(token, HighlightType.Keyword.Export);
-        break;
+      // case MalloyParser.RENAMES:
+      //   register(token, HighlightType.Keyword.Renames);
+      //   break;
+      // case MalloyParser.PRIMARY:
+      //   register(token, HighlightType.Keyword.Primary);
+      //   break;
+      // case MalloyParser.KEY:
+      //   register(token, HighlightType.Keyword.Key);
+      //   break;
+      // case MalloyParser.DEFINE:
+      //   register(token, HighlightType.Keyword.Define);
+      //   break;
+      // case MalloyParser.EXPORT:
+      //   register(token, HighlightType.Keyword.Export);
+      //   break;
       case MalloyParser.DESC:
         register(token, HighlightType.Keyword.Desc);
         break;

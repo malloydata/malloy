@@ -15,9 +15,11 @@ import * as model from "../model/malloy_types";
 import {
   ColumnSpaceField,
   DefinedParameter,
+  FANSPaceField,
   TurtleFieldStruct,
 } from "./space-field";
 import { FieldSpace } from "./field-space";
+import { FilteredAliasedName } from "../model/malloy_types";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
@@ -84,46 +86,6 @@ describe("structdef comprehension", () => {
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
-
-  // LTNOTE: I think we just need to remove these they no longer exist.
-
-  // test(`import count field`, () => {
-  //   const field: model.FieldDef = {
-  //     name: "t",
-  //     type: "count",
-  //   };
-  //   const struct = mkStructDef(field);
-  //   const space = new FieldSpace(struct);
-  //   expect(space.field("t")).toBeInstanceOf(ColumnSpaceField);
-  //   const oField = space.structDef().fields[0];
-  //   expect(oField).toEqual(field);
-  // });
-
-  // test(`import count_distinct field`, () => {
-  //   const field: model.FieldDef = {
-  //     name: "t",
-  //     type: "count_distinct",
-  //     e: ["a"],
-  //   };
-  //   const struct = mkStructDef(field);
-  //   const space = new FieldSpace(struct);
-  //   expect(space.field("t")).toBeInstanceOf(ColumnSpaceField);
-  //   const oField = space.structDef().fields[0];
-  //   expect(oField).toEqual(field);
-  // });
-
-  // test(`import sum field`, () => {
-  //   const field: model.FieldDef = {
-  //     name: "t",
-  //     type: "sum",
-  //     e: ["a"],
-  //   };
-  //   const struct = mkStructDef(field);
-  //   const space = new FieldSpace(struct);
-  //   expect(space.field("t")).toBeInstanceOf(ColumnSpaceField);
-  //   const oField = space.structDef().fields[0];
-  //   expect(oField).toEqual(field);
-  // });
 
   test(`import nested field`, () => {
     const field: model.FieldDef = {
