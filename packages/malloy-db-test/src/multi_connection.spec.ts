@@ -43,14 +43,13 @@ export define bigquery_aircraft is (explore 'bigquery:malloytest.aircraft_models
   aircraft_count is count()+2
 );
 
--- export define bigquery_aircraft is (explore 'postgres:malloytest.aircraft_models'
---   aircraft_count is count()+4
--- );
+export define postgres_aircraft is (explore 'postgres:malloytest.aircraft_models'
+  aircraft_count is count()+4
+);
 `;
 
 const expressionModel = runtime.loadModel(expressionModelText);
 
-// Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
 it(`default query`, async () => {
   const result = await expressionModel
     .loadQuery(
@@ -73,4 +72,16 @@ it(`bigquery query`, async () => {
     )
     .run();
   expect(result.data.path(0, "aircraft_count").value).toBe(60463);
+});
+
+it(`postgres query`, async () => {
+  const result = await expressionModel
+    .loadQuery(
+      `
+      explore postgres_aircraft | reduce
+        aircraft_count
+    `
+    )
+    .run();
+  expect(result.data.path(0, "aircraft_count").value).toBe(60465);
 });

@@ -56,6 +56,7 @@ import {
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
+import { parseTableName } from "../malloy";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -2883,10 +2884,12 @@ class QueryStruct extends QueryNode {
 
   structSourceSQL(stageWriter: StageWriter): string {
     switch (this.fieldDef.structSource.type) {
-      case "table":
-        return this.dialect.quoteTableName(
+      case "table": {
+        const { tableName } = parseTableName(
           this.fieldDef.structSource.tablePath || this.fieldDef.name
         );
+        return this.dialect.quoteTableName(tableName);
+      }
       case "sql":
         return this.fieldDef.name;
       case "nested":

@@ -33,6 +33,7 @@ import {
   NamedStructDefs,
   Connection,
 } from "@malloy-lang/malloy";
+import { parseTableName } from "@malloy-lang/malloy/src/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -228,24 +229,25 @@ export class BigQueryConnection extends Connection {
   }
 
   public async getTableFieldSchema(
-    tablePath: string,
+    tableURL: string,
     pathPrefix: string | undefined = undefined
   ): Promise<bigquery.ITableFieldSchema> {
-    const segments = tablePath.split(".");
+    const { tableName } = parseTableName(tableURL);
+    const segments = tableName.split(".");
 
     // paths can have two or three segments
     // if there are only two segments, assume the dataset is "local" to the current billing project
-    let projectId, datasetName, tableName;
+    let projectId, datasetNamePart, tableNamePart;
     if (segments.length === 2) {
-      [datasetName, tableName] = segments;
+      [datasetNamePart, tableNamePart] = segments;
       if (pathPrefix !== undefined) {
         projectId = pathPrefix;
       }
     } else if (segments.length === 3)
-      [projectId, datasetName, tableName] = segments;
+      [projectId, datasetNamePart, tableNamePart] = segments;
     else
       throw new Error(
-        `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
+        `Improper table path: ${tableName}. A table path requires 2 or 3 segments`
       );
 
     // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
@@ -253,7 +255,7 @@ export class BigQueryConnection extends Connection {
     // once we're done, set it back to our project ID.
     if (projectId) this.bigQuery.projectId = projectId;
 
-    const table = this.bigQuery.dataset(datasetName).table(tableName);
+    const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
 
     try {
       const [metadata] = await table.getMetadata();

@@ -191,25 +191,28 @@ export class Malloy {
           Array<string>
         > = new Map();
         for (const connectionTableString of result.tables) {
-          const { connectionName, tableName } = parseTableName(
-            connectionTableString
-          );
+          const { connectionName } = parseTableName(connectionTableString);
 
           let connectionToTablesMap = tablesByConnection.get(connectionName);
           if (!connectionToTablesMap) {
-            connectionToTablesMap = [tableName];
+            connectionToTablesMap = [connectionTableString];
           } else {
-            connectionToTablesMap.push(tableName);
+            connectionToTablesMap.push(connectionTableString);
           }
           tablesByConnection.set(connectionName, connectionToTablesMap);
         }
 
         // iterate over connections, fetching schema for all missing tables
-        for (const [connectionName, tableNames] of tablesByConnection) {
+        for (const [
+          connectionName,
+          connectionTableString,
+        ] of tablesByConnection) {
           const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
             connectionName
           );
-          const tables = await schemaFetcher.fetchSchemaForTables(tableNames);
+          const tables = await schemaFetcher.fetchSchemaForTables(
+            connectionTableString
+          );
           translator.update({ tables });
         }
       }
@@ -401,7 +404,10 @@ export class PreparedQuery {
   }
 }
 
-function parseTableName(connectionTableString: string) {
+export function parseTableName(connectionTableString: string): {
+  connectionName?: string;
+  tableName: string;
+} {
   const [firstPart, secondPart] = connectionTableString.split(":");
   if (secondPart) {
     return { connectionName: firstPart, tableName: secondPart };
