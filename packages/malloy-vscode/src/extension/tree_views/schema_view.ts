@@ -32,7 +32,7 @@ import stringIcon from "../../media/string.svg";
 import oneToManyIcon from "../../media/one_to_many.svg";
 import manyToOneIcon from "../../media/many_to_one.svg";
 import oneToOneIcon from "../../media/one_to_one.svg";
-import { BIGQUERY_CONNECTION, MALLOY_EXTENSION_STATE } from "../state";
+import { CONNECTION_MAP, MALLOY_EXTENSION_STATE } from "../state";
 import { VSCodeURLReader } from "../utils";
 
 export class SchemaProvider
@@ -116,7 +116,7 @@ async function getStructs(
   const uri = URL.fromString("file://" + document.uri.fsPath);
   const files = new VSCodeURLReader();
   try {
-    const runtime = new Runtime(files, BIGQUERY_CONNECTION);
+    const runtime = new Runtime(files, CONNECTION_MAP);
     const model = await runtime.getModel(uri);
 
     return Object.values(model.explores).sort(exploresByName);

@@ -17,11 +17,7 @@ import * as vscode from "vscode";
 import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
 import { DataStyles, HTMLView } from "@malloy-lang/render";
 import { loadingIndicator, renderErrorHTML, wrapHTMLSnippet } from "../html";
-import {
-  BIGQUERY_CONNECTION,
-  MALLOY_EXTENSION_STATE,
-  RunState,
-} from "../state";
+import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
 
@@ -191,7 +187,7 @@ export function runMalloyQuery(
 
       const vscodeFiles = new VSCodeURLReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
-      const runtime = new Runtime(files, BIGQUERY_CONNECTION);
+      const runtime = new Runtime(files, CONNECTION_MAP);
 
       return (async () => {
         try {

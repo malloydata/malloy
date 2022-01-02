@@ -14,6 +14,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 
 "use strict";
+const webpack = require("webpack");
 
 const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
@@ -67,6 +68,7 @@ const config = {
     ],
   },
   plugins: [
+    new webpack.IgnorePlugin({ resourceRegExp: /^pg-native$/ }),
     new CopyPlugin({
       patterns: [
         {
