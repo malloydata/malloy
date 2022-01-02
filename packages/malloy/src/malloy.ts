@@ -191,7 +191,7 @@ export class Malloy {
           Array<string>
         > = new Map();
         for (const connectionTableString of result.tables) {
-          const { connectionName } = parseTableName(connectionTableString);
+          const { connectionName } = parseTableURL(connectionTableString);
 
           let connectionToTablesMap = tablesByConnection.get(connectionName);
           if (!connectionToTablesMap) {
@@ -404,15 +404,15 @@ export class PreparedQuery {
   }
 }
 
-export function parseTableName(connectionTableString: string): {
+export function parseTableURL(tableURL: string): {
   connectionName?: string;
-  tableName: string;
+  tablePath: string;
 } {
-  const [firstPart, secondPart] = connectionTableString.split(":");
+  const [firstPart, secondPart] = tableURL.split(":");
   if (secondPart) {
-    return { connectionName: firstPart, tableName: secondPart };
+    return { connectionName: firstPart, tablePath: secondPart };
   } else {
-    return { tableName: firstPart };
+    return { tablePath: firstPart };
   }
 }
 
