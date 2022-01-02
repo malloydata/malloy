@@ -191,25 +191,28 @@ export class Malloy {
           Array<string>
         > = new Map();
         for (const connectionTableString of result.tables) {
-          const { connectionName, tableName } = parseTableName(
-            connectionTableString
-          );
+          const { connectionName } = parseTableURL(connectionTableString);
 
           let connectionToTablesMap = tablesByConnection.get(connectionName);
           if (!connectionToTablesMap) {
-            connectionToTablesMap = [tableName];
+            connectionToTablesMap = [connectionTableString];
           } else {
-            connectionToTablesMap.push(tableName);
+            connectionToTablesMap.push(connectionTableString);
           }
           tablesByConnection.set(connectionName, connectionToTablesMap);
         }
 
         // iterate over connections, fetching schema for all missing tables
-        for (const [connectionName, tableNames] of tablesByConnection) {
+        for (const [
+          connectionName,
+          connectionTableString,
+        ] of tablesByConnection) {
           const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
             connectionName
           );
-          const tables = await schemaFetcher.fetchSchemaForTables(tableNames);
+          const tables = await schemaFetcher.fetchSchemaForTables(
+            connectionTableString
+          );
           translator.update({ tables });
         }
       }
@@ -401,12 +404,15 @@ export class PreparedQuery {
   }
 }
 
-function parseTableName(connectionTableString: string) {
-  const [firstPart, secondPart] = connectionTableString.split(":");
+export function parseTableURL(tableURL: string): {
+  connectionName?: string;
+  tablePath: string;
+} {
+  const [firstPart, secondPart] = tableURL.split(":");
   if (secondPart) {
-    return { connectionName: firstPart, tableName: secondPart };
+    return { connectionName: firstPart, tablePath: secondPart };
   } else {
-    return { tableName: firstPart };
+    return { tablePath: firstPart };
   }
 }
 

@@ -33,6 +33,7 @@ import {
   NamedStructDefs,
   Connection,
 } from "@malloy-lang/malloy";
+import { parseTableURL } from "@malloy-lang/malloy/src/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -91,6 +92,7 @@ export class BigQueryConnection extends Connection {
   private bigQuery: BigQuerySDK;
   private projectId;
   private temporaryTables = new Map<string, string>();
+  private defaultProject;
 
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
@@ -116,7 +118,11 @@ export class BigQueryConnection extends Connection {
     // BIGNUMERIC
   };
 
-  constructor(name: string, queryOptions?: QueryOptionsReader) {
+  constructor(
+    name: string,
+    queryOptions?: QueryOptionsReader,
+    defaultProject: string | undefined = undefined
+  ) {
     super(name);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
@@ -125,6 +131,7 @@ export class BigQueryConnection extends Connection {
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
     // we want to use the tables API
     this.projectId = this.bigQuery.projectId;
+    this.defaultProject = defaultProject || this.bigQuery.projectId;
 
     this.queryOptions = queryOptions;
   }
@@ -222,30 +229,27 @@ export class BigQueryConnection extends Connection {
 
     return this.structDefFromSchema(
       `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
-      dryRunResults.metadata.statistics.query.schema,
-      undefined
+      dryRunResults.metadata.statistics.query.schema
     );
   }
 
   public async getTableFieldSchema(
-    tablePath: string,
-    pathPrefix: string | undefined = undefined
+    tableURL: string
   ): Promise<bigquery.ITableFieldSchema> {
-    const segments = tablePath.split(".");
+    const { tablePath: tableName } = parseTableURL(tableURL);
+    const segments = tableName.split(".");
 
     // paths can have two or three segments
     // if there are only two segments, assume the dataset is "local" to the current billing project
-    let projectId, datasetName, tableName;
+    let projectId, datasetNamePart, tableNamePart;
     if (segments.length === 2) {
-      [datasetName, tableName] = segments;
-      if (pathPrefix !== undefined) {
-        projectId = pathPrefix;
-      }
+      [datasetNamePart, tableNamePart] = segments;
+      projectId = this.defaultProject;
     } else if (segments.length === 3)
-      [projectId, datasetName, tableName] = segments;
+      [projectId, datasetNamePart, tableNamePart] = segments;
     else
       throw new Error(
-        `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
+        `Improper table path: ${tableName}. A table path requires 2 or 3 segments`
       );
 
     // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
@@ -253,7 +257,7 @@ export class BigQueryConnection extends Connection {
     // once we're done, set it back to our project ID.
     if (projectId) this.bigQuery.projectId = projectId;
 
-    const table = this.bigQuery.dataset(datasetName).table(tableName);
+    const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
 
     try {
       const [metadata] = await table.getMetadata();
@@ -411,29 +415,26 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  private static fullPath(
-    tablePath: string,
-    pathPrefix: string | undefined
-  ): string {
-    if (pathPrefix !== undefined && tablePath.split(".").length === 2) {
-      return `${pathPrefix}.${tablePath}`;
+  private tableURLtoTablePath(tableURL: string): string {
+    const { tablePath } = parseTableURL(tableURL);
+    if (tablePath.split(".").length === 2) {
+      return `${this.defaultProject}.${tablePath}`;
     } else {
       return tablePath;
     }
   }
 
   private structDefFromSchema(
-    tablePath: string,
-    tableFieldSchema: bigquery.ITableFieldSchema,
-    pathPrefix: string | undefined
+    tableURL: string,
+    tableFieldSchema: bigquery.ITableFieldSchema
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
-      name: tablePath,
+      name: tableURL,
       dialect: this.dialectName,
       structSource: {
         type: "table",
-        tablePath: BigQueryConnection.fullPath(tablePath, pathPrefix),
+        tablePath: this.tableURLtoTablePath(tableURL),
       },
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
@@ -443,26 +444,18 @@ export class BigQueryConnection extends Connection {
   }
 
   public async fetchSchemaForTables(
-    missing: string[],
-    pathPrefix: string | undefined = undefined
+    missing: string[]
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
 
-    for (const tablePath of missing) {
-      let inCache = this.schemaCache.get(tablePath);
+    for (const tableURL of missing) {
+      let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
-        const tableFieldSchema = await this.getTableFieldSchema(
-          tablePath,
-          pathPrefix
-        );
-        inCache = this.structDefFromSchema(
-          tablePath,
-          tableFieldSchema,
-          pathPrefix
-        );
-        this.schemaCache.set(tablePath, inCache);
+        const tableFieldSchema = await this.getTableFieldSchema(tableURL);
+        inCache = this.structDefFromSchema(tableURL, tableFieldSchema);
+        this.schemaCache.set(tableURL, inCache);
       }
-      tableStructDefs[tablePath] = inCache;
+      tableStructDefs[tableURL] = inCache;
     }
     return tableStructDefs;
   }

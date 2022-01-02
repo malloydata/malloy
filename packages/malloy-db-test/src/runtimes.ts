@@ -15,7 +15,6 @@ import {
   Runtime,
   EmptyURLReader,
   Result,
-  NamedStructDefs,
   MalloyQueryData,
 } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
@@ -23,25 +22,7 @@ import { PostgresConnection } from "@malloy-lang/db-postgres";
 
 import { env } from "process";
 
-class BigQueryTestConnection extends BigQueryConnection {
-  // we probably need a better way to do this.
-  public async fetchSchemaForTables(
-    missing: string[]
-  ): Promise<NamedStructDefs> {
-    return await super.fetchSchemaForTables(missing, "malloy-data");
-  }
-
-  public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
-    try {
-      return await super.runSQL(sqlCommand);
-    } catch (e) {
-      console.log(`Error in SQL:\n ${sqlCommand}`);
-      throw e;
-    }
-  }
-}
-
-class PostgresTestConnection extends PostgresConnection {
+export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 
   public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
@@ -54,7 +35,20 @@ class PostgresTestConnection extends PostgresConnection {
   }
 }
 
-const bqConnection = new BigQueryTestConnection("bigquery");
+export class PostgresTestConnection extends PostgresConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand);
+    } catch (e) {
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+const bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
 const postgresConnection = new PostgresTestConnection("postgres");
 const files = new EmptyURLReader();
 
