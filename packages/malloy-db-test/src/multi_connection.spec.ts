@@ -85,3 +85,17 @@ it(`postgres query`, async () => {
     .run();
   expect(result.data.path(0, "aircraft_count").value).toBe(60465);
 });
+
+it(`postgres raw query`, async () => {
+  const result = await runtime
+    .loadQuery(
+      `
+      explore 'postgres:malloytest.airports' | reduce
+        version is version()
+        airport_count is count()
+    `
+    )
+    .run();
+  expect(result.data.path(0, "airport_count").value).toBe(19793);
+  expect(result.data.path(0, "version").value).toMatch(/Postgre/);
+});
