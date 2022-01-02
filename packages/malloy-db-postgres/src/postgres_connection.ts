@@ -21,6 +21,7 @@ import {
   QueryData,
 } from "@malloy-lang/malloy";
 import { Client } from "pg";
+import { parseTableName } from "@malloy-lang/malloy/src/malloy";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "character varying": "string",
@@ -77,10 +78,10 @@ export class PostgresConnection extends Connection {
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 
-  private async getTableSchema(tablePath: string): Promise<StructDef> {
+  private async getTableSchema(tableURL: string): Promise<StructDef> {
     const structDef: StructDef = {
       type: "struct",
-      name: tablePath,
+      name: tableURL,
       dialect: "postgres",
       structSource: { type: "table" },
       structRelationship: {
@@ -90,7 +91,8 @@ export class PostgresConnection extends Connection {
       fields: [],
     };
 
-    const [schema, table] = tablePath.split(".");
+    const { tableName } = parseTableName(tableURL);
+    const [schema, table] = tableName.split(".");
     if (table === undefined) {
       throw new Error("Default schema not supported Yet in Postgres");
     }

@@ -35,16 +35,16 @@ const connectionMap = new malloy.FixedConnectionMap(
 const runtime = new malloy.Runtime(files, connectionMap);
 
 const expressionModelText = `
-export define default_aircraft is (explore 'malloytest.aircraft_models'
-  aircraft_count is count()
+export define default_aircraft is (explore 'malloytest.aircraft'
+  aircraft_count is count(DISTINCT tail_num)
 );
 
-export define bigquery_aircraft is (explore 'bigquery:malloytest.aircraft_models'
-  aircraft_count is count()+2
+export define bigquery_aircraft is (explore 'bigquery:malloytest.aircraft'
+  aircraft_count is count(DISTINCT tail_num)+2
 );
 
-export define postgres_aircraft is (explore 'postgres:malloytest.aircraft_models'
-  aircraft_count is count()+4
+export define postgres_aircraft is (explore 'postgres:malloytest.aircraft'
+  aircraft_count is count(DISTINCT tail_num)+4
 );
 `;
 
@@ -59,7 +59,7 @@ it(`default query`, async () => {
     `
     )
     .run();
-  expect(result.data.path(0, "aircraft_count").value).toBe(60461);
+  expect(result.data.path(0, "aircraft_count").value).toBe(3599);
 });
 
 it(`bigquery query`, async () => {
@@ -71,7 +71,7 @@ it(`bigquery query`, async () => {
     `
     )
     .run();
-  expect(result.data.path(0, "aircraft_count").value).toBe(60463);
+  expect(result.data.path(0, "aircraft_count").value).toBe(3601);
 });
 
 it(`postgres query`, async () => {
@@ -83,7 +83,7 @@ it(`postgres query`, async () => {
     `
     )
     .run();
-  expect(result.data.path(0, "aircraft_count").value).toBe(60465);
+  expect(result.data.path(0, "aircraft_count").value).toBe(3603);
 });
 
 it(`postgres raw query`, async () => {
@@ -92,10 +92,12 @@ it(`postgres raw query`, async () => {
       `
       explore 'postgres:malloytest.airports' | reduce
         version is version()
+        code_count is count(distinct code)
         airport_count is count()
     `
     )
     .run();
   expect(result.data.path(0, "airport_count").value).toBe(19793);
   expect(result.data.path(0, "version").value).toMatch(/Postgre/);
+  expect(result.data.path(0, "code_count").value).toBe(19793);
 });
