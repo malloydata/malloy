@@ -19,14 +19,14 @@ import { Connection, EmptyURLReader } from "@malloy-lang/malloy";
 import { BigQueryTestConnection, PostgresTestConnection } from "./runtimes";
 
 const bqConnection = new BigQueryTestConnection("bigquery");
-const postgresConnection = new PostgresTestConnection("postgres");
+// const postgresConnection = new PostgresTestConnection("postgres");
 const files = new EmptyURLReader();
 
 const connectionMap = new malloy.FixedConnectionMap(
   new Map<string, Connection>(
     Object.entries({
       bigquery: bqConnection,
-      postgres: postgresConnection,
+      // postgres: postgresConnection,
     })
   ),
   "bigquery"
@@ -43,9 +43,9 @@ export define bigquery_aircraft is (explore 'bigquery:malloytest.aircraft'
   aircraft_count is count(DISTINCT tail_num)+2
 );
 
-export define postgres_aircraft is (explore 'postgres:malloytest.aircraft'
-  aircraft_count is count(DISTINCT tail_num)+4
-);
+-- export define postgres_aircraft is (explore 'postgres:malloytest.aircraft'
+--   aircraft_count is count(DISTINCT tail_num)+4
+-- );
 `;
 
 const expressionModel = runtime.loadModel(expressionModelText);
@@ -74,7 +74,7 @@ it(`bigquery query`, async () => {
   expect(result.data.path(0, "aircraft_count").value).toBe(3601);
 });
 
-it(`postgres query`, async () => {
+it.skip(`postgres query`, async () => {
   const result = await expressionModel
     .loadQuery(
       `
@@ -86,7 +86,7 @@ it(`postgres query`, async () => {
   expect(result.data.path(0, "aircraft_count").value).toBe(3603);
 });
 
-it(`postgres raw query`, async () => {
+it.skip(`postgres raw query`, async () => {
   const result = await runtime
     .loadQuery(
       `
