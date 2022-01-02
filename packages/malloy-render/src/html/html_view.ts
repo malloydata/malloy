@@ -22,6 +22,7 @@ import { HTMLBytesRenderer } from "./bytes";
 import { HTMLCurrencyRenderer } from "./currency";
 import { HTMLPercentRenderer } from "./percent";
 import { HTMLDashboardRenderer } from "./dashboard";
+import { HTMLImageRenderer } from "./image";
 import { HTMLDateRenderer } from "./date";
 import { HTMLLineChartRenderer } from "./line_chart";
 import { HTMLLinkRenderer } from "./link";
@@ -97,6 +98,8 @@ export function makeRenderer(
     field.name.endsWith("_point_map")
   ) {
     return new HTMLPointMapRenderer(styleDefaults);
+  } else if (renderDef.renderer === "image" || field.name.endsWith("_image")) {
+    return new HTMLImageRenderer();
   } else if (
     renderDef.renderer === "segment_map" ||
     field.name.endsWith("_segment_map")

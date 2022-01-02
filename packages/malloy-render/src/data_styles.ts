@@ -22,6 +22,7 @@ export type RenderDef =
   | ({ renderer: "dashboard" } & DashboardRenderOptions)
   | ({ renderer: "text" } & TextRenderOptions)
   | ({ renderer: "currency" } & CurrencyRenderOptions)
+  | ({ renderer: "image" } & ImageRenderOptions)
   | ({ renderer: "time" } & TimeRenderOptions)
   | ({ renderer: "json" } & JSONRenderOptions)
   | ({ renderer: "single_value" } & SingleValueRenderOptions)
@@ -86,6 +87,10 @@ export interface TimeRenderOptions extends TextRenderOptions {
 
 export interface NumberRenderOptions extends TextRenderOptions {
   number?: Record<string, unknown>;
+}
+
+export interface ImageRenderOptions extends TextRenderOptions {
+  border?: boolean;
 }
 
 export interface PercentRenderOptions extends TextRenderOptions {
