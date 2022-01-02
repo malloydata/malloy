@@ -33,12 +33,23 @@ export class MalloyToAST
     super();
   }
 
+  /**
+   * Mostly used to flag a case where the grammar and the type system are
+   * no longer in sync. A visitor was written based on a grammar which
+   * apparently has changed and now an unexpected element type has appeared.
+   * This is a non recoverable error, since the parser and the grammar
+   * are not compatible.
+   * @returns an error object to throw.
+   */
   protected internalError(cx: ParserRuleContext, msg: string): Error {
     const tmsg = `Internal Translator Error: ${msg}`;
     this.contextError(cx, tmsg);
     return new Error(tmsg);
   }
 
+  /**
+   * Log an error message relative to an AST node
+   */
   protected astError(el: ast.MalloyElement, str: string): void {
     this.msgLog.log({
       sourceURL: this.parse.sourceURL,
@@ -47,6 +58,9 @@ export class MalloyToAST
     });
   }
 
+  /**
+   * Log an error message relative to a parse node
+   */
   protected contextError(cx: ParserRuleContext, msg: string): void {
     const error: LogMessage = {
       sourceURL: this.parse.sourceURL,
@@ -157,7 +171,7 @@ export class MalloyToAST
     );
   }
 
-  protected getSegments(segments: parse.PipeElementContext[]): ast.QueryDesc[] {
+  protected getSegments(segments: parse.PipeElementContext[]): ast.QOPDesc[] {
     return segments.map((cx) =>
       this.visitQueryProperties(cx.queryProperties())
     );
@@ -360,7 +374,7 @@ export class MalloyToAST
     );
   }
 
-  visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QueryDesc {
+  visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOPDesc {
     const qProps = pcx
       .queryStatement()
       .map((qcx) => this.astAt(this.visit(qcx), qcx))
@@ -375,7 +389,7 @@ export class MalloyToAST
     if (fcx) {
       qProps.push(this.getFilterShortcut(fcx));
     }
-    return new ast.QueryDesc(qProps);
+    return new ast.QOPDesc(qProps);
   }
 
   visitFieldPath(pcx: parse.FieldPathContext): ast.FieldName {
@@ -578,7 +592,7 @@ export class MalloyToAST
   visitTopLevelQueryDef(pcx: parse.TopLevelQueryDefContext): ast.DefineQuery {
     const queryName = this.getIdText(pcx.queryName());
     const queryDef = this.visit(pcx.query());
-    if (ast.canBeQuery(queryDef)) {
+    if (ast.isQueryElement(queryDef)) {
       return this.astAt(new ast.DefineQuery(queryName, queryDef), pcx);
     }
     throw this.internalError(

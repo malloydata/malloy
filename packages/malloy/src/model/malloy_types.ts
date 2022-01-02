@@ -331,7 +331,7 @@ export interface Query extends Pipeline, Filtered {
   structRef: StructRef;
 }
 
-export type NamedQuery = Query & AliasedName;
+export type NamedQuery = Query & NamedObject;
 
 export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
 
@@ -463,13 +463,13 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedMalloyObject = StructDef | Query;
+export type NamedModelObject = StructDef | NamedQuery;
 
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
   exports: string[];
-  structs: Record<string, NamedMalloyObject>;
+  structs: Record<string, NamedModelObject>;
 }
 
 /** Very common record type */

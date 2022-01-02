@@ -22,7 +22,7 @@ import {
   StructDef,
   Query,
   AtomicFieldType,
-  NamedMalloyObject,
+  NamedModelObject,
   ModelDef,
 } from "../model/malloy_types";
 import { Malloy } from "../malloy";
@@ -255,7 +255,7 @@ export class TestTranslator extends MalloyTranslator {
     }
   }
 
-  get nameSpace(): Record<string, NamedMalloyObject> {
+  get nameSpace(): Record<string, NamedModelObject> {
     const gotModel = this.translate();
     return gotModel?.translated?.modelDef.structs || {};
   }
