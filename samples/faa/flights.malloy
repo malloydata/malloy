@@ -1,30 +1,29 @@
 --! styles flights.styles.json
 
-export define airports is (explore 'malloy-data.faa.airports'
+import "flights_base_bigquery.malloy";
+-- import "flights_base_postgres.malloy";
+
+export define airports is (explore airports_base
   primary key code
   name is concat(code, ' - ', full_name)
   airport_count is count()
 );
 
-define carriers is (explore 'malloy-data.faa.carriers'
+define carriers is (explore carriers_base
   primary key code
   carrier_count is count()
 );
 
-export define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
+export define aircraft_models is (explore aircraft_models_base
   primary key aircraft_model_code
   aircraft_model_count is count()
 );
 
-export define aircraft is (explore 'malloy-data.faa.aircraft'
+export define aircraft is (explore aircraft_base
   primary key tail_num
   aircraft_count is count()
   -- joins
   aircraft_models is join on aircraft_model_code
-);
-
-export define flights_base is (explore 'malloy-data.faa.flights'
-  primary key id2
 );
 
 define aircraft_facts is (explore
@@ -76,7 +75,7 @@ export define flights is (explore flights_base
   year_over_year is (reduce
     dep_month is month(dep_time)
     flight_count
-    dep_year is dep_time.year
+    dep_year is year(dep_time) -- dep_time.year
   )
 
   -- shows plane manufacturers and frequency of use
@@ -93,7 +92,7 @@ export define flights is (explore flights_base
   )
 
   carriers_by_month is (reduce
-    dep_month is dep_time.month
+    dep_month is month(dep_time) -- dep_time.month
     flight_count
     carriers.nickname
   )
@@ -115,7 +114,7 @@ export define flights is (explore flights_base
   )
 
   destinations_by_month is (reduce
-    dep_time.`month`
+    dep_month is month(dep_time) -- dep_time.`month`
     flight_count
     destination.name
   )
@@ -144,7 +143,7 @@ export define flights is (explore flights_base
     flight_count
     by_manufacturer
     by_month is (reduce
-      dep_month is dep_time.month
+      dep_month is month(dep_time) --  dep_time.month
       flight_count
     )
     hubs is (reduce : [destination.airport_count > 1] top 10
