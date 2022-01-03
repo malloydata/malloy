@@ -32,7 +32,6 @@ import {
   ExprFieldDecl,
   ExpressionDef,
 } from "./index";
-import {GetModelsCallback} from "@google-cloud/bigquery";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -51,15 +50,11 @@ class ErrorFactory {
     return ret;
   }
 
-  static query(): model.Query {
+  static get query(): model.Query {
     return {
-      structRef: "undefined_query",
+      structRef: ErrorFactory.structDef,
       pipeline: [],
     };
-  }
-
-  static pipeline(): model.Pipeline {
-    return { pipeline: [] };
   }
 }
 
@@ -1208,11 +1203,11 @@ export class PipelineDesc extends MalloyElement {
     const seedQuery = queryEntry?.entry;
     if (!seedQuery) {
       this.log(`Reference to undefined query '${this.headName}'`);
-      return ErrorFactory.query();
+      return ErrorFactory.query;
     }
     if (seedQuery.type !== "query") {
       this.log(`Illegal eference to '${this.headName}', query expected`);
-      return ErrorFactory.query();
+      return ErrorFactory.query;
     }
     if (this.qops.length == 0 && !this.headRefinement) {
       return { ...seedQuery };
@@ -1430,17 +1425,6 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         this.log(`import failed with status: '${src.status}'`);
       }
     }
-  }
-}
-
-export class DocumentQuery extends MalloyElement implements DocStatement {
-  elementType = "document query";
-  constructor(readonly explore: Explore, readonly index: number) {
-    super({ explore });
-  }
-
-  execute(doc: Document): void {
-    doc.queryList[this.index] = this.explore.query();
   }
 }
 
