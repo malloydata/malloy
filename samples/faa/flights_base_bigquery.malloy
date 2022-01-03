@@ -1,6 +1,5 @@
-export define airports_base is (explore 'malloytest.airports');
-export define carriers_base is (explore 'malloytest.carriers');
-export define aircraft_base is (explore 'malloytest.aircraft');
-export define aircraft_models_base is (explore 'malloytest.aircraft_models');
-export define flights_base is (explore 'malloytest.flights');
-
+export define airports_base is (explore 'malloy-data.malloytest.airports');
+export define carriers_base is (explore 'malloy-data.malloytest.carriers');
+export define aircraft_base is (explore 'malloy-data.malloytest.aircraft');
+export define aircraft_models_base is (explore 'malloy-data.malloytest.aircraft_models');
+export define flights_base is (explore 'malloy-data.malloytest.flights');

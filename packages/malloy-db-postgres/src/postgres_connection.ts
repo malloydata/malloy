@@ -26,6 +26,7 @@ import { parseTableURL } from "@malloy-lang/malloy/src/malloy";
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "character varying": "string",
   name: "string",
+  text: "string",
   integer: "number",
   bigint: "number",
   "double precision": "number",
