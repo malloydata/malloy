@@ -47,7 +47,15 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         command: {
           title: "Run",
           command: "malloy.runNamedQuery",
-          arguments: [symbol.name],
+          arguments: [symbol.name, "json"],
+        },
+      });
+      lenses.push({
+        range: symbol.range.toJSON(),
+        command: {
+          title: "Render",
+          command: "malloy.runNamedQuery",
+          arguments: [symbol.name, "html"],
         },
       });
     } else if (symbol.type === "unnamed_query") {
@@ -104,17 +112,29 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
               arguments: [
                 `explore ${exploreName} | ${turtleName}`,
                 `${exploreName} | ${turtleName}`,
+                "json",
               ],
             },
           });
           lenses.push({
             range: child.range.toJSON(),
             command: {
-              title: "Edit and Run",
-              command: "malloy.runQueryWithEdit",
-              arguments: [exploreName, turtleName],
+              title: "Render",
+              command: "malloy.runQuery",
+              arguments: [
+                `explore ${exploreName} | ${turtleName}`,
+                `${exploreName} | ${turtleName}`,
+              ],
             },
           });
+          // lenses.push({
+          //   range: child.range.toJSON(),
+          //   command: {
+          //     title: "Run With Filters",
+          //     command: "malloy.runQueryWithEdit",
+          //     arguments: [exploreName, turtleName],
+          //   },
+          // });
         }
       });
     }

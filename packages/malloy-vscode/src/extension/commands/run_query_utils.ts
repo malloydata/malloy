@@ -15,7 +15,7 @@ import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
-import { DataStyles, HTMLView } from "@malloy-lang/render";
+import { DataStyles, HTMLView, JSONView } from "@malloy-lang/render";
 import { loadingIndicator, renderErrorHTML, wrapHTMLSnippet } from "../html";
 import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
@@ -111,10 +111,13 @@ class HackyDataStylesAccumulator implements URLReader {
   }
 }
 
+export type RunRenderStyle = "html" | "json";
+
 export function runMalloyQuery(
   query: QuerySpec,
   panelId: string,
-  name: string
+  name: string,
+  renderStyle: RunRenderStyle = "html"
 ): void {
   vscode.window.withProgress(
     {
@@ -263,10 +266,16 @@ export function runMalloyQuery(
               const resultExplore = queryResult.resultExplore;
 
               if (resultExplore) {
-                // TODO replace the DataTree with DataArray
-                current.panel.webview.html = wrapHTMLSnippet(
-                  css + (await new HTMLView().render(data, styles))
-                );
+                if (renderStyle === "html") {
+                  // TODO replace the DataTree with DataArray
+                  current.panel.webview.html = wrapHTMLSnippet(
+                    css + (await new HTMLView().render(data, styles))
+                  );
+                } else if (renderStyle === "json") {
+                  current.panel.webview.html = wrapHTMLSnippet(
+                    css + (await new JSONView().render(data))
+                  );
+                }
 
                 const renderEnd = performance.now();
                 logTime("Render", renderBegin, renderEnd);

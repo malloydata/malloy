@@ -62,6 +62,21 @@ export class HTMLView {
   }
 }
 
+export class JSONView {
+  async render(table: DataArray): Promise<string> {
+    const renderer = new HTMLJSONRenderer();
+    try {
+      return await renderer.render(table);
+    } catch (error) {
+      if (error instanceof Error) {
+        return error.toString();
+      } else {
+        return "Internal error - Exception not an Error object.";
+      }
+    }
+  }
+}
+
 function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
   let renderer = dataStyles[field.name];
   if (!renderer) {
