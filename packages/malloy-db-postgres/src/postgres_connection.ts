@@ -27,6 +27,9 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "character varying": "string",
   name: "string",
   integer: "number",
+  bigint: "number",
+  "double precision": "number",
+  "timestamp without time zone": "timestamp", // maybe not right
 };
 
 export class PostgresConnection extends Connection {
@@ -107,12 +110,15 @@ export class PostgresConnection extends Connection {
       false
     );
     for (const row of result.rows) {
-      const malloyType = postgresToMalloyTypes[row["data_type"] as string];
+      const postgresDataType = row["data_type"] as string;
+      const malloyType = postgresToMalloyTypes[postgresDataType];
       if (malloyType !== undefined) {
         structDef.fields.push({
           type: malloyType,
           name: row["column_name"] as string,
         });
+      } else {
+        console.log(`unknown postgres type ${postgresDataType}`);
       }
     }
     return structDef;
