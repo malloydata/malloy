@@ -174,7 +174,7 @@ export abstract class MalloyTranslation {
     this.modelDef = {
       name: sourceURL,
       exports: [],
-      structs: {},
+      contents: {},
     };
   }
 
@@ -422,7 +422,7 @@ export abstract class MalloyTranslation {
       child.translate();
       const exports: NamedStructDefs = {};
       for (const fromChild of child.modelDef.exports) {
-        const modelEntry = child.modelDef.structs[fromChild];
+        const modelEntry = child.modelDef.contents[fromChild];
         if (modelEntry.type === "struct") {
           exports[fromChild] = modelEntry;
         }

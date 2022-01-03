@@ -469,7 +469,7 @@ export type NamedModelObject = StructDef | NamedQuery;
 export interface ModelDef {
   name: string;
   exports: string[];
-  structs: Record<string, NamedModelObject>;
+  contents: Record<string, NamedModelObject>;
 }
 
 /** Very common record type */

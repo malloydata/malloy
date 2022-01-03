@@ -959,8 +959,8 @@ export class Document extends MalloyElement implements NameSpace {
     this.documentModel = {};
     this.queryList = [];
     if (extendingModelDef) {
-      for (const inName in extendingModelDef.structs) {
-        const struct = extendingModelDef.structs[inName];
+      for (const inName in extendingModelDef.contents) {
+        const struct = extendingModelDef.contents[inName];
         if (struct.type == "struct") {
           const exported = extendingModelDef.exports.includes(inName);
           this.setEntry(inName, { entry: struct, exported });
@@ -970,12 +970,12 @@ export class Document extends MalloyElement implements NameSpace {
     for (const stmt of this.statements) {
       stmt.execute(this);
     }
-    const def: model.ModelDef = { name: "", exports: [], structs: {} };
+    const def: model.ModelDef = { name: "", exports: [], contents: {} };
     for (const entry in this.documentModel) {
       if (this.documentModel[entry].exported) {
         def.exports.push(entry);
       }
-      def.structs[entry] = cloneDeep(this.documentModel[entry].entry);
+      def.contents[entry] = cloneDeep(this.documentModel[entry].entry);
     }
     return def;
   }
@@ -1134,6 +1134,41 @@ export class PipelineDesc extends MalloyElement {
     }
   }
 
+  protected refineFirstOp(fs: FieldSpace, modelOps: model.PipeSegment[]): model.PipeSegment[] {
+    if (!this.headRefinement) {
+      return modelOps;
+    }
+    const firstSeg = modelOps[0];
+    if (firstSeg.type === "index") {
+      // TODO delete index segments from the world, and then this error
+      throw new Error("Index segments no longer supported");
+    }
+    this.headRefinement.refineFrom(firstSeg);
+    return [ this.headRefinement.getOp(fs).segment, ...modelOps.slice(1) ];
+  }
+
+  protected importTurtle(
+    turtleName: string,
+    fromStruct: model.StructDef
+  ): model.PipeSegment[] {
+    const turtle = getStructFieldDef(fromStruct, turtleName);
+    if (!turtle) {
+      this.log(`Reference to undefined explore query '${turtleName}'`);
+    } else if (turtle.type !== "turtle") {
+      this.log(`'${turtleName}' is not a query`);
+    } else {
+      return turtle.pipeline;
+    }
+    return [];
+  }
+
+  protected pipeOut(walkStruct: model.StructDef, pipeline: model.PipeSegment[]): model.StructDef {
+    for (const modelQop of pipeline) {
+      walkStruct = ModelQuerySegment.nextStructDef(walkStruct, modelQop);
+    }
+    return walkStruct;
+  }
+
   getPipelineForExplore(explore: Mallobj): model.Pipeline {
     if (this.headName) {
       throw this.internalError("Turtles cannot have named heads");
@@ -1148,7 +1183,6 @@ export class PipelineDesc extends MalloyElement {
     return modelPipe;
   }
 
-  // TODO merge queryFromQuery and queryFromExplore ...
   getQueryFromQuery(): model.Query {
     if (!this.headName) {
       throw this.internalError("can't make query from nameless query");
@@ -1162,37 +1196,28 @@ export class PipelineDesc extends MalloyElement {
     } else {
       const result = { ...seedQuery };
       const explore = new QueryHeadStruct(result.structRef);
-      const exploreFs = new FieldSpace(explore.structDef());
+      const exploreStruct = explore.structDef();
+      const exploreFs = new FieldSpace(exploreStruct);
+      /*
+
+      TODO ok this is wrong but i am tired
+
+      as in QFE if the seedQuery starts with a pipeHead, we need to pull
+      it and walk it in all cases in order to get the shapes right
+
+      */
       if (this.headRefinement) {
-        /*
-
-          OK this where I stop on 12/31 ... the query head might be
-          "exploreName -> turtleName" in which case I need to
-          first copy the entire turtle into the pipeline and
-          modify the first segment, which I already have code for
-          below in queryFromExplore, and so now is the time to
-          rationalize these two functions ... maybe, kind
-          of want to write getPipelineForExplore() first though
-          just to know for sure enough that I don't miss
-          something
-
-        */
-        // rewrite existing pipe with refined first segment
-        const firstSeg = result.pipeline[0];
-        if (firstSeg.type === "index") {
-          throw this.internalError("INDEX segment unexpected");
+        if (seedQuery.pipeHead) {
+          const turtlePipe = this.importTurtle(
+            seedQuery.pipeHead.name,
+            exploreStruct
+          );
+          delete result.pipeHead;
+          result.pipeline = [...turtlePipe, ...result.pipeline];
         }
-        this.headRefinement.refineFrom(firstSeg);
-        const newSeg = this.headRefinement.getOp(exploreFs);
-        const refinedPipe = [newSeg.segment, ...result.pipeline.slice(1)];
-        result.pipeline = refinedPipe;
+        result.pipeline = this.refineFirstOp(exploreFs, result.pipeline);
       }
-      // Now walk the existing pipeline so we have the correct
-      // inputspace for the new pipeline segments
-      let walkStruct = explore.structDef();
-      for (const modelQop of seedQuery.pipeline) {
-        walkStruct = ModelQuerySegment.nextStructDef(walkStruct, modelQop);
-      }
+      const walkStruct = this.pipeOut(explore.structDef(), result.pipeline);
       this.appendOps(result.pipeline, new FieldSpace(walkStruct));
       return result;
     }
@@ -1200,50 +1225,67 @@ export class PipelineDesc extends MalloyElement {
   }
 
   getQueryFromExplore(explore: Mallobj): model.Query {
-    const type = "query";
     const structRef = explore.structRef();
+    const destQuery: model.Query = {
+      type: "query",
+      structRef,
+      pipeline: [],
+    };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
       : explore.structDef();
-    const pipeline: model.PipeSegment[] = [];
     let pipeFs = new FieldSpace(structDef);
+
     if (this.headName) {
-      const turtle = getStructFieldDef(structDef, this.headName);
-      if (!turtle) {
-        this.log(`Reference to undefined explore query '${this.headName}'`);
-      } else if (turtle.type !== "turtle") {
-        this.log(`'${this.headName}' is not a query`);
-      } else {
-        // Copy the full turtle pipeline ...
+      const turtlePipe = this.importTurtle(this.headName, structDef);
+      if (this.headRefinement) {
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment
-        pipeline.push(...turtle.pipeline);
-
-        // Refine the first segment if needed
-        const firstSeg = pipeline[0];
-        if (this.headRefinement && firstSeg) {
-          if (firstSeg.type === "index") {
-            // TODO delete index segments from the world, and then this error
-            throw new Error("Index segments no longer supported");
-          }
-          this.headRefinement.refineFrom(firstSeg);
-          // TODO push refinement filters into the query .. question mark?
-          const newHead = this.headRefinement.getOp(pipeFs);
-          pipeline[0] = newHead.segment;
-        }
-
-        // Now, walk the pipeline so we know the shape at the end ...
-        let pipeStruct = structDef;
-        for (const querySeg of pipeline) {
-          pipeStruct = ModelQuerySegment.nextStructDef(pipeStruct, querySeg);
-        }
+        // TODO there was mention of promoting filters to the query
+        destQuery.pipeline = this.refineFirstOp(pipeFs, turtlePipe);
+        const pipeStruct = this.pipeOut(structDef, destQuery.pipeline);
+        pipeFs = new FieldSpace(pipeStruct);
+      } else {
+        destQuery.pipeHead = { name: this.headName };
+        const pipeStruct = this.pipeOut(structDef, turtlePipe);
         pipeFs = new FieldSpace(pipeStruct);
       }
     }
-    this.appendOps(pipeline, pipeFs);
-    return { type, structRef, pipeline };
+    this.appendOps(destQuery.pipeline, pipeFs);
+    return destQuery;
   }
 }
+
+/*
+
+  qfq:
+
+    copy srcQuery to destQuery
+
+    refinement:
+      srcQuery.pipeHead:
+        look up name in srcQuery.structRef
+        prepend turtle segments to dest query pipeline
+        delete destQuery.pipeHead
+      refineFirstOp
+
+      walk to end of destQuery
+      append to query
+
+    qfe:
+
+      turtleRef:
+        look up name in srcQuery.structRef
+        refinement:
+          copy turtle pipeline to destQuery
+          refineFirstOp
+        no refinement:
+          copy turtle name to destQuery.pipeHead
+      append to query
+
+
+
+*/
 
 /**
  * A FullQuery is something which starts at an explorable, and then
