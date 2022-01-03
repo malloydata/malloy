@@ -213,14 +213,14 @@ export const aircraftHandStructDef: StructDef = {
 const handCodedModel: ModelDef = {
   name: "Hand Coded Models",
   exports: ["aircraft"],
-  structs: { aircraft: aircraftHandStructDef },
+  contents: { aircraft: aircraftHandStructDef },
 };
 
 /** Flight model */
 export const exprHandModelDef: ModelDef = {
   name: "Hand Coded Expressions",
   exports: ["aircraft"],
-  structs: { aircraft: aircraftHandStructDef },
+  contents: { aircraft: aircraftHandStructDef },
 };
 
 describe("expression tests", () => {

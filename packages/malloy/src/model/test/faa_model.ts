@@ -857,7 +857,7 @@ export const testModel: ModelDef = {
     "medicare_state_facts",
     // "aircraft",
   ],
-  structs: {
+  contents: {
     flights: FLIGHTS_EXPLORE,
     table_airports: tableAirports,
     medicare_test: medicareModel,

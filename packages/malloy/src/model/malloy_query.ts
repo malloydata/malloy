@@ -2892,7 +2892,7 @@ export class QueryModel {
 
   loadModelFromDef(modelDef: ModelDef): void {
     this.modelDef = modelDef;
-    for (const s of Object.values(this.modelDef.structs)) {
+    for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (s.type === "struct") {
         qs = new QueryStruct(s, { model: this });
@@ -3024,12 +3024,12 @@ export class QueryModel {
 
       let modelsBefore = 0;
       if (this.modelDef) {
-        modelsBefore = Object.keys(this.modelDef?.structs).length;
+        modelsBefore = Object.keys(this.modelDef?.contents).length;
       }
 
       const getQuery = parse.translate(this.modelDef);
       if (getQuery.translated) {
-        const newStructs = getQuery.translated.modelDef.structs;
+        const newStructs = getQuery.translated.modelDef.contents;
         if (Object.keys(newStructs).length > modelsBefore) {
           newModel = new QueryModel({
             ...getQuery.translated.modelDef,

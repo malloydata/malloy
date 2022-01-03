@@ -23,7 +23,7 @@ import { FLIGHTS_EXPLORE } from "./test/faa_model";
 
 test("simple pipeline", async () => {
   const parse = new TestTranslator("flights | flights_by_carrier");
-  parse.internalModel.structs.flights = FLIGHTS_EXPLORE;
+  parse.internalModel.contents.flights = FLIGHTS_EXPLORE;
   expect(parse).toBeValidMalloy();
   const anyMissing = parse.unresolved();
   if (anyMissing?.tables) {

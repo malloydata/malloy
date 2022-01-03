@@ -181,7 +181,7 @@ class TestRoot extends MalloyElement implements NameSpace {
   }
 
   getEntry(name: string): ModelEntry | undefined {
-    const struct = this.modelDef.structs[name];
+    const struct = this.modelDef.contents[name];
     if (struct.type == "struct") {
       const exported = this.modelDef.exports.includes(name);
       return { entry: struct, exported };
@@ -199,7 +199,7 @@ export class TestTranslator extends MalloyTranslator {
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
-    structs: {
+    contents: {
       a: { ...aTableDef, primaryKey: "astring", as: "a" },
       b: { ...aTableDef, primaryKey: "astring", as: "b" },
     },
@@ -257,7 +257,7 @@ export class TestTranslator extends MalloyTranslator {
 
   get nameSpace(): Record<string, NamedModelObject> {
     const gotModel = this.translate();
-    return gotModel?.translated?.modelDef.structs || {};
+    return gotModel?.translated?.modelDef.contents || {};
   }
 
   exploreFor(exploreName: string): StructDef {
