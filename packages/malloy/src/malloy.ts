@@ -849,18 +849,6 @@ abstract class Entity {
     return this instanceof QueryField;
   }
 
-  isMeasureLike(): boolean {
-    return (
-      this.hasParentExplore() && (!this.isAtomicField() || this.isAggregate())
-    );
-  }
-
-  isDimensional(): boolean {
-    return (
-      this.hasParentExplore() && this.isAtomicField() && !this.isAggregate()
-    );
-  }
-
   public abstract isIntrinsic(): boolean;
 }
 
@@ -1093,16 +1081,19 @@ export class AtomicField extends Entity {
     return this.fieldTypeDef.resultMetadata?.fieldKind === "measure";
   }
 
+  public sourceWasMeasureLike(): boolean {
+    return (
+      this.fieldTypeDef.resultMetadata?.fieldKind === "measure" ||
+      this.fieldTypeDef.resultMetadata?.fieldKind === "struct"
+    );
+  }
+
+  public sourceWasDimension(): boolean {
+    return this.fieldTypeDef.resultMetadata?.fieldKind === "dimension";
+  }
+
   public hasParentExplore(): this is Field {
     return true;
-  }
-
-  public isDimensional(): boolean {
-    return true;
-  }
-
-  public isMeasurelike(): false {
-    return false;
   }
 
   public isString(): this is StringField {
@@ -1291,14 +1282,6 @@ export class QueryField extends Query {
 
   public isAtomicField(): this is AtomicField {
     return false;
-  }
-
-  public isDimensional(): false {
-    return false;
-  }
-
-  public isMeasurelike(): true {
-    return true;
   }
 
   public get sourceClasses(): string[] {
