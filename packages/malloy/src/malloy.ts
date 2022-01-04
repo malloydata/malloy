@@ -1088,6 +1088,11 @@ export class AtomicField extends Entity {
     return sourceField ? [sourceField] : [];
   }
 
+  // was the field generated from a measure in the previous query
+  public sourceWasMeasure(): boolean {
+    return this.fieldTypeDef.resultMetadata?.fieldKind === "measure";
+  }
+
   public hasParentExplore(): this is Field {
     return true;
   }
