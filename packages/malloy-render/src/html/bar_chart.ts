@@ -57,9 +57,9 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
       return "Invalid type for first field of a bar_chart";
     }
     specName += "M";
-    if (fields.length >= 3) {
+    if (fields.length >= 3 && fields[2].isAtomicField()) {
       const field = fields[2];
-      if (field.isMeasureLike()) {
+      if (field.sourceWasMeasure() && field.isNumber()) {
         specName += "M";
       } else if (isOrdninal(field)) {
         specName += "S";
