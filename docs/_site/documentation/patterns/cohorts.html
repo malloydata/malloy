@@ -39,7 +39,7 @@
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/basic.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basics
+              Malloy Quickstart
             </a>
           </div>
 <div class='sidebar-item '>
@@ -49,9 +49,27 @@
             </a>
           </div>
 <div class='sidebar-item '>
+            <a href="/malloy/documentation/language/explore.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Explores
+            </a>
+          </div>
+<div class='sidebar-item '>
             <a href="/malloy/documentation/language/query.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/fields.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Fields
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/types.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Types
             </a>
           </div>
 <div class='sidebar-item '>
@@ -67,12 +85,6 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explore Definition
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/join.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Joins
@@ -85,33 +97,21 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filter_expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filter Syntax
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/time-ranges.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Time Ranges
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nesting
+              Nested Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/aggregates.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Aggregates
             </a>
           </div>
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/imports.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Imports and Exports
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/apply.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Apply Operator
             </a>
           </div>
       </div>
@@ -296,7 +296,104 @@ Texas makes up 18% of the total population of Billies.</p>
 <span class="token operator">|</span> <span class="token keyword">project</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">3</span> <span class="token keyword">desc</span>
   main_query<span class="token punctuation">.</span>state
   main_query<span class="token punctuation">.</span>total_population
-  state_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100.0</span></pre><div class="error">Error: Error: Not found: Job malloy-data:US.e9ab8f9e-5fa0-40ca-a1a1-4ff2a0d5ff31</div><p>We could run this same query, but instead look by decade to see when the Billies where born.
+  state_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100.0</span></pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">state_&#8203;as_&#8203;percent_&#8203;of_&#8203;population</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23,052</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18.644</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OK</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,409</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6.801</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,368</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.959</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,416</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.189</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AR</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,902</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.773</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,726</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.631</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,230</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.23</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,986</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.033</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,830</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.906</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,360</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.526</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OH</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,344</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.513</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,830</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.098</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,598</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.91</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,411</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.759</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,926</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.367</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WV</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,863</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.316</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,605</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.107</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,467</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.995</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MI</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,340</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.893</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,192</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.773</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>We could run this same query, but instead look by decade to see when the Billies where born.
 Using the query below we can see that 26% of all Billies were born in the 1930s.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span>name: <span class="token string">'Billie'</span><span class="token punctuation">]</span>
@@ -309,9 +406,9 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
   main_query<span class="token punctuation">.</span>decade
   main_query<span class="token punctuation">.</span>total_population
   decade_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100.0</span></pre><div class="result-outer small">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">decade</th>
@@ -367,9 +464,9 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 
 		</tbody>
 	</table>
-        </div>
       </div>
     </div>
+  </div>
       <h2>
         <a id="names-as-cohorts" class="header-link anchor" href="#names-as-cohorts">
           Names as Cohorts
@@ -390,9 +487,9 @@ to measure a little differently.  Instead of looking at a percentage, let's look
   main_query<span class="token punctuation">.</span>name
   main_query<span class="token punctuation">.</span>total_population
   births_per_100k <span class="token keyword">is</span> FLOOR<span class="token punctuation">(</span>main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100000.0</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
@@ -484,9 +581,9 @@ to measure a little differently.  Instead of looking at a percentage, let's look
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div><p>MORE TO COME</p>
+    </div>
+  </div><p>MORE TO COME</p>
 <p>First we calculate populations of cohorts (decade, state, gender) and then for
 every name in that cohort, we compute the population.</p>
 <p>Seconds, we group by arbitrary cohorts and compute the births per 100K for some arbitrary names.</p>
@@ -510,9 +607,9 @@ every name in that cohort, we compute the population.</p>
     population <span class="token keyword">is</span> by_name<span class="token punctuation">.</span>population<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     births_per_100k <span class="token keyword">is</span> FLOOR<span class="token punctuation">(</span>by_name<span class="token punctuation">.</span>population<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">/</span>cohort_population<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">*</span><span class="token number">100000</span><span class="token punctuation">)</span>
   <span class="token punctuation">)</span></pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
@@ -1021,9 +1118,9 @@ every name in that cohort, we compute the population.</p>
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div></div>
+    </div>
+  </div></div>
           </div>
         </div>
       </div>

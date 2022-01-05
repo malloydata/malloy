@@ -10,125 +10,634 @@ footer: /generated/footers/language/expressions.html
           Expressions
         </a>
       </h1>
-    <p>Expressions in Malloy are much like expressions in any other computer
-language; they can have variables and operators and function calls in
-the same syntax users are familiar with.</p>
-<p>To support the task of data transformation and constructing a data model,
-Malloy expressions provide the below syntax:</p>
+    <p>Expressions in Malloy are much like expressions in any other language; they can have variables and operators and function calls in
+the same syntax users are familiar with. However, Malloy also introduces several other kinds of expressions useful for the task of data analysis and transformation.</p>
 <table>
 <thead>
 <tr>
-<th>Syntax</th>
-
-<th>Example(s)</th>
-
 <th>Section</th>
+
+<th>Examples</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><em>expr</em> <code class="language-malloy">:</code> <code class="language-malloy"><span class="token punctuation">[</span></code> <em>filterList</em> <code class="language-malloy"><span class="token punctuation">]</span></code></td>
+<td><a href="#identifiers">Identifiers</a><br/>Fields referenced by name</td>
 
-<td><code class="language-malloy"><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>state:<span class="token string">'ca'</span><span class="token punctuation">]</span></code></td>
-
-<td><a href="filters.html">Filtered</a> Sub Expression</td>
+<td><code class="language-malloy">origin<span class="token punctuation">.</span>city</code><br/><code class="language-malloy"><span class="token identifier">`year`</span></code></td>
 </tr>
 
 <tr>
-<td><em>expr</em> <code class="language-malloy">::</code> <em>type</em></td>
+<td><a href="#mathematical-operators">Mathematical operations</a></td>
 
-<td><code class="language-malloy">table<span class="token punctuation">.</span>col::<span class="token type">string</span></code></td>
-
-<td>Safe Type Cast</td>
+<td><code class="language-malloy">x <span class="token operator">*</span> <span class="token number">100</span></code><br/><code class="language-malloy"><span class="token operator">-</span>cost</code><br/><code class="language-malloy"><span class="token punctuation">(</span>a <span class="token operator">+</span> b<span class="token punctuation">)</span> <span class="token operator">/</span> c</code></td>
 </tr>
 
 <tr>
-<td><em>expr</em> <code class="language-malloy"><span class="token keyword">to</span></code> <em>expr</em></td>
+<td><a href="#comparison-operators">Comparison operators</a></td>
 
-<td><code class="language-malloy"><span class="token number">1</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
-
-<td>Range</td>
+<td><code class="language-malloy">x <span class="token operator">></span> <span class="token number">200</span></code><br/><code class="language-malloy">state <span class="token operator">!=</span> <span class="token keyword">null</span></code></td>
 </tr>
 
 <tr>
-<td><em>timeExpr</em> <code class="language-malloy"><span class="token keyword">for</span></code> <em>nExpr</em> <em>timeframe</em></td>
+<td><a href="#boolean-operators">Boolean operators</a><br/>Logically combine booleans</td>
 
-<td><code class="language-malloy">event<span class="token punctuation">.</span>startAt <span class="token keyword">for</span> <span class="token number">3</span> <span class="token timeframe">hours</span></code></td>
-
-<td><a href="time-ranges.html">Duration Time Ranges</a></td>
+<td><code class="language-malloy">height <span class="token operator">></span> <span class="token number">10</span> <span class="token keyword">and</span> height <span class="token operator">&lt;</span> <span class="token number">100</span></code><br/><code class="language-malloy">is_cancelled <span class="token keyword">or</span> is_delayed</code></br><code class="language-malloy"><span class="token keyword">not</span> is_commercial_flight</code></td>
 </tr>
 
 <tr>
-<td><em>compareOperator</em> <em>expr</em></td>
+<td><a href="#sql-functions">SQL functions</a></td>
 
-<td><code class="language-malloy"><span class="token operator">></span> <span class="token number">42</span></code></td>
-
-<td>Partial Comparison</td>
+<td><code class="language-malloy">floor<span class="token punctuation">(</span><span class="token number">10.35</span><span class="token punctuation">)</span></code><br/><code class="language-malloy">concat<span class="token punctuation">(</span>first_name<span class="token punctuation">,</span> <span class="token string">' '</span><span class="token punctuation">,</span> last_name<span class="token punctuation">)</span></code><br/><code class="language-malloy">sqrt<span class="token punctuation">(</span>x<span class="token punctuation">)</span></code></td>
 </tr>
 
 <tr>
-<td><em>exprOrPartial</em>  <code class="language-malloy"><span class="token operator">&amp;</span></code> <em>exprOrPartial</em></td>
+<td><a href="#aggregation">Aggregation</a></td>
 
-<td><code class="language-malloy"><span class="token punctuation">(</span><span class="token operator">></span><span class="token number">5</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span><span class="token number">10</span><span class="token punctuation">)</span></code>, <code class="language-malloy"><span class="token punctuation">(</span><span class="token string">'red'</span> <span class="token operator">&amp;</span> <span class="token string">'blue'</span><span class="token punctuation">)</span></code></td>
-
-<td>Alternation</td>
+<td><code class="language-malloy"><span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span></code> <br/> <code class="language-malloy">aircraft<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> <br/> <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code></td>
 </tr>
 
 <tr>
-<td><em>exprOrPartial</em>  <code class="language-malloy"><span class="token operator">|</span></code> <em>exprOrPartial</em></td>
+<td><a href="#filtered-expressions">Filtered expressions</a></td>
 
-<td><code class="language-malloy"><span class="token punctuation">(</span><span class="token operator">></span><span class="token number">5</span> <span class="token operator">|</span> <span class="token operator">&lt;</span><span class="token number">10</span><span class="token punctuation">)</span></code>, <code class="language-malloy"><span class="token punctuation">(</span><span class="token string">'red'</span> <span class="token operator">|</span> <span class="token string">'blue'</span><span class="token punctuation">)</span></code></td>
-
-<td>Alternation</td>
+<td><code class="language-malloy"><span class="token function">avg</span><span class="token punctuation">(</span>age<span class="token punctuation">)</span> : <span class="token punctuation">[</span>state: <span class="token string">'CA'</span><span class="token punctuation">]</span></code><br/><code class="language-malloy">flight_count : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>county <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">]</span></code></td>
 </tr>
 
 <tr>
-<td><em>expr</em> <code class="language-malloy">:</code> <em>exprOrPartial</em></td>
+<td><a href="#safe-type-cast">Safe type cast</a></td>
 
-<td><code class="language-malloy">weight: <span class="token operator">></span><span class="token number">100</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">1000</span></code></td>
-
-<td><a href="apply.html">Apply</a></td>
+<td><code class="language-malloy">total_distance::<span class="token type">string</span></code><br/><code class="language-malloy">some_date::<span class="token type">timestamp</span></code></td>
 </tr>
 
 <tr>
-<td><em>fieldName.aggregate()</em></td>
+<td><a href="#pick-expressions">Pick expressions</a><br/>Malloy's take on <code>CASE</code> statements</td>
 
-<td><code class="language-malloy">aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code></td>
-
-<td>Asymmetric Aggregation</td>
+<td><code class="language-malloy"><span class="token keyword">pick</span> <span class="token string">'S'</span> <span class="token keyword">when</span> size <span class="token operator">&lt;</span> <span class="token number">3</span> <span class="token keyword">else</span> <span class="token string">'L'</span></code><br/><code class="language-malloy">kind: <span class="token keyword">pick</span> <span class="token string">'other'</span> <span class="token keyword">when</span> <span class="token keyword">null</span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token keyword">pick</span></code> <em>expr</em> <code class="language-malloy"><span class="token keyword">when</span></code> <em>exprOrPartial</em> <br>...<br><code class="language-malloy"><span class="token keyword">else</span></code> <em>expr</em> <em>(optional</em>)</td>
+<td><a href="#time-ranges">Time ranges</a><br/>Ranges with start and end or duration</td>
 
-<td><code class="language-malloy"><span class="token keyword">pick</span> <span class="token string">'small'</span> <span class="token keyword">when</span> size <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">`</span><span class="token operator">&lt;</span>br<span class="token operator">></span><span class="token punctuation">`</span><span class="token keyword">pick</span> <span class="token string">'medium'</span> <span class="token keyword">when</span> size <span class="token operator">&lt;</span> <span class="token number">20</span><span class="token punctuation">`</span><span class="token operator">&lt;</span>br<span class="token operator">></span><span class="token punctuation">`</span><span class="token keyword">else</span> <span class="token string">'large'</span></code> <br> OR <br><code class="language-malloy">size:</code> <br> <code class="language-malloy">  <span class="token keyword">pick</span> <span class="token string">'small'</span> <span class="token keyword">when</span> <span class="token operator">&lt;</span> <span class="token number">10</span></code><br><code class="language-malloy">    <span class="token keyword">pick</span> <span class="token string">'medium'</span> <span class="token keyword">when</span> <span class="token operator">&lt;</span> <span class="token number">20</span></code><br><code class="language-malloy">    <span class="token keyword">else</span> <span class="token string">'large'</span></code></td>
-
-<td><a href="pick-expressions.html">Pick Expressions</a></td>
+<td><code class="language-malloy">start_time <span class="token keyword">for</span> <span class="token number">3</span> <span class="token timeframe">hours</span></code><br/><code class="language-malloy"><span class="token date">@2003</span> <span class="token keyword">for</span> <span class="token number">10</span> <span class="token timeframe">months</span></code> <br/> <code class="language-malloy"><span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token date">@</span></code><em>timespec</em></td>
+<td><a href="#numeric-ranges">Numeric ranges</a><br/>Numeric ranges with start and end</td>
 
-<td><code class="language-malloy"><span class="token date">@2016</span></code>  , <code class="language-malloy"><span class="token date">@2020-01-13</span></code> , <code class="language-malloy"><span class="token date">@2020-00-01 00:00</span></code></td>
-
-<td><a href="time-ranges.html#literals">Date Literals</a></td>
+<td><code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span></code></td>
 </tr>
 
 <tr>
-<td><em>timeValue</em>.<em>truncation</em></td>
+<td><a href="#time-truncation">Time truncation</a></td>
 
-<td><code class="language-malloy">eventTime<span class="token punctuation">.</span><span class="token timeframe">quarter</span></code> , <code class="language-malloy">flightTime<span class="token punctuation">.</span><span class="token timeframe">year</span></code></td>
+<td><code class="language-malloy">event_time<span class="token punctuation">.</span><span class="token timeframe">quarter</span></code> <br/> <code class="language-malloy">now<span class="token punctuation">.</span><span class="token timeframe">year</span></code></td>
+</tr>
 
-<td><a href="time-ranges.html#truncation">Time Truncation</a></td>
+<tr>
+<td><a href="#time-extraction">Time extraction</a><br/>Extract one part of a time value</td>
+
+<td><code class="language-malloy"><span class="token timeframe">day_of_year</span><span class="token punctuation">(</span>event_time<span class="token punctuation">)</span></code> <br/> <code class="language-malloy"><span class="token timeframe">minute</span><span class="token punctuation">(</span>now<span class="token punctuation">)</span></code></td>
+</tr>
+
+<tr>
+<td><a href="time-ranges.html#literals">Time literals</a></td>
+
+<td><code class="language-malloy"><span class="token date">@2003-04-19</span></code><br/><code class="language-malloy"><span class="token date">@2020-Q4</span></code><br/><code class="language-malloy"><span class="token date">@2021-10-24 10:00:00</span></code></td>
+</tr>
+
+<tr>
+<td><a href="#partial-comparison">Partial comparison</a><br/>Reusable conditions</td>
+
+<td><code class="language-malloy"><span class="token operator">></span> <span class="token number">42</span></code><br/><code class="language-malloy"><span class="token operator">!=</span> <span class="token keyword">null</span></code><br/><code class="language-malloy"><span class="token operator">~</span> <span class="token regular_expression">r'C.*'</span></code></td>
+</tr>
+
+<tr>
+<td><a href="#alternation">Alternation</a><br/>Logically combine conditions</td>
+
+<td><code class="language-malloy"><span class="token operator">></span> <span class="token number">5</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">10</span></code></br> <code class="language-malloy"><span class="token string">'red'</span> <span class="token operator">|</span> <span class="token string">'blue'</span></code></td>
+</tr>
+
+<tr>
+<td><a href="#application">Application</a><br/>Apply conditions to values</td>
+
+<td><code class="language-malloy">state: <span class="token string">'CA'</span></code><br/> <code class="language-malloy">weight: <span class="token operator">></span> <span class="token number">100</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">1000</span></code></td>
 </tr>
 </tbody></table>
-<br>
-      <h1>
-        <a id="sql-functions" class="header-link anchor" href="#sql-functions">
-          SQL functions
+
+      <h2>
+        <a id="identifiers" class="header-link anchor" href="#identifiers">
+          Identifiers
         </a>
-      </h1>
-    <p>The intention is to be able to call from Malloy any function which
+      </h2>
+    <!-- * `distance` --><!-- * `origin.city` --><!-- * `` `year` `` --><p>Fields may be referenced by name, and fields in joins or nested structures can be described using <code class="language-malloy"><span class="token punctuation">.</span></code>s.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>county <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">]</span>
+  origin<span class="token punctuation">.</span>state
+  by_county <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
+    origin<span class="token punctuation">.</span>county
+    flight_count
+  <span class="token punctuation">)</span>
+<span class="token operator">|</span> <span class="token keyword">project</span> <span class="token keyword">limit</span> <span class="token number">3</span>
+  by_county<span class="token punctuation">.</span>county</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANCHORAGE</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FAIRBANKS</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JEFFERSON</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>Identifiers that share a name with a keyword in Malloy must be enclosed in back ticks <code class="language-malloy"><span class="token punctuation">`</span></code>, e.g. <code class="language-malloy"><span class="token identifier">`year`</span></code>.</p>
+
+      <h2>
+        <a id="mathematical-operators" class="header-link anchor" href="#mathematical-operators">
+          Mathematical Operators
+        </a>
+      </h2>
+    <!-- * `x * 100` --><!-- * `-cost` --><!-- * `(a + b) / c` --><p>Typical mathematical operators <code class="language-malloy"><span class="token operator">+</span></code>, <code class="language-malloy"><span class="token operator">-</span></code>, <code class="language-malloy"><span class="token operator">*</span></code>, and <code class="language-malloy"><span class="token operator">/</span></code> work as expected, and parentheses may be used to override precedence, e.g. <code class="language-malloy">six <span class="token keyword">is</span> <span class="token number">10</span> <span class="token operator">*</span> <span class="token punctuation">(</span><span class="token number">3</span> <span class="token operator">-</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span> <span class="token operator">+</span> <span class="token number">1</span></code>.</p>
+<p>The unary minus / negation operator is also allowed, e.g. <code class="language-malloy">value <span class="token keyword">is</span> <span class="token operator">-</span>cost</code>.</p>
+
+      <h2>
+        <a id="logical-operators" class="header-link anchor" href="#logical-operators">
+          Logical Operators
+        </a>
+      </h2>
+    
+      <h3>
+        <a id="comparison-operators" class="header-link anchor" href="#comparison-operators">
+          Comparison Operators
+        </a>
+      </h3>
+    <!-- * `distance > 1000` --><!-- * `state = 'CA'` --><!-- * `name != null` --><!-- TODO discuss null checking and how it uses `!=` not `is not` --><p>Standard comparison operators <code class="language-malloy"><span class="token operator">></span></code>, <code class="language-malloy"><span class="token operator">&lt;</span></code>, <code class="language-malloy"><span class="token operator">>=</span></code>, <code class="language-malloy"><span class="token operator">&lt;=</span></code>, and <code class="language-malloy"><span class="token operator">=</span></code> are available in Malloy. "Not equals" is expressed using the <code class="language-malloy"><span class="token operator">!=</span></code> operator.</p>
+
+      <h3>
+        <a id="boolean-operators" class="header-link anchor" href="#boolean-operators">
+          Boolean Operators
+        </a>
+      </h3>
+    <!-- * `is_x and is_y` --><!-- * `is_a or is_b` --><!-- * `not is_c` --><p>Malloy includes the basic binary boolean operators <code class="language-malloy"><span class="token keyword">and</span></code> and <code class="language-malloy"><span class="token keyword">or</span></code>, as well as the unary <code class="language-malloy"><span class="token keyword">not</span></code> operator.</p>
+
+      <h2>
+        <a id="sql-functions" class="header-link anchor" href="#sql-functions">
+          SQL Functions
+        </a>
+      </h2>
+    <!-- * `floor(10.35)` --><!-- * `concat(first_name, ' ', last_name)` --><!-- * `sqrt(x)` --><p>Many functions available in SQL are available unchanged in Malloy. See <a href="https://cloud.google.com/bigquery/docs/reference/standard-sql/syntax">here</a> for documentation on functions available in BigQuery.</p>
+<p>The intention is to be able to call from Malloy any function which
 you could call from Standard SQL. This is not well implemented at
 the moment. If you experience type check errors, use the <code class="language-malloy">::type</code>
 typecast to work around the errors in typing.</p>
-</div>
+
+      <h2>
+        <a id="aggregation" class="header-link anchor" href="#aggregation">
+          Aggregation
+        </a>
+      </h2>
+    <p>Aggregations may included in an expression to create <a href="fields.html#measures">measures</a>, e.g. <code class="language-malloy"><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>, <code class="language-malloy"><span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span></code>, or <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>. For detailed information, see the <a href="aggregates.html">Aggregates</a> section.</p>
+<!-- TODO more info on symmetric aggregates -->
+      <h2>
+        <a id="filtered-expressions" class="header-link anchor" href="#filtered-expressions">
+          Filtered Expressions
+        </a>
+      </h2>
+    <!-- * `avg(age) : [state: 'CA']` --><!-- * `flight_count : [origin.county != null]` --><p>Aggregate expressions may be filtered, using the <a href="filters.html">usual filter syntax</a>.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  distance_2003 <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span> : <span class="token punctuation">[</span>dep_time: <span class="token date">@2003</span><span class="token punctuation">]</span>
+  ca_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span><span class="token punctuation">]</span></pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">distance_&#8203;2003</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">42,545,813</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,670</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="safe-type-cast" class="header-link anchor" href="#safe-type-cast">
+          Safe Type Cast
+        </a>
+      </h2>
+    <!-- * `total_distance::string` --><!-- * `some_date::timestamp` --><p>Safe type casting may be accomplished with the <code class="language-malloy">::type</code> syntax.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  distance_summary <span class="token keyword">is</span> concat<span class="token punctuation">(</span>total_distance::<span class="token type">string</span><span class="token punctuation">,</span> <span class="token string">' miles'</span><span class="token punctuation">)</span></pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">distance_&#8203;summary</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">255337195 miles</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="pick-expressions" class="header-link anchor" href="#pick-expressions">
+          Pick Expressions
+        </a>
+      </h2>
+    <p>The <code class="language-malloy"><span class="token keyword">pick</span></code> construction in Malloy is similar to <code>CASE</code> statements in SQL.</p>
+<pre class="language-malloy"><span class="token keyword">pick</span> <span class="token string">'small'</span>  <span class="token keyword">when</span> size <span class="token operator">&lt;</span> <span class="token number">10</span>
+<span class="token keyword">pick</span> <span class="token string">'medium'</span> <span class="token keyword">when</span> size <span class="token operator">&lt;</span> <span class="token number">20</span>
+<span class="token keyword">else</span> <span class="token string">'large'</span></pre><p>Pick expressions are also compatible with the <a href="#apply-operator">apply operator</a> and partial comparisons.</p>
+<pre class="language-malloy">size:
+  <span class="token keyword">pick</span> <span class="token string">'small'</span> <span class="token keyword">when</span> <span class="token operator">&lt;</span> <span class="token number">10</span>
+  <span class="token keyword">pick</span> <span class="token string">'medium'</span> <span class="token keyword">when</span> <span class="token operator">&lt;</span> <span class="token number">20</span>
+  <span class="token keyword">else</span> <span class="token string">'large'</span></pre><p>Pick can be used to "clean" data, combining similar dirty values into one clean value. In the following example, the <code class="language-malloy"><span class="token keyword">pick</span></code> statement collects all the "this actually
+shiped" statuses, and because there is no <code class="language-malloy"><span class="token keyword">else</span></code>, leaves the other
+status values alone.</p>
+<pre class="language-malloy">shipping_status:
+  <span class="token keyword">pick</span> <span class="token string">'shipped'</span> <span class="token keyword">when</span> <span class="token string">'will call'</span> <span class="token operator">|</span> <span class="token string">'shipped'</span>
+  <span class="token keyword">pick</span> <span class="token string">'ignore'</span> <span class="token keyword">when</span> <span class="token string">'bad1'</span> <span class="token operator">|</span> <span class="token string">'bad2'</span> <span class="token operator">|</span> <span class="token string">'testing'</span></pre><p>Another common kind of cleaning is to have a small set you want to group
+by and all other values are compressed into <code class="language-malloy"><span class="token keyword">null</span></code>. A <code class="language-malloy"><span class="token keyword">pick</span></code> clause with no value
+picks an applied value when the condition is met.</p>
+<pre class="language-malloy">status:
+  <span class="token keyword">pick</span> <span class="token keyword">when</span> <span class="token string">'good'</span> <span class="token operator">|</span> <span class="token string">'ok'</span> <span class="token operator">|</span> <span class="token string">'fine'</span> <span class="token comment">-- leave these alone</span>
+  <span class="token keyword">else</span> <span class="token keyword">null</span>                        <span class="token comment">-- ignore the rest</span></pre>
+      <h2>
+        <a id="time-expressions" class="header-link anchor" href="#time-expressions">
+          Time Expressions
+        </a>
+      </h2>
+    <p>Malloy has built in constructs to simplify many time-related operations, which are described here.</p>
+
+      <h3>
+        <a id="time-ranges" class="header-link anchor" href="#time-ranges">
+          Time Ranges
+        </a>
+      </h3>
+    <p><a id="numeric-ranges"></a></p>
+<p>Ranges between a start and end time can be constructed with the <code class="language-malloy"><span class="token keyword">to</span></code> operator, e.g. <code class="language-malloy"><span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2006</span></code>. This kind of range is also possible for numbers, e.g. <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span></code>.</p>
+<p>Time ranges can also be constructed with a start time and duration using the <code class="language-malloy"><span class="token keyword">for</span></code> operator, e.g. <code class="language-malloy"><span class="token date">@2003</span> <span class="token keyword">for</span> <span class="token number">6</span> <span class="token timeframe">years</span></code> or <code class="language-malloy">now <span class="token keyword">for</span> <span class="token number">20</span> <span class="token timeframe">minutes</span></code>.</p>
+<p>A time value can be compared to a range. If the time is within the range it will be <code class="language-malloy"><span class="token operator">=</span></code>, before the range it will be <code class="language-malloy"><span class="token operator">&lt;</span></code>, and after the range it will be <code class="language-malloy"><span class="token operator">></span></code>. If you <a href="#apply-operator">apply</a> a time to a range, (for example, <code class="language-malloy">event_time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2004</span></code>) that will also check if the value is within the range.</p>
+
+      <h3>
+        <a id="time-truncation" class="header-link anchor" href="#time-truncation">
+          Time Truncation
+        </a>
+      </h3>
+    <p>To truncate a time value to a given timeframe, use the <code class="language-malloy"><span class="token punctuation">.</span></code> operator followed by the timeframe, e.g. <code class="language-malloy">event_time<span class="token punctuation">.</span><span class="token timeframe">quarter</span></code> or <code class="language-malloy">now<span class="token punctuation">.</span><span class="token timeframe">year</span></code>.</p>
+<p>By way of example, if the value of <code class="language-malloy">time</code> is <code class="language-malloy"><span class="token date">@2021-08-06 00:36</span></code>, then the below truncations will produce the results on the right:</p>
+<table>
+<thead>
+<tr>
+<th>timeession</th>
+
+<th>result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">minute</span></code></td>
+
+<td>2021-08-06 00:36</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">hour</span></code></td>
+
+<td>2021-08-06 00:00</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">day</span></code></td>
+
+<td>2021-08-06</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">week</span></code></td>
+
+<td>WK2021-08-01 <em>(the week containing the 10th)</em></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">month</span></code></td>
+
+<td>2021-08</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">quarter</span></code></td>
+
+<td>Q2-2021</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">year</span></code></td>
+
+<td>2021</td>
+</tr>
+</tbody></table>
+<p>A truncation made this way (unlike a truncation make in SQL with
+<code class="language-malloy">TIMESTAMP_TRUNC<span class="token punctuation">(</span><span class="token punctuation">)</span></code>) can also function as a range. The range begins
+at the moment of truncation and the duration is the timeframe unit
+used to specify the truncation, so for example <code class="language-malloy">time<span class="token punctuation">.</span><span class="token timeframe">year</span></code>
+would be a range covering the entire year which contains <code class="language-malloy">time</code>.</p>
+<p>This is extremely useful with the <a href="#apply-operator">apply operator</a>, <code class="language-malloy">:</code>. To see if two events happen in the same calendar year, for example, the boolean expresison in Malloy is <code class="language-malloy">one_time: other_time<span class="token punctuation">.</span><span class="token timeframe">year</span></code>.</p>
+
+      <h3>
+        <a id="time-extraction" class="header-link anchor" href="#time-extraction">
+          Time Extraction
+        </a>
+      </h3>
+    <p>Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call.</p>
+<p>The "Result" column uses a value of <code class="language-malloy"><span class="token date">@2021-08-06 00:55:05</span></code> for <code class="language-malloy">expr</code>.</p>
+<table>
+<thead>
+<tr>
+<th>expression</th>
+
+<th>meaning</th>
+
+<th>result</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy"><span class="token timeframe">day_of_year</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>day of year, 1-365</td>
+
+<td>218</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">day</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>day of month 1-31</td>
+
+<td>5</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">day_of_week<span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>day of week 1-7</td>
+
+<td>6 <em>(Note: 1 represents Sunday)</em></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">week</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>week in year, 1-53</td>
+
+<td>31</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">quarter</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>quarter in year 1-4</td>
+
+<td>3</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">hour</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>hour of day 0-23</td>
+
+<td>0</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">minute</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>minute of hour 0-59</td>
+
+<td>55</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token timeframe">second</span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+
+<td>second of minute 0-59</td>
+
+<td>5</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="time-literals" class="header-link anchor" href="#time-literals">
+          Time Literals
+        </a>
+      </h3>
+    <!-- * `@2003-04-19` --><!-- * `@2020-Q4` --><!-- * `@2021-10-24 10:00:00` --><!-- * `now` --><p>Time literals are specified in malloy with th <code class="language-malloy"><span class="token date">@</span></code> character. A literal
+specified this way has an implied duration which means a literal
+can act like a range.</p>
+<p>For example the year <code class="language-malloy"><span class="token date">@2003</span></code> can be used with <code class="language-malloy">event_time: <span class="token date">@2003</span></code> to test if the
+event happened in the year 2003.</p>
+<table>
+<thead>
+<tr>
+<th>Literal pattern</th>
+
+<th>Duration</th>
+
+<th>Begins</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy"><span class="token date">@DDDD</span></code></td>
+
+<td>One year</td>
+
+<td>The first day of that year</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-QN</span></code></td>
+
+<td>Three months</td>
+
+<td>The first day of that quarter</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM</span></code></td>
+
+<td>One month</td>
+
+<td>The first day of that month</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@WKDDDD-MM-SS</span></code></td>
+
+<td>Seven days</td>
+
+<td>Sunday of the week containing that day</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM-DD</span></code></td>
+
+<td>One day</td>
+
+<td>Midnight on the specified date</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM-DD HH:MM</span></code></td>
+
+<td>One Minute</td>
+
+<td>The specified time</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token date">@DDDD-MM-DD HH:MM:SS</span></code></td>
+
+<td>One Second</td>
+
+<td>the specified time</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">now</code></td>
+
+<td><em>n/a</em></td>
+
+<td>The current time, without implied duration</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="special-filter-expression-syntax" class="header-link anchor" href="#special-filter-expression-syntax">
+          Special Filter Expression Syntax
+        </a>
+      </h2>
+    <p>As filtering is an incredibly common operation in data analysis, Malloy has special syntax to make filter expressions succinct and powerful. In addition to regular comparison and boolean operators, Malloy includes <em>partial comparisons</em>, <em>alternation</em>, and <em>application</em>, as described below.</p>
+
+      <h3>
+        <a id="partial-comparison" class="header-link anchor" href="#partial-comparison">
+          Partial Comparison
+        </a>
+      </h3>
+    <!-- * `> 42` --><!-- * `!= null` --><!-- * `~ r'C.*'` --><p>Partial comparisons, or "partials" are written with a binary comparison operator followed by a value, e.g. <code class="language-malloy"><span class="token operator">></span> <span class="token number">42</span></code> or <code class="language-malloy"><span class="token operator">!=</span> <span class="token keyword">null</span></code>. These can be thought of as conditions-as-values, or as functions that return a boolean.</p>
+
+      <h3>
+        <a id="alternation" class="header-link anchor" href="#alternation">
+          Alternation
+        </a>
+      </h3>
+    <!-- * `> 5 & < 10` --><!-- * `'CA' | 'NY'` --><p>Conditions can be logically combined with the two alternation operators, <code class="language-malloy"><span class="token operator">&amp;</span></code> and <code class="language-malloy"><span class="token operator">|</span></code>. These are different from <code class="language-malloy"><span class="token keyword">and</span></code> and <code class="language-malloy"><span class="token keyword">or</span></code> in that they operate on conditions which return boolean vlues, rather than boolean values directly.</p>
+<p>The <em>union alternation</em> operator <code class="language-malloy"><span class="token operator">|</span></code> represents the logical union of two conditions. An expression like <code class="language-malloy">x <span class="token operator">|</span> y</code> can be read "if either <code class="language-malloy">x</code> or <code class="language-malloy">y</code>." For example <code class="language-malloy"><span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token operator">=</span> <span class="token string">'NY'</span></code> represents the condition "is either CA or NY".</p>
+<p>The <em>conjunction alternation</em> operator <code class="language-malloy"><span class="token operator">&amp;</span></code> represents the logical conjunction of two conditions. An expression like "<code class="language-malloy">x <span class="token operator">&amp;</span> y</code> can be read "if both <code class="language-malloy">x</code> and <code class="language-malloy">y</code>." For example, <code class="language-malloy"><span class="token operator">></span> <span class="token number">5</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">10</span></code> represents the condition "is greater than 5 and less than 10".</p>
+<p>Values can be used directly with the alternation operators, in which case the operator is assumed to be <code class="language-malloy"><span class="token operator">=</span></code>. For example, <code class="language-malloy"><span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span></code> is equivalent to <code class="language-malloy"><span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token operator">=</span> <span class="token string">'NY'</span></code>.</p>
+
+      <h3>
+        <a id="application" class="header-link anchor" href="#application">
+          Application
+        </a>
+      </h3>
+    <!-- * `state: 'CA'` --><!-- * `weight: > 100 & < 1000` --><!-- * `kind: pick 'other' when null` --><p>The apply operator <code class="language-malloy">:</code> "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.</p>
+<p>Applying a value to a condition is like filling in the condition with the given value. For example, <code class="language-malloy">height: <span class="token operator">></span> <span class="token number">5</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">10</span></code> is equivalent to <code class="language-malloy">height <span class="token operator">></span> <span class="token number">5</span> <span class="token keyword">and</span> height <span class="token operator">&lt;</span> <span class="token number">10</span></code>.</p>
+<p>Applying a value to another value applies a default comparison on the two values:</p>
+<table>
+<thead>
+<tr>
+<th>Left</th>
+
+<th>Right</th>
+
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy"><span class="token type">number</span></code></td>
+
+<td><code class="language-malloy"><span class="token type">number</span></code></td>
+
+<td><code class="language-malloy">size: <span class="token number">10</span></code></td>
+
+<td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token type">string</span></code></td>
+
+<td><code class="language-malloy"><span class="token type">string</span></code></td>
+
+<td><code class="language-malloy">state: <span class="token string">'CA'</span></code></td>
+
+<td><code class="language-malloy">state <span class="token operator">=</span> <span class="token string">'CA'</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token type">string</span></code></td>
+
+<td>regular expression</td>
+
+<td><code class="language-malloy">name: <span class="token regular_expression">r'Z$'</span></code></td>
+
+<td><code class="language-malloy">name <span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token type">boolean</span></code></td>
+
+<td><code class="language-malloy"><span class="token type">boolean</span></code></td>
+
+<td><code class="language-malloy">is_cool: <span class="token boolean">true</span></code></td>
+
+<td><code class="language-malloy">is_cool <span class="token operator">=</span> <span class="token boolean">true</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token type">number</span></code></td>
+
+<td>numeric range</td>
+
+<td><code class="language-malloy">x: <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span></code></td>
+
+<td><code class="language-malloy">x <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> x <span class="token operator">&lt;</span> <span class="token number">20</span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy"><span class="token type">date</span></code> or <code class="language-malloy"><span class="token type">timestamp</span></code></td>
+
+<td><code class="language-malloy"><span class="token type">date</span></code> or <code class="language-malloy"><span class="token type">timestamp</span></code></td>
+
+<td><code class="language-malloy">time: <span class="token date">@2003</span></code></td>
+
+<td><code class="language-malloy">time</code> is during 2003</td>
+</tr>
+</tbody></table>
+<p>Values can be applied to <a href="#pick-expressions">pick expressions</a> to make them more succinct.</p>
+<pre class="language-malloy">size:
+  <span class="token keyword">pick</span> <span class="token string">'small'</span> <span class="token keyword">when</span> <span class="token operator">&lt;</span> <span class="token number">10</span>
+  <span class="token keyword">pick</span> <span class="token string">'medium'</span> <span class="token keyword">when</span> <span class="token operator">&lt;</span> <span class="token number">20</span>
+  <span class="token keyword">else</span> <span class="token string">'large'</span></pre></div>

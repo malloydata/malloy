@@ -45,38 +45,7 @@ exported explores from another file using <code class="language-malloy"><span cl
 <code class="language-malloy">flights</code> explore, you could write:</p>
 <pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
 
-flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> carrier<span class="token punctuation">,</span> flight_count</pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
-</tr>
-
-		</tbody>
-	</table>
-        </div>
-      </div>
-    </div><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
+flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> carrier<span class="token punctuation">,</span> flight_count</pre><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
 
       <h3>
         <a id="import-locations" class="header-link anchor" href="#import-locations">

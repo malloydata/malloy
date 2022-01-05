@@ -39,7 +39,7 @@
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/basic.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basics
+              Malloy Quickstart
             </a>
           </div>
 <div class='sidebar-item '>
@@ -48,10 +48,28 @@
               Models
             </a>
           </div>
+<div class='sidebar-item active'>
+            <a href="/malloy/documentation/language/explore.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Explores
+            </a>
+          </div>
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/query.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/fields.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Fields
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/types.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Types
             </a>
           </div>
 <div class='sidebar-item '>
@@ -64,12 +82,6 @@
             <a href="/malloy/documentation/language/order_by.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Ordering and Limiting
-            </a>
-          </div>
-<div class='sidebar-item active'>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explore Definition
             </a>
           </div>
 <div class='sidebar-item '>
@@ -85,33 +97,21 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filter_expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filter Syntax
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/time-ranges.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Time Ranges
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nesting
+              Nested Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/aggregates.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Aggregates
             </a>
           </div>
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/imports.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Imports and Exports
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/apply.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Apply Operator
             </a>
           </div>
       </div>
@@ -260,10 +260,10 @@
             
             <div class="linear-navigation">
     <div class="item">
-      <a href="order_by.html"><img src="/malloy/img/previous.svg" alt="previous"/>Ordering and Limiting</a>
+      <a href="statement.html"><img src="/malloy/img/previous.svg" alt="previous"/>Models</a>
     </div>
     <div class="item">
-      <a href="join.html">Joins<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="query.html">Queries<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
   </div>
             
@@ -271,46 +271,178 @@
           <div class="document-outer">
             <div class="document">
       <h1>
-        <a id="explore-definition" class="header-link anchor" href="#explore-definition">
-          Explore Definition
+        <a id="explores" class="header-link anchor" href="#explores">
+          Explores
         </a>
       </h1>
-    <p>A shape is a data source and a list of additional properties which
-extend the original source in preparation for a
-passing it to a transformation stage.</p>
-<ul>
-<li><p>explore: <em>source</em> fields <em>joins</em></p>
-</li></ul>
+    <p>An explore consists of a data source along with a list of
+additional properties which extend it, such as named fields, queries, and joins. When an explore is used in a query,
+everything from the original source and all its extensions can be referenced.</p>
 
       <h2>
-        <a id="source" class="header-link anchor" href="#source">
-          Source
+        <a id="explore-sources" class="header-link anchor" href="#explore-sources">
+          Explore Sources
         </a>
       </h2>
-    <p>A explore can be an existing SQL table or view, or it can  be
-a Malloy query, which can either be defined in line,
-or referenced by name (see the <a href="statement.html">Models</a>
-section for more information on that)</p>
-<p>A explore can be filtered, it can be given a <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> so it can be
-used in a join, and a shape may select some or all of the fields in
-the <em>dataSource</em> to be included or excluded from the shape.</p>
+    <p>An explore's source can be any of the following:</p>
 <ul>
-<li><p>explore: <em>dataSource</em> <em>filters</em> <em>primaryKey</em> <em>fieldEdit</em></p>
+<li><p>A SQL table or view</p>
 </li>
-<li><p>dataSource: <code class="language-malloy">'</code> <em>table</em> <em>name</em> <code class="language-malloy">'</code> | <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span></code> | <em>query</em> <em>name</em></p>
+<li><p>Another Malloy explore</p>
 </li>
-<li><p><em>primaryKey</em>: <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> <em>fieldName</em></p>
-</li>
-<li><p><em>fieldEdit</em>: ( <code class="language-malloy"><span class="token keyword">accept</span></code> <em>fieldNameList</em> | <code class="language-malloy"><span class="token keyword">except</span></code> <em>fieldNameLlist</em> )</p>
+<li><p>A Malloy query</p>
 </li></ul>
 
+      <h3>
+        <a id="explores-from-tables-or-views" class="header-link anchor" href="#explores-from-tables-or-views">
+          Explores from Tables or Views
+        </a>
+      </h3>
+    <p>An explore can be created from a SQL table or view from a connected database.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>When defining an explore in this way, all the columns from
+the source table are available for use in field definitions
+or queries.</p>
+<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
+  <span class="token comment">-- Columns from the source table are available</span>
+  distance
+  carrier</pre>
+      <h3>
+        <a id="explores-from-other-explores" class="header-link anchor" href="#explores-from-other-explores">
+          Explores from Other Explores
+        </a>
+      </h3>
+    <p>An explore can also be created from another explore in order
+to add fields, impose filters, or restrict available fields.
+This is useful for performing in-depth analysis without altering
+the base explore with modifications only relevant in that specific context.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> sfo_flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>origin <span class="token operator">=</span> <span class="token string">'SFO'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h3>
+        <a id="explores-from-queries" class="header-link anchor" href="#explores-from-queries">
+          Explores from Queries
+        </a>
+      </h3>
+    <p>Lastly, a query can be used as the source for an explore.
+In Malloy, every query has a shape like that of an explore,
+so the output fields of a query can be used to define a new
+explore.</p>
+<p>When defining an explore from a query, the query can either
+be defined inline or referenced by name.</p>
+<p><strong>Inline query as explore source</strong></p>
+<pre class="language-malloy"><span class="token keyword">define</span> carriers <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token punctuation">(</span>flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
+  code <span class="token keyword">is</span> carrier
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p><strong>Named query as explore source</strong></p>
+<pre class="language-malloy"><span class="token keyword">define</span> flight_origins <span class="token keyword">is</span> <span class="token punctuation">(</span>flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
+  code <span class="token keyword">is</span> origin
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">define</span> origins <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> flight_origins
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>For more information about named queries appearing in models, see the <a href="statement.html">Models</a> section.</p>
+
       <h2>
+        <a id="explore-modifications" class="header-link anchor" href="#explore-modifications">
+          Explore Modifications
+        </a>
+      </h2>
+    <p>An explore can introduce a number of different
+modifications or additions to its source, including adding
+filters, specifying a <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code>, adding fields and
+joins, renaming fields, or limiting which fields are
+available.</p>
+
+      <h3>
+        <a id="filtering-explores" class="header-link anchor" href="#filtering-explores">
+          Filtering Explores
+        </a>
+      </h3>
+    <p>When an explore is defined, filters which apply to any query against the new explore may be added.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> long_sfo_flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>
+  distance <span class="token operator">></span> <span class="token number">1000</span><span class="token punctuation">,</span>
+  origin <span class="token operator">=</span> <span class="token string">'SFO'</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h3>
+        <a id="primary-keys" class="header-link anchor" href="#primary-keys">
+          Primary Keys
+        </a>
+      </h3>
+    <p>To be used in joins to other explores, an explore must
+have a primary key specified.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> carriers <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.carriers'</span>
+  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h3>
         <a id="joins" class="header-link anchor" href="#joins">
           Joins
         </a>
-      </h2>
-    <p>The tables joined to a shape are an important aspect of its definition. Read more about joins <a href="join.html">here</a>.</p>
-</div>
+      </h3>
+    <p>When explores are joined as part of their definition, queries can reference fields in the joined explores without having to specify the join relationship each time.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  carriers <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> carrier_code
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">explore</span> flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
+  carriers<span class="token punctuation">.</span>name
+  flight_count</pre><p>See the <a href="join.html">Joins</a> section for more information on working with joins.</p>
+
+      <h3>
+        <a id="adding-fields" class="header-link anchor" href="#adding-fields">
+          Adding Fields
+        </a>
+      </h3>
+    <p>Fields—dimensions, measures, and queries—may be defined as
+part of an explore, allowing for them to be used in any
+query against the explore.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
+  <span class="token comment">-- A dimension</span>
+  has_control_tower <span class="token keyword">is</span> cntl_twr <span class="token operator">=</span> <span class="token string">'Y'</span>
+
+  <span class="token comment">-- A measure</span>
+  average_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+
+  <span class="token comment">-- A query</span>
+  average_elevation_by_control_tower <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
+    has_control_tower
+    average_elevation
+  <span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h3>
+        <a id="renaming-fields" class="header-link anchor" href="#renaming-fields">
+          Renaming Fields
+        </a>
+      </h3>
+    <p>Fields from an explore's source may be renamed in the context of the
+new explore. This is useful when the original name is undescriptive or has a different meaning in the new explore.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  facility_type <span class="token keyword">renames</span> fac_type
+  origin_code <span class="token keyword">renames</span> origin
+
+  origin <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin_code
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h3>
+        <a id="limiting-access-to-fields" class="header-link anchor" href="#limiting-access-to-fields">
+          Limiting Access to Fields
+        </a>
+      </h3>
+    <p>The list of fields available in an explore from its source
+can be limited. This can be done either by <code class="language-malloy"><span class="token keyword">accept</span></code>ing a
+list of fields to include (in which case any other field
+from the source is excluded, i.e. an "allow list") or by
+<code class="language-malloy"><span class="token keyword">except</span></code>ing a list of fields to exclude (any other field
+is included, i.e. a "deny list"). These cannot be used in
+conjunction with one another.</p>
+<p><strong>Accepting fields</strong></p>
+<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
+  <span class="token keyword">accept</span> id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> code<span class="token punctuation">,</span> city<span class="token punctuation">,</span> state<span class="token punctuation">,</span> elevation
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p><strong>Excepting fields</strong></p>
+<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
+  <span class="token keyword">except</span> c_ldg_rts<span class="token punctuation">,</span> aero_cht<span class="token punctuation">,</span> cntl_twr
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre></div>
           </div>
         </div>
       </div>

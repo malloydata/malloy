@@ -39,7 +39,7 @@
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/basic.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basics
+              Malloy Quickstart
             </a>
           </div>
 <div class='sidebar-item '>
@@ -49,9 +49,27 @@
             </a>
           </div>
 <div class='sidebar-item '>
+            <a href="/malloy/documentation/language/explore.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Explores
+            </a>
+          </div>
+<div class='sidebar-item '>
             <a href="/malloy/documentation/language/query.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/fields.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Fields
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/types.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Types
             </a>
           </div>
 <div class='sidebar-item '>
@@ -67,12 +85,6 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explore Definition
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/join.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Joins
@@ -85,33 +97,21 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filter_expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filter Syntax
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/time-ranges.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Time Ranges
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nesting
+              Nested Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/aggregates.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Aggregates
             </a>
           </div>
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/imports.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Imports and Exports
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/apply.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Apply Operator
             </a>
           </div>
       </div>
@@ -278,32 +278,33 @@
     <p>Flight data contains time, carrier, origin, destination and the plane that made the flight (<code class="language-malloy">tail_num</code>).  Take the
 flight data and sessionize it by carrier and date.  Compute statistics and the session, plane and flight level.
 Retain the original flight events.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  fields
-    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span>
+    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span>:  <span class="token punctuation">[</span>carrier : <span class="token string">'WN'</span><span class="token punctuation">,</span> dep_time : <span class="token string">'2002-03-03'</span><span class="token punctuation">]</span>
-  dep_time<span class="token punctuation">.</span><span class="token identifier">`date`</span>
+  flight_date <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token identifier">`date`</span>
   carrier
-  flight_count
-  plane <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">20</span>
+  daily_flight_count <span class="token keyword">is</span> flight_count
+  per_plane_data <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">20</span>
     tail_num
-    flight_count
-    flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">2</span>
+    plane_flight_count <span class="token keyword">is</span> flight_count
+    flight_legs <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">2</span>
       tail_num
       dep_minute <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">minute</span>
       origin
       destination
+      dep_delay
+      arr_delay
     <span class="token punctuation">)</span>
   <span class="token punctuation">)</span></pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">dep_&#8203;time_&#8203;date</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">plane</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">daily_&#8203;flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">per_&#8203;plane_&#8203;data</th>
       </tr>
 		</thead>
 		<tbody>
@@ -314,8 +315,8 @@ Retain the original flight events.</p>
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">tail_&#8203;num</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">plane_&#8203;flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">flight_&#8203;legs</th>
       </tr>
 		</thead>
 		<tbody>
@@ -328,33 +329,45 @@ Retain the original flight events.</p>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">dep_&#8203;minute</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">origin</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">dep_&#8203;delay</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">arr_&#8203;delay</th>
       </tr>
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOU</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAL</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MDW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MDW</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MDW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UNKNOW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2002-03-03 00:00</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
 </tr>
 
 		</tbody>
@@ -367,9 +380,9 @@ Retain the original flight events.</p>
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div></div>
+    </div>
+  </div></div>
           </div>
         </div>
       </div>

@@ -39,7 +39,7 @@
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/basic.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basics
+              Malloy Quickstart
             </a>
           </div>
 <div class='sidebar-item '>
@@ -49,9 +49,27 @@
             </a>
           </div>
 <div class='sidebar-item '>
+            <a href="/malloy/documentation/language/explore.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Explores
+            </a>
+          </div>
+<div class='sidebar-item '>
             <a href="/malloy/documentation/language/query.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/fields.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Fields
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/types.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Types
             </a>
           </div>
 <div class='sidebar-item '>
@@ -67,12 +85,6 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explore Definition
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/join.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Joins
@@ -85,33 +97,21 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filter_expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filter Syntax
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/time-ranges.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Time Ranges
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nesting
+              Nested Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/aggregates.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Aggregates
             </a>
           </div>
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/imports.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Imports and Exports
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/apply.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Apply Operator
             </a>
           </div>
       </div>
@@ -263,7 +263,7 @@
       <a href="join.html"><img src="/malloy/img/previous.svg" alt="previous"/>Joins</a>
     </div>
     <div class="item">
-      <a href="filter_expressions.html">Filter Syntax<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="nesting.html">Nested Queries<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
   </div>
             
@@ -275,33 +275,126 @@
           Filters
         </a>
       </h1>
-    <p>A filter can be applied to a stage in a query, or to a subexpression in a field
-computation.</p>
-<p>The syntax for a filter is</p>
-<ul>
-<li><p><em>thingToBeFiltered</em> <code class="language-malloy">:</code> <code class="language-malloy"><span class="token punctuation">[</span></code> <em>filterExpression</em> ( <code class="language-malloy"><span class="token punctuation">,</span></code> _filterExpression ... ) <code class="language-malloy"><span class="token punctuation">]</span></code></p>
-</li></ul>
-<p>The comma seperated list of expressions can be thought of as being "AND"ed
-together, though in reality, the expression conditions will be checked at different
-parts of the query, depending on what types of computation (aggregate or not)
-occurs in the expression.</p>
+    <p>Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individal filters.</p>
 
       <h2>
-        <a id="filter-expressions" class="header-link anchor" href="#filter-expressions">
-          Filter Expressions
+        <a id="filter-syntax" class="header-link anchor" href="#filter-syntax">
+          Filter Syntax
         </a>
       </h2>
-    <p>A filter expression is any legal expression which generates a boolean
-result.  <a href="expressions.html">Expressions</a> in Malloy are extended in
-numerous ways in order to make the kinds of filtering which are
-common very easy to express.</p>
-
+    <p>Regardless of the placement of a filter, the syntax looks the same.</p>
+<pre class="language-malloy">source : <span class="token punctuation">[</span> filter_one<span class="token punctuation">,</span> filter_two <span class="token punctuation">]</span></pre><p>Each filter be any expression of type <code class="language-malloy"><span class="token type">boolean</span></code>, whether that's a boolean field <code class="language-malloy">is_commercial_flight</code>, a comparison <code class="language-malloy">distance <span class="token operator">></span> <span class="token number">1000</span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
+<p>Logically, the comma-seperated list of filters are <code class="language-malloy"><span class="token keyword">and</span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
+<!--
+TODO "see where vs having for more information on how Malloy generates SQL for filters"
+-->
       <h2>
-        <a id="testing-and-comparison" class="header-link anchor" href="#testing-and-comparison">
-          Testing and Comparison
+        <a id="filter-placement" class="header-link anchor" href="#filter-placement">
+          Filter Placement
         </a>
       </h2>
-    <p>All normal comparison operators work ... some examples:</p>
+    <p>A filter can be applied to the source of a query, to just one stage of a query, or even to a particular field or expression (measure or nested query).</p>
+
+      <h3>
+        <a id="filtering-a-query-s-source" class="header-link anchor" href="#filtering-a-query-s-source">
+          Filtering a Query's Source
+        </a>
+      </h3>
+    <p>When filtering a query's source, the filter applies to the whole query.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>distance <span class="token operator">></span> <span class="token number">1000</span><span class="token punctuation">]</span>
+<span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">90,002</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-a-query-stage" class="header-link anchor" href="#filtering-a-query-stage">
+          Filtering a Query Stage
+        </a>
+      </h3>
+    <p>A filter can also be applied to an individual query stage.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span> carrier<span class="token punctuation">,</span> flight_count
+<span class="token operator">|</span> <span class="token keyword">project</span> : <span class="token punctuation">[</span>carrier: <span class="token string">'UA'</span> <span class="token operator">|</span> <span class="token string">'AA'</span><span class="token punctuation">]</span>
+  carrier
+  flight_count</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-a-field" class="header-link anchor" href="#filtering-a-field">
+          Filtering a Field
+        </a>
+      </h3>
+    <p>Individual fields or expressions may also be filtered. These expressions must be measures or nested queries—dimensions can not be filtered.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  ca_flights <span class="token keyword">is</span> flight_count : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span><span class="token punctuation">]</span>
+  ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span><span class="token punctuation">]</span></pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;flights</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,670</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,641</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="common-patterns-in-filters" class="header-link anchor" href="#common-patterns-in-filters">
+          Common Patterns in Filters
+        </a>
+      </h2>
+    <p>This section describes some of the more common patterns used in filter expressions. For a more detailed description of the possible kinds of expressions, see the <a href="expressions.html">Expressions</a> section.</p>
+
+      <h3>
+        <a id="comparisons" class="header-link anchor" href="#comparisons">
+          Comparisons
+        </a>
+      </h3>
+    <p>All the usual comparison operators behave as expected, and are some of the most common kinds of filters.</p>
 <table>
 <thead>
 <tr>
@@ -313,71 +406,63 @@ common very easy to express.</p>
 <tbody><tr>
 <td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
 
-<td>Does size equal 10</td>
+<td>Does <code class="language-malloy">size</code> equal 10</td>
 </tr>
 
 <tr>
 <td><code class="language-malloy">size <span class="token operator">></span> <span class="token number">10</span></code></td>
 
-<td>Is size > 10</td>
+<td>Is <code class="language-malloy">size</code> > 10</td>
 </tr>
 
 <tr>
 <td><code class="language-malloy">size <span class="token operator">!=</span> <span class="token number">10</span></code></td>
 
-<td>Size is not equal to 10</td>
+<td><code class="language-malloy">size</code> is not equal to 10</td>
 </tr>
 </tbody></table>
 
-      <h2>
-        <a id="ranges-and-multiple-conditions" class="header-link anchor" href="#ranges-and-multiple-conditions">
-          Ranges and Multiple Conditions
+      <h3>
+        <a id="combining-filters" class="header-link anchor" href="#combining-filters">
+          Combining Filters
         </a>
-      </h2>
-    <p>A range of numeric or time values can be constructed
-with <em>beginValue</em> <code class="language-malloy"><span class="token keyword">to</span></code> <em>endValue</em>. The <code class="language-malloy"><span class="token operator">~</span></code> operator will check to
-see if a value is within a range.</p>
-<p>If you want to place multiple conditions on one expression,
-there are a number of ways to express them. Which is "best"
-depends on which most clearly conveys the intent of the
-conditions. All these mean the same thing:</p>
+      </h3>
+    <p>Filters can be logically combined using <code class="language-malloy"><span class="token keyword">and</span></code>, <code class="language-malloy"><span class="token keyword">or</span></code>, and <code class="language-malloy"><span class="token keyword">not</span></code>.</p>
 <table>
 <thead>
 <tr>
-<th>Example</th>
+<th>Operation</th>
 
-<th>Meaning</th>
+<th>Example</th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">size <span class="token operator">~</span> <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+<td>Logical union</td>
 
-<td>size is in the range <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy">distance_miles <span class="token operator">></span> <span class="token number">1000</span> <span class="token keyword">or</span> duration_hours <span class="token operator">></span> <span class="token number">8</span></code></td>
 </tr>
 
 <tr>
+<td>Logical conjunction</td>
+
 <td><code class="language-malloy">size <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> size <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
-
-<td>size is at least 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size: <span class="token operator">>=</span><span class="token number">10</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+<td>Logical negation</td>
 
-<td>size is at least 10 and less than 100</td>
+<td><code class="language-malloy"><span class="token keyword">not</span> is_commercial_flight</code></td>
 </tr>
 </tbody></table>
 
       <h3>
-        <a id="partial-comparison-and-alternation" class="header-link anchor" href="#partial-comparison-and-alternation">
-          Partial Comparison and Alternation
+        <a id="ranges" class="header-link anchor" href="#ranges">
+          Ranges
         </a>
       </h3>
-    <p>In the examples above we see a new operator, <code class="language-malloy">:</code> which works by
-"filling in" the missing left hand side of the expressions on
-it's right side, with the expression on the left hand side.</p>
-<p>It can also be used to specify a list of values .. Or use
-multiple values in combination with partial compairsons ...</p>
+    <p>A range of numeric or time values can be constructed
+with the <code class="language-malloy"><span class="token keyword">to</span></code>operator, e.g. <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code>. The <code class="language-malloy"><span class="token operator">~</span></code> operator will check to
+see if a value is within a range.</p>
 <table>
 <thead>
 <tr>
@@ -387,38 +472,24 @@ multiple values in combination with partial compairsons ...</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">color : <span class="token string">'red'</span><span class="token operator">|</span><span class="token string">'green'</span><span class="token operator">|</span><span class="token string">'blue'</span></code></td>
+<td><code class="language-malloy">size <span class="token operator">~</span> <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span></code></td>
 
-<td>true if color is one of the primary colors</td>
+<td><code class="language-malloy">size</code> is in the range [10, 20)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size: <span class="token number">14</span> <span class="token operator">|</span> <span class="token number">42</span> <span class="token operator">|</span> <span class="token operator">></span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy">event_time <span class="token operator">~</span> <span class="token date">@2003</span></code></td>
 
-<td>true if size is 14, 42, or greater than 100</td>
+<td><code class="language-malloy">event_time</code> occurs within the year 2003</td>
 </tr>
 </tbody></table>
 
-      <h2>
-        <a id="special-time-features" class="header-link anchor" href="#special-time-features">
-          Special Time Features
-        </a>
-      </h2>
-    <p>Read the section on <a href="time-ranges.html">Time and Ranges</a>.</p>
-
-      <h2>
-        <a id="special-string-features" class="header-link anchor" href="#special-string-features">
-          Special String Features
-        </a>
-      </h2>
-    
       <h3>
-        <a id="like" class="header-link anchor" href="#like">
-          LIKE
+        <a id="string-like-matching" class="header-link anchor" href="#string-like-matching">
+          String "Like" Matching
         </a>
       </h3>
-    <p>For strings the <code class="language-malloy"><span class="token operator">~</span></code> and <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operators, in most cases (see below)
-mean <code>LIKE</code> and <code>NOT LIKE</code> ...</p>
+    <p>When comparing strings, the <code class="language-malloy"><span class="token operator">=</span></code> operator checks for pure equality, whereas the <code class="language-malloy"><span class="token operator">~</span></code> and <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.</p>
 <table>
 <thead>
 <tr>
@@ -430,23 +501,29 @@ mean <code>LIKE</code> and <code>NOT LIKE</code> ...</p>
 <tbody><tr>
 <td><code class="language-malloy">name <span class="token operator">~</span> <span class="token string">'M%'</span></code></td>
 
-<td>first letter of name is 'M'</td>
+<td>The first letter of <code class="language-malloy">name</code> is M</td>
 </tr>
 
 <tr>
 <td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token string">'%Z%'</span></code></td>
 
-<td>name does not contain a 'Z'</td>
+<td><code class="language-malloy">name</code> does not contain a Z</td>
 </tr>
 </tbody></table>
+<p>In the right hand (pattern) string, the following syntax is used:</p>
+<ul>
+<li><p>A percent sign <code>%</code> matches any number of characters</p>
+</li>
+<li><p>An underscore <code>_</code> matches a single character</p>
+</li></ul>
 
       <h3>
         <a id="regular-expressions" class="header-link anchor" href="#regular-expressions">
           Regular Expressions
         </a>
       </h3>
-    <p>When the right hand side of a <code class="language-malloy"><span class="token operator">~</span></code> or <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operator is a regular expression, then
-Malloy generates <code>REGEXP_COMPARE</code>.</p>
+    <p>When the right hand side of a <code class="language-malloy"><span class="token operator">~</span></code> or <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operator is a regular expression,
+Malloy checks whether the left hand side matches that regular expression. In Standard SQL, Malloy uses the <code>REGEXP_COMPARE</code> function.</p>
 <table>
 <thead>
 <tr>
@@ -458,13 +535,151 @@ Malloy generates <code>REGEXP_COMPARE</code>.</p>
 <tbody><tr>
 <td><code class="language-malloy">state <span class="token operator">~</span> <span class="token regular_expression">r'^(CA|NY)$'</span></code></td>
 
-<td>true if state is 'CA' or 'NY'</td>
+<td><code class="language-malloy">state</code> is <code class="language-malloy"><span class="token string">'CA'</span></code> or <code class="language-malloy"><span class="token string">'NY'</span></code></td>
 </tr>
 
 <tr>
 <td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
 
-<td>true name does not end with 'Z'</td>
+<td><code class="language-malloy">name</code> does not end with a Z</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="alternation" class="header-link anchor" href="#alternation">
+          Alternation
+        </a>
+      </h3>
+    <p>Checking equality against multiple possible values is extremely common, and can be achieved succinctly using the <a href="expressions.html#application">apply operator</a> and <a href="expressions.html#alternation">alternation</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">color: <span class="token string">'red'</span> <span class="token operator">|</span> <span class="token string">'green'</span> <span class="token operator">|</span> <span class="token string">'blue'</span></code></td>
+
+<td><code class="language-malloy">color</code> is one of the primary colors</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">email <span class="token operator">~</span> <span class="token string">'%.com'</span> <span class="token operator">|</span> <span class="token string">'%.org'</span></code></td>
+
+<td><code class="language-malloy">email</code> has <code class="language-malloy"><span class="token punctuation">.</span>com</code> or <code class="language-malloy"><span class="token punctuation">.</span>org</code> domain</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="examples-of-filter-expressions" class="header-link anchor" href="#examples-of-filter-expressions">
+          Examples of Filter Expressions
+        </a>
+      </h2>
+    <p>Use this table as a quick reference for common types of filter expressions.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
+
+<td><code class="language-malloy">size</code> is equal to 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">></span> <span class="token number">10</span></code></td>
+
+<td><code class="language-malloy">size</code> is greater than 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">!=</span> <span class="token number">10</span></code></td>
+
+<td><code class="language-malloy">size</code> is not equal to 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size:  <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+
+<td><code class="language-malloy">size</code> is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> size <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td><code class="language-malloy">size</code> is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size: <span class="token operator">>=</span> <span class="token number">10</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+
+<td><code class="language-malloy">size</code> is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">color : <span class="token string">'red'</span> <span class="token operator">|</span> <span class="token string">'green'</span> <span class="token operator">|</span> <span class="token string">'blue'</span></code></td>
+
+<td><code class="language-malloy">color</code> is red, green or blue</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">size: <span class="token number">14</span> <span class="token operator">|</span> <span class="token number">42</span> <span class="token operator">|</span> <span class="token operator">></span> <span class="token number">100</span></code></td>
+
+<td><code class="language-malloy">size</code> is 14, 42, or greater than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2013</span></code></td>
+
+<td><code class="language-malloy">time</code> is between the years 2003 and 2013 (excluding 2013)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time <span class="token operator">></span> <span class="token number">1591129283</span> <span class="token operator">+</span> <span class="token number">10</span> <span class="token timeframe">hours</span></code></td>
+
+<td><code class="language-malloy">time</code> greater than 10 hours after 1591129283 (epoch timestamp)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time: now<span class="token punctuation">.</span><span class="token type">date</span></code></td>
+
+<td><code class="language-malloy">time</code> is today</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">time: now<span class="token punctuation">.</span><span class="token timeframe">month</span> <span class="token operator">-</span> <span class="token number">1</span></code></td>
+
+<td><code class="language-malloy">time</code> is in the previous calendar month</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">~</span> <span class="token string">'M%'</span></code></td>
+
+<td>first letter of <code class="language-malloy">name</code> is a capital M</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token string">'%z%'</span></code></td>
+
+<td><code class="language-malloy">name</code> does not contain a lower case Z</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">state <span class="token operator">~</span> <span class="token regular_expression">r'^(CA|NY)$'</span></code></td>
+
+<td><code class="language-malloy">state</code> is 'CA' or 'NY'</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
+
+<td><code class="language-malloy">name</code> does not end with a Z</td>
 </tr>
 </tbody></table>
 </div>

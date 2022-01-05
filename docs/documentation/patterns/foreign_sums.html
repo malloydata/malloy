@@ -30,7 +30,7 @@ footer: /generated/footers/patterns/foreign_sums.html
   aircraft <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> tail_num
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>dep_time : <span class="token date">@2003-01]</span>
+<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>dep_time : <span class="token date">@2003-01</span><span class="token punctuation">]</span>
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   carrier
   <span class="token comment">-- number of flights</span>
@@ -45,9 +45,9 @@ footer: /generated/footers/patterns/foreign_sums.html
   seats_on_all_planes <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
   <span class="token comment">-- average number of seats on each model by model</span>
   average_seats_per_model <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
@@ -103,6 +103,6 @@ footer: /generated/footers/patterns/foreign_sums.html
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div></div>
+    </div>
+  </div></div>

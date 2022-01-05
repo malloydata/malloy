@@ -10,72 +10,177 @@ footer: /generated/footers/language/join.html
           Joins
         </a>
       </h1>
-    <p>Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table to a foreign key in the <a href="{{ '/documentation/language/shape.html' | relative_url }}">shape</a> being joined to.</p>
+    <p>Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table and a foreign key in the <a href="explore.html">explore</a> being joined to.</p>
 
+      <h2>
+        <a id="join-types" class="header-link anchor" href="#join-types">
+          Join Types
+        </a>
+      </h2>
+    
       <h3>
-        <a id="join-keys" class="header-link anchor" href="#join-keys">
-          Join Keys
+        <a id="foreign-key-to-primary-key" class="header-link anchor" href="#foreign-key-to-primary-key">
+          Foreign Key to Primary Key
         </a>
       </h3>
-    <p>One of the entities being joined must have a primary key. If you specify a bare field name as a <em>keySpec</em> then the primary key for the join will come from the entity being joined. If you specify a field in the join, <code class="language-malloy">joinName<span class="token punctuation">.</span>some_id</code> then the primary key of the shape will be used to complete the join.</p>
-
+    <p>To join a foreign key of the source explore to the <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> of a joined explore, reference the foreign key by name in the <code class="language-malloy"><span class="token keyword">on</span></code> clause.</p>
+<pre class="language-malloy">order_items <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.ecomm.order_items'</span>
+  order_items <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> user_id
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
       <h3>
-        <a id="join-specifications" class="header-link anchor" href="#join-specifications">
-          Join Specifications
+        <a id="primary-key-to-foreign-key" class="header-link anchor" href="#primary-key-to-foreign-key">
+          Primary Key to Foreign Key
         </a>
       </h3>
-    <ul>
-<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span></code> <em>keySpec</em></p>
-</li>
-<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">is</span> <span class="token keyword">join</span></code> <em>existingName</em> on <em>keySpec</em></p>
-</li>
-<li><p><em>joinName</em> <code class="language-malloy"><span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span></code> on <em>keySpec</em></p>
-</li></ul>
-<p>Note that joins through an intermediate table are defined on the definition of that table. When referencing fields not in the source shape, the <code class="language-malloy"><span class="token punctuation">.</span></code> operator can be used to indicate which table a field comes from; you do not scope to the source shape in Malloy (i.e. when querying the flights table, do not prepend <code class="language-malloy">flights<span class="token punctuation">.</span></code> to <code class="language-malloy">flight_count</code>.)</p>
-<p>Joins can be defined in a query, or in the model. The below demonstrates the definition of several different joins in a model, and their use in a query.</p>
-<pre class="language-malloy"><span class="token comment">-- join 3 tables, flights, aircraft and aircraft models.</span>
-<span class="token comment">-- 'flights' is individual flights</span>
-<span class="token comment">-- 'aircraft' is the plane that made the flight</span>
-<span class="token comment">-- 'aircraft_models' is data about the kind of aircraft</span>
+    <p>To join the <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> of the source explore to a foreign key on a joined explore, reference the field from the joined explore in the <code class="language-malloy"><span class="token keyword">on</span></code> clause.</p>
+<pre class="language-malloy">users <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.ecomm.users'</span>
+  <span class="token keyword">primary</span> <span class="token keyword">key</span> id
+  order_items <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> order_items<span class="token punctuation">.</span>user_id
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h2>
+        <a id="naming-joined-explores" class="header-link anchor" href="#naming-joined-explores">
+          Naming Joined Explores
+        </a>
+      </h2>
+    <p>To preserve the name of the explore being joined in, use <code class="language-malloy"><span class="token keyword">join</span> <span class="token keyword">on</span></code>.</p>
+<pre class="language-malloy">flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  <span class="token keyword">primary</span> <span class="token keyword">key</span> id2
+  carriers <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> carrier
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>To give the joined explore a different name within the source explore, specify the name of the explore being joined in between <code class="language-malloy"><span class="token keyword">join</span></code> and <code class="language-malloy"><span class="token keyword">on</span></code>.</p>
+<pre class="language-malloy">flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  <span class="token keyword">primary</span> <span class="token keyword">key</span> id2
+  origin_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h2>
+        <a id="inlining-joins" class="header-link anchor" href="#inlining-joins">
+          Inlining Joins
+        </a>
+      </h2>
+    <p>Explores do not need to be named before they are used in a join.</p>
+<pre class="language-malloy">order_items <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.ecomm.order_items'</span>
+  users <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span>
+    <span class="token keyword">primary</span> <span class="token keyword">key</span> id
+  <span class="token punctuation">)</span> <span class="token keyword">on</span> user_id
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+      <h2>
+        <a id="using-fields-in-joined-explores" class="header-link anchor" href="#using-fields-in-joined-explores">
+          Using Fields in Joined Explores
+        </a>
+      </h2>
+    <p>When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class="language-malloy"><span class="token punctuation">.</span></code>.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  carriers<span class="token punctuation">.</span>nickname
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Northwest</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">United</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
+</tr>
 
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>Measures and queries defined in joined explores may be used in addition to dimensions.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> flights
+<span class="token operator">|</span> <span class="token keyword">reduce</span>
+  destination_code
+  carriers<span class="token punctuation">.</span>carrier_count</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination_&#8203;code</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">carrier_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IAH</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IND</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="join-example" class="header-link anchor" href="#join-example">
+          Join Example
+        </a>
+      </h2>
+    <p>This example demonstrates the definition of several different joins in a model and their use in a query.</p>
+<pre class="language-malloy"><span class="token comment">/* Data about particular kinds of aircraft */</span>
 <span class="token keyword">define</span> aircraft_models <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft_models'</span>
   <span class="token keyword">primary</span> <span class="token keyword">key</span> aircraft_model_code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
+<span class="token comment">/* Individual airplanes */</span>
 <span class="token keyword">define</span> aircraft <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft'</span>
   <span class="token keyword">primary</span> <span class="token keyword">key</span> tail_num
   aircraft_models <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> aircraft_model_code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
+<span class="token comment">/* The airports that the aircraft fly to and from */</span>
 <span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
   <span class="token keyword">primary</span> <span class="token keyword">key</span> code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
+<span class="token comment">/* Each individual flight */</span>
 <span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
     aircraft <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> tail_num
-
-  <span class="token comment">-- need to rename origin and desination fields to avoid namespace collision</span>
-  <span class="token comment">-- between aliased tables and fields; issue is unique to this dataset)</span>
-    origin_code <span class="token keyword">renames</span> origin
-    destination_code <span class="token keyword">renames</span> destination
-
-  <span class="token comment">-- join and alias airports table</span>
-    origin <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin_code
-    destination <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> destination_code
+    origin_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin
+    destination_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> destination
   <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>dep_time : <span class="token date">@2003-01</span><span class="token punctuation">,</span> origin<span class="token punctuation">.</span>code : <span class="token string">'SJC'</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  destination <span class="token keyword">is</span> destination<span class="token punctuation">.</span>code
+<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>
+  dep_time : <span class="token date">@2003-01</span><span class="token punctuation">,</span>
+  origin_airport<span class="token punctuation">.</span>code : <span class="token string">'SJC'</span>
+<span class="token punctuation">]</span> <span class="token operator">|</span> <span class="token keyword">reduce</span>
+  destination_code <span class="token keyword">is</span> destination_airport<span class="token punctuation">.</span>code
   flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   aircraft_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   aircraft_model_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination_&#8203;code</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;count</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;model_&#8203;count</th>
@@ -110,7 +215,7 @@ footer: /generated/footers/language/join.html
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div><p>For more examples and how to reason about aggregation across joins, review <a href="{{ '/documentation/patterns/foreign_sums.html' | relative_url }}">Foreign Sums</a></p>
+    </div>
+  </div><p>For more examples and how to reason about aggregation across joins, review the <a href="aggregates.html">Aggregates</a> section.</p>
 </div>

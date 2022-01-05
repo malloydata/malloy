@@ -455,3 +455,11 @@ div.document hr {
   border: none;
   border-bottom: 1px solid #4285f4;
 }
+
+td {
+  line-height: 24px;
+}
+
+.result-inner td {
+  line-height: 16px;
+}

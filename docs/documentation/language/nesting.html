@@ -6,16 +6,12 @@ footer: /generated/footers/language/nesting.html
 
 <div class="document">
       <h1>
-        <a id="what-is-an-aggregating-subquery-" class="header-link anchor" href="#what-is-an-aggregating-subquery-">
-          What is an "Aggregating Subquery?"
+        <a id="nested-queries" class="header-link anchor" href="#nested-queries">
+          Nested Queries
         </a>
       </h1>
-    <p>Aggregating Subqueries are queries nested in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, queries can be named and referenced in other queries. The technical term of "Aggregating Subquery" is a bit of a mouthful, so we more often refer to it as "nesting a query," or a "nested subtable."</p>
-<p>An Aggregating Subquery utilizes a Named Query, which might look like this when defined in the model, or within a query:</p>
-<pre class="language-malloy">  airports_by_facility <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    fac_type
-    airport_count
-    <span class="token punctuation">)</span></pre><p>When a Named Query is nested inside of another query, this forms a nested subtable.</p>
+    <p>Nested queries, more formally known as "aggregating subqueries" are queries included in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, queries can be named and referenced in other queries. The technical term "aggregating subquery" is a bit of a mouthful, so we more often refer to it as a "nested query."</p>
+<p>When a named query is nested inside of another query, it produces an aggregating subquery and the results include a nested subtable.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> airports <span class="token operator">|</span> <span class="token keyword">reduce</span>
   state
   airport_count
@@ -23,9 +19,9 @@ footer: /generated/footers/language/nesting.html
     fac_type
     airport_count
   <span class="token punctuation">)</span></pre><div class="result-outer small">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
@@ -50,10 +46,10 @@ footer: /generated/footers/language/nesting.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">435</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
@@ -117,13 +113,13 @@ footer: /generated/footers/language/nesting.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BALLOONPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BALLOONPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 
@@ -184,10 +180,10 @@ footer: /generated/footers/language/nesting.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 
@@ -197,16 +193,15 @@ footer: /generated/footers/language/nesting.html
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div><p>This named query can additionally be used to build out other computations, for example:</p>
-<pre class="language-malloy">  airports_in_ca <span class="token keyword">is</span> airports_by_facility <span class="token punctuation">[</span> state : <span class="token string">'CA'</span> <span class="token punctuation">]</span></pre>
+    </div>
+  </div>
       <h2>
         <a id="nesting-nested-queries" class="header-link anchor" href="#nesting-nested-queries">
           Nesting Nested Queries
         </a>
       </h2>
-    <p>Aggregating subqueries can be nested infinitely</p>
+    <p>Aggregating subqueries can be nested infinitely, meaning that a nested query can contain another nested query.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> airports
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   state
@@ -219,9 +214,9 @@ footer: /generated/footers/language/nesting.html
       airport_count
     <span class="token punctuation">)</span>
   <span class="token punctuation">)</span></pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
@@ -572,7 +567,7 @@ footer: /generated/footers/language/nesting.html
 		</tbody>
 	</table></td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WINNEBAGO</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LEE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 <td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -583,10 +578,13 @@ footer: /generated/footers/language/nesting.html
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 
 		</tbody>
@@ -765,10 +763,10 @@ footer: /generated/footers/language/nesting.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 
@@ -868,12 +866,12 @@ footer: /generated/footers/language/nesting.html
 
 		</tbody>
 	</table>
-        </div>
       </div>
     </div>
+  </div>
       <h2>
-        <a id="filter" class="header-link anchor" href="#filter">
-          Filter
+        <a id="filtering-nested-queries" class="header-link anchor" href="#filtering-nested-queries">
+          Filtering Nested Queries
         </a>
       </h2>
     <p>Filters can be applied at any level within nested queries.</p>
@@ -892,9 +890,9 @@ footer: /generated/footers/language/nesting.html
       airport_count
     <span class="token punctuation">)</span>
   <span class="token punctuation">)</span></pre><div class="result-outer large">
-      <div class="result-middle">
-        <div class="result-inner">
-          <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
@@ -1354,36 +1352,6 @@ footer: /generated/footers/language/nesting.html
 		</tbody>
 	</table></td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAKOTA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CROW WING</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
 <td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1410,14 +1378,44 @@ footer: /generated/footers/language/nesting.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+</tr>
+
+		</tbody>
+	</table></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAKOTA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
+      </tr>
+		</thead>
+		<tbody>
+			
+		</tbody>
+	</table></td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 
 		</tbody>
@@ -1463,6 +1461,6 @@ footer: /generated/footers/language/nesting.html
 
 		</tbody>
 	</table>
-        </div>
       </div>
-    </div></div>
+    </div>
+  </div></div>

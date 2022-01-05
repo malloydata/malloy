@@ -39,7 +39,7 @@
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/basic.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basics
+              Malloy Quickstart
             </a>
           </div>
 <div class='sidebar-item active'>
@@ -49,9 +49,27 @@
             </a>
           </div>
 <div class='sidebar-item '>
+            <a href="/malloy/documentation/language/explore.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Explores
+            </a>
+          </div>
+<div class='sidebar-item '>
             <a href="/malloy/documentation/language/query.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/fields.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Fields
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/types.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Types
             </a>
           </div>
 <div class='sidebar-item '>
@@ -67,12 +85,6 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explore Definition
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/join.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Joins
@@ -85,33 +97,21 @@
             </a>
           </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filter_expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filter Syntax
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/time-ranges.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Time Ranges
-            </a>
-          </div>
-<div class='sidebar-item '>
             <a href="/malloy/documentation/language/nesting.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nesting
+              Nested Queries
+            </a>
+          </div>
+<div class='sidebar-item '>
+            <a href="/malloy/documentation/language/aggregates.html">
+              <img src="/malloy/img/docs-page.svg" alt="document"/>
+              Aggregates
             </a>
           </div>
 <div class='sidebar-item '>
             <a href="/malloy/documentation/language/imports.html">
               <img src="/malloy/img/docs-page.svg" alt="document"/>
               Imports and Exports
-            </a>
-          </div>
-<div class='sidebar-item '>
-            <a href="/malloy/documentation/language/apply.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Apply Operator
             </a>
           </div>
       </div>
@@ -260,10 +260,10 @@
             
             <div class="linear-navigation">
     <div class="item">
-      <a href="basic.html"><img src="/malloy/img/previous.svg" alt="previous"/>Basics</a>
+      <a href="basic.html"><img src="/malloy/img/previous.svg" alt="previous"/>Malloy Quickstart</a>
     </div>
     <div class="item">
-      <a href="query.html">Queries<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="explore.html">Explores<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
   </div>
             
@@ -271,35 +271,42 @@
           <div class="document-outer">
             <div class="document">
       <h1>
-        <a id="model" class="header-link anchor" href="#model">
-          Model
+        <a id="models" class="header-link anchor" href="#models">
+          Models
         </a>
       </h1>
-    
-      <h1>
-        <a id="define" class="header-link anchor" href="#define">
-          define
-        </a>
-      </h1>
-    <p>When building a complex transformation from smaller pieces, there is
-a way to create a name for a query.</p>
-<ul>
-<li><p><code class="language-malloy"><span class="token keyword">define</span></code> <em>query</em> <em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span><span class="token punctuation">;</span></code></p>
-</li></ul>
+    <p>Malloy recognizes modeling as a key aspect of data analyitics and
+provides tools that allow for modularity and reusability of definitions.
+Whereas in SQL, queries generally define all metrics inline,
+requiring useful snippets to be saved and managed separately, in Malloy,
+<em>dimensions</em>, <em>measures</em>, and <em>queries</em> can be saved and attached to a
+modeled <em>explore</em>.</p>
 
-      <h1>
-        <a id="export" class="header-link anchor" href="#export">
-          export
+      <h2>
+        <a id="explores" class="header-link anchor" href="#explores">
+          Explores
         </a>
-      </h1>
-    <p>When building a model, it is sometimes usefult to have "internal"
-queries which are not useful to a user of the model. Malloy
-copies the notion of "modules" and "export" from other
-programming languages, requiring an explicit declaration
-for symbols which would be visibel outside of a model.</p>
-<ul>
-<li><p><code class="language-malloy"><span class="token keyword">export</span></code> <code class="language-malloy"><span class="token keyword">define</span></code> <em>query</em> <em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <code class="language-malloy"><span class="token punctuation">(</span></code> <em>query</em> <code class="language-malloy"><span class="token punctuation">)</span><span class="token punctuation">;</span></code></p>
-</li></ul>
+      </h2>
+    <p>A Malloy model file can contain several <em>explores</em>, which define fields that can be
+used in queries.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
+  <span class="token comment">-- A dimension</span>
+  distance_km <span class="token keyword">is</span> distance_mi <span class="token operator">/</span> <span class="token number">1.609344</span>
+
+  <span class="token comment">-- A measure</span>
+  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>See <a href="explore.html">here</a> for more information on explores.</p>
+
+      <h2>
+        <a id="queries" class="header-link anchor" href="#queries">
+          Queries
+        </a>
+      </h2>
+    <p>Named queries can also be defined at the top level of a model.</p>
+<pre class="language-malloy"><span class="token keyword">define</span> flights_by_carrier <span class="token keyword">is</span> <span class="token punctuation">(</span>flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
+  carrier
+  flight_count
+<span class="token punctuation">)</span></pre><p>See <a href="query.html">here</a> for more information on queries.</p>
 </div>
           </div>
         </div>
