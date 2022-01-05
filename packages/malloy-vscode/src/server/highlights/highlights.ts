@@ -12,7 +12,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { HighlightType, MalloyTranslator } from "malloy";
+import { HighlightType, Malloy } from "@malloy-lang/malloy";
 import {
   SemanticTokens,
   SemanticTokensBuilder,
@@ -42,19 +42,11 @@ export const TOKEN_MODIFIERS = ["declaration", "documentation"];
 export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const tokensBuilder = new SemanticTokensBuilder();
 
-  const uri = document.uri.toString();
   const text = document.getText();
   const textLines = text.split("\n");
-  const translator = new MalloyTranslator(uri, {
-    URLs: {
-      [uri]: text,
-    },
-  });
+  const parse = Malloy.parse({ source: text });
 
-  const metadata = translator.metadata();
-  const highlights = metadata.highlights || [];
-
-  highlights.forEach((highlight) => {
+  parse.highlights.forEach((highlight) => {
     for (
       let line = highlight.range.start.line;
       line <= highlight.range.end.line;
@@ -124,7 +116,7 @@ function mapTypes(type: string) {
     case HighlightType.Keyword.Import:
       return "keyword";
     // These are more like meta types, so maybe they should be highlighted differently
-    case HighlightType.Keyword.Json:
+    case HighlightType.Keyword.JSON:
     case HighlightType.Keyword.Turtle:
       return "keyword";
     case HighlightType.Call.TimeFrame:

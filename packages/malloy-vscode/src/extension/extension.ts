@@ -31,10 +31,7 @@ import {
   runQueryWithEdit,
   showLicensesCommand,
 } from "./commands";
-import { BigQuery, Malloy } from "malloy";
-import { showResultJsonCommand } from "./commands/show_result_json";
-
-Malloy.setDB(new BigQuery());
+import { showResultJSONCommand } from "./commands/show_result_json";
 
 let client: LanguageClient;
 
@@ -122,8 +119,8 @@ function registerCommands(context: vscode.ExtensionContext): void {
   // Show result JSON
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "malloy.showResultJson",
-      showResultJsonCommand
+      "malloy.showResultJSON",
+      showResultJSONCommand
     )
   );
 }

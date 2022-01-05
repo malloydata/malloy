@@ -1,30 +1,29 @@
 --! styles flights.styles.json
 
-export define airports is (explore 'malloy-data.faa.airports'
+import "flights_base_bigquery.malloy";
+-- import "flights_base_postgres.malloy";
+
+export define airports is (explore airports_base
   primary key code
   name is concat(code, ' - ', full_name)
   airport_count is count()
 );
 
-define carriers is (explore 'malloy-data.faa.carriers'
+define carriers is (explore carriers_base
   primary key code
   carrier_count is count()
 );
 
-define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
+export define aircraft_models is (explore aircraft_models_base
   primary key aircraft_model_code
   aircraft_model_count is count()
 );
 
-define aircraft is (explore 'malloy-data.faa.aircraft'
+export define aircraft is (explore aircraft_base
   primary key tail_num
   aircraft_count is count()
   -- joins
   aircraft_models is join on aircraft_model_code
-);
-
-export define flights_base is (explore 'malloy-data.faa.flights'
-  primary key id2
 );
 
 define aircraft_facts is (explore
@@ -76,7 +75,7 @@ export define flights is (explore flights_base
   year_over_year is (reduce
     dep_month is month(dep_time)
     flight_count
-    dep_year is dep_time.year
+    dep_year is year(dep_time) -- dep_time.year
   )
 
   -- shows plane manufacturers and frequency of use
@@ -93,7 +92,7 @@ export define flights is (explore flights_base
   )
 
   carriers_by_month is (reduce
-    dep_month is dep_time.month
+    dep_month is month(dep_time) -- dep_time.month
     flight_count
     carriers.nickname
   )
@@ -115,7 +114,7 @@ export define flights is (explore flights_base
   )
 
   destinations_by_month is (reduce
-    dep_time.`month`
+    dep_month is month(dep_time) -- dep_time.`month`
     flight_count
     destination.name
   )
@@ -144,7 +143,7 @@ export define flights is (explore flights_base
     flight_count
     by_manufacturer
     by_month is (reduce
-      dep_month is dep_time.month
+      dep_month is month(dep_time) --  dep_time.month
       flight_count
     )
     hubs is (reduce : [destination.airport_count > 1] top 10
@@ -204,7 +203,7 @@ export define flights is (explore flights_base
         dest_code is destination_code
         dep_delay
         arr_delay
-        )
+      )
     )
   )
 
@@ -260,3 +259,34 @@ sfo_dashboard is (
   flights |
   airport_dashboard : [origin.code: 'SFO']
 );
+
+explore aircraft
+| reduce
+  average_seats1 is avg(aircraft_models.seats)
+
+explore flights : [dep_time: @2003 to @2005]
+| reduce order by dep_month desc dep_month is dep_time.month
+
+
+explore flights : [dep_time: @2003 to @2005]
+| reduce
+  carriers
+  flight_count
+
+
+explore flights : [dep_time: @2003 to @2005]
+| reduce : [ carriers.carrier_count > 10]
+  destination
+  flight_count
+  by_carrier is (reduce order by 2 desc limit 1
+    carriers
+    flight_count
+  )
+-- | reduce order by 1
+--   by_carrier.carriers.nickname
+--   destination_count is destination.count()
+--   total_flights is by_carrier.flight_count.sum()
+--   destinations is (reduce
+--     destination.full_name
+--     flight_count is by_carrier.flight_count.sum()
+--   )

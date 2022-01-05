@@ -12,8 +12,69 @@
  */
 
 // TODO tighten up exports
-export * from "./model";
-export * from "./lang";
-export { BigQuery, BigQueryAuthenticationError } from "./db/bigquery";
-export { Malloy } from "./malloy";
+export {
+  // Currently needed only by tests
+  ModelDef,
+  Fragment,
+  Query,
+  // Needed for DB
+  StructDef,
+  NamedStructDefs,
+  MalloyQueryData,
+  AtomicFieldType,
+  QueryData,
+  FieldTypeDef,
+  // Needed for drills in render
+  FilterExpression,
+} from "./model";
+export {
+  // Neede for VSCode extension
+  HighlightType,
+  LogMessage,
+  // Needed for tests only
+  MalloyTranslator,
+  TranslateResponse,
+} from "./lang";
+export {
+  Malloy,
+  Runtime,
+  EmptyURLReader,
+  InMemoryURLReader,
+  FixedConnectionMap,
+  MalloyError,
+  JoinRelationship,
+  SourceRelationship,
+  DateTimeframe,
+  TimestampTimeframe,
+} from "./malloy";
+export type {
+  Explore,
+  Model,
+  PreparedQuery,
+  PreparedResult,
+  Field,
+  AtomicField,
+  ExploreField,
+  QueryField,
+  Result,
+  DataArray,
+  DataColumn,
+  DataArrayOrRecord,
+  ModelMaterializer,
+  DocumentSymbol,
+  DocumentHighlight,
+} from "./malloy";
+export type {
+  URLReader,
+  SchemaReader,
+  LookupSchemaReader,
+  SQLRunner,
+  LookupSQLRunner,
+  QueryString,
+  ModelString,
+  QueryURL,
+  ModelURL,
+} from "./runtime_types";
+export { URL } from "./runtime_types";
+export { Connection } from "./connection";
 export type { Loggable } from "./malloy";

@@ -16,11 +16,12 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { Malloy, MalloyTranslator, LogMessage, BigQuery } from "malloy";
+import { LogMessage, MalloyError, Runtime, URL } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 
-Malloy.setDB(new BigQuery());
+const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery");
 
 async function magicGetTheFile(
   documents: TextDocuments<TextDocument>,
@@ -41,67 +42,52 @@ export async function getMalloyDiagnostics(
 ): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
 
+  const uri = document.uri.toString();
+  const files = {
+    readURL: (url: URL) => magicGetTheFile(documents, url.toString()),
+  };
+  const runtime = new Runtime(files, BIGQUERY_CONNECTION);
+  let errors: LogMessage[] = [];
   try {
-    const uri = document.uri.toString();
-    const translator = new MalloyTranslator(uri, {
-      URLs: {
-        [uri]: document.getText(),
-      },
-    });
-    let done = false;
-    let errors: LogMessage[] = [];
-    while (!done) {
-      const result = translator.translate();
-      done = result.final || false;
-      if (result.errors) {
-        errors = result.errors;
-      }
-      if (result.translated) {
-        // result.translated.queryList has unnamed queries
-        // result.translated.modelDef has the model
-      } else if (result.URLs) {
-        for (const neededUri of result.URLs) {
-          const theNeeded = await magicGetTheFile(documents, neededUri);
-          translator.update({ URLs: { [neededUri]: theNeeded } });
-        }
-      } else if (result.tables) {
-        const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-        translator.update({ tables });
-      }
-    }
-
-    for (const err of errors) {
-      const sev =
-        err.severity === "warn"
-          ? DiagnosticSeverity.Warning
-          : err.severity === "debug"
-          ? DiagnosticSeverity.Information
-          : DiagnosticSeverity.Error;
-
+    await runtime.getModel(new URL(uri));
+  } catch (error) {
+    if (error instanceof MalloyError) {
+      errors = error.log;
+    } else {
+      // TODO this kind of error should cease to exist. All errors should have source info.
       diagnostics.push({
-        severity: sev,
+        severity: DiagnosticSeverity.Error,
         range: {
-          start: {
-            line: (err.begin?.line || 1) - 1,
-            character: err.begin?.char || 0,
-          },
-          end: {
-            line: (err.end?.line || err.begin?.line || 1) - 1,
-            character: err.end?.char || Number.MAX_VALUE,
-          },
+          start: { line: 0, character: 0 },
+          end: { line: 0, character: Number.MAX_VALUE },
         },
-        message: err.message,
+        message: error.message,
         source: "malloy",
       });
     }
-  } catch (error) {
+  }
+
+  for (const err of errors) {
+    const sev =
+      err.severity === "warn"
+        ? DiagnosticSeverity.Warning
+        : err.severity === "debug"
+        ? DiagnosticSeverity.Information
+        : DiagnosticSeverity.Error;
+
     diagnostics.push({
-      severity: DiagnosticSeverity.Error,
+      severity: sev,
       range: {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: Number.MAX_VALUE },
+        start: {
+          line: (err.begin?.line || 1) - 1,
+          character: err.begin?.char || 0,
+        },
+        end: {
+          line: (err.end?.line || err.begin?.line || 1) - 1,
+          character: err.end?.char || Number.MAX_VALUE,
+        },
       },
-      message: error.message,
+      message: err.message,
       source: "malloy",
     });
   }

@@ -13,64 +13,45 @@
 
 import * as lite from "vega-lite";
 import * as vega from "vega";
-import {
-  FieldDef,
-  QueryData,
-  QueryDataRow,
-  QueryValue,
-  StructDef,
-} from "malloy";
+import { DataArray, DataColumn, Field } from "@malloy-lang/malloy";
 import { Renderer } from "../renderer";
-import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { StyleDefaults } from "../data_styles";
 
-export abstract class HtmlChartRenderer implements Renderer {
+export abstract class HTMLChartRenderer implements Renderer {
   abstract getDataType(
-    field: FieldDef,
-    metadata: StructDef
+    field: Field
   ): "temporal" | "ordinal" | "quantitative" | "nominal";
 
   abstract getDataValue(
-    value: QueryValue,
-    field: FieldDef,
-    metadata: StructDef
+    value: DataColumn
   ): Date | string | number | null | undefined;
 
   mapData(
-    data: QueryData,
-    dataFields: (FieldDef | undefined)[],
-    metadata: StructDef
+    data: DataArray
   ): { [p: string]: string | number | Date | undefined | null }[] {
-    return data.map((row: QueryDataRow) => {
+    const mappedRows = [];
+    for (const row of data) {
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;
       } = {};
-      for (const dataField of dataFields) {
-        if (dataField) {
-          mappedRow[dataField.name] = this.getDataValue(
-            row[dataField.name],
-            dataField,
-            metadata
-          );
-        }
+      for (const field of data.field.intrinsicFields) {
+        mappedRow[field.name] = this.getDataValue(row.cell(field));
       }
-      return mappedRow;
-    });
+      mappedRows.push(mappedRow);
+    }
+    return mappedRows;
   }
 
   constructor(protected styleDefaults: StyleDefaults) {}
 
-  abstract getVegaLiteSpec(
-    data: QueryData,
-    metadata: StructDef
-  ): lite.TopLevelSpec;
+  abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataColumn): Promise<string> {
+    if (!table.isArray()) {
       throw new Error("Invalid type for chart renderer");
     }
 
-    const spec = this.getVegaLiteSpec(table.rows, table.structDef);
+    const spec = this.getVegaLiteSpec(table);
 
     const vegaspec = lite.compile(spec, {
       logger: {

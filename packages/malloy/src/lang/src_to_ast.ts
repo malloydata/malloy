@@ -787,7 +787,7 @@ export class MalloyToAST
     return this.visitExplore(pcx.explore());
   }
 
-  visitDefFromJson(pcx: parse.DefFromJsonContext): ast.JSONStructDef {
+  visitDefFromJSON(pcx: parse.DefFromJSONContext): ast.JSONStructDef {
     const jsonCx = pcx.json();
     // const jsonFrom = jsonCx.start.startIndex;
     if (jsonCx.stop) {

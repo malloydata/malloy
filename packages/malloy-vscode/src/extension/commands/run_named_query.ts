@@ -13,9 +13,9 @@
 
 import * as vscode from "vscode";
 import { MALLOY_EXTENSION_STATE } from "../state";
-import { runMalloyQuery } from "./run_query_utils";
+import { runMalloyQuery, RunRenderStyle } from "./run_query_utils";
 
-export function runNamedQuery(name: string): void {
+export function runNamedQuery(name: string, renderStyle: RunRenderStyle): void {
   const document =
     vscode.window.activeTextEditor?.document ||
     MALLOY_EXTENSION_STATE.getActiveWebviewPanel()?.document;
@@ -23,7 +23,8 @@ export function runNamedQuery(name: string): void {
     runMalloyQuery(
       { type: "named", name, file: document },
       `${document.uri.toString()} ${name}`,
-      name
+      name,
+      renderStyle
     );
   }
 }

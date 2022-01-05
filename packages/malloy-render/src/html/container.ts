@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "malloy";
+import { Explore, Field } from "@malloy-lang/malloy";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { ChildRenderers, RenderTree } from "../renderer";
 import { makeRenderer } from "./html_view";
@@ -20,9 +20,9 @@ export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};
   protected abstract childrenStyleDefaults: StyleDefaults;
 
-  makeChildRenderers(structDef: StructDef, dataStyles: DataStyles): void {
+  makeChildRenderers(explore: Explore, dataStyles: DataStyles): void {
     const result: ChildRenderers = {};
-    structDef.fields.forEach((field: FieldDef) => {
+    explore.intrinsicFields.forEach((field: Field) => {
       result[field.name] = makeRenderer(
         field,
         dataStyles,
@@ -37,11 +37,11 @@ export abstract class ContainerRenderer extends RenderTree {
   //  our children.
   static make<Type extends ContainerRenderer>(
     c: new () => Type,
-    structDef: StructDef,
+    exploreField: Explore,
     dataStyles: DataStyles
   ): Type {
     const n = new c();
-    n.makeChildRenderers(structDef, dataStyles);
+    n.makeChildRenderers(exploreField, dataStyles);
     return n;
   }
 }

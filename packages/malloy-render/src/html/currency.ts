@@ -11,23 +11,19 @@
  * GNU General Public License for more details.
  */
 
-import { DataValue } from "../data_table";
-import { HtmlTextRenderer } from "./text";
+import { DataColumn } from "@malloy-lang/malloy";
+import { HTMLTextRenderer } from "./text";
 
-export class HtmlCurrencyRenderer extends HtmlTextRenderer {
-  getText(data: DataValue): string | null {
-    if (data === null) {
+export class HTMLCurrencyRenderer extends HTMLTextRenderer {
+  getText(data: DataColumn): string | null {
+    if (data.isNull()) {
       return null;
-    }
-
-    if (typeof data !== "number") {
-      throw new Error("Invalid type for number renderer.");
     }
 
     // TODO get this from renderer options
     const unitText = "$";
 
-    const numText = data.toLocaleString("en-US", {
+    const numText = data.number.value.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });

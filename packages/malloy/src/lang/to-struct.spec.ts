@@ -14,21 +14,19 @@
 
 import "./jestery";
 import * as model from "../model/malloy_types";
-import { Malloy } from "../malloy";
 import {
   aTableDef,
   mkQuery,
   mkStruct,
   mkFilters,
   mkCountDef,
-  exploreFor,
   mkAgg,
   pretty,
   TestTranslator,
 } from "./jest-factories";
 import * as ast from "./ast";
 import { FieldSpace } from "./field-space";
-import { NeedSchemaData } from "./parse-malloy";
+import { NeedSchemaData, UpdateData } from "./parse-malloy";
 import { isConditionParameter, isValueParameter } from "../model/malloy_types";
 import { cloneDeep } from "lodash";
 
@@ -44,28 +42,28 @@ function findField(
 function queryForExplore(exploreSource: string): model.Query {
   const x = new TestTranslator(exploreSource, "explore");
   expect(x).toTranslate();
-  const exploreAst = x.ast();
-  if (exploreAst instanceof ast.Explore) {
-    return exploreAst.query();
+  const exploreAST = x.ast();
+  if (exploreAST instanceof ast.Explore) {
+    return exploreAST.query();
   }
   throw new Error(
     `SOURCE:\n` +
       `${exploreSource}\n\n` +
-      `Expected source to parse to an explore => ${pretty(exploreAst)}`
+      `Expected source to parse to an explore => ${pretty(exploreAST)}`
   );
 }
 
 function sourceStructFromExplore(exploreSource: string): model.StructDef {
   const x = new TestTranslator(exploreSource, "explore");
   expect(x).toTranslate();
-  const exploreAst = x.ast();
-  if (exploreAst instanceof ast.Explore) {
-    return exploreAst.structDef();
+  const exploreAST = x.ast();
+  if (exploreAST instanceof ast.Explore) {
+    return exploreAST.structDef();
   }
   throw new Error(
     `SOURCE:\n` +
       `${exploreSource}\n\n` +
-      `Expected source to parse to an explore => ${pretty(exploreAst)}`
+      `Expected source to parse to an explore => ${pretty(exploreAST)}`
   );
 }
 
@@ -81,13 +79,13 @@ function wellTranslated(docSource: string) {
 
 function fieldDefFromExpression(expr: string): model.FieldTypeDef {
   const exprParse = new TestTranslator(expr, "fieldExpr");
-  const exprAst = exprParse.ast();
+  const exprAST = exprParse.ast();
   expect(exprParse).toTranslate();
-  expect(exprAst).toBeInstanceOf(ast.ExpressionDef);
-  if (exprAst instanceof ast.ExpressionDef) {
+  expect(exprAST).toBeInstanceOf(ast.ExpressionDef);
+  if (exprAST instanceof ast.ExpressionDef) {
     const aSpace = new FieldSpace(mkStruct("a"));
     const fakeDef = new ast.ExpressionFieldDef(
-      exprAst,
+      exprAST,
       new ast.FieldName("test")
     );
     const field = fakeDef.fieldDef(aSpace, "test");
@@ -453,19 +451,21 @@ describe("field definition lists", () => {
   // At the moment, anonymous expressions are not legal, wo we have some older
   // tests which we don't need to run, leaving them herein case we change
   // our minds about that.
+
+  // additionally, this is commented out because we are removing database access from language tests
   test.skip("generated safe anonymous name for dotted sources", async () => {
-    const n =
-      "bigquery-public-data.google_analytics_sample.ga_sessions_20170801";
-    const parse = await exploreFor(
-      `explore '${n}' hits.latencyTracking.pageLoadTime + 1`
-    );
-    if (parse.schema && parse.explore) {
-      const s = parse.explore.structDef();
-      const lastField = s.fields[s.fields.length - 1];
-      expect(lastField.name).toBe("ga_sessions_20170801_anon_0");
-    } else {
-      fail(pretty(parse.errors));
-    }
+    // const n =
+    //   "bigquery-public-data.google_analytics_sample.ga_sessions_20170801";
+    // const parse = await exploreFor(
+    //   `explore '${n}' hits.latencyTracking.pageLoadTime + 1`
+    // );
+    // if (parse.schema && parse.explore) {
+    //   const s = parse.explore.structDef();
+    //   const lastField = s.fields[s.fields.length - 1];
+    //   expect(lastField.name).toBe("ga_sessions_20170801_anon_0");
+    // } else {
+    //   fail(pretty(parse.errors));
+    // }
   });
 
   test.skip("foo.bar.sum() is named total_bar", async () => {
@@ -1225,10 +1225,10 @@ describe("expressions", () => {
   test("dimension source code passed to back end", () => {
     const expr = "e is afloat + 42 / 54";
     const exprParse = new TestTranslator(expr, "fieldDef");
-    const exprAst = exprParse.ast();
-    expect(exprAst).toBeInstanceOf(ast.ExpressionFieldDef);
-    if (exprAst instanceof ast.ExpressionFieldDef) {
-      const f = exprAst.fieldDef(new FieldSpace(aTableDef), "test");
+    const exprAST = exprParse.ast();
+    expect(exprAST).toBeInstanceOf(ast.ExpressionFieldDef);
+    if (exprAST instanceof ast.ExpressionFieldDef) {
+      const f = exprAST.fieldDef(new FieldSpace(aTableDef), "test");
       expect(exprParse).toBeErrorless();
       expect(f.source).toEqual("afloat+42/54");
     } else {
@@ -1334,14 +1334,14 @@ describe("document", () => {
   test("x model", async () => {
     const letsgoSrc = `
       define aircraft_models is
-        (explore 'lookerdata.liquor.aircraft_models'
+        (explore 'malloytest.aircraft_models'
           primary key aircraft_model_code
           total_seats is sum(seats),
           airport_count is count(*),
         );
 
       export define aircraft is
-        (explore 'lookerdata.liquor.aircraft'
+        (explore 'malloytest.aircraft'
           primary key tail_num
           aircraft_count is count(*),
           joins
@@ -1350,16 +1350,193 @@ describe("document", () => {
         `;
     const letsParse = new TestTranslator(letsgoSrc);
     const needThese: NeedSchemaData = {
-      tables: [
-        "lookerdata.liquor.aircraft_models",
-        "lookerdata.liquor.aircraft",
-      ],
+      tables: ["malloytest.aircraft_models", "malloytest.aircraft"],
     };
     expect(letsParse).toBeValidMalloy();
     const xr = letsParse.translate();
     expect(xr).toEqual(needThese);
-    const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
-    letsParse.update({ tables });
+    //const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
+    const tables = {
+      "malloytest.aircraft_models": {
+        type: "struct",
+        name: "malloytest.aircraft_models",
+        dialect: "standardsql",
+        structSource: {
+          type: "table",
+        },
+        structRelationship: {
+          type: "basetable",
+        },
+        fields: [
+          {
+            name: "aircraft_model_code",
+            type: "string",
+          },
+          {
+            name: "manufacturer",
+            type: "string",
+          },
+          {
+            name: "model",
+            type: "string",
+          },
+          {
+            name: "aircraft_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_engine_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_category_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "amateur",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "engines",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "seats",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "weight",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "speed",
+            type: "number",
+            numberType: "integer",
+          },
+        ],
+      },
+      "malloytest.aircraft": {
+        type: "struct",
+        dialect: "standardsql",
+        name: "malloytest.aircraft",
+        structSource: {
+          type: "table",
+        },
+        structRelationship: {
+          type: "basetable",
+        },
+        fields: [
+          {
+            name: "tail_num",
+            type: "string",
+          },
+          {
+            name: "aircraft_serial",
+            type: "string",
+          },
+          {
+            name: "aircraft_model_code",
+            type: "string",
+          },
+          {
+            name: "aircraft_engine_code",
+            type: "string",
+          },
+          {
+            name: "year_built",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "aircraft_engine_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "registrant_type_id",
+            type: "number",
+            numberType: "integer",
+          },
+          {
+            name: "name",
+            type: "string",
+          },
+          {
+            name: "address1",
+            type: "string",
+          },
+          {
+            name: "address2",
+            type: "string",
+          },
+          {
+            name: "city",
+            type: "string",
+          },
+          {
+            name: "state",
+            type: "string",
+          },
+          {
+            name: "zip",
+            type: "string",
+          },
+          {
+            name: "region",
+            type: "string",
+          },
+          {
+            name: "county",
+            type: "string",
+          },
+          {
+            name: "country",
+            type: "string",
+          },
+          {
+            name: "certification",
+            type: "string",
+          },
+          {
+            name: "status_code",
+            type: "string",
+          },
+          {
+            name: "mode_s_code",
+            type: "string",
+          },
+          {
+            name: "fract_owner",
+            type: "string",
+          },
+          {
+            name: "last_action_date",
+            type: "date",
+          },
+          {
+            name: "cert_issue_date",
+            type: "date",
+          },
+          {
+            name: "air_worth_date",
+            type: "date",
+          },
+        ],
+      },
+    };
+    letsParse.update({ tables } as Partial<UpdateData>);
     expect(letsParse).toTranslate();
   });
 
@@ -1396,7 +1573,7 @@ describe("document", () => {
     `;
     const parentDoc = new TestTranslator(parentSrc);
     parentDoc.update({
-      URLs: {
+      urls: {
         "internal://test/child":
           "export define childA is ('aTable' new0 is aninteger + 1)",
       },
@@ -1421,7 +1598,7 @@ describe("document", () => {
     const parentDoc = new TestTranslator(parentSrc);
     parentDoc.update({
       errors: {
-        URLs: { "internal://test/no-such-file": "No such file or directory" },
+        urls: { "internal://test/no-such-file": "No such file or directory" },
       },
     });
     expect(parentDoc.unresolved()).toBeNull();
@@ -1436,7 +1613,7 @@ describe("document", () => {
     `;
     const parentDoc = new TestTranslator(parentSrc);
     parentDoc.update({
-      URLs: {
+      urls: {
         "internal://test/child": `
           import "grandchild"
           export define childC is (explore childG newC is newG + 1)

@@ -54,8 +54,9 @@ declare global {
 const fs = new FieldSpace({
   type: "struct",
   name: "empty",
+  dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   fields: [],
 });
 

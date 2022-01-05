@@ -1,6 +1,9 @@
 {
   "references": [
     { "path": "packages/malloy" },
+    { "path": "packages/malloy-db-bigquery" },
+    { "path": "packages/malloy-db-postgres" },
+    { "path": "packages/malloy-db-test" },
     { "path": "packages/malloy-render" },
     { "path": "packages/malloy-vscode" }
   ],
@@ -8,6 +11,7 @@
   "include": [],
   "exclude": ["**/node_modules"],
   "compilerOptions": {
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "downlevelIteration": true
   }
 }

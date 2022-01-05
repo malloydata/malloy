@@ -23,8 +23,9 @@ import {
   Fragment,
   isAtomicFieldType,
   isConditionParameter,
+  StructDef,
 } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
+import { FieldSpace, ConstantFieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
   FieldName,
@@ -127,18 +128,6 @@ class DollarReference extends ExpressionDef {
       value: [{ type: "applyVal" }],
       aggregate: false,
     };
-  }
-}
-
-class ConstantFieldSpace extends FieldSpace {
-  constructor() {
-    super({
-      type: "struct",
-      name: "empty structdef",
-      structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
-      fields: [],
-    });
   }
 }
 

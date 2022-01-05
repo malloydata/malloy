@@ -56,8 +56,8 @@ The "Result" column uses a value of `2021-08-06 00:55:05` for `expr`.
 expression | meaning | result
 ---- | ---- | ----
 `day_of_year(expr)` | day of year, 1-365 | 218
-`day_of_month(expr)` | day of month 1-31 | 5
-`day(expr)` | day of week 1-7 | 6
+`day(expr)` | day of month 1-31 | 5
+`day_of_week(expr)` | day of week 1-7 | 6 _(Note: 1 represents Sunday)_
 `week(expr)` | week in year, 1-53 | 31
 `quarter(expr)` | quarter in year 1-4 | 3
 `hour(expr)` | hour of day 0-23 | 0
