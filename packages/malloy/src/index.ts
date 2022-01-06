@@ -46,6 +46,7 @@ export {
   SourceRelationship,
   DateTimeframe,
   TimestampTimeframe,
+  parseTableURL,
 } from "./malloy";
 export type {
   Explore,
@@ -76,5 +77,5 @@ export type {
   ModelURL,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
-export { Connection } from "./connection";
+export { Connection, PooledConnection } from "./connection";
 export type { Loggable } from "./malloy";
