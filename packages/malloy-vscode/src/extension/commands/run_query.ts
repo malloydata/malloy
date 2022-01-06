@@ -19,7 +19,7 @@ import { runMalloyQuery } from "./run_query_utils";
 export function runQueryCommand(
   query: string,
   name?: string,
-  renderStyle: QueryRenderMode = QueryRenderMode.HTML
+  renderMode: QueryRenderMode = QueryRenderMode.HTML
 ): void {
   const document =
     vscode.window.activeTextEditor?.document ||
@@ -29,7 +29,7 @@ export function runQueryCommand(
       { type: "string", text: query, file: document },
       `${document.uri.toString()} ${name}`,
       name || document.uri.toString(),
-      renderStyle
+      renderMode
     );
   }
 }

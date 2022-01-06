@@ -16,7 +16,6 @@ import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
 import { DataStyles } from "@malloy-lang/render";
-import { renderErrorHTML } from "../html";
 import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
