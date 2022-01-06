@@ -603,13 +603,13 @@ export class MalloyToAST
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getIdText(pcx.queryName());
-    return this.astAt(new ast.NestedQuery(name), pcx);
+    return this.astAt(new ast.NestReference(name), pcx);
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestedQuery {
     const name = this.getIdText(pcx.queryName());
     const pipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.NestedQuery(name, pipe), pcx);
+    return this.astAt(new ast.NestDefinition(name, pipe), pcx);
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {

@@ -12,15 +12,8 @@
  */
 
 import * as model from "../model/malloy_types";
-import { Segment } from "../model/malloy_query";
 import { FieldSpace, NewFieldSpace } from "./field-space";
-import {
-  MalloyElement,
-  FieldValueType,
-  ExprFieldDecl,
-  TurtleDecl,
-  HasParameter,
-} from "./ast";
+import { FieldValueType, ExprFieldDecl, TurtleDecl, HasParameter } from "./ast";
 
 // "Space Fields" are a field in a field space
 
@@ -159,49 +152,9 @@ export class ColumnSpaceField extends SpaceField {
   }
 }
 
-interface ResultPipeline {
-  segments: model.PipeSegment[];
-  lastSpace: FieldSpace;
-}
-function isResultPipeline(wr: WalkResult): wr is ResultPipeline {
-  const rp = wr as ResultPipeline;
-  return rp.segments !== undefined && rp.lastSpace !== undefined;
-}
-interface WalkError {
-  error: true;
-  message?: string;
-}
-type WalkResult = ResultPipeline | WalkError;
-
 export abstract class QueryField extends SpaceField {
   constructor(protected inSpace: FieldSpace) {
     super();
-  }
-
-  abstract walkSegments(_ignore: MalloyElement, fs: FieldSpace): WalkResult;
-
-  static getTailSpace(
-    logEl: MalloyElement,
-    fs: FieldSpace,
-    turtleName: string | undefined
-  ): FieldSpace | undefined {
-    if (turtleName === undefined) {
-      return fs;
-    }
-    const turtle = fs.findEntry(turtleName);
-    if (turtle === undefined) {
-      logEl.log(`Reference to undefined turtle '${turtleName}'`);
-      return undefined;
-    }
-    if (!(turtle instanceof QueryField)) {
-      logEl.log(`Expected '${turtleName} to reference a turtle`);
-      return undefined;
-    }
-    const turtleWalk = turtle.walkSegments(logEl, fs);
-    if (!isResultPipeline(turtleWalk)) {
-      return undefined;
-    }
-    return turtleWalk.lastSpace;
   }
 
   queryFieldDef(): model.QueryFieldDef | undefined {
@@ -214,6 +167,7 @@ export abstract class QueryField extends SpaceField {
 }
 
 export class QueryFieldAST extends QueryField {
+  renameAs?: string;
   constructor(
     fs: FieldSpace,
     readonly turtle: TurtleDecl,
@@ -222,50 +176,22 @@ export class QueryFieldAST extends QueryField {
     super(fs);
   }
 
-  walkSegments(_logEl: MalloyElement, fs: FieldSpace): WalkResult {
-    const [lastFs, segs] = this.turtle.pipe.translateSegments(fs);
-    return {
-      segments: segs,
-      lastSpace: lastFs,
-    };
-  }
-
   rename(newName: string): void {
-    this.name = newName;
+    this.renameAs = newName;
   }
 
   fieldDef(): model.TurtleDef {
-    return this.turtle.getFieldDef(this.inSpace);
+    const def = this.turtle.getFieldDef(this.inSpace);
+    if (this.renameAs) {
+      def.as = this.renameAs;
+    }
+    return def;
   }
 }
 
-export class TurtleFieldStruct extends QueryField {
+export class QueryFieldStruct extends QueryField {
   constructor(fs: FieldSpace, protected turtleDef: model.TurtleDef) {
     super(fs);
-  }
-
-  walkSegments(logEl: MalloyElement, fs: FieldSpace): WalkResult {
-    const walked: WalkResult = {
-      lastSpace: fs,
-      segments: [],
-    };
-    const turtleName = this.turtleDef.pipeHead?.name;
-    if (turtleName) {
-      const nfs = QueryField.getTailSpace(logEl, fs, turtleName);
-      if (nfs === undefined) {
-        return { error: true };
-      }
-      walked.lastSpace = nfs;
-    }
-    const pipe = this.turtleDef.pipeline;
-    if (pipe.length > 0) {
-      let inputStruct = walked.lastSpace.structDef();
-      for (const seg of this.turtleDef.pipeline) {
-        inputStruct = Segment.nextStructDef(inputStruct, seg);
-      }
-      walked.lastSpace = new FieldSpace(inputStruct);
-    }
-    return walked;
   }
 
   rename(name: string): void {
@@ -275,7 +201,7 @@ export class TurtleFieldStruct extends QueryField {
     };
   }
 
-  fieldDef(): model.FieldDef {
+  fieldDef(): model.TurtleDef {
     return this.turtleDef;
   }
 }
@@ -370,10 +296,7 @@ export class FANSPaceField extends SpaceField {
 
 export class ExpressionFieldFromAst extends SpaceField {
   fieldName: string;
-  constructor(
-    readonly space: NewFieldSpace,
-    readonly exprDef: ExprFieldDecl
-  ) {
+  constructor(readonly space: NewFieldSpace, readonly exprDef: ExprFieldDecl) {
     super();
     this.fieldName = exprDef.defineName;
     // left over from anonymous expression days

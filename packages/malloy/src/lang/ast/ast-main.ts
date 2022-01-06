@@ -625,7 +625,8 @@ export type QueryProperty =
   | Limit
   | Filter
   | FieldCollection
-  | Nest
+  | NestReference
+  | NestDefinition
   | Nests
   | Aggregate
   | GroupBy;
@@ -638,7 +639,8 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof FieldCollection ||
     q instanceof Aggregate ||
     q instanceof Nests ||
-    q instanceof Nest ||
+    q instanceof NestReference ||
+    q instanceof NestDefinition ||
     q instanceof GroupBy
   );
 }
@@ -803,7 +805,11 @@ export class FieldListEdit extends MalloyElement {
   }
 }
 
-export type QueryItem = ExprFieldDecl | FieldName;
+export type QueryItem =
+  | ExprFieldDecl
+  | FieldName
+  | NestDefinition
+  | NestReference;
 
 export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
@@ -881,8 +887,12 @@ export class QOPDesc extends ListOf<QueryProperty> {
     }
     for (const qp of this.list) {
       const errTo = qp;
-      if (qp instanceof GroupBy || qp instanceof Aggregate) {
-        pfs.addQueryItems(qp.list);
+      if (
+        qp instanceof GroupBy ||
+        qp instanceof Aggregate ||
+        qp instanceof Nests
+      ) {
+        pfs.addQueryItems(...qp.list);
       } else if (qp instanceof Limit) {
         delete segProp.by;
         segProp.limit = qp.limit;
@@ -915,9 +925,8 @@ export class QOPDesc extends ListOf<QueryProperty> {
             didOrderBy.log("Ignored order_by becauase top_statement exists");
           }
         }
-      } else if (qp instanceof Nests) {
-        // TODO nest turtles in query segments
-        qp.log("Can't nest a turtle in a query segement yet");
+      } else if (qp instanceof NestDefinition || qp instanceof NestReference) {
+        pfs.addQueryItems(qp);
       } else {
         errTo.log(`Unrecognized segment parameter type`);
       }
@@ -1048,9 +1057,18 @@ export class Limit extends MalloyElement {
 
 export class TurtleDecl extends MalloyElement {
   elementType = "turtleDesc";
-  constructor(readonly name: string, pipe: PipelineDesc) {
+  constructor(readonly name: string, readonly pipe: PipelineDesc) {
     super();
     this.has({ pipe });
+  }
+
+  getFieldDef(inputFS: FieldSpace): model.TurtleDef {
+    const pipe = this.pipe.getPipelineForExplore(inputFS);
+    return {
+      type: "turtle",
+      name: this.name,
+      ...pipe,
+    };
   }
 }
 
@@ -1181,7 +1199,7 @@ export class PipelineDesc extends MalloyElement {
     return walkStruct;
   }
 
-  getPipelineForExplore(explore: Mallobj): model.Pipeline {
+  getPipelineForExplore(exploreFS: FieldSpace): model.Pipeline {
     if (this.headName) {
       throw this.internalError("Turtles cannot have named heads");
     }
@@ -1191,7 +1209,7 @@ export class PipelineDesc extends MalloyElement {
       );
     }
     const modelPipe: model.Pipeline = { pipeline: [] };
-    this.appendOps(modelPipe.pipeline, new FieldSpace(explore.structDef()));
+    this.appendOps(modelPipe.pipeline, exploreFS);
     return modelPipe;
   }
 
@@ -1284,6 +1302,28 @@ export class ExistingQuery extends MalloyElement {
 
   query(): model.Query {
     return this.queryDesc.getQueryFromQuery();
+  }
+}
+
+export class NestReference extends MalloyElement {
+  elementType = "nestReference";
+  constructor(readonly name: string) {
+    super();
+  }
+}
+
+export class NestDefinition extends TurtleDecl {
+  elementType = "nestDefinition";
+  constructor(name: string, queryDesc: PipelineDesc) {
+    super(name, queryDesc);
+  }
+}
+
+export type NestedQuery = NestReference | NestDefinition;
+
+export class Nests extends ListOf<NestedQuery> {
+  constructor(nests: NestedQuery[]) {
+    super("nestedQueries", nests);
   }
 }
 

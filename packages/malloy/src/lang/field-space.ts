@@ -26,6 +26,8 @@ import {
   HasParameter,
   FieldCollectionMember,
   QueryItem,
+  NestDefinition,
+  NestReference,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
@@ -34,7 +36,7 @@ import {
   ExpressionFieldFromAst,
   QueryField,
   QueryFieldAST,
-  TurtleFieldStruct,
+  QueryFieldStruct,
   ColumnSpaceField,
   FANSPaceField,
   WildSpaceField,
@@ -71,7 +73,7 @@ export class FieldSpace {
     if (from.type === "struct") {
       return new StructSpaceField(from);
     } else if (model.isTurtleDef(from)) {
-      return new TurtleFieldStruct(this, from);
+      return new QueryFieldStruct(this, from);
     }
     // TODO field has an "e" and needs to be an expression
     // TODO field has a filter and needs to be a filteredalias
@@ -339,20 +341,16 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     throw new Error("Can't get StructDef for pipe member");
   }
 
-  canAddFieldDef(_qi: ExprFieldDecl): boolean {
-    return true;
-  }
-
-  addQueryItems(qiList: QueryItem[]): void {
+  addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldName) {
+      if (qi instanceof FieldName || qi instanceof NestReference) {
         this.addReference(qi.name);
+      } else if (qi instanceof ExprFieldDecl) {
+        this.addField(qi);
+      } else if (qi instanceof NestDefinition) {
+        this.setEntry(qi.name, new QueryFieldAST(this, qi, qi.name));
       } else {
-        if (this.canAddFieldDef(qi)) {
-          this.addField(qi);
-        } else {
-          qi.log("Not legal inside ${this.segType} query");
-        }
+        throw new Error("INTERNAL ERROR: Add Query Item");
       }
     }
   }
