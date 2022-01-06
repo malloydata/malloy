@@ -3,13 +3,18 @@
 export define airports is (explore 'malloy-data.faa.airports'
   airport_count is count(*)
 
+  by_state is (reduce : [state != null]
+    state
+    airport_count
+  )
+
   by_fac_type is (reduce
     fac_type
     airport_count
-    own_type
+    avg_elevation is elevation.avg()
   )
 
-  by_state is (reduce 
+  by_state_and_county is (reduce 
     state
     airport_count
     by_fac_type
@@ -23,8 +28,9 @@ export define airports is (explore 'malloy-data.faa.airports'
     name is concat(state, '-', full_name)
   )
 
-  airports_by_region is (reduce
+  airports_by_region is (reduce : [faa_region != null]
     faa_region
+    airport_count
     by_fac_type
     by_state
     major_airports

@@ -23,6 +23,13 @@ import {
   QueryData,
 } from "./model/malloy_types";
 
+export interface PooledConnection {
+  // Most pool implementations require a specific call to release connection handles. If a Connection is a
+  // PooledConnection, drain() should be called when connection usage is over
+  drain(): Promise<void>;
+  isPool(): true;
+}
+
 export abstract class Connection
   implements LookupSchemaReader, SchemaReader, LookupSQLRunner, SQLRunner
 {
@@ -39,6 +46,10 @@ export abstract class Connection
   // returns instance of Dialect class that works for this connection
   abstract get dialectName(): string;
 
+  // if this connection is mananged by a connection pool and requires draining when
+  // usage is complete, return true here
+  abstract isPool(): this is PooledConnection;
+
   abstract executeSQLRaw(sqlCommand: string): Promise<QueryData>;
 
   abstract runSQL(sqlCommand: string): Promise<MalloyQueryData>;
@@ -48,7 +59,7 @@ export abstract class Connection
   ): Promise<NamedStructDefs>;
 
   /*
-   * Implement `LookupSQLRunner` and `LookupSchemaReader` so these can be
+   * Implement `LookupSQLRunner` and `LookupSchemaReader` so that a Connection can be
    * passed directly into `Compiler` and `Runner`
    */
 

@@ -43,7 +43,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         return "quantitative";
       }
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for point map.");
   }
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {

@@ -31,7 +31,7 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
         return "quantitative";
       }
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for scatter chart.");
   }
 
   getDataValue(data: DataColumn): Date | string | number | null {
@@ -45,7 +45,7 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
     ) {
       return data.value;
     } else {
-      throw new Error("Invalid field type for bar chart.");
+      throw new Error("Invalid field type for scatter chart.");
     }
   }
 }

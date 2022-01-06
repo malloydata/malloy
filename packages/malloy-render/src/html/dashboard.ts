@@ -29,10 +29,10 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
 
     const fields = table.field.intrinsicFields;
     const dimensions = fields.filter(
-      (field) => field.isAtomicField() && field.isDimensional()
+      (field) => field.isAtomicField() && field.sourceWasDimension()
     );
     const measures = fields.filter(
-      (field) => !field.isAtomicField() || field.isMeasurelike()
+      (field) => !field.isAtomicField() || field.sourceWasMeasureLike()
     );
 
     let renderedBody = "";

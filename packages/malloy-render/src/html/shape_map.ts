@@ -41,7 +41,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
         return data.value;
       }
     } else {
-      throw new Error("Invalid field type for bar chart.");
+      throw new Error("Invalid field type for shape map.");
     }
   }
 
@@ -59,7 +59,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
         return "quantitative";
       }
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for shape map.");
   }
 
   getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {

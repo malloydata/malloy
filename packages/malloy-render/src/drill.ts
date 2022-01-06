@@ -43,8 +43,8 @@ function getTableFilters(
     dest.push({ key: f.source, value: undefined });
   }
 
-  const dimensions = table.field.intrinsicFields.filter((field) =>
-    field.isDimensional()
+  const dimensions = table.field.intrinsicFields.filter(
+    (field) => field.isAtomicField() && field.sourceWasDimension()
   );
 
   for (const dim of dimensions) {

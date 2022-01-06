@@ -13,7 +13,7 @@
 /* eslint-disable no-console */
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes } from "./runtimes";
+import { getRuntimes, testConnections } from "./runtimes";
 
 const joinModelText = `
 export define aircraft_models is ('malloytest.aircraft_models'
@@ -47,6 +47,14 @@ export define aircraft is ('malloytest.aircraft'
 
 // const runtimes = getRuntimes(["bigquery"]);
 const runtimes = getRuntimes();
+
+afterAll(async () => {
+  testConnections.forEach(async (connection) => {
+    if (connection.isPool()) {
+      await connection.drain();
+    }
+  });
+});
 
 const models = new Map<string, malloy.ModelMaterializer>();
 runtimes.forEach((runtime, key) => {

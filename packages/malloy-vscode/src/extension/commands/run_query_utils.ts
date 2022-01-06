@@ -116,6 +116,9 @@ export function runMalloyQuery(
   name: string,
   renderMode: QueryRenderMode = QueryRenderMode.HTML
 ): void {
+  if (renderStyle === "json") {
+    panelId += " Data";
+  }
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
