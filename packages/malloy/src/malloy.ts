@@ -1583,21 +1583,20 @@ export class ConnectionRuntime extends Runtime {
   }
 }
 
-export class SingleConnectionRuntime extends Runtime {
-  public readonly connection: Connection;
+export class SingleConnectionRuntime<
+  T extends Connection = Connection
+> extends Runtime {
+  public readonly connection: T;
 
-  constructor(urls: URLReader, connection: Connection);
-  constructor(connection: Connection);
-  constructor(
-    urlsOrConnections: URLReader | Connection,
-    maybeConnections?: Connection
-  ) {
+  constructor(urls: URLReader, connection: T);
+  constructor(connection: T);
+  constructor(urlsOrConnections: URLReader | T, maybeConnections?: T) {
     if (maybeConnections === undefined) {
-      const connection = urlsOrConnections as Connection;
+      const connection = urlsOrConnections as T;
       super(connection);
       this.connection = connection;
     } else {
-      const connection = maybeConnections as Connection;
+      const connection = maybeConnections as T;
       super(urlsOrConnections as URLReader, connection);
       this.connection = connection;
     }
