@@ -16,9 +16,17 @@ import { ModelDef, Query, StructDef } from "@malloy-lang/malloy";
 import { fStringEq, fStringLike } from "./test_utils";
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes } from "./runtimes";
+import { getRuntimes, testConnections } from "./runtimes";
 
 const runtimes = getRuntimes(["bigquery"]);
+
+afterAll(async () => {
+  testConnections.forEach(async (connection) => {
+    if (connection.isPool()) {
+      await connection.drain();
+    }
+  });
+});
 
 async function validateCompilation(
   databaseName: string,

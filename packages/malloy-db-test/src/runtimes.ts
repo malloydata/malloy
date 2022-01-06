@@ -18,7 +18,7 @@ import {
   MalloyQueryData,
 } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-import { PostgresConnection } from "@malloy-lang/db-postgres";
+import { PooledPostgresConnection } from "@malloy-lang/db-postgres";
 
 import { env } from "process";
 
@@ -35,7 +35,7 @@ export class BigQueryTestConnection extends BigQueryConnection {
   }
 }
 
-export class PostgresTestConnection extends PostgresConnection {
+export class PostgresTestConnection extends PooledPostgresConnection {
   // we probably need a better way to do this.
 
   public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
@@ -50,6 +50,9 @@ export class PostgresTestConnection extends PostgresConnection {
 
 const bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
 const postgresConnection = new PostgresTestConnection("postgres");
+// export the actual connections so that we can access them from test
+export const testConnections = [bqConnection, postgresConnection];
+
 const files = new EmptyURLReader();
 
 export function getRuntimes(

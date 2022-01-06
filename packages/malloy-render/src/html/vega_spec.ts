@@ -420,7 +420,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     ) {
       return data.value;
     } else {
-      throw new Error("Invalid field type for bar chart.");
+      throw new Error("Invalid field type for vega chart.");
     }
   }
 
@@ -432,7 +432,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
         return "quantitative";
       }
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for vega chart.");
   }
 
   translateField(explore: Explore, fieldString: string): string {

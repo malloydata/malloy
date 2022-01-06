@@ -18,11 +18,11 @@ import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
-  getDataValue(data: DataColumn): string | number {
-    if (data.isNumber() || data.isString()) {
+  getDataValue(data: DataColumn): string | number | null {
+    if (data.isNull() || data.isNumber() || data.isString()) {
       return data.value;
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for segment map.");
   }
 
   getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
@@ -34,7 +34,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
       }
       // TODO dates nominal?
     }
-    throw new Error("Invalid field type for bar chart.");
+    throw new Error("Invalid field type for segment map.");
   }
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
