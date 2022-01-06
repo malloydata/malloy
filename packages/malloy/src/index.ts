@@ -46,6 +46,7 @@ export {
   SourceRelationship,
   DateTimeframe,
   TimestampTimeframe,
+  Result,
 } from "./malloy";
 export type {
   Explore,
@@ -56,13 +57,13 @@ export type {
   AtomicField,
   ExploreField,
   QueryField,
-  Result,
   DataArray,
   DataColumn,
   DataArrayOrRecord,
   ModelMaterializer,
   DocumentSymbol,
   DocumentHighlight,
+  ResultJSON,
 } from "./malloy";
 export type {
   URLReader,

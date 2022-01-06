@@ -13,12 +13,13 @@
 
 import * as vscode from "vscode";
 import { MALLOY_EXTENSION_STATE } from "../state";
-import { runMalloyQuery, RunRenderStyle } from "./run_query_utils";
+import { QueryRenderMode } from "../webview_message_manager";
+import { runMalloyQuery } from "./run_query_utils";
 
 export function runQueryCommand(
   query: string,
   name?: string,
-  renderStyle: RunRenderStyle = "html"
+  renderStyle: QueryRenderMode = QueryRenderMode.HTML
 ): void {
   const document =
     vscode.window.activeTextEditor?.document ||
