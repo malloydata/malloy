@@ -50,14 +50,18 @@ export class PostgresTestConnection extends PooledPostgresConnection {
 
 const bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
 const postgresConnection = new PostgresTestConnection("postgres");
+const closePostgres = async () => {
+  await postgresConnection.drain();
+};
 // export the actual connections so that we can access them from test
 export const testConnections = [bqConnection, postgresConnection];
 
 const files = new EmptyURLReader();
 
-export function getRuntimes(
-  databaseList: string[] | undefined = undefined
-): Map<string, Runtime> {
+export function getRuntimes(databaseList: string[] | undefined = undefined): {
+  runtimes: Map<string, Runtime>;
+  closer: () => void;
+} {
   const runtimes: Map<string, Runtime> = new Map<string, Runtime>(
     Object.entries({
       bigquery: new Runtime(files, bqConnection),
@@ -81,7 +85,7 @@ export function getRuntimes(
       runtimes.delete(key);
     }
   }
-  return runtimes;
+  return { runtimes, closer: closePostgres };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

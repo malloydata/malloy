@@ -18,7 +18,7 @@ import { fStringEq, fStringLike } from "./test_utils";
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes, testConnections } from "./runtimes";
 
-const runtimes = getRuntimes(["bigquery"]);
+const { runtimes, closer } = getRuntimes(["bigquery"]);
 
 afterAll(async () => {
   testConnections.forEach(async (connection) => {
@@ -663,4 +663,8 @@ it(`hand join foreign key filtered inner - ${databaseName}`, async () => {
   // console.log(result.data.value);
   expect(result.data.value[0].total_seats).toBe(7448);
   expect(result.data.value[0].aircraft_count).toBe(544);
+});
+
+afterAll(async () => {
+  await closer();
 });

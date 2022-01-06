@@ -17,9 +17,9 @@
 import * as malloy from "@malloy-lang/malloy";
 import { getRuntimes } from "./runtimes";
 
-const runtimes = getRuntimes(["bigquery"]);
-// const runtimes = getRuntimes(["postgres", "bigquery"]);
-// const runtimes = getRuntimes();
+const { runtimes, closer } = getRuntimes(["bigquery"]);
+// const { runtimes, closer } = getRuntimes(["postgres", "bigquery"]);
+// const {runtimes, closer } = getRuntimes();
 
 const expressionModelText = `
 export define aircraft_models is (explore 'malloytest.aircraft_models'
@@ -550,4 +550,8 @@ aircraft_count
     expect(result.data.path(0, "flight_count").value).toBe(199726);
     expect(result.data.path(0, "popular_name").value).toBe("Isabella");
   });
+});
+
+afterAll(async () => {
+  await closer();
 });
