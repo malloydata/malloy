@@ -15,9 +15,9 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes, testConnections } from "./runtimes";
+import { getRuntimes } from "./runtimes";
 
-const runtimes = getRuntimes(["postgres"]);
+const runtimes = getRuntimes(["bigquery"]);
 // const runtimes = getRuntimes(["postgres", "bigquery"]);
 // const runtimes = getRuntimes();
 
@@ -51,14 +51,6 @@ const expressionModels = new Map<string, malloy.ModelMaterializer>();
 runtimes.forEach((runtime, databaseName) =>
   expressionModels.set(databaseName, runtime.loadModel(expressionModelText))
 );
-
-afterAll(async () => {
-  testConnections.forEach(async (connection) => {
-    if (connection.isPool()) {
-      await connection.drain();
-    }
-  });
-});
 
 expressionModels.forEach((expressionModel, databaseName) => {
   // basic calculations for sum, filtered sum, without a join.
