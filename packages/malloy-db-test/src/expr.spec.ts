@@ -15,11 +15,12 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes } from "./runtimes";
+import { RuntimeList } from "./runtimes";
 
-const { runtimes, closer } = getRuntimes(["bigquery"]);
-// const { runtimes, closer } = getRuntimes(["postgres", "bigquery"]);
-// const {runtimes, closer } = getRuntimes();
+const runtimes = new RuntimeList([
+  "bigquery", //
+  "postgres", //
+]);
 
 const expressionModelText = `
 export define aircraft_models is (explore 'malloytest.aircraft_models'
@@ -48,7 +49,7 @@ export define aircraft is (
 `;
 
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
-runtimes.forEach((runtime, databaseName) =>
+runtimes.runtimeMap.forEach((runtime, databaseName) =>
   expressionModels.set(databaseName, runtime.loadModel(expressionModelText))
 );
 
@@ -553,5 +554,5 @@ aircraft_count
 });
 
 afterAll(async () => {
-  await closer();
+  await runtimes.closeAll();
 });

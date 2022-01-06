@@ -20,8 +20,6 @@ import {
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { PooledPostgresConnection } from "@malloy-lang/db-postgres";
 
-import { env } from "process";
-
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 
@@ -48,47 +46,48 @@ export class PostgresTestConnection extends PooledPostgresConnection {
   }
 }
 
-const bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
-const postgresConnection = new PostgresTestConnection("postgres");
-const closePostgres = async () => {
-  await postgresConnection.drain();
-};
-// export the actual connections so that we can access them from test
-export const testConnections = [bqConnection, postgresConnection];
-
 const files = new EmptyURLReader();
-
-export function getRuntimes(databaseList: string[] | undefined = undefined): {
-  runtimes: Map<string, Runtime>;
-  closer: () => void;
-} {
-  const runtimes: Map<string, Runtime> = new Map<string, Runtime>(
-    Object.entries({
-      bigquery: new Runtime(files, bqConnection),
-      postgres: new Runtime(files, postgresConnection),
-    })
-  );
-
-  const testDatabaseEnv = env.MALLOY_TEST_DATABASES;
-  // const testDatabaseEnv = "bigquery,postgres";
-
-  let databases;
-  if (databaseList !== undefined) {
-    databases = databaseList;
-  } else if (testDatabaseEnv !== undefined) {
-    databases = testDatabaseEnv.split(",");
-  } else {
-    databases = ["bigquery"];
-  }
-  for (const key of runtimes.keys()) {
-    if (!databases.includes(key)) {
-      runtimes.delete(key);
-    }
-  }
-  return { runtimes, closer: closePostgres };
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rows(qr: Result): any[] {
   return qr.data.value;
+}
+
+const allDatabases = ["postgres", "bigquery"];
+type RuntimeDatabaseNames = typeof allDatabases[number];
+
+export class RuntimeList {
+  bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
+  postgresConnection = new PostgresTestConnection("postgres");
+  runtimeMap = new Map<string, Runtime>();
+  closeFunctions: (() => void)[] = [];
+
+  constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
+    for (const dbName of databaseList || allDatabases) {
+      switch (dbName) {
+        case "bigquery":
+          this.runtimeMap.set(
+            "bigquery",
+            new Runtime(
+              files,
+              new BigQueryTestConnection("bigquery", {}, "malloy-data")
+            )
+          );
+          break;
+        case "postgres": {
+          const pg = new PostgresTestConnection("postgres");
+          this.runtimeMap.set("postgres", new Runtime(files, pg));
+          this.closeFunctions.push(async () => {
+            await pg.drain();
+          });
+        }
+      }
+    }
+  }
+
+  async closeAll(): Promise<void> {
+    for (const fn of this.closeFunctions) {
+      await fn();
+    }
+  }
 }
