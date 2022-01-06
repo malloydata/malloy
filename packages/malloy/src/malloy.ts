@@ -781,6 +781,12 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSQLRunner {
   public async lookupSQLRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
+
+  public static fromArray(connections: Connection[]): FixedConnectionMap {
+    return new FixedConnectionMap(
+      new Map(connections.map((connection) => [connection.name, connection]))
+    );
+  }
 }
 
 /**
@@ -1550,6 +1556,51 @@ export class Runtime {
     name: string
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name).getPreparedQuery();
+  }
+}
+
+export class ConnectionRuntime extends Runtime {
+  public readonly connections: Connection[];
+
+  constructor(urls: URLReader, connections: Connection[]);
+  constructor(connections: Connection[]);
+  constructor(
+    urlsOrConnections: URLReader | Connection[],
+    maybeConnections?: Connection[]
+  ) {
+    if (maybeConnections === undefined) {
+      const connections = urlsOrConnections as Connection[];
+      super(FixedConnectionMap.fromArray(connections));
+      this.connections = connections;
+    } else {
+      const connections = maybeConnections as Connection[];
+      super(
+        urlsOrConnections as URLReader,
+        FixedConnectionMap.fromArray(connections)
+      );
+      this.connections = connections;
+    }
+  }
+}
+
+export class SingleConnectionRuntime extends Runtime {
+  public readonly connection: Connection;
+
+  constructor(urls: URLReader, connection: Connection);
+  constructor(connection: Connection);
+  constructor(
+    urlsOrConnections: URLReader | Connection,
+    maybeConnections?: Connection
+  ) {
+    if (maybeConnections === undefined) {
+      const connection = urlsOrConnections as Connection;
+      super(connection);
+      this.connection = connection;
+    } else {
+      const connection = maybeConnections as Connection;
+      super(urlsOrConnections as URLReader, connection);
+      this.connection = connection;
+    }
   }
 }
 
