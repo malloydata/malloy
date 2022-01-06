@@ -27,6 +27,7 @@ export interface PooledConnection {
   // Most pool implementations require a specific call to release connection handles. If a Connection is a
   // PooledConnection, drain() should be called when connection usage is over
   drain(): Promise<void>;
+  isPool(): true;
 }
 
 export abstract class Connection
