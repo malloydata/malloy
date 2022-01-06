@@ -1,7 +1,8 @@
 import * as malloy from "@malloy-lang/malloy";
 import { RuntimeList } from "./runtimes";
 
-it("accessors are not too expensive", async () => {
+// Chris, please rework.
+it.skip("accessors are not too expensive", async () => {
   // If this test fails, consideration should be given to how much time using
   // the accessors costs.
   const runtime = new RuntimeList(["bigquery"]).runtimeMap.get("bigquery");
