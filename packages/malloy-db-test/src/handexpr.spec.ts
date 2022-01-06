@@ -16,16 +16,12 @@ import { ModelDef, Query, StructDef } from "@malloy-lang/malloy";
 import { fStringEq, fStringLike } from "./test_utils";
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes, testConnections } from "./runtimes";
+import { RuntimeList } from "./runtimes";
 
-const runtimes = getRuntimes(["bigquery"]);
+const runtimes = new RuntimeList(["bigquery"]);
 
 afterAll(async () => {
-  testConnections.forEach(async (connection) => {
-    if (connection.isPool()) {
-      await connection.drain();
-    }
-  });
+  await runtimes.closeAll();
 });
 
 async function validateCompilation(
@@ -33,7 +29,7 @@ async function validateCompilation(
   sql: string
 ): Promise<boolean> {
   try {
-    const runtime = runtimes.get(databaseName);
+    const runtime = runtimes.runtimeMap.get(databaseName);
     if (runtime === undefined) {
       throw new Error(`Unknown database ${databaseName}`);
     }
@@ -231,7 +227,7 @@ const handCodedModel: ModelDef = {
 };
 
 // BigQuery tests only on the Hand Coded models.
-const bqRuntime = runtimes.get("bigquery");
+const bqRuntime = runtimes.runtimeMap.get("bigquery");
 if (!bqRuntime) {
   throw new Error("Can't create bigquery RUntime");
 }

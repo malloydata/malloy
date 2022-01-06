@@ -12,16 +12,15 @@
  */
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes, testConnections } from "./runtimes";
+import { RuntimeList } from "./runtimes";
 
-const runtimes = getRuntimes();
+const runtimes = new RuntimeList([
+  "bigquery", //
+  // "postgres", //
+]);
 
 afterAll(async () => {
-  testConnections.forEach(async (connection) => {
-    if (connection.isPool()) {
-      await connection.drain();
-    }
-  });
+  await runtimes.closeAll();
 });
 
 async function validateCompilation(
@@ -29,7 +28,7 @@ async function validateCompilation(
   sql: string
 ): Promise<boolean> {
   try {
-    const runtime = runtimes.get(databaseName);
+    const runtime = runtimes.runtimeMap.get(databaseName);
     if (runtime === undefined) {
       throw new Error(`Unknown database ${databaseName}`);
     }
@@ -44,7 +43,7 @@ async function validateCompilation(
 }
 
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
-runtimes.forEach((runtime, databaseName) =>
+runtimes.runtimeMap.forEach((runtime, databaseName) =>
   expressionModels.set(
     databaseName,
     runtime.loadModel(`
