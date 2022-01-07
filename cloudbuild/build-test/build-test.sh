@@ -3,7 +3,8 @@ set -euxo pipefail
 
 
 nix-shell --pure --command "$(cat <<NIXCMD
-  while [ ! -f /package.json ]; do sleep 1; done
+  pwd
+  ls
   yarn install
   yarn build
   yarn test
