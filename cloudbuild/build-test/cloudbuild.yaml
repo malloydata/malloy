@@ -9,9 +9,7 @@ steps:
   - id: run-tests
     name: "nixos/nix"
     entrypoint: sh
-    env:
-      - "PGHOST=127.0.0.1"
     args:
       - -c
-      - "(/workspace/cloud_sql_proxy -dir=/workspace -instances=malloy-303216:us-central1:pg-test=tcp:5432 & sleep 2) && (./cloudbuild/build-test/build-test.sh)"
+      - "(/workspace/cloud_sql_proxy -instances=malloy-303216:us-central1:pg-test=tcp:5432 & sleep 2) && (./cloudbuild/build-test/build-test.sh)"
     waitFor: ["proxy-install"]
