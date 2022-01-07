@@ -47,7 +47,7 @@ export define aircraft is ('malloytest.aircraft'
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  // "postgres", //
+  "postgres", //
 ]);
 
 afterAll(async () => {
