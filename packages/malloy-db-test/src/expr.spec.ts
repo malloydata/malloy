@@ -19,7 +19,7 @@ import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  // "postgres", //
+  "postgres", //
 ]);
 
 const expressionModelText = `
