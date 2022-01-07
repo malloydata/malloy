@@ -1,3 +1,15 @@
 steps:
-  - name: 'nixos/nix'
-    args: ['sh', './cloudbuild/build-test/build-test.sh']
+ - id: proxy-install
+    name: 'nixos/nix'
+    entrypoint: sh
+    args:
+      - -c
+      - 'wget -O /workspace/cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.386 &&  chmod +x /workspace/cloud_sql_proxy'
+    waitFor: ['-']
+ - id: run-tests
+    name: 'nixos/nix'
+    entrypoint: sh
+    args:
+      - -c
+      - '(/workspace/cloud_sql_proxy -dir=/workspace -instances=malloy-303216:us-central1:pg-test=tcp:5432 & sleep 2) && (./cloudbuild/build-test/build-test.sh)'
+    waitFor: ['proxy-install']
