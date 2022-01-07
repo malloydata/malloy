@@ -130,9 +130,10 @@ In an explore definition, there can not be a chain of queries, there are only th
 
 ## Query syntax (`->`)
 
-There is a similar new symbol `->` for building chains of queries when defining a query object. The `->` reads more like on operator on the explore to the left and less like a filter on the data in the explore to the left.
+There is a similar new symbol `->`. This indicates the beginning of a chain
+of query operations.
 
-The "_exploreSpec `->` _querySpec_" describes a query. An explore spec can be as simple as an explore names, or as complex as a full explore definition.
+The "_exploreSpec `->` _queryOperationSpec_" describes a query. An explore spec can be as simple as an explore names, or as complex as a full explore definition.
 
 ```
     -- Flights by carrier, written out by hand
@@ -162,7 +163,7 @@ The "_exploreSpec `->` _querySpec_" describes a query. An explore spec can be as
     }
 ```
 
-Like the pipelines of alpha Malloy, a query can be chained to a new query, but only the first query in a chain is allowed to be a named reference to an existing query.
+Like the pipelines of alpha Malloy, a query can be a chain of operations.
 
 ```
 flights -> by_carrier -> {
@@ -174,6 +175,28 @@ flights -> by_carrier -> {
     }
 }
 ```
+
+To summarize, here are some sample beta statements.
+
+All queries start with either
+  *  _exploreSpec_ `->` _querySpec_  [ `->` _querySpec_ ... ]
+  * `->` _queryName_ [ `-> _querySpec_ ... ]
+
+1) `explore: eName is eName1 { }`
+2) `explore: eName is from(->qName) { }`
+3) `query: qName is ->qName1->subQName { }`
+4) `query: qName is eName->subQName { }`
+5) ... there is no 5, `query: ->qName->subQueryName` is not legal
+6) `query: ->qName`
+7) `query: ->qName->{ fullQuery }`
+8) `query: eName->{ fullQuery }`
+9) `query: eName->subQName`
+10) `explore: eName is eName1 { query: subQuery is -> { ... } -> { ... }`
+11) explore: eName is from(eName1->qName {qRefine}) { eRefine }
+
+## Search/Suggestion are totally missing
+
+I think `index:` is a property of an explore ... maybe?
 
 ## { where: ... shorthand }
 
@@ -221,9 +244,12 @@ And to include a nested query in a result set, much like the `aggregate:` keywor
         }
     }
 
-## Explore from Query
+## Explore from() Query
 
-Because an explore can no longer have a `| reduce` in the definition, there needs to be a syntax meaning "the explore which starts with the result of this query". This would be indicated when, anywhere an explore name is legal, to use `(` _QUERY_ `)` for example.
+Because an explore can no longer have a `| reduce` in the definition, `from()`
+is used to mean "the explore which starts with the result of this query".
+You can use `from()` to make an explore from a query, anywhere an explore name
+would be legal, for example:
 
     -- given this explore ...
     explore: users is table('schema.users') {
@@ -240,29 +266,6 @@ Because an explore can no longer have a `| reduce` in the definition, there need
     -- ... make user->user_order_facts a top level entity for joins etc
     -- but add new dimension
     explore: user_order_facts is from(users->user_order_facts) {
+        primary_key: user_id
         dimension: super_user is lifetime_value > 1000
     }
-
-# NEW QUERY EXAMPLES
-
-There were a number of sentences which were ambiguous, in addidtion the ability
-to write a query which is pipeline had been left out of the language.
-
-Two major changes to get here ...
-
-* All queries start with `->`
-* Nameless queries are declared with `query:`
-
-1) explore: eName is eName1 { }
-2) explore: eName is from(->qName) { }
-3) query: qName is ->qName1->subQName { }
-4) query: qName is eName->subQName { }
-THERE IS NO 5) query: ->qName->sq6
-6) query: ->qName
-7) query: ->qName->{ fullQuery }
-8) query: eName->{ fullQuery }
-9) query: eName->subQName
-10) explore: eName is eName1 {
-      query: subQuery is -> { firstStage } -> { secondStage }
-   }
-11) explore: eName is from(eName1->qName {qRefine}) { eRefine }
