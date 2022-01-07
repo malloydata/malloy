@@ -1327,19 +1327,31 @@ export class Nests extends ListOf<NestedQuery> {
   }
 }
 
-export function isQueryElement(
-  e: MalloyElement
-): e is FullQuery | ExistingQuery {
+export type QueryElement = FullQuery | ExistingQuery;
+export function isQueryElement(e: MalloyElement): e is QueryElement {
   return e instanceof FullQuery || e instanceof ExistingQuery;
+}
+
+export class DefineQueryList
+  extends ListOf<DefineQuery>
+  implements DocStatement
+{
+  constructor(queryList: DefineQuery[]) {
+    super("defineQueries", queryList);
+    this.has({ queryList });
+  }
+
+  execute(doc: Document): void {
+    for (const dq of this.list) {
+      dq.execute(doc);
+    }
+  }
 }
 
 export class DefineQuery extends MalloyElement implements DocStatement {
   elementType = "defineQuery";
 
-  constructor(
-    readonly name: string,
-    readonly queryDetails: FullQuery | ExistingQuery
-  ) {
+  constructor(readonly name: string, readonly queryDetails: QueryElement) {
     super({ queryDetails });
   }
 
@@ -1351,6 +1363,19 @@ export class DefineQuery extends MalloyElement implements DocStatement {
     };
     const exported = false;
     doc.setEntry(this.name, { entry, exported });
+  }
+}
+
+export class AnonymousQuery extends MalloyElement implements DocStatement {
+  elementType = "anonymousQuery";
+  constructor(readonly theQuery: QueryElement) {
+    super();
+    this.has({ query: theQuery });
+  }
+
+  execute(_doc: Document): void {
+    const _modelQuery = this.theQuery.query();
+    // TODO somehow this needs to end up accessible to the translator ?
   }
 }
 

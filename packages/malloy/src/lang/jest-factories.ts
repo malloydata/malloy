@@ -25,7 +25,6 @@ import {
   NamedModelObject,
   ModelDef,
 } from "../model/malloy_types";
-import { Malloy } from "../malloy";
 import * as ast from "./ast";
 import { compressExpr, MalloyElement, ModelEntry, NameSpace } from "./ast";
 import { FieldSpace } from "./field-space";
@@ -60,12 +59,12 @@ export const caFilter = new ast.Filter([
   ),
 ]);
 
-export function mkExploreOf(
-  name: string,
-  init: ast.ExploreInterface = {}
-): ast.Explore {
-  return testAST(new ast.Explore(new ast.NamedSource(name), init));
-}
+// export function mkExploreOf(
+//   name: string,
+//   init: ast.ExploreInterface = {}
+// ): ast.Explore {
+//   return testAST(new ast.Explore(new ast.NamedSource(name), init));
+// }
 
 export const aTableDef: StructDef = {
   type: "struct",
@@ -269,19 +268,19 @@ export class TestTranslator extends MalloyTranslator {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export async function exploreFor(src: string) {
-  const parse = new TestTranslator(src, "explore");
-  const req = parse.translate();
-  if (req.tables) {
-    const tables = await Malloy.db.getSchemaForMissingTables(req.tables);
-    parse.update({ tables });
-  }
-  const explore = parse.ast() as ast.Explore;
-  return {
-    schema: parse.schemaZone,
-    explore,
-    errors: parse.logger.getLog(),
-    errorFree: parse.logger.noErrors(),
-  };
-}
+// // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+// export async function exploreFor(src: string) {
+//   const parse = new TestTranslator(src, "explore");
+//   const req = parse.translate();
+//   if (req.tables) {
+//     const tables = await Malloy.db.getSchemaForMissingTables(req.tables);
+//     parse.update({ tables });
+//   }
+//   const explore = parse.ast() as ast.Explore;
+//   return {
+//     schema: parse.schemaZone,
+//     explore,
+//     errors: parse.logger.getLog(),
+//     errorFree: parse.logger.noErrors(),
+//   };
+// }

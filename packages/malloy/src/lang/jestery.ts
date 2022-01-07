@@ -14,8 +14,7 @@
 // Custom matchers for writing jest unit tests for the tranlsation code
 
 import { diff as jestDiff } from "jest-diff";
-import { FieldRef, Query, refIsStructDef } from "../model/malloy_types";
-import { Explore, MalloyElement } from "./ast";
+import { MalloyElement } from "./ast";
 import { MalloyTranslator } from "./parse-malloy";
 import { TestTranslator, pretty } from "./jest-factories";
 
@@ -29,28 +28,28 @@ declare global {
       toHaveExploreErrors(...errs: string[]): R;
       toEqualAst(result: MalloyElement): R;
       toMakeAst(astRoot: string, wantAst: MalloyElement): R;
-      toMakeQuery(query: Query): R;
+      // toMakeQuery(query: Query): R;
     }
   }
 }
 
-function fieldSort(a: FieldRef, b: FieldRef) {
-  const aName = typeof a === "string" ? a : a.as || a.name;
-  const bName = typeof b === "string" ? b : b.as || b.name;
-  return aName > bName ? 1 : aName < bName ? -1 : 0;
-}
+// function fieldSort(a: FieldRef, b: FieldRef) {
+//   const aName = typeof a === "string" ? a : a.as || a.name;
+//   const bName = typeof b === "string" ? b : b.as || b.name;
+//   return aName > bName ? 1 : aName < bName ? -1 : 0;
+// }
 
-function sortFields(q: Query): Query {
-  const qr = q.structRef;
-  if (refIsStructDef(qr)) {
-    const sortedQ = { ...q };
-    if (refIsStructDef(sortedQ.structRef)) {
-      sortedQ.structRef.fields = qr.fields.sort(fieldSort);
-    }
-    return sortedQ;
-  }
-  return q;
-}
+// function sortFields(q: Query): Query {
+//   const qr = q.structRef;
+//   if (refIsStructDef(qr)) {
+//     const sortedQ = { ...q };
+//     if (refIsStructDef(sortedQ.structRef)) {
+//       sortedQ.structRef.fields = qr.fields.sort(fieldSort);
+//     }
+//     return sortedQ;
+//   }
+//   return q;
+// }
 
 function checkForErrors(trans: MalloyTranslator) {
   if (trans.logger === undefined) {
@@ -173,27 +172,27 @@ expect.extend({
     };
   },
 
-  toMakeQuery: function (srcCode: string, goodQuery: Query) {
-    const x = new TestTranslator(srcCode, "explore");
-    const t = x.ast();
-    expect(x).toBeErrorless();
-    if (t instanceof Explore) {
-      t.setTranslator(x);
-      const query = t.query();
-      expect(x).toBeErrorless();
-      expect(query).toBeDefined();
-      expect(sortFields(query)).toEqual(sortFields(goodQuery));
-      return {
-        message: () => "queries matched",
-        pass: true,
-      };
-    }
-    expect(t).toBeDefined();
-    return {
-      message: () => `Expected explore, got ${t?.toString()}`,
-      pass: false,
-    };
-  },
+  // toMakeQuery: function (srcCode: string, goodQuery: Query) {
+  //   const x = new TestTranslator(srcCode, "explore");
+  //   const t = x.ast();
+  //   expect(x).toBeErrorless();
+  //   if (t instanceof Explore) {
+  //     t.setTranslator(x);
+  //     const query = t.query();
+  //     expect(x).toBeErrorless();
+  //     expect(query).toBeDefined();
+  //     expect(sortFields(query)).toEqual(sortFields(goodQuery));
+  //     return {
+  //       message: () => "queries matched",
+  //       pass: true,
+  //     };
+  //   }
+  //   expect(t).toBeDefined();
+  //   return {
+  //     message: () => `Expected explore, got ${t?.toString()}`,
+  //     pass: false,
+  //   };
+  // },
 });
 
 export default undefined;

@@ -589,6 +589,18 @@ export class MalloyToAST
     return this.astAt(new ast.ExistingQuery(pipe), pcx);
   }
 
+  visitTopLevelQueryDefs(
+    pcx: parse.TopLevelQueryDefsContext
+  ): ast.DocStatement {
+    const stmts = pcx
+      .topLevelQueryDef()
+      .map((cx) => this.visitTopLevelQueryDef(cx));
+    if (stmts.length === 1) {
+      return stmts[0];
+    }
+    return new ast.DefineQueryList(stmts);
+  }
+
   visitTopLevelQueryDef(pcx: parse.TopLevelQueryDefContext): ast.DefineQuery {
     const queryName = this.getIdText(pcx.queryName());
     const queryDef = this.visit(pcx.query());
@@ -598,6 +610,17 @@ export class MalloyToAST
     throw this.internalError(
       pcx,
       `Expect query definition, got a '${queryDef.elementType}'`
+    );
+  }
+
+  visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
+    const query = this.visit(pcx.query());
+    if (ast.isQueryElement(query)) {
+      return new ast.AnonymousQuery(query);
+    }
+    throw this.internalError(
+      pcx,
+      `Anonymous query matched, but ${query.elementType} found`
     );
   }
 

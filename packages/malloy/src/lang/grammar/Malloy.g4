@@ -25,8 +25,8 @@ defineExploreStatement
   ;
 
 defineQuery
-  : QUERY topLevelQueryDefs
-  | QUERY query
+  : QUERY topLevelQueryDefs  # namedQueries_stub
+  | QUERY query              # anonymousQuery
   ;
 
 importStatement
