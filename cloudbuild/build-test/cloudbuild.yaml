@@ -11,5 +11,5 @@ steps:
     entrypoint: sh
     args:
       - -c
-      - "(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 -verbose & sleep 2) && (./cloudbuild/build-test/build-test.sh)"
+      - "(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 & sleep 2) && (./cloudbuild/build-test/build-test.sh)"
     waitFor: ["proxy-install"]
