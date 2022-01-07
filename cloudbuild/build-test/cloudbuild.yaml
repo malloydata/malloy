@@ -1,4 +1,3 @@
 steps:
   - name: 'nixos/nix'
     args: ['sh', './cloudbuild/build-test/build-test.sh']
-    dir: build
