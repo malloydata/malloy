@@ -17,7 +17,7 @@ This experiment has produced a lovely small language, but when presented to expe
 
 In conversation with data-science SQL users, we learn that they mostly know how to read SQL, Python, and JSON. This raises the interesting possibility of going back to a more LookML inspired syntax. The new tao would be something like
 
-> _... leveraging these two languages we use SQL-familiar words to describe SQL concpepts, but use JSON to make clear the structure of the model that SQL would make hidden_
+> _... leveraging these two languages we use SQL-familiar words to describe SQL concpepts, but use JSON-familiar syntax to make clear the structure of the model that SQL would make hidden_
 
 ## Farewell Space Turtles
 
@@ -43,21 +43,22 @@ The beta-malloy LookML-ish syntax would have one of two forms.  For a single dec
 
 as in these statements ...
 
-    explore: flights is 'malloydata.faa.flights' { primary key: id }
+    explore: flights is table('malloydata.faa.flights') { primary key: id }
 
     join: things is thing_table on thing_id
 
-    primary key: id
+    primary_key: id
 
-    group by: state, county
+    group by: state
 
 
-but will also allow groups of similar types of named objects to be declared with
+but will also allow groups of similar types of named objects to be
+written with a list like syntax ...
 
-    TYPE: {
-        NAME1 type-specific-initializer
+    TYPE: [
+        NAME1 type-specific-initializer,
         NAME2 type-specific-initializer
-    }
+    ]
 
 which will allow grouped blocks of dimensions or joins where that adds readability to a large model
 
@@ -65,7 +66,7 @@ which will allow grouped blocks of dimensions or joins where that adds readabili
 
 Creation of explores in malloy is always a gesture of refinement based on existing object where the simplest object is a table. For example we want `flights` to mean the `malloydta.faa.flights` table ...
 ```
-   explore: flights is 'malloydata.faa.flights' {
+   explore: flights is table('malloydata.faa.flights') {
        primary key: id
        ... other flights stuff
    }
@@ -74,14 +75,14 @@ In beta-malloy any time you name a refineable object you can create an enhanced 
 
 As an example ... this ...
 
-    explore: carriers is 'malloydata.faa.carriers' { primary key: id }
-    explore: flights is 'malloydata.faa.flights' {
+    explore: carriers is table('malloydata.faa.carriers') { primary key: id }
+    explore: flights is table('malloydata.faa.flights') {
       join: carrier is carriers on carrier_id
     }
 
 ... can be written without having to create an explore for carriers by writing the enhancement inline in the join ...
 
-    explore: flights is 'malloydata.faa.flights' {
+    explore: flights is table('malloydata.faa.flights') {
       join: carrier is 'malloydata.faa.carriers' { primary key: id } on carrier_id
     }
 
@@ -108,7 +109,7 @@ A query is either a grouping/aggregating gesture, which would look like this ...
 ... or a detail-gesture like this ...
 
     query: flight_details {
-        project: carrier.nickname, flight_num, dep_time, arr_time
+        project: [ carrier.nickname, flight_num, dep_time, arr_time ]
     }
 
 A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha-malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
@@ -134,30 +135,31 @@ There is a similar new symbol `->` for building chains of queries when defining 
 The "_exploreSpec `->` _querySpec_" describes a query. An explore spec can be as simple as an explore names, or as complex as a full explore definition.
 
 ```
-    -- Invent a new query ... by running it ...
+    -- Flights by carrier, written out by hand
     flights->{
         group_by: carrier.nickname
         measure: flight_count
     }
 ```
+
 ```
-    -- Invoke a query
+    -- flights by carrier, invoking the named query in flights
     flights->by_carrier
+
 ```
+
 ```
-    -- Invoke a refined query
+    -- run a refined version of flights->by_carrier
     flights->by_carrier {
         aggregate: long_flights is flight_count { where: arr_time > dep_time + 1 hour }
     }
 ```
+
 ```
     -- Save redefined query as a top level item
     query: long_flights_by_carrier is from flights->by_carrier {
         aggregate: long_flights is flight_count { where: arr_time > dep_time + 1 hour }
     }
-    -- above will have a run button ...
-    -- TBD: How I invoke a top level query in the scratch query
-    -- space of a malloy file like the above invocations
 ```
 
 Like the pipelines of alpha Malloy, a query can be chained to a new query, but only the first query in a chain is allowed to be a named reference to an existing query.
@@ -171,6 +173,7 @@ flights -> by_carrier -> {
         code is carrier.code
     }
 }
+```
 
 ## { where: ... shorthand }
 
@@ -193,6 +196,7 @@ Because filtering is ubiquitous, there is a shorthand for filtering. We expect a
 ## What about turtles ...
 
 Nested queries are declared in an explore with the `query:` keyword ...
+
 ```
 explore: flights is 'malloydata.faa.flights' {
     ...
@@ -208,13 +212,12 @@ And to include a nested query in a result set, much like the `aggregate:` keywor
     explore: flights is 'malloydata.faa.flights' {
         ...
         query: airport_dashboard is {
-          group by:
+          group by: [
             code is destination_code,
             destination is destination.full_name
-          aggregate:
-            flight_count
-          nest:
-            carriers_by_month, routes_map, delay_by_hour_of_day
+          ]
+          aggregate: flight_count
+          nest: [ carriers_by_month, routes_map, delay_by_hour_of_day ]
         }
     }
 
@@ -223,7 +226,7 @@ And to include a nested query in a result set, much like the `aggregate:` keywor
 Because an explore can no longer have a `| reduce` in the definition, there needs to be a syntax meaning "the explore which starts with the result of this query". This would be indicated when, anywhere an explore name is legal, to use `(` _QUERY_ `)` for example.
 
     -- given this explore ...
-    explore: users is 'schema.users' {
+    explore: users is table('schema.users') {
         ...
         join: orders on orders.user_id
         query: user_order_facts is {
