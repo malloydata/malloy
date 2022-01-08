@@ -56,12 +56,20 @@ function nameOf(qfd: model.QueryFieldDef): string {
 }
 
 /**
- * The grand daddy of all FieldSpace(s) is JUST a wrapper for a StructDef
- *
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
  * are fields. A FieldSpace can lookup fields, and generate a StructDef
  */
-export class FieldSpace {
+export interface FieldSpace {
+  structDef(): model.StructDef;
+  emptyStructDef(): model.StructDef;
+  findEntry(symbol: string): SpaceEntry | undefined;
+}
+
+/**
+ * The father of all FieldSpaces is a wrapper for a StructDef
+ */
+
+export class StructSpace implements FieldSpace {
   private memoMap?: FieldMap;
   protected fromStruct: model.StructDef;
 
@@ -129,9 +137,7 @@ export class FieldSpace {
   }
 
   emptyStructDef(): model.StructDef {
-    const copyStructDef = { ...this.fromStruct };
-    copyStructDef.fields = [];
-    return copyStructDef;
+    return { ...this.fromStruct, fields: [] };
   }
 
   outerName(): string {
@@ -153,20 +159,12 @@ export class FieldSpace {
       return undefined;
     }
   }
-
-  /**
-   * Field space is asked "what is the first field space for a pipeline". For
-   * a StructDef FieldSpace, the StructDef is the head.
-   */
-  headSpace(): FieldSpace {
-    return this;
-  }
 }
 
 /**
  * A FieldSpace which is coming from source code
  */
-export class NewFieldSpace extends FieldSpace {
+export class NewFieldSpace extends StructSpace {
   final: model.StructDef | undefined;
   constructor(inputStruct: model.StructDef) {
     super(cloneDeep(inputStruct));
@@ -305,23 +303,10 @@ type QuerySegType = "reduce" | "project";
  * for a query segment
  */
 export abstract class QueryFieldSpace extends NewFieldSpace {
-  protected queryHeadSpace: FieldSpace;
   abstract segType: QuerySegType;
 
   constructor(readonly inputSpace: FieldSpace) {
     super(inputSpace.emptyStructDef());
-    this.queryHeadSpace = inputSpace.headSpace();
-  }
-
-  /**
-   * For a chain of QueryFieldSpace where each one is the inputSpace for
-   * the next one, this will chase to always return the headSpace of the
-   * query chain. This is currently suspect, should never have to ask
-   * a segment in the middle of a chain this question, that is an artifact
-   * of translation ... I think ...
-   */
-  headSpace(): FieldSpace {
-    return this.queryHeadSpace;
   }
 
   /**

@@ -12,7 +12,7 @@
  */
 
 import { ExpressionDef } from "./ast";
-import { FieldSpace } from "./field-space";
+import { StructSpace } from "./field-space";
 import { TestTranslator } from "./jest-factories";
 
 abstract class Testable {
@@ -86,7 +86,7 @@ class BetaExpression extends Testable {
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.xlate.internalModel.contents.a;
       if (aStruct.type === "struct") {
-        const _exprDef = exprAst.getExpression(new FieldSpace(aStruct));
+        const _exprDef = exprAst.getExpression(new StructSpace(aStruct));
       } else {
         throw new Error("Can't get simple namespace for expression tests");
       }

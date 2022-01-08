@@ -12,7 +12,7 @@
  */
 
 import * as model from "../model/malloy_types";
-import { FieldSpace, NewFieldSpace } from "./field-space";
+import { FieldSpace, StructSpace, NewFieldSpace } from "./field-space";
 import { FieldValueType, ExprFieldDecl, TurtleDecl, HasParameter } from "./ast";
 
 // "Space Fields" are a field in a field space
@@ -109,7 +109,7 @@ export class StructSpaceField extends SpaceField {
 
   get fieldSpace(): FieldSpace {
     if (!this.space) {
-      this.space = new FieldSpace(this.sourceDef);
+      this.space = new StructSpace(this.sourceDef);
     }
     return this.space;
   }

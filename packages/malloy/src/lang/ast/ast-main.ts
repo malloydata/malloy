@@ -17,6 +17,7 @@ import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
   FieldSpace,
+  StructSpace,
   ReduceFieldSpace,
   ProjectFieldSpace,
   NewFieldSpace,
@@ -936,7 +937,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment: seg,
       outputSpace: () =>
-        new FieldSpace(
+        new StructSpace(
           ModelQuerySegment.nextStructDef(inputFS.structDef(), seg)
         ),
     };
@@ -1235,10 +1236,10 @@ export class PipelineDesc extends MalloyElement {
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
     this.has({ queryHead });
     const exploreStruct = queryHead.structDef();
-    const exploreFS = new FieldSpace(exploreStruct);
+    const exploreFS = new StructSpace(exploreStruct);
     const resultPipe = this.refinePipeline(exploreFS, seedQuery);
     const walkStruct = this.getOutputStruct(exploreStruct, resultPipe.pipeline);
-    this.appendOps(resultPipe.pipeline, new FieldSpace(walkStruct));
+    this.appendOps(resultPipe.pipeline, new StructSpace(walkStruct));
     return { ...resultPipe, type: "query", structRef: queryHead.structRef() };
   }
 
@@ -1252,7 +1253,7 @@ export class PipelineDesc extends MalloyElement {
     const structDef = model.refIsStructDef(structRef)
       ? structRef
       : explore.structDef();
-    let pipeFs = new FieldSpace(structDef);
+    let pipeFs = new StructSpace(structDef);
 
     if (this.headName) {
       const pipeline = this.importTurtle(this.headName, structDef);
@@ -1266,7 +1267,7 @@ export class PipelineDesc extends MalloyElement {
         destQuery.pipeHead = { name: this.headName };
       }
       const pipeStruct = this.getOutputStruct(structDef, refined);
-      pipeFs = new FieldSpace(pipeStruct);
+      pipeFs = new StructSpace(pipeStruct);
     }
     this.appendOps(destQuery.pipeline, pipeFs);
     return destQuery;

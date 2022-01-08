@@ -27,7 +27,7 @@ import {
 } from "../model/malloy_types";
 import * as ast from "./ast";
 import { compressExpr, MalloyElement, ModelEntry, NameSpace } from "./ast";
-import { FieldSpace } from "./field-space";
+import { StructSpace } from "./field-space";
 import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
@@ -105,7 +105,7 @@ export function mkFilters(...pairs: string[]): FilterExpression[] {
     const thingIs = `'${pairs[i + 1]}'`;
     const exprSrc = `${thing}:${thingIs}`;
     const expr = new ast.Apply(mkExprIdRef(thing), new ast.ExprString(thingIs));
-    const fs = new FieldSpace(aTableDef);
+    const fs = new StructSpace(aTableDef);
     filters.push({
       expression: compressExpr(expr.getExpression(fs).value),
       source: exprSrc,
