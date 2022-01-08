@@ -266,6 +266,11 @@ export class TestTranslator extends MalloyTranslator {
     }
     throw new Error(`Expected model to contain explore '${exploreName}'`);
   }
+
+  prettyErrors(): string {
+    this.explainFailure();
+    return super.prettyErrors();
+  }
 }
 
 // // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

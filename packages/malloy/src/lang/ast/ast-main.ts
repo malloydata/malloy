@@ -1165,11 +1165,13 @@ export class PipelineDesc extends MalloyElement {
     }
     pipeline.push(...modelPipe.pipeline);
     const firstSeg = pipeline[0];
-    if (firstSeg.type === "index") {
-      // TODO delete index segments from the world, and then this error
-      throw new Error("Index segments no longer supported");
+    if (firstSeg) {
+      if (firstSeg.type === "index") {
+        // TODO delete index segments from the world, and then this error
+        throw new Error("Index segments no longer supported");
+      }
+      this.headRefinement.refineFrom(firstSeg);
     }
-    this.headRefinement.refineFrom(firstSeg);
     pipeline[0] = this.headRefinement.getOp(fs).segment;
     return { pipeline };
   }
