@@ -401,7 +401,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
 export class ReduceFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "reduce";
-  canAddFieldDef(qi: ExprFieldDecl): boolean {
+  canAddFieldDef(_qi: ExprFieldDecl): boolean {
     return true;
   }
 }
