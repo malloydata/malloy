@@ -309,9 +309,15 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     super(inputSpace.emptyStructDef());
   }
 
+  abstract canAddFieldDef(qi: ExprFieldDecl): boolean;
+
   /**
-   * Although this QueryFieldSpace is collectiing definitions for the
+   * Although this QueryFieldSpace is collecting definitions for the
    * output space, expressions are all evaluated against the input space.
+   *
+   * I think this is probably a mistake, some external object should
+   * hold both the input and output spaces, but I haven't been able to
+   * refold my brain to see this properly yet.
    */
   findEntry(fieldPath: string): SpaceEntry | undefined {
     return this.inputSpace.findEntry(fieldPath);
@@ -331,7 +337,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       if (qi instanceof FieldName || qi instanceof NestReference) {
         this.addReference(qi.name);
       } else if (qi instanceof ExprFieldDecl) {
-        this.addField(qi);
+        if (this.canAddFieldDef(qi)) {
+          this.addField(qi);
+        }
       } else if (qi instanceof NestDefinition) {
         this.setEntry(qi.name, new QueryFieldAST(this, qi, qi.name));
       } else {
@@ -393,6 +401,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
 export class ReduceFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "reduce";
+  canAddFieldDef(qi: ExprFieldDecl): boolean {
+    return true;
+  }
 }
 
 export class ProjectFieldSpace extends QueryFieldSpace {
