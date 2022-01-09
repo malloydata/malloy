@@ -15,6 +15,13 @@ import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
 import { TestTranslator } from "./jest-factories";
 
+/*
+ * Thinking of these tests as just "do things parse", there should maybe
+ * be additional tests for, "does the correct code get generated", but
+ * the first step should be to write all the phrases in the grammar
+ * and make sure they parse to ast and the ast generates something
+ */
+
 abstract class Testable {
   xlate: TestTranslator;
   constructor(x: TestTranslator) {
@@ -131,6 +138,11 @@ describe("expressions", () => {
     test("day", exprOK("@1960-06-30"));
     test("minute", exprOK("@1960-06-30 10:30"));
     test("second", exprOK("@1960-06-30 10:30:31"));
+    test("null", exprOK("null"));
+    test("now", exprOK("now"));
+    test("true", exprOK("true"));
+    test("false", exprOK("false"));
+    test("regex", exprOK("r'RegularExpression'"));
   });
 
   describe("timeframes", () => {
@@ -160,6 +172,7 @@ describe("expressions", () => {
   });
 
   test("field name", exprOK("astring"));
+  test("function call", exprOK("CURRENT_TIMESTAMP()"));
 
   describe("operators", () => {
     test("addition", exprOK("42 + 7"));
@@ -167,5 +180,17 @@ describe("expressions", () => {
     test("multiplication", exprOK("42 * 7"));
     test("division", exprOK("42 / 7"));
     test("unary negation", exprOK("- aninteger"));
+    test("equal", exprOK("42 = 7"));
+    test("not equal", exprOK("42 != 7"));
+    test("greater than", exprOK("42 > 7"));
+    test("greater than or equal", exprOK("42 >= 7"));
+    test("less than or equal", exprOK("42 <= 7"));
+    test("less than", exprOK("42 < 7"));
+    test("match", exprOK("'forty-two' ~ 'fifty-four'"));
+    test("not match", exprOK("'forty-two' !~ 'fifty-four'"));
+    test("apply", exprOK("'forty-two' : 'fifty-four'"));
+    test("not", exprOK("not true"));
+    test("and", exprOK("true and false"));
+    test("or", exprOK("true or false"));
   });
 });
