@@ -305,12 +305,9 @@ export class Model {
    * @returns A prepared query.
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
-    const struct = this.modelDef.structs[queryName];
-    if (struct.type === "struct") {
-      const source = struct.structSource;
-      if (source.type === "query") {
-        return new PreparedQuery(source.query, this.modelDef, queryName);
-      }
+    const query = this.modelDef.contents[queryName];
+    if (query.type === "query") {
+      return new PreparedQuery(query, this.modelDef, queryName);
     }
 
     throw new Error("Given query name does not refer to a named query.");
@@ -353,7 +350,11 @@ export class Model {
    * @returns An `Explore`.
    */
   public getExploreByName(name: string): Explore {
-    return new Explore(this.modelDef.structs[name]);
+    const struct = this.modelDef.contents[name];
+    if (struct.type === "struct") {
+      return new Explore(struct);
+    }
+    throw new Error(`'name' is not an explore`);
   }
 
   /**
@@ -362,9 +363,14 @@ export class Model {
    * @returns An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    return Object.keys(this.modelDef.structs).map((name) =>
-      this.getExploreByName(name)
-    );
+    const explores: Explore[] = [];
+    for (const me in this.modelDef.contents) {
+      const ent = this.modelDef.contents[me];
+      if (ent.type === "struct") {
+        explores.push(new Explore(ent));
+      }
+    }
+    return explores;
   }
 
   public get _modelDef(): ModelDef {
@@ -687,11 +693,14 @@ export class PreparedResult {
 
   public get sourceExplore(): Explore {
     const name = this.inner.sourceExplore;
-    const explore = this.modelDef.structs[name];
+    const explore = this.modelDef.contents[name];
     if (explore === undefined) {
       throw new Error("Malformed query result.");
     }
-    return new Explore(explore);
+    if (explore.type === "struct") {
+      return new Explore(explore);
+    }
+    throw new Error(`'${name} is not an explore`);
   }
 
   public get _sourceExploreName(): string {
@@ -900,7 +909,7 @@ export class Explore extends Entity {
     return {
       name: "generated_model",
       exports: [],
-      structs: { [this.structDef.name]: this.structDef },
+      contents: { [this.structDef.name]: this.structDef },
     };
   }
 
