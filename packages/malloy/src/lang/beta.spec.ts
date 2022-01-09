@@ -25,13 +25,10 @@ abstract class Testable {
 
   hasErrors(): boolean {
     const t = this.xlate.translate();
-    if (t.final) {
-      if (t.errors) {
-        return false;
-      }
-      return true;
+    if (t.final && (t.errors === undefined || t.errors.length === 0)) {
+      return false;
     }
-    return false;
+    return true;
   }
 
   errReport(): string {
@@ -39,7 +36,7 @@ abstract class Testable {
     if (t.errors) {
       return this.xlate.prettyErrors();
     }
-    return "";
+    return "no errors to report";
   }
 }
 
@@ -49,6 +46,7 @@ class BetaModel extends Testable {
   }
 
   compile(): void {
+    const _compileTo = this.xlate.translate();
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
 }
@@ -72,10 +70,6 @@ expect.extend({
   },
 });
 
-function model(s: string): Testable {
-  return new BetaModel(s);
-}
-
 class BetaExpression extends Testable {
   constructor(src: string) {
     super(new TestTranslator(src, "fieldExpr"));
@@ -96,15 +90,25 @@ class BetaExpression extends Testable {
   }
 }
 
-function expression(s: string): Testable {
-  return new BetaExpression(s);
+type TestFunc = () => undefined;
+
+function exprOK(s: string): TestFunc {
+  return () => {
+    expect(new BetaExpression(s)).toCompile();
+    return undefined;
+  };
+}
+
+function modelOK(s: string): TestFunc {
+  return () => {
+    const m = new BetaModel(s);
+    expect(m).toCompile();
+    return undefined;
+  };
 }
 
 describe("top level explore definition tests", () => {
-  test("define one explore", () => {
-    const tModel = model(`explore: testA is 'aTable`);
-    expect(tModel).toCompile();
-  });
+  test("define one explore", modelOK(`explore: testA is table('aTable')`));
 });
 
 describe("expressions", () => {
@@ -120,33 +124,20 @@ describe("expressions", () => {
   ];
 
   describe("literals", () => {
-    test("integer", () => {
-      const tExpr = expression("42");
-      expect(tExpr).toCompile();
-    });
-
-    test("string", () => {
-      const tExpr = expression(`'forty-two'`);
-      expect(tExpr).toCompile();
-    });
+    test("integer", exprOK("42"));
+    test("string", exprOK(`'fortywo-two'`));
   });
 
   describe("timestamp truncation", () => {
     for (const unit of timeframes) {
-      test(`timestamp truncate ${unit}`, () => {
-        const tExpr = expression(`atimestamp.${unit}`);
-        expect(tExpr).toCompile();
-      });
+      test(`timestamp truncate ${unit}`, exprOK(`atimestamp.${unit}`));
     }
   });
 
   describe("timestamp extraction", () => {
     for (const unit of timeframes) {
-      test(`timestamp truncate ${unit}`, () => {
-        // TODO expect these to error ...
-        const tExpr = expression(`${unit}(zzz_atimestamp)`);
-        expect(tExpr).toCompile();
-      });
+      // TODO expect these to error ...
+      test(`timestamp extract ${unit}`, exprOK(`${unit}(atimestamp)`));
     }
   });
 });
