@@ -326,7 +326,8 @@ export class MalloyToAST
   }
 
   visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
-    return this.getFilterShortcut(pcx.filterShortcut());
+    const el = this.getFilterElement(pcx.fieldExpr());
+    return this.astAt(new ast.Filter([el]), pcx);
   }
 
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {

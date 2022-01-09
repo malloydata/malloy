@@ -29,7 +29,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
     airport_count is count(*),
     aircraft_model_count is count(),
     total_seats is sum(seats),
-    boeing_seats is sum(seats) --  {? manufacturer: 'BOEING'},
+    boeing_seats is sum(seats) {? manufacturer: 'BOEING'},
     percent_boeing is boeing_seats / total_seats * 100,
     percent_boeing_floor is FLOOR(boeing_seats / total_seats * 100),
   ]
@@ -482,45 +482,40 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "aircraft_count").value).toBe(3599);
   });
 
-  // MTOY: I need some help with this one...
   it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
-    define bo_models is (
-      (explore 'malloytest.aircraft_models'
-        : [manufacturer: ~ 'BO%']
-      | project
-        aircraft_model_code
-        manufacturer
-        seats
-      )
-      primary key aircraft_model_code
-      bo_count is count()
-    );
+    explore: bo_models is
+      from(
+          table('malloytest.aircraft_models') {? manufacturer: ~ 'BO%' }
+          -> { project: [ aircraft_model_code, manufacturer, seats ] }
+        ) {
+          primary_key: aircraft_model_code
+          measure: bo_count is count()
+        }
 
-    define b_models is (
-      (explore 'malloytest.aircraft_models'
-        : [manufacturer: ~ 'B%']
-      | project
-        aircraft_model_code
-        manufacturer
-        seats
-      ) : [bo_models.seats > 200]
-      primary key aircraft_model_code
-      b_count is count()
-      bo_models is join on aircraft_model_code
-    );
+    explore: b_models is
+        from(
+          table('malloytest.aircraft_models') {? manufacturer: ~ 'B%' }
+          -> { project: [ aircraft_model_code, manufacturer, seats ] }
+        ) {
+          where: bo_models.seats > 200
+          primary_key: aircraft_model_code
+          measure: b_count is count()
+          join: bo_models on aircraft_model_code
+        }
 
-    define models is (explore 'malloytest.aircraft_models'
-      b_models is join on aircraft_model_code
-      model_count is count()
-    )
+    explore: models is table('malloytest.aircraft_models') {
+      join: b_models on aircraft_model_code
+      measure: model_count is count()
+    }
 
-    explore models | reduce
-      model_count
-      b_models.b_count
-      -- b_models.bo_models.bo_count
+    query: models -> {
+      aggregate: model_count
+      aggregate: b_models.b_count
+      -- aggregate: b_models.bo_models.bo_count
+    }
         `
       )
       .run();

@@ -158,8 +158,8 @@ filterStatement
   ;
 
 filteredBy
-  : filterShortcut                       # filterByShortcut
-  | OCURLY whereStatement CCURLY         # filterByWhere
+  : QMARK fieldExpr                   # filterByShortcut
+  | whereStatement                    # filterByWhere
   ;
 
 filterClauseList
