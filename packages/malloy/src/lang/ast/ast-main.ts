@@ -33,6 +33,7 @@ import {
   ExprFieldDecl,
   ExpressionDef,
 } from "./index";
+import {doc} from "prettier";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -1380,9 +1381,9 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
     this.has({ query: theQuery });
   }
 
-  execute(_doc: Document): void {
-    const _modelQuery = this.theQuery.query();
-    // TODO somehow this needs to end up accessible to the translator ?
+  execute(doc: Document): void {
+    const modelQuery = this.theQuery.query();
+    doc.queryList.push(modelQuery);
   }
 }
 

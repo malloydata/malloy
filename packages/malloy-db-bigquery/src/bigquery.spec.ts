@@ -45,9 +45,9 @@ describe("db:BigQuery", () => {
   it("runs a Malloy query", async () => {
     const sql = await runtime
       .loadModel(
-        "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
+        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
       )
-      .loadQuery("explore carriers | reduce carrier_count")
+      .loadQuery("query: carriers -> { aggregate: carrier_count }")
       .getSQL();
     const res = await bq.runSQL(sql);
     expect(res.rows[0]["carrier_count"]).toBe(21);
@@ -56,9 +56,9 @@ describe("db:BigQuery", () => {
   it("streams a Malloy query for download", async () => {
     const sql = await runtime
       .loadModel(
-        "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
+        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
       )
-      .loadQuery("explore carriers | reduce name")
+      .loadQuery("query: carriers -> { group_by: name }")
       .getSQL();
     const res = await bq.downloadMalloyQuery(sql);
 
