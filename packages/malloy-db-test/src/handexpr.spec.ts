@@ -221,7 +221,7 @@ export const aircraftHandStructDef: StructDef = {
 const handCodedModel: ModelDef = {
   name: "Hand Coded Models",
   exports: ["aircraft"],
-  structs: {
+  contents: {
     aircraft: aircraftHandStructDef,
   },
 };
@@ -518,7 +518,7 @@ it(`hand: filtered measures - ${databaseName}`, async () => {
 export const exprHandModelDef: ModelDef = {
   name: "Hand Coded Expressions",
   exports: ["aircraft"],
-  structs: { aircraft: aircraftHandStructDef },
+  contents: { aircraft: aircraftHandStructDef },
 };
 
 export const joinModelAircraftHandStructDef: StructDef = {
@@ -598,7 +598,7 @@ export const aircraftBModelInner: StructDef = {
 const joinModel: ModelDef = {
   name: "Hand Coded Join Models",
   exports: ["model_aircraft", "aircraft_modelb_inner"],
-  structs: {
+  contents: {
     model_aircraft: joinModelAircraftHandStructDef,
     aircraft_modelb_inner: aircraftBModelInner,
   },
