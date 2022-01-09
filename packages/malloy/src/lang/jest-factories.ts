@@ -269,7 +269,6 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   prettyErrors(): string {
-    this.explainFailure();
     return super.prettyErrors();
   }
 }
