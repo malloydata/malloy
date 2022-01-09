@@ -44,6 +44,7 @@ import {
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam } from "../space-field";
+import { Dialect } from "../../dialect";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -150,6 +151,12 @@ class ConstantFieldSpace implements FieldSpace {
   }
   findEntry(_name: string): undefined {
     return undefined;
+  }
+  getDialect(): Dialect {
+    // well dialects totally make this wrong and broken and stupid and useless
+    // but since this is only used for parameters which are also wrong and
+    // broken and stupid and useless, this will do for now
+    throw new Error("I just put this line of code here to make things compile");
   }
 }
 

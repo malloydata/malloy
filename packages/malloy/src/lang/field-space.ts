@@ -64,6 +64,7 @@ export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
   findEntry(symbol: string): SpaceEntry | undefined;
+  getDialect(): Dialect;
 }
 
 /**
