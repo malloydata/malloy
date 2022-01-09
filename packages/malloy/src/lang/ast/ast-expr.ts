@@ -23,11 +23,10 @@ import {
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
-  StructDef,
   isConditionParameter,
   StructDef,
 } from "../../model/malloy_types";
-import { FieldSpace, ConstantFieldSpace } from "../field-space";
+import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
   Filter,
@@ -138,8 +137,12 @@ class ConstantFieldSpace implements FieldSpace {
       type: "struct",
       name: "empty structdef",
       structSource: { type: "table" },
-      structRelationship: { type: "basetable" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: "noConnection",
+      },
       fields: [],
+      dialect: "noDialect",
     };
   }
   emptyStructDef(): StructDef {
