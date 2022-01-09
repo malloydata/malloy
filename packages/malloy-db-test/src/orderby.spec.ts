@@ -81,7 +81,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           ]
           aggregate: model_count is count()
         }->{
-          group__by: big
+          group_by: big
           aggregate: model_count is model_count.sum()
         }
         `
@@ -133,7 +133,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         }
       } -> {
         project: [
-          withx is lower(withx.select)
+          withxz is lower(withx.select)
           fetch is withx.fetch
         ]
       }
@@ -180,11 +180,11 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        explore: popular_names is models->{
+        explore: popular_names is from(models->{
           where: model_count > 100
           group_by: manufacturer
           aggregate: model_count
-        }
+        })
 
         query: popular_names->{
           order_by: 2
@@ -200,7 +200,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        explore: popular_names is models->{
+        explore: popular_names is from(models->{
           where: model_count > 100
           group_by: manufacturer
           aggregate: model_count
@@ -209,7 +209,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
             group_by: manufacturer
             aggregate: model_count
           }
-        );
+        })
+
         query: popular_names->{
          order_by: 2
          project: [manufacturer, model_count]
