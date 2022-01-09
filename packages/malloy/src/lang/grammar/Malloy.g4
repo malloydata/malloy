@@ -337,17 +337,12 @@ fieldExpr
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | (id | timeframe) OPAREN ( fieldExprList? ) CPAREN      # exprFunc
-  | CASE caseSpec END                                      # exprCase
   | pickStatement                                          # exprPick
   ;
 
 partialAllowedFieldExpr
   : compareOp fieldExpr                                    # exprPartialCompare
   | fieldExpr                                              # exprNotPartial
-  ;
-
-caseSpec
-  : (WHEN fieldExpr THEN fieldExpr)+ (ELSE fieldExpr)?
   ;
 
 pickStatement
