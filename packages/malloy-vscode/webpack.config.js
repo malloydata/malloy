@@ -14,6 +14,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 
 "use strict";
+const webpack = require("webpack");
 
 const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
@@ -31,7 +32,7 @@ const config = {
     libraryTarget: "commonjs2",
     devtoolModuleFilenameTemplate: "../[resource-path]",
   },
-  devtool: "inline-source-map",
+  devtool: "inline-cheap-module-source-map",
   externals: {
     vscode: "commonjs vscode",
   },
@@ -46,6 +47,9 @@ const config = {
         use: [
           {
             loader: "ts-loader",
+            options: {
+              projectReferences: true,
+            },
           },
         ],
       },
@@ -57,13 +61,14 @@ const config = {
       },
       {
         test: /\.js$/,
+        exclude: /node_modules/,
         enforce: "pre",
         use: ["source-map-loader"],
       },
     ],
   },
-  ignoreWarnings: [/Failed to parse source map/],
   plugins: [
+    new webpack.IgnorePlugin({ resourceRegExp: /^pg-native$/ }),
     new CopyPlugin({
       patterns: [
         {

@@ -1,9 +1,9 @@
 # Malloy's Features
 
 ### Reusable Analytical Data Model
-Common calculations, table relationships and reusable queries can all be encoded in a Malloy 
+Common calculations, table relationships and reusable queries can all be encoded in a Malloy
 Data Model.  Malloy queries (equivalent of SQL's <code>SELECT</code>) run against the data model and
-produce SQL.  
+produce SQL.
 
 ### Filtering Data
 The first step in working with data, often is isolating the data you are interested in.
@@ -12,11 +12,11 @@ applied.  [Time calculations](language/time-ranges.md) are powerful and understa
 
 ### Reusable Aggregates
 In a Malloy Data Model, an agggreate computation need only be defined once (for example revenue).  Once defined, it can be used
-in any query at any level of granulatity or dimensionality. Malloy retains enough information in the data graph 
+in any query at any level of granulatity or dimensionality. Malloy retains enough information in the data graph
 to perform this calculation no matter how you ask for it. Reusable Aggregates help improve accuracy.
 
 ### Reusable Dimensional calculations
-Dimensional (Scalar calculations) can also be introduced into the model. Dimensional calculation are useful 
+Dimensional (Scalar calculations) can also be introduced into the model. Dimensional calculation are useful
 mapping values, bucketing results and data cleanup.
 
 ### Maintains Relationships
@@ -26,11 +26,11 @@ of data lets you access and correctly perform comutations and any place in the g
 ### Reusable Queries
 Queries can be introduced into a Malloy model and accessed by name.  One benefit is that the
 queries are always accurate.  Think of a Malloy model as a data function library.
-Queries can also be used in other queries (we call this *Turtling*).  
+Queries can also be used to create [nested subtables](nesting.md) in other queries.
 
-### Turtles
+### Aggregating Subueries
 Malloy easily produces nested results.  Entire dashboards can be fetched in a single query.
-Turtles of a given shape can easily be visualized and reused.
+Named queries of a given shape can easily be nested, visualized and reused.
 
 ### Pipelines
  Malloy can pipeline operations.  The output of one query can be the input for next.

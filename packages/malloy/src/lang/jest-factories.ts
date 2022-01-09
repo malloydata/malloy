@@ -69,8 +69,9 @@ export const caFilter = new ast.Filter([
 export const aTableDef: StructDef = {
   type: "struct",
   name: "aTable",
+  dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable" },
+  structRelationship: { type: "basetable", connectionName: "test" },
   fields: [
     { type: "string", name: "astring" },
     { type: "number", name: "afloat", numberType: "float" },
@@ -272,20 +273,3 @@ export class TestTranslator extends MalloyTranslator {
     return super.prettyErrors();
   }
 }
-
-// // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-// export async function exploreFor(src: string) {
-//   const parse = new TestTranslator(src, "explore");
-//   const req = parse.translate();
-//   if (req.tables) {
-//     const tables = await Malloy.db.getSchemaForMissingTables(req.tables);
-//     parse.update({ tables });
-//   }
-//   const explore = parse.ast() as ast.Explore;
-//   return {
-//     schema: parse.schemaZone,
-//     explore,
-//     errors: parse.logger.getLog(),
-//     errorFree: parse.logger.noErrors(),
-//   };
-// }

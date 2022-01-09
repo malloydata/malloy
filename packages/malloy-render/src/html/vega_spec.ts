@@ -12,8 +12,8 @@
  */
 
 import * as lite from "vega-lite";
-import { FieldDef, QueryDataRow, QueryValue, StructDef } from "malloy";
-import { HtmlChartRenderer } from "./chart";
+import { DataColumn, Explore, Field } from "@malloy-lang/malloy";
+import { HTMLChartRenderer } from "./chart";
 import { cloneDeep } from "lodash";
 import { getColorScale } from "./utils";
 import { StyleDefaults } from "../data_styles";
@@ -52,6 +52,17 @@ const sizeSmall = {
   height: 80,
   width: 150,
 };
+
+const sizeSmallWidth = {
+  width: 150,
+};
+
+const sizeSmallHeightStep = {
+  height: { step: 13 },
+};
+
+const sizeSmallStep = { ...sizeSmallWidth, ...sizeSmallHeightStep };
+const sizeMediumStep = { ...sizeSmallWidth };
 
 const sizeMedium = {
   height: 150,
@@ -196,18 +207,18 @@ const bar_NMM: lite.TopLevelSpec = {
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM,
-  bar_SM_small: { ...bar_SM, ...sizeSmall },
-  // bar_SM_medium: { ...bar_SM, ...sizeMedium }, // just use the default runs long
+  bar_SM_small: { ...bar_SM, ...sizeSmallStep },
+  bar_SM_medium: { ...bar_SM, ...sizeMediumStep }, // just use the default runs long
   bar_SM_large,
 
   bar_SMS,
-  bar_SMS_small: { ...bar_SMS, ...sizeSmall },
-  bar_SMS_medium: { ...bar_SMS, ...sizeMedium },
+  bar_SMS_small: { ...bar_SMS, ...sizeSmallStep },
+  bar_SMS_medium: { ...bar_SMS, ...sizeMediumStep },
   bar_SMS_large,
 
   bar_SMM,
-  bar_SMM_small: { ...bar_SMM, ...sizeSmall },
-  bar_SMM_medium: { ...bar_SMM, ...sizeMedium },
+  bar_SMM_small: { ...bar_SMM, ...sizeSmallStep },
+  bar_SMM_medium: { ...bar_SMM, ...sizeMediumStep },
   bar_SMM_large,
 
   bar_NM,
@@ -390,7 +401,7 @@ export function isDataContainer(a: unknown): a is DataContainer {
   return a instanceof Array || a instanceof Object;
 }
 
-export class HtmlVegaSpecRenderer extends HtmlChartRenderer {
+export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   spec: lite.TopLevelSpec;
 
   constructor(styleDefaults: StyleDefaults, spec: lite.TopLevelSpec) {
@@ -398,67 +409,61 @@ export class HtmlVegaSpecRenderer extends HtmlChartRenderer {
     this.spec = spec;
   }
 
-  getDataValue(
-    value: QueryValue,
-    field: FieldDef
-  ): Date | string | number | null {
-    switch (field.type) {
-      case "timestamp":
-      case "date":
-        return value === null
-          ? null
-          : new Date((value as { value: string }).value);
-      case "number":
-        return value as number;
-      case "string":
-        return value as string;
-      default:
-        throw new Error("Invalid field type for bar chart.");
+  getDataValue(data: DataColumn): Date | string | number | null {
+    if (data.isNull()) {
+      return null;
+    } else if (
+      data.isTimestamp() ||
+      data.isDate() ||
+      data.isNumber() ||
+      data.isString()
+    ) {
+      return data.value;
+    } else {
+      throw new Error("Invalid field type for vega chart.");
     }
   }
 
-  getDataType(field: FieldDef): "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
-      case "string":
+  getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp() || field.isString()) {
         return "nominal";
-      case "number":
+      } else if (field.isNumber()) {
         return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+      }
     }
+    throw new Error("Invalid field type for vega chart.");
   }
 
-  translateField(metadata: StructDef, fieldString: string): string {
+  translateField(explore: Explore, fieldString: string): string {
     const m = fieldString.match(/#\{(?<fieldnum>\d+)\}/);
     if (m && m.groups) {
-      return metadata.fields[parseInt(m.groups["fieldnum"]) - 1].name;
+      return explore.intrinsicFields[parseInt(m.groups["fieldnum"]) - 1].name;
     }
     return fieldString;
   }
 
-  translateFields(node: DataContainer, metadata: StructDef): void {
+  translateFields(node: DataContainer, explore: Explore): void {
     if (node instanceof Array) {
       for (const e of node) {
         if (isDataContainer(e)) {
-          this.translateFields(e, metadata);
+          this.translateFields(e, explore);
         }
       }
     } else if (node instanceof Object) {
       for (const [key, value] of Object.entries(node)) {
         if (key === "field" && typeof value === "string") {
-          node[key] = this.translateField(metadata, value);
+          node[key] = this.translateField(explore, value);
         } else if (key === "repeat" && value instanceof Array) {
           for (const k of value.keys()) {
             const fieldName = value[k];
             if (typeof fieldName === "string") {
-              value[k] = this.translateField(metadata, fieldName);
+              value[k] = this.translateField(explore, fieldName);
             }
           }
         } else {
           if (isDataContainer(value)) {
-            this.translateFields(value, metadata);
+            this.translateFields(value, explore);
           }
         }
       }
@@ -476,16 +481,16 @@ export class HtmlVegaSpecRenderer extends HtmlChartRenderer {
   //   return ret;
   // }
 
-  getVegaLiteSpec(data: QueryValue, metadata: StructDef): lite.TopLevelSpec {
-    if (data === null) {
+  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
+    if (data.isNull() || !data.isArray()) {
       throw new Error("Expected struct value not to be null.");
     }
 
     const newSpec = cloneDeep(this.spec);
 
-    this.translateFields(newSpec as unknown as DataContainer, metadata);
+    this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
-      values: this.mapData(data as QueryDataRow[], metadata.fields, metadata),
+      values: this.mapData(data),
     };
     newSpec.data = rdata;
 

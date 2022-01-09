@@ -11,11 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "malloy";
-import { HtmlListRenderer } from "./list";
+import { Explore, Field } from "@malloy-lang/malloy";
+import { HTMLListRenderer } from "./list";
 
-export class HtmlListDetailRenderer extends HtmlListRenderer {
-  getDetailField(struct: StructDef): FieldDef | undefined {
-    return struct.fields[1];
+export class HTMLListDetailRenderer extends HTMLListRenderer {
+  getDetailField(explore: Explore): Field | undefined {
+    return explore.intrinsicFields[1];
   }
 }

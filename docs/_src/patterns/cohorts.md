@@ -9,7 +9,7 @@ To understand this, we're going to use Social Security Administrations birth/nam
 We have a table with `name`, `gender`, `` `year` ``, `state` and the `` `number` `` of people born with those
 characterisitics.
 
-In the simplelist form, a cohort calculation is a [percentage of total calculation](percet_of_total.md).  
+In the simplelist form, a cohort calculation is a [percentage of total calculation](percent_of_total.md).
 For example, if we were interested in the name 'Billie' as it relates to location. We could look
 could filter on 'Billie' and look a states as it relates to total population.
 
@@ -82,7 +82,7 @@ Seconds, we group by arbitrary cohorts and compute the births per 100K for some 
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"large" }
-explore ('bigquery-public-data.usa_names.usa_1910_2013' 
+explore ('bigquery-public-data.usa_names.usa_1910_2013'
 | reduce
     decade is floor(`year`/10)*10
     state

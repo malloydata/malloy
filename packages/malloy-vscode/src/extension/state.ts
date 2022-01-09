@@ -12,14 +12,28 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { QueryResult } from "malloy";
+import { Connection, FixedConnectionMap, Result } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { PostgresConnection } from "@malloy-lang/db-postgres";
+
+export const CONNECTION_MAP = new FixedConnectionMap(
+  new Map<string, Connection>(
+    Object.entries({
+      bigquery: new BigQueryConnection("bigquery", {
+        pageSize: 50,
+      }),
+      postgres: new PostgresConnection("postgres"),
+    })
+  ),
+  "bigquery"
+);
 
 export interface RunState {
   cancel: () => void;
   panel: WebviewPanel;
   panelId: string;
   document: TextDocument;
-  result?: QueryResult;
+  result?: Result;
 }
 
 class MalloyExtensionState {

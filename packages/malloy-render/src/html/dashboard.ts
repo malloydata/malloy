@@ -11,47 +11,44 @@
  * GNU General Public License for more details.
  */
 
-import { isDimensional, isMeasureLike } from "malloy";
+import { DataArrayOrRecord } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
-import { DataPointer, DataValue, isDataTree } from "../data_table";
 import { ContainerRenderer } from "./container";
-import { HtmlTextRenderer } from "./text";
+import { HTMLTextRenderer } from "./text";
 
-export class HtmlDashboardRenderer extends ContainerRenderer {
+export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "medium",
   };
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
-      return "Invalid data for chart renderer.";
+  async render(table: DataArrayOrRecord): Promise<string> {
+    if (!table.isArrayOrRecord()) {
+      return "Invalid data for dashboard renderer.";
     }
-    const metadata = table.structDef;
 
-    const dimensions = metadata.fields.filter(isDimensional);
-    const measures = metadata.fields.filter(isMeasureLike);
+    const fields = table.field.intrinsicFields;
+    const dimensions = fields.filter(
+      (field) => field.isAtomicField() && field.sourceWasDimension()
+    );
+    const measures = fields.filter(
+      (field) => !field.isAtomicField() || field.sourceWasMeasureLike()
+    );
 
     let renderedBody = "";
-    for (let rowNum = 0; rowNum < table.rows.length; rowNum++) {
+    for (const row of table) {
       let renderedDimensions = "";
       for (const field of dimensions) {
         const renderer = this.childRenderers[field.name];
-        const rendered = await renderer.render(
-          table.getValue(rowNum, field.name),
-          new DataPointer(table, rowNum, field.name)
-        );
+        const rendered = await renderer.render(row.cell(field));
         renderedDimensions += `<div style="${DIMENSION_BOX}"><div style="${DIMENSION_TITLE}">${field.name}</div><div style="${VERTICAL_CENTER}">${rendered}</div></div>\n`;
       }
       let renderedMeasures = "";
       for (const field of measures) {
         const childRenderer = this.childRenderers[field.name];
-        const rendered = await childRenderer.render(
-          table.getValue(rowNum, field.name),
-          new DataPointer(table, rowNum, field.name)
-        );
-        if (childRenderer instanceof HtmlDashboardRenderer) {
+        const rendered = await childRenderer.render(row.cell(field));
+        if (childRenderer instanceof HTMLDashboardRenderer) {
           renderedMeasures += rendered;
-        } else if (childRenderer instanceof HtmlTextRenderer) {
+        } else if (childRenderer instanceof HTMLTextRenderer) {
           renderedMeasures += `
             <div style="${MEASURE_BOX}">
               <div style="${TITLE}">${field.name}</div>

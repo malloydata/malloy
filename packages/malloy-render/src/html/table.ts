@@ -11,43 +11,40 @@
  * GNU General Public License for more details.
  */
 
+import { DataColumn } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
-import { DataPointer, DataValue, isDataTree } from "../data_table";
 // import { getDrillPath, getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
-import { HtmlNumberRenderer } from "./number";
+import { HTMLNumberRenderer } from "./number";
 
-export class HtmlTableRenderer extends ContainerRenderer {
+export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "small",
   };
 
-  async render(table: DataValue, _ref: DataPointer): Promise<string> {
-    if (!isDataTree(table)) {
+  async render(table: DataColumn): Promise<string> {
+    if (!table.isArray()) {
       throw new Error("Invalid type for Table Renderer");
     }
-    const header = table
-      .getFieldNames()
-      .map((name) => {
+    const header = table.field.intrinsicFields
+      .map((field) => {
+        const name = field.name;
         const childRenderer = this.childRenderers[name];
-        const isNumeric = childRenderer instanceof HtmlNumberRenderer;
+        const isNumeric = childRenderer instanceof HTMLNumberRenderer;
         return `<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
           isNumeric ? "right" : "left"
         };">${name.replace(/_/g, "_&#8203;")}</th>`;
       })
       .join("\n");
     let renderedBody = "";
-    for (let rowNum = 0; rowNum < table.rows.length; rowNum++) {
+    for (const row of table) {
       let renderedRow = "";
-      for (const fieldName of table.getFieldNames()) {
-        const childRenderer = this.childRenderers[fieldName];
-        const isNumeric = childRenderer instanceof HtmlNumberRenderer;
-        const rendered = await childRenderer.render(
-          table.getValue(rowNum, fieldName),
-          new DataPointer(table, rowNum, fieldName)
-        );
+      for (const field of table.field.intrinsicFields) {
+        const childRenderer = this.childRenderers[field.name];
+        const isNumeric = childRenderer instanceof HTMLNumberRenderer;
+        const rendered = await childRenderer.render(row.cell(field));
         renderedRow += `<td style="padding: ${
-          childRenderer instanceof HtmlTableRenderer ? "0" : "8px"
+          childRenderer instanceof HTMLTableRenderer ? "0" : "8px"
         }; vertical-align: top; border-bottom: 1px solid #eaeaea; ${
           isNumeric ? "text-align: right;" : ""
         }">${rendered}</td>\n`;

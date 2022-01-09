@@ -29,11 +29,9 @@ import {
   runQueryCommand,
   runQueryFileCommand,
   runQueryWithEdit,
+  showLicensesCommand,
 } from "./commands";
-import { BigQuery, Malloy } from "malloy";
-import { showResultJsonCommand } from "./commands/show_result_json";
-
-Malloy.setDB(new BigQuery());
+import { showResultJSONCommand } from "./commands/show_result_json";
 
 let client: LanguageClient;
 
@@ -85,6 +83,11 @@ function registerTreeDataProviders(context: vscode.ExtensionContext): void {
 }
 
 function registerCommands(context: vscode.ExtensionContext): void {
+  // Show Licenses
+  context.subscriptions.push(
+    vscode.commands.registerCommand("malloy.showLicenses", showLicensesCommand)
+  );
+
   // Run Query (whole file)
   context.subscriptions.push(
     vscode.commands.registerCommand("malloy.runQueryFile", runQueryFileCommand)
@@ -116,8 +119,8 @@ function registerCommands(context: vscode.ExtensionContext): void {
   // Show result JSON
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "malloy.showResultJson",
-      showResultJsonCommand
+      "malloy.showResultJSON",
+      showResultJSONCommand
     )
   );
 }

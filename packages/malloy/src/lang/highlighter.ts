@@ -71,7 +71,7 @@ export const HighlightType = {
     Accept: "keyword.accept",
     Except: "keyword.except",
     // TODO or is this a meta type?
-    Json: "keyword.json",
+    JSON: "keyword.json",
     // TODO or is this a meta type?
     Turtle: "keyword.turtle",
     Import: "keyword.import",
@@ -223,7 +223,7 @@ export function passForHighlights(
         register(token, HighlightType.Keyword.Except);
         break;
       case MalloyParser.JSON:
-        register(token, HighlightType.Keyword.Json);
+        register(token, HighlightType.Keyword.JSON);
         break;
       case MalloyParser.TURTLE:
         register(token, HighlightType.Keyword.Turtle);

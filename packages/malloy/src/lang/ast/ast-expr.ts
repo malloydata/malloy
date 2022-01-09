@@ -25,8 +25,9 @@ import {
   isAtomicFieldType,
   StructDef,
   isConditionParameter,
+  StructDef,
 } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
+import { FieldSpace, ConstantFieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
   Filter,

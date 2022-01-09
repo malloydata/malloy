@@ -12,74 +12,69 @@
  */
 
 import * as lite from "vega-lite";
-import { FieldDef, QueryData, QueryValue, StructDef } from "malloy";
+import { DataColumn, Explore, Field } from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { STATE_CODES } from "./state_codes";
 import { getColorScale } from "./utils";
 
-export class HtmlShapeMapRenderer extends HtmlChartRenderer {
-  getDataValue(
-    value: QueryValue,
-    field: FieldDef,
-    metadata: StructDef
-  ): string | number | undefined {
-    switch (field.type) {
-      case "number":
-        return value as number;
-      case "timestamp":
-      case "date":
-      case "string": {
-        if (field === metadata.fields[0]) {
-          const id = STATE_CODES[value as string];
-          if (id === undefined) {
-            return undefined;
-          }
-          return id;
-        } else {
-          return value as string;
+export class HTMLShapeMapRenderer extends HTMLChartRenderer {
+  private getRegionField(explore: Explore): Field {
+    return explore.intrinsicFields[0];
+  }
+
+  private getColorField(explore: Explore): Field {
+    return explore.intrinsicFields[1];
+  }
+
+  getDataValue(data: DataColumn): string | number | undefined {
+    if (data.isNumber()) {
+      return data.value;
+    } else if (data.isString()) {
+      if (data.field === this.getRegionField(data.field.parentExplore)) {
+        const id = STATE_CODES[data.value];
+        if (id === undefined) {
+          return undefined;
         }
+        return id;
+      } else {
+        return data.value;
       }
-      default:
-        throw new Error("Invalid field type for bar chart.");
+    } else {
+      throw new Error("Invalid field type for shape map.");
     }
   }
 
-  getDataType(
-    field: FieldDef,
-    metadata: StructDef
-  ): "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
+  getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp()) {
         return "nominal";
-      case "string": {
-        if (field === metadata.fields[0]) {
+      } else if (field.isString()) {
+        if (field === this.getRegionField(field.parentExplore)) {
           return "quantitative";
         } else {
           return "nominal";
         }
-      }
-      case "number":
+      } else if (field.isNumber()) {
         return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+      }
     }
+    throw new Error("Invalid field type for shape map.");
   }
 
-  getVegaLiteSpec(data: QueryValue, metadata: StructDef): lite.TopLevelSpec {
-    if (data === null) {
+  getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
+    if (data.isNull()) {
       throw new Error("Expected struct value not to be null.");
     }
 
-    const typedData = data as QueryData;
+    if (!data.isArray()) {
+      throw new Error("Invalid data for shape map");
+    }
 
-    const regionField = metadata.fields[0];
-    const colorField = metadata.fields[1];
+    const regionField = this.getRegionField(data.field);
+    const colorField = this.getColorField(data.field);
 
-    const colorType = colorField
-      ? this.getDataType(colorField, metadata)
-      : undefined;
+    const colorType = colorField ? this.getDataType(colorField) : undefined;
 
     const colorDef =
       colorField !== undefined
@@ -91,11 +86,9 @@ export class HtmlShapeMapRenderer extends HtmlChartRenderer {
           }
         : undefined;
 
-    const mapped = this.mapData(
-      typedData,
-      [regionField, colorField],
-      metadata
-    ).filter((row) => row[regionField.name] !== undefined);
+    const mapped = this.mapData(data).filter(
+      (row) => row[regionField.name] !== undefined
+    );
 
     return {
       width: 250,

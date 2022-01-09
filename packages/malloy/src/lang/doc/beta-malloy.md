@@ -1,4 +1,4 @@
-# The problems ...
+# State the problems ...
 
 We are calling the current malloy alpha-malloy, we are defining beta-malloy.
 
@@ -11,7 +11,7 @@ This experiment has produced a lovely small language, but when presented to expe
 1. filter syntax, while short and readable, is also problematic
 1. pipes aren't quite right for expressing the "activate query" gesture
 1. query / explorable-thing split is unclear, what is a "space"
-1. "turtle" is a problem for everyone except michael and lloyd
+1. the term "turtle" is a problem for everyone except michael and lloyd
 
 # One Proposal
 

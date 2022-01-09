@@ -12,50 +12,43 @@
  */
 
 import * as lite from "vega-lite";
-import { FieldDef, QueryData, QueryValue, StructDef } from "malloy";
+import { DataArray, DataColumn, Field } from "@malloy-lang/malloy";
 import usAtlas from "us-atlas/states-10m.json";
-import { HtmlChartRenderer } from "./chart";
+import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";
 
-export class HtmlSegmentMapRenderer extends HtmlChartRenderer {
-  getDataValue(value: QueryValue, field: FieldDef): string | number {
-    switch (field.type) {
-      case "number":
-        return value as number;
-      case "timestamp":
-      case "date":
-      case "string":
-        return value as string;
-      default:
-        throw new Error("Invalid field type for bar chart.");
+export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
+  getDataValue(data: DataColumn): string | number | null {
+    if (data.isNull() || data.isNumber() || data.isString()) {
+      return data.value;
     }
+    throw new Error("Invalid field type for segment map.");
   }
 
-  getDataType(field: FieldDef): "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
-      case "string":
+  getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
+    if (field.isAtomicField()) {
+      if (field.isString()) {
         return "nominal";
-      case "number":
+      } else if (field.isNumber()) {
         return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+      }
+      // TODO dates nominal?
     }
+    throw new Error("Invalid field type for segment map.");
   }
 
-  getVegaLiteSpec(data: QueryValue, metadata: StructDef): lite.TopLevelSpec {
-    if (data === null) {
+  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+    if (data.isNull()) {
       throw new Error("Expected struct value not to be null.");
     }
 
-    const typedData = data as QueryData;
+    const fields = data.field.intrinsicFields;
 
-    const lat1Field = metadata.fields[0];
-    const lon1Field = metadata.fields[1];
-    const lat2Field = metadata.fields[2];
-    const lon2Field = metadata.fields[3];
-    const colorField = metadata.fields[4];
+    const lat1Field = fields[0];
+    const lon1Field = fields[1];
+    const lat2Field = fields[2];
+    const lon2Field = fields[3];
+    const colorField = fields[4];
 
     const colorType = colorField ? this.getDataType(colorField) : undefined;
 
@@ -73,11 +66,7 @@ export class HtmlSegmentMapRenderer extends HtmlChartRenderer {
       width: 250,
       height: 200,
       data: {
-        values: this.mapData(
-          typedData,
-          [lat1Field, lon1Field, lat2Field, lon2Field, colorField],
-          metadata
-        ),
+        values: this.mapData(data),
       },
       projection: {
         type: "albersUsa",

@@ -21,6 +21,10 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { runCode } from "./run_code";
 import { log } from "./log";
+import { Malloy } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+
+Malloy.db = new BigQueryConnection("docs");
 
 /*
  * A Renderer is capable of converting a parsed `Markdown` document into HTML,
@@ -250,7 +254,9 @@ class Renderer {
       return text;
     }
     href = href.replace(/\.md/, ".html");
-    let out = '<a href="' + href + '"';
+    let out = href.startsWith("/")
+      ? `<a href="{{ '${href}' | relative_url }}"`
+      : `<a href="${href}"`;
     if (title) {
       out += ' title="' + title + '"';
     }

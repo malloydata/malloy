@@ -182,6 +182,20 @@ export interface FieldAtomicDef
   type: AtomicFieldType;
 }
 
+// this field definition represents something in the database.
+export function FieldIsIntrinsic(f: FieldDef): boolean {
+  if (isAtomicFieldType(f.type) && !hasExpression(f)) {
+    return true;
+  } else if (
+    f.type === "struct" &&
+    (f.structSource.type === "inline" || f.structSource.type === "nested")
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 /** Scalar String Field */
 export interface FieldStringDef extends FieldAtomicDef {
   type: "string";
@@ -370,20 +384,41 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: "turtle";
 }
 
+type JoinType = "left" | "right" | "inner" | "outer";
+export type JoinRelationship =
+  | "one_to_one"
+  | "one_to_many"
+  | "many_to_one"
+  | "many_to_many";
+
+export interface JoinForeignKey {
+  type: "foreignKey";
+  foreignKey: FieldRef;
+  joinType?: JoinType;
+}
+
+export interface JoinCondition {
+  type: "condition";
+  onExpression: Expression; // must be a boolean expression
+  joinType?: JoinType;
+  joinRelationship: JoinRelationship;
+}
+
 /** types of joins. */
 export type StructRelationship =
-  | { type: "basetable" }
-  // {type: 'cross'}
-  | { type: "foreignKey"; foreignKey: FieldRef }
+  | { type: "basetable"; connectionName: string }
+  | JoinForeignKey
+  | JoinCondition
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
 
 /** where does the struct come from? */
 export type StructSource =
-  | { type: "table" }
+  | { type: "table"; tablePath?: string }
   | { type: "nested" }
   | { type: "inline" }
-  | { type: "query"; query: Query };
+  | { type: "query"; query: Query }
+  | { type: "sql"; nested?: boolean };
 
 // Inline and nested tables, cannot have a StructRelationship
 //  the relationshipo is implied
@@ -396,6 +431,7 @@ export interface StructDef extends NamedObject, ResultMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
+  dialect: string;
 }
 
 // /** the resulting structure of the query (and it's source) */
@@ -428,6 +464,10 @@ export function isFieldTimeBased(
   f: FieldDef
 ): f is FieldTimestampDef | FieldDateDef {
   return f.type === "date" || f.type === "timestamp";
+}
+
+export function isFieldStructDef(f: FieldDef): f is StructDef {
+  return f.type === "struct";
 }
 
 // Queries
@@ -475,13 +515,7 @@ export interface ModelDef {
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
 
-export type QueryScalar =
-  | string
-  | boolean
-  | number
-  | { value: string }
-  | { type: "Buffer"; data: number[] }
-  | null;
+export type QueryScalar = string | boolean | number | Date | Buffer | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;
@@ -509,6 +543,7 @@ export interface CompiledQuery extends DrillSource {
   lastStageName: string;
   malloy: string;
   queryName?: string | undefined;
+  connectionName: string;
 }
 
 /** Result type for running a Malloy query. */
@@ -537,8 +572,21 @@ export function isDimensional(field: FieldDef): boolean {
   return false;
 }
 
+export function isPhysical(field: FieldDef): boolean {
+  return (
+    (isFieldTypeDef(field) && field.e === undefined) ||
+    (isFieldStructDef(field) &&
+      (field.structSource.type === "nested" ||
+        field.structSource.type == "inline"))
+  );
+}
+
 export function getDimensions(structDef: StructDef): FieldAtomicDef[] {
   return structDef.fields.filter(isDimensional) as FieldAtomicDef[];
+}
+
+export function getPhysicalFields(structDef: StructDef): FieldDef[] {
+  return structDef.fields.filter(isPhysical) as FieldDef[];
 }
 
 export function isMeasureLike(field: FieldDef): boolean {
