@@ -14,7 +14,7 @@
 import "./jestery";
 import fs from "fs";
 import path from "path";
-import { Malloy } from "../malloy";
+// import { Malloy } from "../malloy";
 import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
 
 const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../../samples");
@@ -39,10 +39,13 @@ describe(`compiling server models`, () => {
           do {
             tr = trans.translate();
             if (tr.tables) {
-              const tables = await Malloy.db.getSchemaForMissingTables(
-                tr.tables
+              throw new Error(
+                "Can't translate a model because it references a table"
               );
-              trans.update({ tables });
+              // const tables = await Malloy.db.getSchemaForMissingTables(
+              //   tr.tables
+              // );
+              // trans.update({ tables });
             } else if (tr.urls) {
               const files: { [fileName: string]: string } = {};
               for (const neededFile of tr.urls) {
