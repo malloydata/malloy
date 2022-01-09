@@ -168,8 +168,9 @@ export class Malloy {
           );
         } else {
           const errors = result.errors || [];
+          const errText = translator.prettyErrors();
           throw new MalloyError(
-            `Error(s) compiling model: ${errors[0]?.message}.`,
+            `Error(s) compiling model:\n${errText}`,
             errors
           );
         }

@@ -258,7 +258,14 @@ export class MalloyToAST
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
-    throw this.internalError(pcx, "Explore from query source NYI");
+    const query = this.visit(pcx.query());
+    if (ast.isQueryElement(query)) {
+      return this.astAt(new ast.QuerySource(query), pcx);
+    }
+    throw this.internalError(
+      pcx,
+      `Expect query definition, got a '${query.elementType}'`
+    );
   }
 
   visitDefExploreJoin(pcx: parse.DefExploreJoinContext): ast.Joins {

@@ -33,7 +33,7 @@ import {
   ExprFieldDecl,
   ExpressionDef,
 } from "./index";
-import {doc} from "prettier";
+import {Dialect} from "../../dialect";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -586,6 +586,46 @@ export class NamedSource extends Mallobj {
       }
     }
     return ret;
+  }
+}
+
+export class QuerySource extends Mallobj {
+  elementType = "querySource";
+  constructor(readonly query: QueryElement) {
+    super({ query });
+  }
+
+  structDef(): model.StructDef {
+    const modelQuery = this.query.query();
+    const querySrcRef = modelQuery.structRef;
+    let querySrc: model.StructDef;
+    if (model.refIsStructDef(querySrcRef)) {
+      querySrc = querySrcRef;
+    } else {
+      const ns = new NamedSource(querySrcRef);
+      querySrc = ns.structDef();
+    }
+
+    const rel = querySrc.structRelationship;
+    if (rel.type !== "basetable") {
+      throw this.internalError("QuerySource weird struct relationship");
+    }
+    const exploreFromQuery: model.StructDef = {
+      type: "struct",
+      name: "WHY DO I NEED A NAME HERE",
+      structRelationship: {
+        type: "basetable",
+        connectionName: rel.connectionName,
+      },
+      structSource: {
+        type: "query",
+        query: modelQuery,
+      },
+      fields: [],
+      dialect: querySrc.dialect
+    };
+
+    return exploreFromQuery;
   }
 }
 
