@@ -65,7 +65,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
             total_seats2 is sum(seats),
             boeing_seats,
             boeing_seats2 is sum(seats) {? manufacturer: 'BOEING'},
-            boeing_seats3 is total_seats {? [manufacturer: 'BOEING'},
+            boeing_seats3 is total_seats {? manufacturer: 'BOEING'},
             percent_boeing,
             percent_boeing2 is boeing_seats / total_seats * 100,
             -- percent_boeing_floor,
@@ -198,19 +198,24 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-      -- hacking a null test for now
-      explore aircraft
-      | reduce order by 2 asc: [aircraft_count: >500]
-          region
-          aircraft_count
-          by_state is (reduce  order by 2 asc : [aircraft_count: >45]
-            state,
-            aircraft_count
-            by_city is (reduce  order by 2 asc : [aircraft_count: >5 ]
-              city,
-              aircraft_count
-            )
-          )
+      query: aircraft->{
+        order_by: 2 asc
+        having: aircraft_count: >500
+        group_by: region
+        aggregate: aircraft_count
+        nest: by_state is {
+          order_by: 2 asc
+          having: aircraft_count >45
+          group_by: state
+          aggregate: aircraft_count
+          nest: by_city is {
+            order_by: 2 asc
+            having: aircraft_count: >5
+            group_by: city
+            aggregate: aircraft_count
+          }
+        }
+      }
         `
       )
       .run();
