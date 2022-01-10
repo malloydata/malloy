@@ -85,14 +85,17 @@ class BetaExpression extends Testable {
   compile(): void {
     const exprAst = this.xlate.ast();
     if (exprAst instanceof ExpressionDef) {
-      const aStruct = this.xlate.internalModel.contents.a;
+      const aStruct = this.xlate.internalModel.contents.ab;
       if (aStruct.type === "struct") {
         const _exprDef = exprAst.getExpression(new StructSpace(aStruct));
       } else {
         throw new Error("Can't get simple namespace for expression tests");
       }
+    } else if (this.hasErrors()) {
+      return;
     } else {
-      throw new Error("Not an expression");
+      const whatIsIt = exprAst?.toString() || "NO AST GENERATED";
+      throw new Error(`Not an expression: ${whatIsIt}`);
     }
   }
 }
@@ -192,5 +195,18 @@ describe("expressions", () => {
     test("not", exprOK("not true"));
     test("and", exprOK("true and false"));
     test("or", exprOK("true or false"));
+  });
+
+  test("filtered measure", exprOK("acount {? astring = 'why?' }"));
+  describe("aggregate forms", () => {
+    test("count distinct", exprOK("count(distinct astring)"));
+    test("count", exprOK("count()"));
+    test("join.field.count()", exprOK("b.astring.count()"));
+    for (const f of ["sum", "min", "max", "avg"]) {
+      test(`${f}(afloat)`, exprOK(`${f}(afloat)`));
+    }
+    // for (const f of ["sum", "min", "max", "avg"]) {
+    //   test(`afloat.${f}()`, exprOK(`afloat.${f}()`));
+    // }
   });
 });
