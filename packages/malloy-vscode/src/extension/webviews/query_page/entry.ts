@@ -18,7 +18,7 @@ import * as _webviewAPI from "vscode-webview";
 
 import ReactDOM from "react-dom";
 import React from "react";
-import { App } from "./app";
+import { App } from "./App";
 import { QueryPanelMessage } from "../../webview_message_manager";
 
 (() => {
