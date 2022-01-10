@@ -1,62 +1,67 @@
 --! styles ga_sessions.styles.json
 
-export define ga_sessions is (explore 'bigquery-public-data.google_analytics_sample.ga_sessions_20170801'
-  start_time is cast(timestamp_seconds(visitStartTime) as timestamp)
-  user_count is count(distinct fullVisitorId)
-  session_count is count(*)
-  total_visits is totals.visits.sum()
-  total_hits is totals.hits.sum()
-  total_page_views is totals.pageviews.sum()
-  t2 is totals.pageviews.sum()
-  total_productRevenue is hits.product.productRevenue.sum()
-  sold_count is hits.count() : [hits.product.productQuantity >0 ]
+explore:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801'){
+  dimension: start_time is cast(timestamp_seconds(visitStartTime) as timestamp)
 
-  by_source is (reduce : [trafficSource.source != '(direct)']
-    trafficSource.source
-    hits_count is hits.count()
-    limit 10
-  )
-  by_adContent_bar_chart is (reduce
-    device.browser
-    user_count
-    device.deviceCategory
-  )
-  by_region is (reduce : [geoNetwork.region !~ '%demo%']
-    geoNetwork.region
-    user_count
-    limit 10
-  )
-  by_category is (reduce
-    category is hits.product.v2ProductCategory
-    total_productRevenue
-    sold_count
-    limit 10
-  )
-  by_hour_of_day is (reduce
-    session_hour is hour(start_time)
-    session_count
-    order by 1
-  )
-  page_load_times is (reduce
-    hits.page.pageTitle
-    hit_count is hits.count()
-    load_bar_chart is (reduce
-       hit_seconds is floor(hits.latencyTracking.pageLoadTime/2)*2
-       hit_count is hits.count()
-    )
-    limit 10
-  )
+  measure: [
+    user_count is count(distinct fullVisitorId)
+    session_count is count(*)
+    total_visits is totals.visits.sum()
+    total_hits is totals.hits.sum()
+    total_page_views is totals.pageviews.sum()
+    t2 is totals.pageviews.sum()
+    total_productRevenue is hits.product.productRevenue.sum()
+    sold_count is hits.count() {? hits.product.productQuantity >0 }
+  ]
 
-  by_page_title is (reduce : [totals.transactionRevenue > 0]
-    hits.page.pageTitle
-    hit_count is hits.count()
-    sold_count
-  )
+  query: by_source is { 
+    where: trafficSource.source != '(direct)'
+    group_by: trafficSource.source
+    aggregate: hits_count is hits.count()
+    limit: 10
+  }
+  query: by_adContent_bar_chart is {
+    group_by: device.browser
+    aggregate: user_count
+    group_by: device.deviceCategory
+  }
+  query: by_region is { 
+    where: geoNetwork.region !~ '%demo%'
+    group_by: geoNetwork.region
+    aggregate: user_count
+    limit: 10
+  }
+  query: by_category is {
+    group_by: category is hits.product.v2ProductCategory
+    aggregate: total_productRevenue
+    aggregate: sold_count
+    limit: 10
+  }
+  query: by_hour_of_day is {
+    group_by: gsession_hour is hour(start_time)
+    aggregate: session_count
+    order_by: 1
+  }
+  query: page_load_times is {
+    group_by: hits.page.pageTitle
+    aggregate: hit_count is hits.count()
+    nest: load_bar_chart is {
+       group_by: hit_seconds is floor(hits.latencyTracking.pageLoadTime/2)*2
+       aggregate: hit_count is hits.count()
+    }
+    limit: 10
+  }
 
-  by_all is (reduce
-    by_source
-    by_adContent_bar_chart
-    by_region
-    by_category
-  )
-);
+  query: by_page_title is { where: totals.transactionRevenue > 0
+    group_by: hits.page.pageTitle
+    aggregate: hit_count is hits.count()
+    nest: sold_count
+  }
+
+  query: by_all is {
+    nest: by_source
+    nest: by_adContent_bar_chart
+    nest: by_region
+    nest: by_category
+  }
+}
