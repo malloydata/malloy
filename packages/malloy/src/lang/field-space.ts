@@ -396,10 +396,16 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       fields: this.queryFieldDefs(),
     };
     if (exisitingFields) {
-      seg.fields = [
-        ...exisitingFields.filter((f) => this.entry(nameOf(f))),
-        ...seg.fields,
-      ];
+      const newDefinition: Record<string, boolean> = {};
+      for (const fieldName in seg.fields) {
+        newDefinition[fieldName] = true;
+      }
+      for (const field of exisitingFields) {
+        const fieldName = nameOf(field);
+        if (!newDefinition[fieldName]) {
+          seg.fields.push(fieldName);
+        }
+      }
     }
     return seg;
   }
