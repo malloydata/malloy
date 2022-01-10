@@ -15,6 +15,10 @@ import { TextDocument, WebviewPanel } from "vscode";
 import { Connection, FixedConnectionMap, Result } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import { PostgresConnection } from "@malloy-lang/db-postgres";
+import {
+  QueryPanelMessage,
+  WebviewMessageManager,
+} from "./webview_message_manager";
 
 export const CONNECTION_MAP = new FixedConnectionMap(
   new Map<string, Connection>(
@@ -31,6 +35,7 @@ export const CONNECTION_MAP = new FixedConnectionMap(
 export interface RunState {
   cancel: () => void;
   panel: WebviewPanel;
+  messages: WebviewMessageManager<QueryPanelMessage>;
   panelId: string;
   document: TextDocument;
   result?: Result;
