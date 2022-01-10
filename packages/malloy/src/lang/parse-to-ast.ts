@@ -894,25 +894,6 @@ export class MalloyToAST
     );
   }
 
-  visitExprCase(pcx: parse.ExprCaseContext): ast.ExprCase {
-    return this.visitCaseSpec(pcx.caseSpec());
-  }
-
-  visitCaseSpec(pcx: parse.CaseSpecContext): ast.ExprCase {
-    const whenList: ast.WhenClause[] = [];
-    const exprList = this.allFieldExpressions(pcx.fieldExpr());
-    const lastWhen = pcx.ELSE() ? exprList.length - 1 : exprList.length;
-    let index = 0;
-    while (index < lastWhen) {
-      whenList.push(new ast.WhenClause(exprList[index], exprList[index + 1]));
-      index += 2;
-    }
-    if (pcx.ELSE()) {
-      return new ast.ExprCase(whenList, exprList[lastWhen]);
-    }
-    return new ast.ExprCase(whenList);
-  }
-
   visitPickStatement(pcx: parse.PickStatementContext): ast.Pick {
     const picks = pcx.pick().map((pwCx) => {
       let pickExpr: ast.ExpressionDef | undefined;
