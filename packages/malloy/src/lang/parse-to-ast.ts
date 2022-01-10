@@ -105,6 +105,18 @@ export class MalloyToAST
     return eps;
   }
 
+  protected onlyNestedQueries(els: ast.MalloyElement[]): ast.NestedQuery[] {
+    const eps: ast.NestedQuery[] = [];
+    for (const el of els) {
+      if (ast.isNestedQuery(el)) {
+        eps.push(el);
+      } else {
+        this.astError(el, `Expected query, not '${el.elementType}'`);
+      }
+    }
+    return eps;
+  }
+
   protected getNumber(term: ParseTree): number {
     return Number.parseInt(term.text);
   }
@@ -630,6 +642,15 @@ export class MalloyToAST
       pcx,
       `Anonymous query matched, but ${query.elementType} found`
     );
+  }
+
+  visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.MalloyElement {
+    const queryList = pcx.nestEntry();
+    const nestedList = queryList.map((cx) => this.visit(cx));
+    if (queryList.length == 1) {
+      return nestedList[0];
+    }
+    return new ast.Nests(this.onlyNestedQueries(nestedList));
   }
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {

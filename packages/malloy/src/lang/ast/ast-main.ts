@@ -33,7 +33,6 @@ import {
   ExprFieldDecl,
   ExpressionDef,
 } from "./index";
-import {Dialect} from "../../dialect";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -622,7 +621,7 @@ export class QuerySource extends Mallobj {
         query: modelQuery,
       },
       fields: [],
-      dialect: querySrc.dialect
+      dialect: querySrc.dialect,
     };
 
     return exploreFromQuery;
@@ -1368,6 +1367,9 @@ export class NestDefinition extends TurtleDecl {
 }
 
 export type NestedQuery = NestReference | NestDefinition;
+export function isNestedQuery(me: MalloyElement): me is NestedQuery {
+  return me instanceof NestReference || me instanceof NestDefinition;
+}
 
 export class Nests extends ListOf<NestedQuery> {
   constructor(nests: NestedQuery[]) {
