@@ -15,6 +15,26 @@ import { CodeLens } from "vscode-languageserver/node";
 import { Malloy } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+// const explain = `
+//   index
+//   | reduce  : [
+//       field_value: != null,
+//     ]
+//     strings is (reduce order by 2 : [field_type: 'string']
+//       field_name
+//       cardinality is count(distinct field_value)
+//       top_values_list is (reduce order by 2 desc top 20
+//         field_value
+//         occurrences is weight
+//       )
+//     )
+//     other_types is (reduce : [field_type: != 'string']
+//       field_name
+//       field_type
+//       field_value
+//     )
+// `;
+
 export function getMalloyLenses(document: TextDocument): CodeLens[] {
   const lenses: CodeLens[] = [];
   const symbols = Malloy.parse({ source: document.getText() }).symbols;
@@ -67,6 +87,28 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
           arguments: [exploreName, ""],
         },
       });
+      lenses.push({
+        range: symbol.range.toJSON(),
+        command: {
+          title: "Preview",
+          command: "malloy.runQuery",
+          arguments: [
+            `query: ${exploreName}->{ project: *; limit: 20 }`,
+            `preview ${exploreName}`,
+          ],
+        },
+      });
+      // lenses.push({
+      //   range: symbol.range.toJSON(),
+      //   command: {
+      //     title: "Explain",
+      //     command: "malloy.runQuery",
+      //     arguments: [
+      //       `query: ${exploreName}->${explain}`,
+      //       `explain ${exploreName}`,
+      //     ],
+      //   },
+      // });
       children.forEach((child) => {
         if (child.type === "query") {
           const queryName = child.name;
