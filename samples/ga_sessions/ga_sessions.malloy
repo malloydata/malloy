@@ -11,13 +11,14 @@ explore:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_se
     total_page_views is totals.pageviews.sum()
     t2 is totals.pageviews.sum()
     total_productRevenue is hits.product.productRevenue.sum()
+    hits_count is hits.count()
     sold_count is hits.count() {? hits.product.productQuantity >0 }
   ]
 
   query: by_source is { 
     where: trafficSource.source != '(direct)'
     group_by: trafficSource.source
-    aggregate: hits_count is hits.count()
+    aggregate: hits_count
     limit: 10
   }
   query: by_adContent_bar_chart is {
@@ -47,14 +48,14 @@ explore:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_se
     aggregate: hit_count is hits.count()
     nest: load_bar_chart is {
        group_by: hit_seconds is floor(hits.latencyTracking.pageLoadTime/2)*2
-       aggregate: hit_count is hits.count()
+       aggregate: hits_count 
     }
     limit: 10
   }
 
   query: by_page_title is { where: totals.transactionRevenue > 0
     group_by: hits.page.pageTitle
-    aggregate: hit_count is hits.count()
+    aggregate: hits_count
     nest: sold_count
   }
 
