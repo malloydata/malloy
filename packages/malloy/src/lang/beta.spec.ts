@@ -127,6 +127,10 @@ describe("top level definition", () => {
     "query",
     modelOK("query: name is table('aTable') -> { group_by: astring }")
   );
+  test(
+    "filtered turtle",
+    modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
+  );
 });
 
 describe("expressions", () => {

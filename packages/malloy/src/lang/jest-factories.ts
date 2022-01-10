@@ -221,6 +221,16 @@ export class TestTranslator extends MalloyTranslator {
             e: ["COUNT()"],
             source: "count()",
           },
+          {
+            type: "turtle",
+            name: "aturtle",
+            pipeline: [
+              {
+                type: "reduce",
+                fields: ["astring", "acount"],
+              },
+            ],
+          },
         ],
       },
     },
