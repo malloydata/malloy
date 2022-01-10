@@ -115,7 +115,7 @@
   "scripts": {
     "vscode:prepublish": "yarn licenses generate-disclaimer --prod > third_party_notices.txt && webpack --mode production",
     "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch --stats='summary'",
+    "webpack-dev": "webpack --mode development --watch",
     "build": "yarn tsc --build && yarn package",
     "pretest": "yarn run package",
     "test": "echo 'no tests for vscode yet'",
