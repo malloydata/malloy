@@ -16,33 +16,35 @@ import * as malloy from "@malloy-lang/malloy";
 import { RuntimeList } from "./runtimes";
 
 const joinModelText = `
-export define aircraft_models is ('malloytest.aircraft_models'
-  primary key aircraft_model_code
-  model_count is count(*),
-  manufacturer_models is (reduce
-    manufacturer,
-    num_models is count(*)
-  ),
-  manufacturer_seats is (reduce
-    manufacturer,
-    total_seats is seats.sum()
-  )
-);
+explore: aircraft_models is table('malloytest.aircraft_models') {
+  primary_key: aircraft_model_code
+  measure: model_count is count(*)
+  query: manufacturer_models is {
+    group_by: manufacturer
+    aggregate: num_models is count(*)
+  }
+  query: manufacturer_seats is {
+    group_by: manufacturer
+    aggregate: total_seats is seats.sum()
+  }
+}
 
-export define funnel is (
-  (aircraft_models | manufacturer_models)
-  joins seats is (aircraft_models | manufacturer_seats)
+explore: funnel is from(aircraft_models->manufacturer_models) {
+  join: seats is from(aircraft_models->manufacturer_seats)
       on manufacturer
-);
+}
 
-export define pipe is (aircraft_models
-  | reduce manufacturer, f is count(*)
-  | reduce f_sum is f.sum());
+query: pipe is aircraft_models-> {
+  group_by: manufacturer
+  aggregate: f is count(*)
+} -> {
+  aggregate: f_sum is f.sum()
+}
 
-export define aircraft is ('malloytest.aircraft'
-  primary key tail_num
-  aircraft_count is count(*),
-)
+explore: aircraft is table('malloytest.aircraft'){
+  primary_key: tail_num
+  measure: aircraft_count is count(*)
+}
 `;
 
 const runtimes = new RuntimeList([
@@ -65,9 +67,14 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-      explore aircraft joins aircraft_models on aircraft_model_code | reduce
-        aircraft_count,
-        aircraft_models.model_count
+      query: aircraft {
+        join: aircraft_models on aircraft_model_code
+      } -> {
+        aggregate: [
+          aircraft_count
+          aircraft_models.model_count
+        ]
+      }
       `
         )
         .run();
@@ -98,15 +105,20 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-      explore (
-            aircraft_models  | reduce
-            m is manufacturer,
-            num_models is count(*)
-      )  | project
-        m,
-        num_models
-        order by 2 desc
-        limit 1
+      query:
+        from(
+          aircraft_models-> {
+            group_by: m is manufacturer
+            aggregate: num_models is count(*)
+        )
+      -> {
+        project: [
+          m
+          num_models
+        ]
+        order_by: 2 desc
+        limit: 1
+      }
         `
         )
         .run();
