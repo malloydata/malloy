@@ -595,36 +595,10 @@ export class QuerySource extends Mallobj {
   }
 
   structDef(): model.StructDef {
-    const modelQuery = this.query.query();
-    const querySrcRef = modelQuery.structRef;
-    let querySrc: model.StructDef;
-    if (model.refIsStructDef(querySrcRef)) {
-      querySrc = querySrcRef;
-    } else {
-      const ns = new NamedSource(querySrcRef);
-      querySrc = ns.structDef();
-    }
-
-    const rel = querySrc.structRelationship;
-    if (rel.type !== "basetable") {
-      throw this.internalError("QuerySource weird struct relationship");
-    }
-    const exploreFromQuery: model.StructDef = {
-      type: "struct",
-      name: "WHY DO I NEED A NAME HERE",
-      structRelationship: {
-        type: "basetable",
-        connectionName: rel.connectionName,
-      },
-      structSource: {
-        type: "query",
-        query: modelQuery,
-      },
-      fields: [],
-      dialect: querySrc.dialect,
-    };
-
-    return exploreFromQuery;
+    const comp = this.query.queryComp();
+    const queryStruct = comp.outputStruct;
+    queryStruct.structSource = { type: "query", query: comp.query };
+    return queryStruct;
   }
 }
 
@@ -1152,6 +1126,11 @@ export class Turtles extends ListOf<TurtleDecl> {
 //   }
 // }
 
+interface QueryComp {
+  outputStruct: model.StructDef;
+  query: model.Query;
+}
+
 /**
  * Generic abstract for all pipelines, the first segment might be a reference
  * to an existing pipeline (query or turtle), and if there is a refinement it
@@ -1182,15 +1161,14 @@ export class PipelineDesc extends MalloyElement {
   protected appendOps(
     modelPipe: model.PipeSegment[],
     firstSpace: FieldSpace
-  ): void {
-    let nextFS = function (): FieldSpace {
-      return firstSpace;
-    };
+  ): model.StructDef {
+    let nextFS = firstSpace;
     for (const qop of this.qops) {
-      const next = qop.getOp(nextFS());
+      const next = qop.getOp(nextFS);
       modelPipe.push(next.segment);
-      nextFS = next.outputSpace;
+      nextFS = next.outputSpace();
     }
+    return nextFS.structDef();
   }
 
   protected refinePipeline(
@@ -1260,22 +1238,26 @@ export class PipelineDesc extends MalloyElement {
     return modelPipe;
   }
 
-  getQueryFromQuery(): model.Query {
+  queryFromQuery(): QueryComp {
     if (!this.headName) {
       throw this.internalError("can't make query from nameless query");
     }
     const queryEntry = this.modelEntry(this.headName);
     const seedQuery = queryEntry?.entry;
+    const oops = {
+      outputStruct: ErrorFactory.structDef,
+      query: ErrorFactory.query,
+    };
     if (!seedQuery) {
       this.log(`Reference to undefined query '${this.headName}'`);
-      return ErrorFactory.query;
+      return oops;
     }
     if (seedQuery.type !== "query") {
       this.log(`Illegal eference to '${this.headName}', query expected`);
-      return ErrorFactory.query;
+      return oops;
     }
     if (this.qops.length == 0 && !this.headRefinement) {
-      return { ...seedQuery };
+      return oops;
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
     this.has({ queryHead });
@@ -1283,11 +1265,19 @@ export class PipelineDesc extends MalloyElement {
     const exploreFS = new StructSpace(exploreStruct);
     const resultPipe = this.refinePipeline(exploreFS, seedQuery);
     const walkStruct = this.getOutputStruct(exploreStruct, resultPipe.pipeline);
-    this.appendOps(resultPipe.pipeline, new StructSpace(walkStruct));
-    return { ...resultPipe, type: "query", structRef: queryHead.structRef() };
+    const outputStruct = this.appendOps(
+      resultPipe.pipeline,
+      new StructSpace(walkStruct)
+    );
+    const query: model.Query = {
+      ...resultPipe,
+      type: "query",
+      structRef: queryHead.structRef(),
+    };
+    return { outputStruct, query };
   }
 
-  getQueryFromExplore(explore: Mallobj): model.Query {
+  queryFromExplore(explore: Mallobj): QueryComp {
     const structRef = explore.structRef();
     const destQuery: model.Query = {
       type: "query",
@@ -1313,8 +1303,8 @@ export class PipelineDesc extends MalloyElement {
       const pipeStruct = this.getOutputStruct(structDef, refined);
       pipeFs = new StructSpace(pipeStruct);
     }
-    this.appendOps(destQuery.pipeline, pipeFs);
-    return destQuery;
+    const outputStruct = this.appendOps(destQuery.pipeline, pipeFs);
+    return { outputStruct, query: destQuery };
   }
 }
 
@@ -1330,8 +1320,12 @@ export class FullQuery extends MalloyElement {
     super({ explore, pipeline });
   }
 
+  queryComp(): QueryComp {
+    return this.pipeline.queryFromExplore(this.explore);
+  }
+
   query(): model.Query {
-    return this.pipeline.getQueryFromExplore(this.explore);
+    return this.queryComp().query;
   }
 }
 
@@ -1347,8 +1341,12 @@ export class ExistingQuery extends MalloyElement {
     this.has({ queryDesc });
   }
 
+  queryComp(): QueryComp {
+    return this.queryDesc.queryFromQuery();
+  }
+
   query(): model.Query {
-    return this.queryDesc.getQueryFromQuery();
+    return this.queryComp().query;
   }
 }
 
