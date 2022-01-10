@@ -12,7 +12,7 @@
  */
 grammar Malloy;
 
-malloyDocument: malloyStatement* EOF;
+malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineExploreStatement
@@ -74,7 +74,7 @@ exploreTable
 
 queryProperties
   : filterShortcut
-  | OCURLY queryStatement* CCURLY
+  | OCURLY (queryStatement | SEMI)* CCURLY
   ;
 
 filterShortcut
@@ -107,7 +107,7 @@ exploreNameDef: id;
 exploreName: id;
 
 exploreProperties
-  : OCURLY exploreStatement* CCURLY
+  : OCURLY (exploreStatement | SEMI)* CCURLY
   | filterShortcut
   ;
 
@@ -578,7 +578,7 @@ fragment U: [uU] ; fragment V: [vV] ; fragment W: [wW] ; fragment X: [xX] ;
 fragment Y: [yY] ; fragment Z: [zZ] ;
 
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
-DOUBLE_DASH_COMMENT: '--' ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
+COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 // Matching any of these is a parse error
