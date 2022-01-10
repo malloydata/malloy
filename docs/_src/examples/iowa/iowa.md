@@ -41,6 +41,8 @@ explore 'bigquery-public-data.iowa_liquor_sales.sales'
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore 'bigquery-public-data.iowa_liquor_sales.sales'
-| project top 100 *
+query: table('bigquery-public-data.iowa_liquor_sales.sales') -> {
+  project: *
+  top: 100
+}
 ```
