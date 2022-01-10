@@ -202,6 +202,27 @@ export class TestTranslator extends MalloyTranslator {
     contents: {
       a: { ...aTableDef, primaryKey: "astring", as: "a" },
       b: { ...aTableDef, primaryKey: "astring", as: "b" },
+      ab: {
+        ...aTableDef,
+        as: "ab",
+        primaryKey: "astring",
+        fields: [
+          ...aTableDef.fields,
+          {
+            ...aTableDef,
+            as: "b",
+            structRelationship: { type: "foreignKey", foreignKey: "astring" },
+          },
+          {
+            type: "number",
+            name: "acount",
+            numberType: "integer",
+            aggregate: true,
+            e: ["COUNT()"],
+            source: "count()",
+          },
+        ],
+      },
     },
   };
 
