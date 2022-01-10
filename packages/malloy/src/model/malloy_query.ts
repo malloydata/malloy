@@ -3111,11 +3111,13 @@ export class QueryModel {
       let qs;
       if (s.type === "struct") {
         qs = new QueryStruct(s, { model: this });
+        this.structs.set(getIdentifier(s), qs);
+        qs.resolveQueryFields();
+      } else if (s.type === "query") {
+        /* TODO */
       } else {
         throw new Error("Internal Error: Unknown structure type");
       }
-      this.structs.set(getIdentifier(s), qs);
-      qs.resolveQueryFields();
     }
   }
 

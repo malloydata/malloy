@@ -15,6 +15,7 @@ import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import * as parser from "../lib/Malloy/MalloyParser";
 
 export interface DocumentSymbol {
   range: {
@@ -58,180 +59,109 @@ class DocumentSymbolWalker implements MalloyListener {
     };
   }
 
-  // just to make this compile, no need for this
-  inDocument = false;
-  enterMalloyDocument(): void {
-    this.inDocument = true;
+  enterTopLevelQueryDef(pcx: parser.TopLevelQueryDefContext) {
+    this.symbols.push({
+      range: this.rangeOf(pcx),
+      name: pcx.queryName().text,
+      type: "query",
+      children: [],
+    });
   }
 
-  // enterNamelessQuery(pcx: parser.NamelessQueryContext) {
-  //   this.symbols.push({
-  //     range: this.rangeOf(pcx),
-  //     name: "unnamed_query",
-  //     type: "unnamed_query",
-  //     children: [],
-  //   });
-  // }
+  enterAnonymousQuery(pcx: parser.AnonymousQueryContext) {
+    this.symbols.push({
+      range: this.rangeOf(pcx),
+      name: "unnamed_query",
+      type: "unnamed_query",
+      children: [],
+    });
+  }
 
-  // enterDefineStatement(pcx: parser.DefineStatementContext) {
-  //   const defineValue = pcx.defineValue();
-  //   let type;
-  //   if (defineValue instanceof parser.DefFromExploreContext) {
-  //     if (defineValue.explore().EXPLORE()) {
-  //       type = "explore";
-  //     } else {
-  //       type = "query";
-  //     }
-  //   } else {
-  //     type = "explore";
-  //   }
-  //   this.scopes.push({
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.id().text,
-  //     type,
-  //     children: [],
-  //   });
-  // }
+  enterExploreDefinition(pcx: parser.ExploreDefinitionContext) {
+    this.scopes.push({
+      range: this.rangeOf(pcx),
+      name: pcx.exploreNameDef().id().text,
+      type: "explore",
+      children: [],
+    });
+  }
 
-  // exitDefineStatement(_pcx: parser.DefineStatementContext) {
-  //   const scope = this.popScope();
-  //   if (scope) {
-  //     this.symbols.push(scope);
-  //   }
-  // }
+  exitExploreDefinition(_pcx: parser.ExploreDefinitionContext) {
+    const scope = this.popScope();
+    if (scope) {
+      this.symbols.push(scope);
+    }
+  }
 
-  // enterExpressionFieldDef(pcx: parser.ExpressionFieldDefContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.defineName().id().text,
-  //     type: "field",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  // }
+  enterExploreQueryDef(pcx: parser.ExploreQueryDefContext) {
+    const symbol = {
+      range: this.rangeOf(pcx),
+      name: pcx.exploreQueryNameDef().id().text,
+      type: "query",
+      children: [],
+    };
+    const parent = this.peekScope();
+    if (parent) {
+      parent.children.push(symbol);
+    }
+    this.scopes.push(symbol);
+  }
 
-  // enterTurtleFieldDef(pcx: parser.TurtleFieldDefContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.defineName().id().text,
-  //     type: "turtle",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  //   this.scopes.push(symbol);
-  // }
+  exitExploreQueryDef(_pcx: parser.ExploreQueryDefContext) {
+    this.popScope();
+  }
 
-  // exitTurtleFieldDef(_pcx: parser.TurtleFieldDefContext) {
-  //   this.popScope();
-  // }
+  enterDimensionDef(pcx: parser.DimensionDefContext) {
+    const symbol = {
+      range: this.rangeOf(pcx),
+      name: pcx.fieldDef().fieldNameDef().id().text,
+      type: "field",
+      children: [],
+    };
+    const parent = this.peekScope();
+    if (parent) {
+      parent.children.push(symbol);
+    }
+  }
 
-  // enterIndexStage(pcx: parser.IndexStageContext) {
-  //   // TODO this gets "x.*" as one "field_name"
-  //   pcx.fieldNameCollection().forEach((collection) => {
-  //     collection.collectionMember().forEach((member) => {
-  //       const symbol = {
-  //         range: this.rangeOf(member),
-  //         name: member.text,
-  //         type: "field",
-  //         children: [],
-  //       };
-  //       const parent = this.peekScope();
-  //       if (parent) {
-  //         parent.children.push(symbol);
-  //       }
-  //     });
-  //   });
-  // }
+  enterMeasureDef(pcx: parser.MeasureDefContext) {
+    const symbol = {
+      range: this.rangeOf(pcx),
+      name: pcx.fieldDef().fieldNameDef().id().text,
+      type: "field",
+      children: [],
+    };
+    const parent = this.peekScope();
+    if (parent) {
+      parent.children.push(symbol);
+    }
+  }
 
-  // enterFieldReflist(pcx: parser.FieldReflistContext) {
-  //   // TODO this gets "x.*" as one "field_name"
-  //   pcx
-  //     .fieldNameCollection()
-  //     .collectionMember()
-  //     .forEach((member) => {
-  //       const symbol = {
-  //         range: this.rangeOf(member),
-  //         name: member.text,
-  //         type: "field",
-  //         children: [],
-  //       };
-  //       const parent = this.peekScope();
-  //       if (parent) {
-  //         parent.children.push(symbol);
-  //       }
-  //     });
-  // }
+  enterDefExploreRename(pcx: parser.DefExploreRenameContext) {
+    const symbol = {
+      range: this.rangeOf(pcx),
+      name: pcx.fieldName()[0].text,
+      type: "field",
+      children: [],
+    };
+    const parent = this.peekScope();
+    if (parent) {
+      parent.children.push(symbol);
+    }
+  }
 
-  // enterNameOnlyDef(pcx: parser.NameOnlyDefContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.defineName().id().text,
-  //     type: "field",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  // }
-
-  // enterRenameFieldDef(pcx: parser.RenameFieldDefContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.id()[0].text,
-  //     type: "field",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  // }
-
-  // enterJoinDef(pcx: parser.JoinDefContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.id().text,
-  //     type: "join",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  // }
-
-  // enterJoinOn(pcx: parser.JoinOnContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.id().text,
-  //     type: "join",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  // }
-
-  // enterJoinSource(pcx: parser.JoinSourceContext) {
-  //   const symbol = {
-  //     range: this.rangeOf(pcx),
-  //     name: pcx.id().text,
-  //     type: "join",
-  //     children: [],
-  //   };
-  //   const parent = this.peekScope();
-  //   if (parent) {
-  //     parent.children.push(symbol);
-  //   }
-  // }
+  enterJoinDef(pcx: parser.JoinDefContext) {
+    const symbol = {
+      range: this.rangeOf(pcx),
+      name: pcx.joinNameDef().id().text,
+      type: "join",
+      children: [],
+    };
+    const parent = this.peekScope();
+    if (parent) {
+      parent.children.push(symbol);
+    }
+  }
 }
 
 export function walkForDocumentSymbols(
