@@ -11,14 +11,13 @@ Using the query below, we can see that there are 68 different category names in 
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce
-  distinct_number_of_category_names is count(distinct category_name)
-  sizes is (reduce
-    category_name
-    line_item_count
-    item_count
-  )
+query: iowa -> {
+  aggregate: distinct_number_of_category_names is count(distinct category_name)
+  nest: sizes is {
+    group_by: category_name
+    aggregate: [ item_count, line_item_count ]
+  }
+}
 ```
 
 Malloy provides a simple way to map all these values, using `pick` expressions.  In the [Malloy Model for this Data Set](source.md), you will find the declaration below.  Each pick expression tests `category_name` for a regular expression.  If it matches, it returns the name pick'ed.
@@ -41,14 +40,14 @@ Let's take a look at each category class and see how many individual items it ha
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small", "dataStyles": { "names_list": { "renderer": "list_detail" } } }
-explore iowa
-| reduce
-  category_class
-  item_count
-  names_list is (reduce
-    category_name
-    item_count
-  )
+query: iowa -> {
+  group_by: category_class
+  aggregate: item_count
+  nest: names_list is {
+    group_by: category_name
+    aggregate: item_count
+  }
+}
 ```
 ## Looking at the entire market by `category_class`
 
@@ -56,11 +55,11 @@ With our new lens, we can now see the top sellers in each `category_class`, allo
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce
-  category_class
-  total_sale_dollars
-  top_sellers_by_revenue
+query: iowa -> {
+  group_by: category_class
+  aggregate: total_sale_dollars
+  nest: top_sellers_by_revenue
+}
 ```
 
 ## Understanding bottle sizes
@@ -70,26 +69,27 @@ A first query reveals that there are 34 distinct bottle sizes in this data set, 
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce
-  distinct_number_of_sizes is count(distinct bottle_volume_ml)
-  sizes is (reduce
-    bottle_volume_ml
-    line_item_count
-  )
+query: iowa -> {
+  aggregate: distinct_number_of_sizes is count(distinct bottle_volume_ml)
+  nest: sizes is {
+    group_by: bottle_volume_ml
+    aggregate: line_item_count
+  }
+}
 ```
 
 Visualizing this query suggests that we might wish to create 3 distinct buckets to approximate small, medium and large bottles.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium", "dataStyles": { "sizes": { "renderer": "bar_chart" } } }
-explore iowa
-| reduce
-  distinct_number_of_sizes is count(distinct bottle_volume_ml)
-  sizes is (reduce : [bottle_volume_ml < 6000]
-    bottle_volume_ml
-    line_item_count
-  )
+query: iowa -> {
+  aggregate: distinct_number_of_sizes is count(distinct bottle_volume_ml)
+  nest: sizes is {
+    group_by: bottle_volume_ml
+    aggregate: line_item_count
+    where: bottle_volume_ml < 6000
+  }
+}
 ```
 
 ## Creating a new Dimension for Bottle Size.
@@ -105,11 +105,9 @@ Look at the data through the new mapping.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce order by 1
-  bottle_size
-  total_sale_dollars
-  line_item_count
-  item_count
-
+query: iowa -> {
+  group_by: bottle_size
+  aggregate: [ total_sale_dollars, line_item_count, item_count ]
+  order_by: bottle_size
+}
 ```

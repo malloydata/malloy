@@ -1,100 +1,121 @@
 --! styles hackernews.styles.json
 
-export define stories is (explore 'bigquery-public-data.hacker_news.full'
-  threshold is 10
-  is_good is score >= threshold
+explore: stories is table('bigquery-public-data.hacker_news.full') {
+  rename: poster is `by`
+  rename: post_type is `type`
+  
+  dimension: [
+    threshold is 10
+    is_good is score >= threshold
+  ]
 
-  -- measures 
-  post_count is count()
-  good_post_count is post_count : [is_good]
-  percent_good is FLOOR(good_post_count /post_count * 100)
+  measure: [
+    post_count is count()
+    good_post_count is post_count {where: is_good}
+    percent_good is FLOOR(good_post_count /post_count * 100)
+  ]
 
-  -- dimensions
-  post_time is CAST(TIMESTAMP_SECONDS(`time`) as timestamp)
-  site is REGEXP_EXTRACT(
-      REGEXP_EXTRACT(url, '^http://([^\\/]*)\\/'),
-        '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$')
+  dimension: [
+    post_time is CAST(TIMESTAMP_SECONDS(`time`) as timestamp)
+    site is REGEXP_EXTRACT(
+        REGEXP_EXTRACT(url, '^http://([^\\/]*)\\/'),
+          '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$')
 
-  score_class is IFNULL(score,0): 
-    pick 'blah' when < 5 
-    pick 'hmmm' when < 10
-    pick 'oooh' when < 100
-    else 'wow'
+    score_class is IFNULL(score,0): 
+      pick 'blah' when < 5 
+      pick 'hmmm' when < 10
+      pick 'oooh' when < 100
+      else 'wow'
+  ]
 
+  query: by_date is {
+    group_by: posted_month is post_time.month
+    aggregate: post_count
+  }
 
-  poster renames `by`
-  post_type renames `type`
+  query: posts_over_time is {
+    group_by: posted_month is post_time.month
+    aggregate: post_count
+  }
 
-  by_date is (reduce
-    posted_at is post_time.month
-    post_count
-  )
+  query: percent_good_over_time is {
+    group_by: posted_year is post_time.year
+    aggregate: percent_good
+  }
 
-  posts_over_time is (reduce 
-    posted_at is post_time.month
-    post_count
-  )
+  query: stories_by_month is {
+    where: post_type = 'story'
+    nest: by_date 
+  }
 
-  percent_good_over_time is (reduce
-    posted_at is post_time.year
-    percent_good
-  )
+  query: jobs_by_month is {
+    where: post_type = 'job'
+    nest: by_date
+  }
 
-  -- stories_by_date is turtle by_date : [post_type: 'story']
-  -- jobs_by_date is (by_date: [post_type: 'jobs'])
+  query: by_post_type is {
+    group_by: post_type
+    aggregate: post_count
+  }
 
-  by_post_type is (reduce
-    post_type
-    post_count
-  )
+  query: top_poster is {
+    top: 10
+    where: poster != null
+    group_by: poster
+    aggregate: post_count
+  }
 
-  top_poster is (reduce top 10 : [poster !=  null]
-    poster
-    post_count
-  )
+  query: top_sites is {
+    top: 20
+    where: site != null
+    group_by: site
+    aggregate: post_count
+  }
 
-  top_sites is (reduce top 20 : [site !=  null]
-    site
-    post_count
-  )
-
-  stories is (reduce limit 100 order by 1 desc
-    post_time
-    poster
-    score
-    title
-    post_type
-    url
-  )
-
-  term_dashboard is (reduce 
-    by_date_and_type_line_chart is (reduce
-      posted_at is post_time.month
-      post_count
+  query: stories is {
+    top: 100
+    order_by: post_time desc
+    group_by: [
+      post_time
+      poster
+      score
+      title
       post_type
-    )
-    top_poster
-    top_sites
-    stories
-  )
+      url
+    ]
+  }
 
-  poster_dashboard is (reduce top 20 : [poster != null, post_type: 'story']
-    poster
-    post_count
-    percent_good
-    posts_over_time
-    percent_good_over_time
-    first_post is min(post_time)
-    by_sites is (reduce top 10
-      site
+  query: term_dashboard is {
+    nest: by_date_and_type_line_chart is {
+      group_by: posted_at is post_time.month
+      aggregate: post_count
+      group_by: post_type
+    }
+    nest: top_poster
+    nest: top_sites
+    nest: stories
+  }
+
+  query: poster_dashboard is {
+    top: 20
+    where: [poster != null, post_type = 'story']
+    group_by: poster
+    aggregate: [
       post_count
       percent_good
-    )
-    best_stories is (reduce top 10 order by score desc
-      post_time
-      title
-      score
-      site
-    )
-  )
-);
+    ]
+    nest: posts_over_time
+    nest: percent_good_over_time
+    aggregate: first_post is min(post_time)
+    nest: by_sites is {
+      top: 10
+      group_by: site
+      aggregate: [post_count, percent_good]
+    }
+    nest: best_stories is {
+      top: 10
+      order_by: score desc
+      group_by: [post_time, title, score, site]
+    }
+  }
+}
