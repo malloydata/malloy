@@ -15,6 +15,13 @@ import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
 import { TestTranslator } from "./jest-factories";
 
+/*
+ * Thinking of these tests as just "do things parse", there should maybe
+ * be additional tests for, "does the correct code get generated", but
+ * the first step should be to write all the phrases in the grammar
+ * and make sure they parse to ast and the ast generates something
+ */
+
 abstract class Testable {
   xlate: TestTranslator;
   constructor(x: TestTranslator) {
@@ -107,37 +114,83 @@ function modelOK(s: string): TestFunc {
   };
 }
 
-describe("top level explore definition tests", () => {
-  test("define one explore", modelOK(`explore: testA is table('aTable')`));
+describe("top level definition", () => {
+  test("explore", modelOK(`explore: testA is table('aTable')`));
+  test(
+    "anonymous query",
+    modelOK("query: table('aTable') -> { group_by: astring }")
+  );
+  test(
+    "query",
+    modelOK("query: name is table('aTable') -> { group_by: astring }")
+  );
 });
 
 describe("expressions", () => {
-  const timeframes = [
-    "second",
-    "minute",
-    "hour",
-    "day",
-    "week",
-    "month",
-    "quarter",
-    "year",
-  ];
-
   describe("literals", () => {
     test("integer", exprOK("42"));
     test("string", exprOK(`'fortywo-two'`));
+    test("string with quotes", exprOK(`'Isn'''t this nice'`));
+    test("year", exprOK("@1960"));
+    test("quarter", exprOK("@1960-Q1"));
+    test("week", exprOK("@WK1960-06-26"));
+    test("month", exprOK("@1960-06"));
+    test("day", exprOK("@1960-06-30"));
+    test("minute", exprOK("@1960-06-30 10:30"));
+    test("second", exprOK("@1960-06-30 10:30:31"));
+    test("null", exprOK("null"));
+    test("now", exprOK("now"));
+    test("true", exprOK("true"));
+    test("false", exprOK("false"));
+    test("regex", exprOK("r'RegularExpression'"));
   });
 
-  describe("timestamp truncation", () => {
-    for (const unit of timeframes) {
-      test(`timestamp truncate ${unit}`, exprOK(`atimestamp.${unit}`));
-    }
+  describe("timeframes", () => {
+    const timeframes = [
+      "second",
+      "minute",
+      "hour",
+      "day",
+      "week",
+      "month",
+      "quarter",
+      "year",
+    ];
+
+    describe("timestamp truncation", () => {
+      for (const unit of timeframes) {
+        test(`timestamp truncate ${unit}`, exprOK(`atimestamp.${unit}`));
+      }
+    });
+
+    describe("timestamp extraction", () => {
+      for (const unit of timeframes) {
+        // TODO expect these to error ...
+        test(`timestamp extract ${unit}`, exprOK(`${unit}(atimestamp)`));
+      }
+    });
   });
 
-  describe("timestamp extraction", () => {
-    for (const unit of timeframes) {
-      // TODO expect these to error ...
-      test(`timestamp extract ${unit}`, exprOK(`${unit}(atimestamp)`));
-    }
+  test("field name", exprOK("astring"));
+  test("function call", exprOK("CURRENT_TIMESTAMP()"));
+
+  describe("operators", () => {
+    test("addition", exprOK("42 + 7"));
+    test("subtraction", exprOK("42 - 7"));
+    test("multiplication", exprOK("42 * 7"));
+    test("division", exprOK("42 / 7"));
+    test("unary negation", exprOK("- aninteger"));
+    test("equal", exprOK("42 = 7"));
+    test("not equal", exprOK("42 != 7"));
+    test("greater than", exprOK("42 > 7"));
+    test("greater than or equal", exprOK("42 >= 7"));
+    test("less than or equal", exprOK("42 <= 7"));
+    test("less than", exprOK("42 < 7"));
+    test("match", exprOK("'forty-two' ~ 'fifty-four'"));
+    test("not match", exprOK("'forty-two' !~ 'fifty-four'"));
+    test("apply", exprOK("'forty-two' : 'fifty-four'"));
+    test("not", exprOK("not true"));
+    test("and", exprOK("true and false"));
+    test("or", exprOK("true or false"));
   });
 });
