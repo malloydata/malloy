@@ -252,7 +252,7 @@ export function passForHighlights(
       case MalloyParser.FOR:
         register(token, HighlightType.Operator.Date);
         break;
-      case MalloyParser.DOUBLE_DASH_COMMENT:
+      case MalloyParser.COMMENT_TO_EOL:
         register(token, HighlightType.Comment.Line);
         break;
       case MalloyParser.BLOCK_COMMENT:
