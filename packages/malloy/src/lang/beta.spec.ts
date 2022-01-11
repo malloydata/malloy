@@ -128,8 +128,16 @@ describe("top level definition", () => {
     modelOK("query: name is table('aTable') -> { group_by: astring }")
   );
   test(
-    "filtered turtle",
+    "query with filtered turtle",
     modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
+  );
+  test(
+    "refined turtle",
+    modelOK(`
+      explore: abNew is ab {
+        query: for1 is aturtle {? aninteger = 1 }
+      }
+    `)
   );
   test(
     "nest: in group_by:",
