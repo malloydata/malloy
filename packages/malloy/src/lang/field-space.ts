@@ -397,13 +397,14 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     };
     if (exisitingFields) {
       const newDefinition: Record<string, boolean> = {};
-      for (const fieldName in seg.fields) {
+      for (const field in seg.fields) {
+        const fieldName = nameOf(field);
         newDefinition[fieldName] = true;
       }
       for (const field of exisitingFields) {
         const fieldName = nameOf(field);
         if (!newDefinition[fieldName]) {
-          seg.fields.push(fieldName);
+          seg.fields.push(field);
         }
       }
     }
