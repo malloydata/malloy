@@ -39,7 +39,7 @@ describe(`compiling server models`, () => {
           fileReader,
           new BigQueryConnection("bigquery")
         );
-        test(`checking ${srcURL}`, async () => {
+        test(`checking ${dir}/${fn}`, async () => {
           await runtime.getModel(srcURL);
         });
       }
