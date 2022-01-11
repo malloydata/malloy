@@ -347,7 +347,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
           this.addField(qi);
         }
       } else if (qi instanceof NestDefinition) {
-        this.setEntry(qi.name, new QueryFieldAST(this, qi, qi.name));
+        this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
       } else {
         throw new Error("INTERNAL ERROR: Add Query Item");
       }

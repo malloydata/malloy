@@ -131,6 +131,17 @@ describe("top level definition", () => {
     "filtered turtle",
     modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
   );
+  test(
+    "nest: in group_by:",
+    modelOK(`
+      query: ab -> {
+        group_by: astring;
+        nest: nested_count is {
+          aggregate: acount
+        }
+      }
+    `)
+  );
 });
 
 describe("expressions", () => {
@@ -209,8 +220,52 @@ describe("expressions", () => {
     for (const f of ["sum", "min", "max", "avg"]) {
       test(`${f}(afloat)`, exprOK(`${f}(afloat)`));
     }
-    // for (const f of ["sum", "min", "max", "avg"]) {
-    //   test(`afloat.${f}()`, exprOK(`afloat.${f}()`));
-    // }
+    for (const f of ["sum", "min", "max", "avg"]) {
+      test(`b.afloat.${f}()`, exprOK(`b.afloat.${f}()`));
+    }
+  });
+
+  describe("pick statements", () => {
+    test(
+      "full",
+      exprOK(`
+        pick 'the answer' when aninteger = 42
+        pick 'the questionable answer' when aninteger = 54
+        else 'random'
+    `)
+    );
+    test(
+      "applied",
+      exprOK(`
+        astring: pick 'the answer' when '42'
+        pick 'the questionable answer' '54'
+        else 'random'
+    `)
+    );
+    test(
+      "filtering",
+      exprOK(`
+        astring: pick 'missing value' when NULL
+    `)
+    );
+    test(
+      "tiering",
+      exprOK(`
+      aninteger:
+        pick 1 when < 10
+        pick 10 when < 100
+        pick 100 when < 1000
+        else 10000
+  `)
+    );
+    test(
+      "transforming",
+      exprOK(`
+        aninteger:
+          pick "small" when < 10
+          pick "medium" when < 100
+          else "large"
+    `)
+    );
   });
 });
