@@ -48,37 +48,4 @@ explore: faang_analysis is stories {
 
   query: poster_dashboard2 is poster_dashboard {? faang != 'OTHER'}
 
-
-  -- query: facebook is top_sites2 {? faang = 'Facebook'}
-
-  -- query: facebook2 is {
-  --   top: 20
-  --   where: [site != null, faang = 'Facebook']
-  --   group_by: site
-  --   aggregate: post_count
-  -- }
-
 }
-
--- define faang_analysis is (explore stories
-
---   apple_dashboard is (reduce : [faang : 'Apple', score >= threshold] term_dashboard)
---   google_dashboard is (reduce : [faang: 'Google', score >= threshold] term_dashboard)
-
---   faang_stories is (reduce : [faang: != 'OTHER', score >= threshold] stories)
-
---   faang_dashboard is (reduce : [faang != 'OTHER', score >= threshold, post_type: 'story']
---     faang_story_chart is (reduce
---       posted_at is post_time.month
---       post_count
---       faang
---     )
---     facebook is top_sites : [faang: 'Facebook']
---     apple is top_sites : [faang: 'Apple']
---     amazon is top_sites : [faang: 'Amazon']
---     netflix is top_sites : [faang: 'Netflix']
---     google is top_sites : [faang: 'Google']
---   )
-
---   poster_dashboard2 is (reduce : [faang != 'OTHER'] poster_dashboard)
--- );
