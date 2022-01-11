@@ -12,7 +12,7 @@
  */
 
 import { URL } from "url";
-import { cloneDeep } from "lodash";
+import { cloneDeep, isTypedArray } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
@@ -33,6 +33,7 @@ import {
   ExprFieldDecl,
   ExpressionDef,
 } from "./index";
+import { QueryField } from "../space-field";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -1131,6 +1132,12 @@ interface QueryComp {
   query: model.Query;
 }
 
+function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
+  const ret =
+    fd && typeof fd !== "string" && (fd as model.TurtleDef).type === "turtle";
+  return !!ret;
+}
+
 /**
  * Generic abstract for all pipelines, the first segment might be a reference
  * to an existing pipeline (query or turtle), and if there is a refinement it
@@ -1225,15 +1232,32 @@ export class PipelineDesc extends MalloyElement {
   }
 
   getPipelineForExplore(exploreFS: FieldSpace): model.Pipeline {
-    if (this.headName) {
-      throw this.internalError("Turtles cannot have named heads");
-    }
-    if (this.headRefinement) {
+    const modelPipe: model.Pipeline = { pipeline: [] };
+    if (this.headName && this.headRefinement) {
+      const headEnt = exploreFS.findEntry(this.headName);
+      let reportWrongType = true;
+      if (!headEnt) {
+        this.log(`Reference to undefined query '${this.headName}'`);
+        reportWrongType = false;
+      } else if (headEnt instanceof QueryField) {
+        const headDef = headEnt.queryFieldDef();
+        if (isTurtle(headDef)) {
+          const newPipe = this.refinePipeline(exploreFS, headDef);
+          modelPipe.pipeline = [...newPipe.pipeline];
+          reportWrongType = false;
+        }
+      }
+      if (reportWrongType) {
+        this.log(`Expected '${this.headName}' to be as query`);
+      }
+    } else if (this.headName) {
+      throw this.internalError("Unrefined turtle with a named head");
+    } else if (this.headRefinement) {
       throw this.internalError(
         "Can't refine the head of a turtle in its definition"
       );
     }
-    const modelPipe: model.Pipeline = { pipeline: [] };
+
     this.appendOps(modelPipe.pipeline, exploreFS);
     return modelPipe;
   }
