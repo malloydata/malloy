@@ -221,6 +221,15 @@ explore: flights is table('malloy-data.faa.flights') {
       }
     }
   }
+
+  -- search_index is (index : [dep_time: @2004-01]
+  --   *, carriers.*,
+  --   origin.code, origin.state, origin.city, origin.full_name, origin.fac_type
+  --   destination.code, destination.state, destination.city, destination.full_name
+  --   aircraft.aircraft_model_code, aircraft.aircraft_models.manufacturer
+  --   aircraft.aircraft_models.model
+  --   on flight_count
+  -- )
 }
 
 query: sessionize_delta_southwest is
