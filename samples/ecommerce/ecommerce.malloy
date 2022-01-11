@@ -18,34 +18,27 @@ explore: ii is table('malloy-data.ecomm.inventory_items'){
     item_count is count(distinct id)
     total_cost is sum(cost)
   ]
-
 }
 
--- explore: user_order_facts is from(
---   table('malloy-data.ecomm.order_items') ->  {
---     group_by: user_id
---     aggregate: lifetime_orders is count()
---   }) {
---     primary_key: user_id
---   }
-
--- define user_order_facts is (
---   'malloy-data.ecomm.order_items' |
---   reduce
---     user_id
---     lifetime_orders is count()
--- );
+explore: user_order_facts is from(
+    table('malloy-data.ecomm.order_items') ->  {
+      group_by: user_id
+      aggregate: lifetime_orders is count()
+    }
+  ) { primary_key: user_id }
 
 explore: order_items_base is table('malloy-data.ecomm.order_items'){
   primary_key: id
 
+  join: users on user_id
+  join: ii on inventory_item_id
+  join: user_order_facts on user_id
+
   -- join: [
   --   users on user_id
   --   ii on inventory_item_id
+  --   user_order_facts on user_id
   -- ]
-  join: users on user_id
-  join: ii on inventory_item_id
-  -- join: user_order_facts on user_id
 
   measure: [
     order_count is count(distinct order_id)
@@ -147,8 +140,11 @@ explore: order_items is order_items_base {
       item_count
       ii.product.product_count
     ]
-    nest: top_products
-    nest: by_month
+    nest: [
+      top_products
+      by_month
+    ]
+
     -- nest: synergistic_brands is {
     --   group by: brandy_synergy.synergies.brand
     --   aggregate: occurances is brand_synergy.synergies.occurances.sum()
