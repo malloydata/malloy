@@ -12,7 +12,7 @@
  */
 
 import { URL } from "url";
-import { cloneDeep, isTypedArray } from "lodash";
+import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
