@@ -1,22 +1,46 @@
 # Welcome to Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language. Malloy is not an officially supported Google product.
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database, and is currently available on BigQuery and Postgres. Malloy is not an officially supported Google product.
 
-- Queries compile to SQL - Malloy writes SQL optimized for your database
-- Computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms.
-- Data is interpreted as a network of relationships, and generates network graphs with results, so Malloy can ensure correctness of aggregate computations through multiple levels of transformation.
-- Defaults are smart, and Malloy is concise (where SQL is verbose and often redundant).
-- Currently available on BigQuery and Postgres.
+- Queries in the Malloy language compile to SQL, and Malloy writes SQL optimized for your database
+- Computations in Malloy are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms
+- Data is modeled as a network of relationships, and Malloy generates network graphs with results, which ensures correctness of aggregate computations over multiple levels of transformation
+- Defaults are smart, and Malloy is concise (where SQL is verbose and often redundant)
 
-Malloy is for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient.
+Malloy is for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient. Malloy allows you to model as you go, so there is no heavy up-front work before you can start answering complex questions.
 
-# Get the Plugin
+# Install the Extension
 
-Want to experiment with Malloy? Great! Download the VS Code Plugin for writing and running models, queries, and transformations.
+The Visual Studio Code Extension enables data modeling with Malloy, as well as query and transformation execution. Currently, the Malloy extension works on Mac and Linux machines.
 
-1. VSCode
-2. Download the plugin
-3. Connect your database (Postgres or BigQuery)
+## 1. Download Visual Studio Code
+
+If you don't already have it, download [Visual Studio Code](https://code.visualstudio.com/)
+
+## 2. Add the Malloy extension from the Visual Studio Code Marketplace
+
+Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
+
+## 3. Connect to your database
+
+### Postgres
+
+Connecting to Postgres is hard!
+
+### BigQuery
+
+To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the [gcloud CLI](https://cloud.google.com/sdk/gcloud) installed. Once it's installed, open a terminal and type the following:
+
+```
+gcloud auth login --update-adc
+gcloud config set project my_project_id --installation
+```
+
+_Replace `my_project_id` with the **ID** of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
+
+## 4. Run a quick test
+
+Create a file called "test.malloy". Pick a table. Do a thing.
 
 # Join the Community
 
@@ -25,57 +49,31 @@ Want to experiment with Malloy? Great! Download the VS Code Plugin for writing a
 
 # Documentation
 
-[Full documentation for Malloy](https://looker-open-source.github.io/malloy/)
+[Malloy Documentation](https://looker-open-source.github.io/malloy/)
 
-- [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
-- [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
+- [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - A quick introduction to the language
+- [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of the basics on an ecommerce dataset
 - [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
 - [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
-# Installation
+# Why do we need another data language?
 
-## Building Malloy
+SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to express; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn.
 
-You will need to have BigQuery credentials available, and the [gcloud CLI](https://cloud.google.com/sdk/gcloud) installed.
+Key features and advantages:
 
-```
-gcloud auth login --update-adc
-gcloud config set project my_project_id --installation
-```
+- Query and model in the same language - everything is reusable and extensible.
+- Malloy reads the schema so you don’t need to model everything. Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.
+- Pipelining: output one query into the next easily for powerful advanced analysis.
+- Aggregating Subqueries let you build nested data sets to delve deeper into data quickly, and return complicated networks of data from single queries (like GraphQL).
+- Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.
+- Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.
+- Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.
+- Malloy models are purely about data; visualization and “styles” configurations live separately, keeping the model clean and easy to read.
+- Aggregates are safe and accurate: Malloy generates distinct keys when they’re needed to ensure it never fans out your data.
+- Nested tables are made approachable: you don’t have to model or flatten them; specify a query path and Malloy handles the rest.
+- Compiler-based error checking: Malloy understands sql expressions so the compiler catches errors as you write, before the query is run.
 
-_Replace `my_project_id` with the name of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
-
-You will need to have [node.js](https://nodejs.org/en/download/), [yarn](https://classic.yarnpkg.com/en/docs/install/), and a [Java Runtime Environment](https://www.oracle.com/java/technologies/javase-jre8-downloads.html) (JRE 1.6 or higher, 1.8 recommended) installed on your system in order to build the Malloy projecti.
-
-Alternatively, you can use [nix](https://nixos.org/) to install these dependencies. To use nix, install it with `curl -L https://nixos.org/nix/install | sh` and then run `nix-shell` from the `malloy/` directory. Nix is what _CI_ uses to run builds.
-
-The following will install dependencies for the entire set of packages and compile both the Malloy language and the VSCode extension.
-
-```bash
-yarn install
-yarn build-extension
-```
-
-## Malloy VSCode Extension
-
-The Malloy VSCode extension's source is in the `malloy-vscode` directory.
-
-### Installation
-
-To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
-
-```bash
-yarn build-extension
-```
-
-Next, in VSCode _EITHER_:
-
-1. Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
-
-_OR_
-
-2. Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
-
-### Contributing
+# Contributing
 
 If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
