@@ -114,7 +114,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
       query: models->{
         aggregate: fetch is count()
       }->{
-        project: fetch
+        group_by: fetch
       }
       `
       )
