@@ -1314,35 +1314,6 @@ export class Index extends MalloyElement {
   }
 }
 
-// export class Index extends Segment {
-//   elementType = "index";
-//   fields: IndexField[] = [];
-//   filter?: Filter;
-//   on?: FieldName;
-//   limit?: number;
-
-//   getPipeSegment(space: FieldSpace): model.IndexSegment {
-//     const fieldNames: string[] = [];
-//     for (const ref of this.fields) {
-//       fieldNames.push(...ref.members.map((m) => m.text));
-//     }
-//     const indexDef: model.IndexSegment = {
-//       type: "index",
-//       fields: fieldNames,
-//     };
-//     if (this.limit) {
-//       indexDef.limit = this.limit;
-//     }
-//     if (this.on) {
-//       indexDef.weightMeasure = this.on.name;
-//     }
-//     if (this.filter) {
-//       indexDef.filterList = this.filter.getFilterList(space);
-//     }
-//     return indexDef;
-//   }
-// }
-
 interface QueryComp {
   outputStruct: model.StructDef;
   query: model.Query;

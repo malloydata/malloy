@@ -1,11 +1,11 @@
 --! styles iowa.styles.json
 explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
-  
+
   -- dimensions
   dimension: [
     gross_margin is 100 * (state_bottle_retail - state_bottle_cost) / nullif(state_bottle_retail, 0)
     price_per_100ml is state_bottle_retail/NULLIF(bottle_volume_ml,0)*100
-    
+
     category_class is category_name :
       pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BOURBON|RYE)'
       pick 'VODKAS' when ~ r'VODKA'
@@ -33,13 +33,13 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
   ]
 
   -- turtles
-  query: by_month is { 
+  query: by_month is {
     order_by: 1
     group_by: purchase_month is `date`.week
     aggregate: total_sale_dollars
   }
 
-  query: top_sellers_by_revenue is { 
+  query: top_sellers_by_revenue is {
     top: 5
     group_by: [
       vendor_name
@@ -53,11 +53,11 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
   }
 
   query: most_expensive_products is {
-    top: 10 
+    top: 10
     order_by: avg_price_per_100ml desc
     group_by: [
       vendor_name
-      item_description 
+      item_description
     ]
     aggregate: [
       total_sale_dollars
@@ -75,7 +75,7 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
     ]
   }
 
-  query: by_class is { 
+  query: by_class is {
     top: 10
     group_by: category_class
     aggregate: [
@@ -105,19 +105,23 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       total_sale_dollars
       total_bottles
     ]
-    nest: by_month
-    nest: by_class
-    nest: by_vendor_bar_chart
-    nest: top_sellers_by_revenue
-    nest: most_expensive_products
-    nest: by_vendor_dashboard is {
-      top: 10
-      group_by: vendor_name
-      aggregate: total_sale_dollars
-      nest: by_month
-      nest: top_sellers_by_revenue
-      nest: most_expensive_products
-    }
+    nest: [
+      by_month
+      by_class
+      by_vendor_bar_chart
+      top_sellers_by_revenue
+      most_expensive_products
+      by_vendor_dashboard is {
+        top: 10
+        group_by: vendor_name
+        aggregate: total_sale_dollars
+        nest: [
+          by_month,
+          top_sellers_by_revenue,
+          most_expensive_products
+        ]
+      }
+    ]
   }
 }
 

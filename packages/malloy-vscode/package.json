@@ -2,13 +2,16 @@
   "name": "malloy-vscode",
   "publisher": "malloy-lang",
   "displayName": "Malloy",
-  "description": "",
+  "description": "Malloy is an experimental language for describing data relationships and transformations",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.56.0"
   },
   "license": "GPL-2.0",
   "categories": [
+    "Programming Languages",
+    "Data Science",
+    "Visualization",
     "Other"
   ],
   "activationEvents": [
@@ -119,7 +122,7 @@
     "build": "yarn tsc --build && yarn package",
     "pretest": "yarn run package",
     "test": "echo 'no tests for vscode yet'",
-    "package": "yarn vsce package --yarn"
+    "package": "yarn vsce package --yarn --githubBranch=main"
   },
   "dependencies": {
     "@observablehq/plot": "^0.1.0",

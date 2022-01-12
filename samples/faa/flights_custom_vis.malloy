@@ -7,7 +7,7 @@ import "flights.malloy"
 -- Each visualization takes a sub-table as input
 --
 -- Visualizations are named with wth parameters they expect
---  at the end.  For example `bar_SM` expected a string and a 
+--  at the end.  For example `bar_SM` expected a string and a
 --  measure.
 --
 -- S: dimensional string
@@ -15,154 +15,178 @@ import "flights.malloy"
 -- N: dimensional number
 -- M: numeric measure
 
-define vis_flights is (explore flights 
+explore: vis_flights is flights {
 
   -- bar_SM: simple bar chart (as opposed to column) with
   --  labels inside the bar.
   --  uses 'bar_SM' (bar chart S)
-  by_carrier_simple_bar is (reduce
-    carriers.nickname   -- string
-    flight_count        -- measure
-  )
+  query: by_carrier_simple_bar is {
+    group_by: carriers.nickname   -- string
+    aggregate: flight_count        -- measure
+  }
 
   -- bar_SMM: gradiant bar chart
   --  String is the y axis
   --  First measure is the x axis
   --  Second measure controls the color gradiant
-  by_carrier_gradiant_bar is (reduce
-    carriers.nickname   -- string
-    flight_count        -- measure
-    total_distance      -- measure
-  )
+  query: by_carrier_gradiant_bar is {
+    group_by: carriers.nickname   -- string
+    aggregate: [
+      flight_count        -- measure
+      total_distance      -- measure
+    ]
+  }
 
-  -- bar_SMS: stacked bar.  
+  -- bar_SMS: stacked bar.
   -- String is the y axis
   -- Measure is the x axis
   -- String is the second dimension
-  by_carrier_stacked_bar is (reduce
-    carriers.nickname     -- string
-    flight_count          -- measure
-    dist is distance:     -- string
-      pick 'short' when < 300
-      pick 'medium' when < 1000
-      else 'long'
-  )
+  query: by_carrier_stacked_bar is {
+    group_by: carriers.nickname     -- string
+    aggregate: flight_count          -- measure
+    group_by:
+      dist is distance:     -- string
+        pick 'short' when < 300
+        pick 'medium' when < 1000
+        else 'long'
+  }
 
   -- bar_SSMMM
   -- repeated bar chart.  Vega has the ability
-  --  to repeat charts.  A stacked bar is 
+  --  to repeat charts.  A stacked bar is
   --  repeated for each of the measures.
-  by_carrier_repeated_bar is (reduce
-    carriers.nickname                         -- string
-    dist is distance:                         -- string
-      pick 'short' when < 300                 
-      pick 'medium' when < 1000
-      else 'long'
-    flight_count                              -- measure
-    aircraft.aircraft_count                   -- measure
-    destination_count is destination.count()   --measure
-  )
+  query: by_carrier_repeated_bar is {
+    group_by: carriers.nickname                 -- string
+    aggregate:
+      dist is distance:                         -- string
+        pick 'short' when < 300
+        pick 'medium' when < 1000
+        else 'long'
+    aggregate: [
+      flight_count                              -- measure
+      aircraft.aircraft_count                   -- measure
+      destination_count is destination.count()  -- measure
+    ]
+  }
 
   -- bubble_NNM
   -- bubble chart that shows measure by size of circle
-  run_me is (reduce --BUG: in order to get a large number of result run in a turtle
-    distance_by_hour_of_day_bubble is (reduce
-      dist is FLOOR(distance/250) * 250   -- number
-      dep_hour is dep_time.hour_of_day    -- number
-      flight_count                        -- measure
-    )
-  )
+  query: run_me is { --BUG: in order to get a large number of result run in a turtle
+    nest: distance_by_hour_of_day_bubble is {
+      group_by: [
+        dist is FLOOR(distance/250) * 250            -- number
+        dep_hour is HOUR(dep_time)                   -- number
+      ]
+      aggregate: flight_count                        -- measure
+    }
+  }
 
   -- heat_NNM
-  -- like a buble chat, but show the measure as color instead of 
+  -- like a buble chat, but show the measure as color instead of
   --  size
-  run_me1 is (reduce 
-    distance_by_hour_of_day_heat_map is (reduce   -- number
-      dist is FLOOR(distance/250) * 250           -- number
-      dep_hour is dep_time.hour_of_day            -- measure
-      flight_count
-    )
-  )
+  query: run_me1 is {
+    nest: distance_by_hour_of_day_heat_map is {         -- number
+      group_by: [
+        dist is FLOOR(distance/250) * 250               -- number
+        dep_hour is HOUR(dep_time)                      -- measure
+      ]
+      aggregate: flight_count
+    }
+  }
 
   -- heat_SNM
   -- heat map with a string dimension, number and color as measure
-  run_me2 is (reduce 
-    carrier_by_distance_heat_map is (reduce
-      carriers.nickname                     -- string
-      dist is FLOOR(distance/250) * 250     -- number
-      flight_count                          -- measure
-    )
-  )
+  query: run_me2 is {
+    nest: carrier_by_distance_heat_map is {
+      group_by: [
+        carriers.nickname                         -- string
+        dist is FLOOR(distance/250) * 250         -- number
+      ]
+      aggregate: flight_count                     -- measure
+    }
+  }
 
   -- stacked_line_STM
-  --  repeated timebased line charts 
-  run_me3 is (reduce 
-    carrier_by_over_time_stacked_line is (reduce
-      carriers.nickname             -- string
-      dep_month is dep_time.month   -- time
-      flight_count                  -- measure
-    )
-  )
+  --  repeated timebased line charts
+  query: run_me3 is {
+    nest: carrier_by_over_time_stacked_line is {
+      group_by: [
+        carriers.nickname                     -- string
+        dep_month is dep_time.month           -- time
+      ]
+      aggregate: flight_count                 -- measure
+    }
+  }
 
   -- grid_line_SSTM
   --  time based line charts in a grid
-  run_me4 is (reduce 
-    carrier_by_distance_over_time_grid_line is (reduce
-      carriers.nickname             -- string
-      dist is distance:             -- string
-        pick 'short' when < 300
-        pick 'medium' when < 1000
-        else 'long'
-      dep_month is dep_time.month    -- time
-      flight_count                   -- measure
-    )
-  )
+  query: run_me4 is {
+    nest: carrier_by_distance_over_time_grid_line is {
+      group_by: [
+        carriers.nickname               -- string
+        dist is distance:               -- string
+          pick 'short' when < 300
+          pick 'medium' when < 1000
+          else 'long'
+        dep_month is dep_time.month     -- time
+      ]
+      aggregate: flight_count           -- measure
+    }
+  }
 
- 
-  run_me5 is (reduce 
-    carriers.nickname
-    flight_count
+
+  query: run_me5 is {
+    group_by: carriers.nickname
+    aggregate: flight_count
     -- spark_bar_SM
-    dist_sb is (reduce
-      dist is distance:             -- string
-        pick 'short' when < 300
-        pick 'medium' when < 1000
-        else 'long'
-      flight_count                  -- measure
-    )
+    nest: dist_sb is {
+      group_by:
+        dist is distance:                   -- string
+          pick 'short' when < 300
+          pick 'medium' when < 1000
+          else 'long'
+      aggregate: flight_count                -- measure
+    }
     -- spark_bar_TM
-    time_spark_line is (reduce
-      dep_month is dep_time.month   -- time
-      flight_count                  -- measure
-    )
+    nest: time_spark_line is {
+      group_by: dep_month is dep_time.month    -- time
+      aggregate: flight_count                  -- measure
+    }
     -- custome buit visualization that forces scale.
-    spark_force_scale is (reduce
-      dep_month is dep_time.month
-      flight_count
-    )
-  )
+    nest: spark_force_scale is {
+      group_by: dep_month is dep_time.month
+      aggregate: flight_count
+    }
+  }
 
   -- name_plot_SSM
   -- plot some labeled points on a cartesian chart
-  run_me6 is(reduce
-    name_plot_SMM is (reduce
-      carriers.nickname
-      avg_distance is distance.avg()
-      total_destinations is count(distinct destination_code)
-    )
-  )
+  query: run_me6 is {
+    nest: name_plot_SMM is {
+      group_by: carriers.nickname
+      aggregate: [
+        avg_distance is distance.avg()
+        total_destinations is count(distinct destination_code)
+      ]
+    }
+  }
 
   -- text_plot_SSMM
-  --  plot some points with a short label and 
+  --  plot some points with a short label and
   --  a long colored label
-  run_me7 is(reduce top 10
-    origin.code
-    flight_count
-    text_plot_SSMM is (reduce
-      carrier_name is concat (carrier, ' - ', carriers.nickname)
-      carrier
-      avg_distance is distance.avg()
-      total_destinations is count(distinct destination_code)
-    )
-  )
-);
+  query: run_me7 is {
+    top: 10
+    group_by: origin.code
+    aggregate: flight_count
+    nest: text_plot_SSMM is {
+      group_by: [
+        carrier_name is concat (carrier, ' - ', carriers.nickname)
+        carrier
+      ]
+      aggregate: [
+        avg_distance is distance.avg()
+        total_destinations is count(distinct destination_code)
+      ]
+    }
+  }
+}
