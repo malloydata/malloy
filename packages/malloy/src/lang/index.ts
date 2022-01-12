@@ -22,6 +22,9 @@ export {
   exploreQueryWalkerBuilder,
   ExploreClauseRef,
 } from "./parse-tree-walkers/explore-query-walker";
-export { DocumentHighlight, HighlightType } from "./highlighter";
+export {
+  DocumentHighlight,
+  HighlightType,
+} from "./parse-tree-walkers/document-highlight-walker";
 export { DocumentSymbol } from "./parse-tree-walkers/document-symbol-walker";
 export { LogMessage } from "./parse-log";

@@ -33,11 +33,17 @@ import { MalloyToAST } from "./parse-to-ast";
 import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
-import { passForHighlights, DocumentHighlight } from "./highlighter";
 import {
   DocumentSymbol,
   walkForDocumentSymbols,
 } from "./parse-tree-walkers/document-symbol-walker";
+
+import {
+  DocumentHighlight,
+  walkForDocumentHighlights,
+  passForHighlights,
+  sortHighlights,
+} from "./parse-tree-walkers/document-highlight-walker";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
   constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
@@ -451,9 +457,21 @@ export abstract class MalloyTranslation {
         } catch {
           // Do nothing, symbols already `undefined`
         }
+        let walkHighlights: DocumentHighlight[];
+        try {
+          walkHighlights = walkForDocumentHighlights(
+            tryParse.parse.tokens,
+            tryParse.parse.root
+          );
+        } catch {
+          walkHighlights = [];
+        }
         this.metadataResponse = {
           symbols,
-          highlights: passForHighlights(tryParse.parse.tokens),
+          highlights: sortHighlights([
+            ...passForHighlights(tryParse.parse.tokens),
+            ...walkHighlights,
+          ]),
           final: true,
         };
       }

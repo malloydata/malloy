@@ -88,7 +88,7 @@ function mapTypes(type: string) {
       return "variable";
     case HighlightType.Call.Aggregate:
     case HighlightType.Keyword.AggregateModifier.Distinct:
-      return "macro";
+      return "function";
     case HighlightType.Type:
       return "type";
     case HighlightType.Keyword.Is:
@@ -108,7 +108,7 @@ function mapTypes(type: string) {
     case HighlightType.Keyword.Turtle:
       return "keyword";
     case HighlightType.Call.TimeFrame:
-      return "macro";
+      return "variable";
     case HighlightType.Literal.String:
       return "string";
     case HighlightType.Literal.Boolean:
@@ -151,7 +151,9 @@ function mapTypes(type: string) {
     case HighlightType.Property.Where:
       return "keyword";
     case HighlightType.Call.Table:
-      return "keyword";
+    case HighlightType.Call.From:
+    case HighlightType.Call.Function:
+      return "function";
     default:
       throw new Error(`Unexpected type ${type}`);
   }
