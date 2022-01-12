@@ -901,10 +901,12 @@ export class QOPDesc extends ListOf<QueryProperty> {
     const pfs = this.getInputSpace(inputFS);
     let didOrderBy: OrderBy | undefined;
     let didLimit: Limit | undefined;
-    const segProp: Partial<model.QuerySegment> = { ...this.refineThis };
-    if (segProp.fields) {
-      delete segProp.fields;
-    }
+    const segProp: Partial<model.QuerySegment> = {
+      ...this.refineThis,
+      filterList: this.refineThis?.filterList
+        ? [...this.refineThis.filterList]
+        : undefined,
+    };
     for (const qp of this.list) {
       const errTo = qp;
       if (
