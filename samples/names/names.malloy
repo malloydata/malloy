@@ -9,10 +9,11 @@ query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   ]
   aggregate: cohort_population is `number`.sum()
   nest: by_name is { group_by: name; aggregate: population is `number`.sum() }
-  group_by: name is concat(by_name.name,'') // !?BUG !?
-}
+} 
 
 explore: names is from(->namesQuery) {
+  dimension: name is concat(by_name.name,'') // !?BUG !?
+
   measure: [
     births_per_100k is FLOOR(by_name.population.sum()/cohort_population.sum() *100000),
     total_cohort_population is cohort_population.sum(),
@@ -26,7 +27,7 @@ explore: names is from(->namesQuery) {
     aggregate: births_per_100k
     group_by: baby_gender
   }
-  -- explore names | name_list
+  -- -- explore names | name_list
   query: name_dashboard is {
     top: 15
     group_by: name
@@ -57,18 +58,19 @@ explore: names is from(->namesQuery) {
     nest: by_decade is {
       group_by: decade
       aggregate: births_per_100k
-    } -> {
-      where: births_per_100k > 50
-      group_by: by_decade.decade
-      nest: by_gender is {
-        group_by: baby_gender
-        nest: iconic_name_list is {
-          top: 50; order_by: 2 desc
-          group_by: name
-          aggregate: popularity is (by_decade.births_per_100k - births_per_100k) /births_per_100k
-        }
+    } 
+  } 
+  -> {
+    where: births_per_100k > 50
+    group_by: by_decade.decade
+    nest: by_gender is {
+      group_by: baby_gender
+      nest: iconic_name_list is {
+        top: 50; order_by: 2 desc
+        group_by: name
+        aggregate: popularity is (by_decade.births_per_100k - births_per_100k) /births_per_100k
       }
-    }
+    }  
   }
 }
 
