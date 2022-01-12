@@ -274,7 +274,7 @@ topStatement
   ;
 
 indexStatement
-  : INDEX fieldNameList (BY fieldName)
+  : INDEX fieldNameList (BY fieldName)?
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;

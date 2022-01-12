@@ -20,21 +20,26 @@ The table below shows all columns in the data set and their most common or range
 
 ```malloy
 --! {"isRunnable": true, "isHidden": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore 'bigquery-public-data.iowa_liquor_sales.sales'
-| index
-| reduce
-  string_columns is (reduce order by 2 asc : [field_type: 'string']
-    column_name is field_name
-    cardinality is count(distinct field_value)
-    values_list_detail is (reduce top 20
-      field_value
-      rows_matched is weight.sum()
-    )
-  )
-  other_columns is (reduce : [field_type: != 'string']
-    column_name is field_name
-    ranges_of_values is field_value
-  )
+query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> {
+  nest: string_columns is {
+    order_by: cardinality asc
+    where: field_type = 'string'
+    group_by: column_name is field_name
+    aggregate: cardinality is count(distinct field_value)
+    nest: values_list_detail is {
+      top: 20
+      group_by: field_value
+      aggregate: rows_matched is weight.sum()
+    }
+  }
+  nest: other_columns is {
+    where: field_type != 'string'
+    group_by: [
+      column_name is field_name
+      ranges_of_values is field_value
+    ]
+  }
+}
 ```
 
 ## First 100 Rows of the data set.

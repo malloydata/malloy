@@ -23,7 +23,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
   };
 
   async render(table: DataColumn): Promise<string> {
-    if (!table.isArray()) {
+    if (!table.isArray() && !table.isRecord()) {
       throw new Error("Invalid type for Table Renderer");
     }
     const header = table.field.intrinsicFields

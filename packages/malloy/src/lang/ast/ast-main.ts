@@ -942,13 +942,15 @@ class ReduceExecutor implements QueryExecutor {
     }
   }
 
-  refineFrom(from: model.QuerySegment | undefined, to: model.QuerySegment) {
+  refineFrom(from: model.PipeSegment | undefined, to: model.PipeSegment) {
     if (from) {
       if (!this.order) {
-        if (from.orderBy) {
-          to.orderBy = from.orderBy;
-        } else if (from.by) {
-          to.by = from.by;
+        if (model.isQuerySegment(from) && model.isQuerySegment(to)) {
+          if (from.orderBy) {
+            to.orderBy = from.orderBy;
+          } else if (from.by) {
+            to.by = from.by;
+          }
         }
       }
       if (!this.limit && from.limit) {
@@ -960,13 +962,13 @@ class ReduceExecutor implements QueryExecutor {
       to.limit = this.limit;
     }
 
-    if (this.order instanceof Top) {
+    if (model.isQuerySegment(to) && this.order instanceof Top) {
       const topBy = this.order.getBy(this.outputFS);
       if (topBy) {
         to.by = topBy;
       }
     }
-    if (this.order instanceof Ordering) {
+    if (model.isQuerySegment(to) && this.order instanceof Ordering) {
       to.orderBy = this.order.orderBy();
     }
 
