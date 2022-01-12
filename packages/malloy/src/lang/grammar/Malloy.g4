@@ -186,10 +186,6 @@ exploreQueryDef
   : exploreQueryNameDef IS pipelineFromName
   ;
 
-// indexStatement
-//   : INDEX fieldCollection
-//   ;
-
 groupByStatement
   : GROUP_BY groupByList
   ;
@@ -209,7 +205,7 @@ groupByEntry
 queryStatement
   : groupByStatement
   | projectStatement
-//| indexStatement
+  | indexStatement
   | aggregateStatement
   | topStatement
   | limitStatement
@@ -217,7 +213,6 @@ queryStatement
   | whereStatement
   | havingStatement
   | nestStatement
-//| exploreStatement
   ;
 
 nestStatement
@@ -276,6 +271,10 @@ bySpec
 
 topStatement
   : TOP INTEGER_LITERAL bySpec?
+  ;
+
+indexStatement
+  : INDEX fieldNameList (BY fieldName)
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
@@ -358,7 +357,13 @@ fieldExprList
   ;
 
 fieldNameList
-  : fieldName ( COMMA fieldName)* COMMA
+  : fieldOrStar
+  | OBRACK fieldOrStar ( COMMA fieldOrStar)* COMMA? CBRACK
+  ;
+
+fieldOrStar
+  : STAR
+  | fieldName
   ;
 
 fieldCollection

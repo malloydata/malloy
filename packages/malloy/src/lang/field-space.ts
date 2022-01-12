@@ -49,13 +49,6 @@ import {
 
 type FieldMap = Record<string, SpaceEntry>;
 
-function nameOf(qfd: model.QueryFieldDef): string {
-  if (typeof qfd === "string") {
-    return qfd;
-  }
-  return qfd.as || qfd.name;
-}
-
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
  * are fields. A FieldSpace can lookup fields, and generate a StructDef
@@ -303,7 +296,7 @@ export class NewFieldSpace extends StructSpace {
   }
 }
 
-type QuerySegType = "reduce" | "project";
+type QuerySegType = "reduce" | "project" | "index";
 /**
  * Maintains the two namespaces (computation space and output space)
  * for a query segment
@@ -389,27 +382,6 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
     return fields;
   }
-
-  querySegment(exisitingFields?: model.QueryFieldDef[]): model.QuerySegment {
-    const seg = {
-      type: this.segType,
-      fields: this.queryFieldDefs(),
-    };
-    if (exisitingFields) {
-      const newDefinition: Record<string, boolean> = {};
-      for (const field in seg.fields) {
-        const fieldName = nameOf(field);
-        newDefinition[fieldName] = true;
-      }
-      for (const field of exisitingFields) {
-        const fieldName = nameOf(field);
-        if (!newDefinition[fieldName]) {
-          seg.fields.push(field);
-        }
-      }
-    }
-    return seg;
-  }
 }
 
 export class ReduceFieldSpace extends QueryFieldSpace {
@@ -428,5 +400,34 @@ export class ProjectFieldSpace extends QueryFieldSpace {
       return false;
     }
     return true;
+  }
+}
+
+export class IndexFieldSpace extends QueryFieldSpace {
+  segType: QuerySegType = "index";
+
+  canAddFieldDef(_qi: ExprFieldDecl): boolean {
+    return false;
+  }
+
+  indexSegment(exisitingFields?: model.QueryFieldDef[]): model.IndexSegment {
+    const seg: model.IndexSegment = {
+      type: "index",
+      fields: [],
+    };
+    const inIndex: Record<string, boolean> = {};
+    for (const [name, _] of this.entries()) {
+      inIndex[name] = true;
+      seg.fields.push(name);
+    }
+    if (exisitingFields) {
+      for (const exists of exisitingFields) {
+        if (typeof exists === "string" && !inIndex[exists]) {
+          seg.fields.push(exists);
+          inIndex[exists] = true;
+        }
+      }
+    }
+    return seg;
   }
 }
