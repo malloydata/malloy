@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import { DocumentHighlight } from "../highlighter";
 import { TestTranslator } from "../jest-factories";
 import { DocumentSymbol } from "./document-symbol-walker";
 
@@ -24,11 +23,6 @@ class MalloyExplore {
   get symbols(): DocumentSymbol[] {
     const md = this.tt.metadata();
     return md.symbols || [];
-  }
-
-  get highlights(): DocumentHighlight[] {
-    const md = this.tt.metadata();
-    return md.highlights || [];
   }
 }
 

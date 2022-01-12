@@ -11,9 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { CommonTokenStream } from "antlr4ts";
+import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
+import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
+import { ParseTree } from "antlr4ts/tree";
+import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import * as parser from "../lib/Malloy/MalloyParser";
+import { MalloyParser } from "../lib/Malloy/MalloyParser";
 import { Token } from "antlr4ts/Token";
-import { MalloyParser } from "./lib/Malloy/MalloyParser";
 
 export interface DocumentHighlight {
   range: {
@@ -40,6 +44,8 @@ export const HighlightType = {
     TimeFrame: "call.time_frame",
     Cast: "call.cast",
     Table: "call.table",
+    From: "call.from",
+    Function: "call.function",
   },
   // TODO many of these should probably be categorized further
   Keyword: {
@@ -188,6 +194,9 @@ export function passForHighlights(
       case MalloyParser.TABLE:
         register(token, HighlightType.Call.Table);
         break;
+      case MalloyParser.FROM:
+        register(token, HighlightType.Call.Table);
+        break;
       case MalloyParser.STRING_LITERAL:
       case MalloyParser.JSON_STRING:
         register(token, HighlightType.Literal.String);
@@ -302,4 +311,66 @@ export function passForHighlights(
     }
   }
   return highlights;
+}
+
+class DocumentHighlightWalker implements MalloyListener {
+  constructor(
+    readonly tokens: CommonTokenStream,
+    readonly highlights: DocumentHighlight[]
+  ) {}
+
+  rangeOf(pcx: ParserRuleContext) {
+    const stopToken = pcx.stop || pcx.start;
+    return {
+      start: {
+        line: pcx.start.line - 1,
+        character: pcx.start.charPositionInLine,
+      },
+      end: {
+        line: stopToken.line - 1,
+        character:
+          stopToken.stopIndex -
+          (stopToken.startIndex - stopToken.charPositionInLine) +
+          1,
+      },
+    };
+  }
+
+  enterExprFunc(pcx: parser.ExprFuncContext) {
+    const id = pcx.id() || pcx.timeframe();
+    if (id) {
+      this.highlights.push({
+        range: this.rangeOf(id),
+        type: HighlightType.Call.Function,
+      });
+    }
+  }
+}
+
+export function walkForDocumentHighlights(
+  tokens: CommonTokenStream,
+  parseTree: ParseTree
+): DocumentHighlight[] {
+  const finder = new DocumentHighlightWalker(tokens, []);
+  const listener: MalloyListener = finder;
+  ParseTreeWalker.DEFAULT.walk(listener, parseTree);
+  return finder.highlights;
+}
+
+export function sortHighlights(
+  highlights: DocumentHighlight[]
+): DocumentHighlight[] {
+  return highlights.sort((a, b) => {
+    if (a.range.start.line < b.range.start.line) {
+      return -1;
+    } else if (a.range.start.line > b.range.start.line) {
+      return 1;
+    } else if (a.range.start.character < b.range.start.character) {
+      return -1;
+    } else if (a.range.start.character > b.range.start.character) {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
 }
