@@ -362,6 +362,11 @@ export interface ProjectSegment extends QuerySegment {
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
   return (pe as ProjectSegment).type === "project";
 }
+
+export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
+  return pe.type === "project" || pe.type === "reduce";
+}
+
 export interface IndexSegment extends Filtered {
   type: "index";
   fields: string[];
