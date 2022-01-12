@@ -276,7 +276,8 @@ div.document span.token.comment {
   color: #4f984f;
 }
 
-div.document span.token.function {
+div.document span.token.function,
+div.document span.token.function_keyword {
   color: #795E26;
 }
 
