@@ -586,6 +586,29 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "flight_count").value).toBe(199726);
     expect(result.data.path(0, "popular_name").value).toBe("Isabella");
   });
+
+  // Issue: #151
+  it(`unknonwn dialect  - ${databaseName}`, async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+        query: q is table('malloytest.aircraft')->{
+          group_by: state
+        }
+
+        explore: r is from(->q){
+          query: foo is {
+            group_by: state
+          }
+        }
+
+        query: r->foo
+    `
+      )
+      .run();
+    // console.log(result.data.toObject());
+    expect(result.data.path(0, "state").value).toBe("AL");
+  });
 });
 
 afterAll(async () => {
