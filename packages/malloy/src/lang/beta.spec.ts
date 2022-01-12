@@ -150,6 +150,12 @@ describe("top level definition", () => {
       }
     `)
   );
+  test(
+    "reduce pipe project",
+    modelOK(`
+      query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+    `)
+  );
 });
 
 describe("expressions", () => {

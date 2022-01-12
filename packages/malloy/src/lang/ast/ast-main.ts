@@ -1003,6 +1003,15 @@ class ProjectExecutor extends ReduceExecutor {
       this.outputFS.addMembers(qp.list);
       return true;
     }
+    if (
+      qp instanceof NestDefinition ||
+      qp instanceof NestReference ||
+      qp instanceof Nests ||
+      qp instanceof Aggregate ||
+      qp instanceof GroupBy
+    ) {
+      return false;
+    }
     return super.handle(qp);
   }
 

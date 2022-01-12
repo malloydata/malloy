@@ -308,8 +308,6 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     super(inputSpace.emptyStructDef());
   }
 
-  abstract canAddFieldDef(qi: ExprFieldDecl): boolean;
-
   /**
    * Although this QueryFieldSpace is collecting definitions for the
    * output space, expressions are all evaluated against the input space.
@@ -336,9 +334,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       if (qi instanceof FieldName || qi instanceof NestReference) {
         this.addReference(qi.name);
       } else if (qi instanceof ExprFieldDecl) {
-        if (this.canAddFieldDef(qi)) {
-          this.addField(qi);
-        }
+        this.addField(qi);
       } else if (qi instanceof NestDefinition) {
         this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
       } else {
@@ -355,11 +351,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
-        if (member.isMeasure == false) {
-          this.addField(member);
-        } else {
-          member.log("Only dimension values allowed in project");
-        }
+        this.addField(member);
       }
     }
   }
@@ -386,29 +378,14 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
 export class ReduceFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "reduce";
-  canAddFieldDef(_qi: ExprFieldDecl): boolean {
-    return true;
-  }
 }
 
 export class ProjectFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "project";
-
-  canAddFieldDef(qi: ExprFieldDecl): boolean {
-    if (qi.isMeasure) {
-      qi.log("Aggreate definition illegal inside project query");
-      return false;
-    }
-    return true;
-  }
 }
 
 export class IndexFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "index";
-
-  canAddFieldDef(_qi: ExprFieldDecl): boolean {
-    return false;
-  }
 
   indexSegment(exisitingFields?: model.QueryFieldDef[]): model.IndexSegment {
     const seg: model.IndexSegment = {
