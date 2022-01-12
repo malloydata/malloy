@@ -1474,20 +1474,19 @@ export class PipelineDesc extends MalloyElement {
     }
     const queryEntry = this.modelEntry(this.headName);
     const seedQuery = queryEntry?.entry;
-    const oops = {
-      outputStruct: ErrorFactory.structDef,
-      query: ErrorFactory.query,
+    const oops = function () {
+      return {
+        outputStruct: ErrorFactory.structDef,
+        query: ErrorFactory.query,
+      };
     };
     if (!seedQuery) {
       this.log(`Reference to undefined query '${this.headName}'`);
-      return oops;
+      return oops();
     }
     if (seedQuery.type !== "query") {
       this.log(`Illegal eference to '${this.headName}', query expected`);
-      return oops;
-    }
-    if (this.qops.length == 0 && !this.headRefinement) {
-      return oops;
+      return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
     this.has({ queryHead });
