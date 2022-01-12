@@ -1,6 +1,6 @@
 # Welcome to Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database, and is currently available on BigQuery and Postgres. Malloy is not an officially supported Google product.
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database, and is currently available on BigQuery and Postgres.
 
 - Queries in the Malloy language compile to SQL, and Malloy writes SQL optimized for your database
 - Computations in Malloy are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms
@@ -29,14 +29,22 @@ Connecting to Postgres is hard!
 
 ### BigQuery
 
+Authenticating to BigQuery can be done either via oAuth (using your Google Cloud Account) or with a Service Account Key downloaded from Google Cloud
+
+#### **Using oAuth**
+
 To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the [gcloud CLI](https://cloud.google.com/sdk/gcloud) installed. Once it's installed, open a terminal and type the following:
 
 ```
 gcloud auth login --update-adc
-gcloud config set project my_project_id --installation
+gcloud config set project {my_project_id} --installation
 ```
 
-_Replace `my_project_id` with the **ID** of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
+_Replace `{my_project_id}` with the **ID** of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
+
+#### **Using Service Account Key**
+
+We don't support this but we should
 
 ## 4. Run a quick test
 
@@ -77,3 +85,5 @@ Key features and advantages:
 # Contributing
 
 If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
+
+Malloy is not an officially supported Google product.
