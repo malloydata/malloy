@@ -8,13 +8,14 @@ _Note: If you'd like to follow along with this guide, you can create a new <code
 
 In Malloy, the source of a query is always first, and can be either a raw table, a [modeled explore](explore.md), or even another query.
 
-To reference a table (or view) in the database, simply put the path and name of the table in a quoted string.
+To the table function references a table (or view) in the database.  We are explicit about which fields are grouped and which files are aggregated.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-explore 'malloy-data.faa.airports' | reduce
-  state
-  airport_count is count()
+query: table('malloy-data.faa.airports')->{
+  group_by: state
+  aggregate: airport_count is count()
+}
 ```
 
 To the right of the source, data is piped from one command to the next.
@@ -30,20 +31,34 @@ When using `reduce`, Malloy knows which fields to group by and which to use as a
 In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count`.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-explore 'malloy-data.faa.airports' | reduce
-  state,
-  airport_count is count(*)
+query: table('malloy-data.faa.airports')->{
+  group_by: state
+  aggregate: airport_count is count(*)
+}
 ```
 
 Multiple aggregations can be computed within the same `reduce` command.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-explore 'malloy-data.faa.airports'
-| reduce
-  fac_type
-  airport_count is count()
-  max_elevation is max(elevation)
+query: table('malloy-data.faa.airports')->{
+  group_by: fac_type
+  aggregate: airport_count is count()
+  aggregate: max_elevation is max(elevation)
+}
+```
+
+Groups and aggregates can contain lists of fields
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+query: table('malloy-data.faa.airports')->{
+  group_by: [state, county]
+  aggregate: [
+    airport_count is count()
+    max_elevation is max(elevation)
+  ]
+}
 ```
 
 ## Everything has a Name
@@ -53,8 +68,9 @@ calculation or agregation, it must be aliased.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-explore 'malloy-data.faa.airports' | reduce
-  max_elevation is max(elevation)
+query: table('malloy-data.faa.airports')->{
+  aggregate: max_elevation is max(elevation)
+}
 ```
 
 Malloy uses `name is value` instead of SQL's `value as name`, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.
@@ -63,9 +79,12 @@ Columns from a table and fields defined in an explore already have names, and ca
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-explore 'malloy-data.faa.airports' | project
-  full_name
-  elevation
+query: table('malloy-data.faa.airports')->{
+  project: [
+    full_name
+    elevation
+  ]
+}
 ```
 
 ## Expressions
@@ -74,12 +93,15 @@ Many SQL expressions will work unchanged in Malloy, and many functions available
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
-explore 'malloy-data.faa.airports' | reduce
-  county_and_state is concat(county, ', ', state)
-  airport_count is count()
-  max_elevation is max(elevation)
-  min_elevation is min(elevation)
-  avg_elevation is avg(elevation)
+query: table('malloy-data.faa.airports')->{
+  group_by: county_and_state is concat(county, ', ', state)
+  aggregate: [
+    airport_count is count()
+    max_elevation is max(elevation)
+    min_elevation is min(elevation)
+    avg_elevation is avg(elevation)
+  ]
+}
 ```
 
 The basic types of Malloy expressions are `string`, `number`, `boolean`, `date`, and `timestamp`.
@@ -91,14 +113,16 @@ add calculations for `county_and_state` and `airport_count`.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-define airports is (explore 'malloy-data.faa.airports'
-  county_and_state is concat(county, ', ', state)
-  airport_count is count()
-);
+explore: airports is table('malloy-data.faa.airports'){
+  dimension: county_and_state is concat(county, ', ', state)
+  measure: airport_count is count()
+  measure: average_elevation is avg(elevation)
+}
 
-explore airports | reduce
-  county_and_state
-  airport_count
+query: airports->{
+  group_by:county_and_state
+  aggregate: airport_count
+}
 ```
 
 ## Ordering and Limiting
@@ -109,10 +133,11 @@ The `top` statement limits the number of rows returned, sorted by default by the
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
-explore 'malloy-data.faa.airports'
-| reduce top 2
-  state
-  airport_count is count(*)
+query: table('malloy-data.faa.airports')->{
+  top: 2
+  group_by: state
+  aggregate: airport_count is count(*)
+}
 ```
 
 Default ordering can be overridden with `order by`, as in the following query, which shows the states in alphabetical order.
