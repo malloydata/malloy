@@ -7,11 +7,13 @@ Malloy is an experimental language for describing data relationships and transfo
 - Data is modeled as a network of relationships, and Malloy generates network graphs with results, which ensures correctness of aggregate computations over multiple levels of transformation
 - Defaults are smart, and Malloy is concise (where SQL is verbose and often redundant)
 
-Malloy is for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient. Malloy allows you to model as you go, so there is no heavy up-front work before you can start answering complex questions.
+Malloy is a language for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient. Malloy allows you to model as you go, so there is no heavy up-front work before you can start answering complex questions.
 
-# Install the Extension
+We've built a Visual Studio Code extension to help you try interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
-The Visual Studio Code Extension enables data modeling with Malloy, as well as query and transformation execution. Currently, the Malloy extension works on Mac and Linux machines.
+# Installing the Extension
+
+Currently, the Malloy extension works on Mac and Linux machines.
 
 ## 1. Download Visual Studio Code
 
