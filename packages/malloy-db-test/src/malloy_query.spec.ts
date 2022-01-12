@@ -590,7 +590,7 @@ describe("expression tests", () => {
       faa,
       `
       query: flights->{
-        group_by: hod is dep_time.hour_of_day
+        group_by: mon is dep_time.month
       }
     `
     );
