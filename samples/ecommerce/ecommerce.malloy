@@ -33,7 +33,6 @@ explore: order_items_base is table('malloy-data.ecomm.order_items'){
   join: users on user_id
   join: ii on inventory_item_id
   join: user_order_facts on user_id
-
   -- join: [
   --   users on user_id
   --   ii on inventory_item_id
@@ -48,6 +47,7 @@ explore: order_items_base is table('malloy-data.ecomm.order_items'){
 }
 
 explore: brand_synergy is from(
+-- query: brand_synergy is
   order_items_base -> {
     group_by: order_id
     nest: brand1 is {group_by: ii.product.brand}
@@ -55,12 +55,12 @@ explore: brand_synergy is from(
   } -> {
     where: brand1.brand != brand2.brand
     project: order_id
-    project: brand1.brand
-    project: brand2.brand
+    project: brand1 is brand1.brand
+    project: brand2 is brand2.brand
   } -> {
     group_by: [
-      brand1 is brand1.brand
-      brand2 is brand2.brand
+      brand1
+      brand2
     ]
     aggregate: occurances is count()
   } -> {
@@ -173,7 +173,6 @@ explore: order_items is order_items_base {
       top_products
       by_month
     ]
-
     -- nest: synergistic_brands is {
     --   group by: brandy_synergy.synergies.brand
     --   aggregate: occurances is brand_synergy.synergies.occurances.sum()
