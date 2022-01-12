@@ -143,7 +143,7 @@ joinNameDef: id;
 measureDef: fieldDef;
 
 joinList
-  : OCURLY (joinDef COMMA?)* CCURLY
+  : OBRACK (joinDef COMMA?)* CBRACK
   | joinDef
   ;
 
