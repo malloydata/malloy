@@ -589,8 +589,9 @@ describe("expression tests", () => {
     const sql = await compileQuery(
       faa,
       `
-      query: flights->reduce
-        hour_of_day is dep_time.hour_of_day
+      query: flights->{
+        group_by: hod is dep_time.hour_of_day
+      }
     `
     );
     await bqCompile(sql);
@@ -600,8 +601,9 @@ describe("expression tests", () => {
     const sql = await compileQuery(
       faa,
       `
-      query: flights->reduce
-        carrier_count is count(distinct carrier)
+      query: flights->{
+        aggregate: carrier_count is count(distinct carrier)
+      }
     `
     );
     // console.log(result.sql);
@@ -810,25 +812,25 @@ describe("airport_tests", () => {
     const result = await runQuery(
       model,
       `
-        query: airports->{
-          aggregate: airport_count
-          nest: pipe_turtle is {
-            group_by: [
-              state
-              county
-            ]
-            aggregate: a is airport_count
-          } -> {
-            project: [
-              state is upper(state)
-              a
-            ]
-          } -> {
-            group_by: state
-            aggregate: total_airports is a.sum()
-          }
+      query: table('malloytest.airports')->{
+        aggregate: airport_count is count()
+        nest: pipe_turtle is {
+          group_by: [
+            state
+            county
+          ]
+          aggregate: a is count()
+        } -> {
+          project: [
+            state is upper(state)
+            a
+          ]
+        } -> {
+          group_by: state
+          aggregate: total_airports is a.sum()
         }
-    `
+      }
+      `
     );
 
     expect(
@@ -975,7 +977,7 @@ describe("sql injection tests", () => {
 
   test.todo("'malloytest\\'.tables' produces the wrong error...");
 
-  test("nested_table", async () => {
+  test("comment in literal", async () => {
     const result = await runQuery(
       model,
       `
