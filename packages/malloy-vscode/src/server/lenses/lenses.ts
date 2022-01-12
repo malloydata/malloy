@@ -64,7 +64,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         command: {
           title: "Run",
           command: "malloy.runQueryFile",
-          arguments: [currentUnnamedQueryIndex],
+          arguments: [currentUnnamedQueryIndex, "json"],
         },
       });
       lenses.push({
