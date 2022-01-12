@@ -35,6 +35,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
         explore: r is from(->q){
           query: foo is {
+            order_by: 1 desc
             group_by: state
           }
         }
@@ -44,6 +45,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "state").value).toBe("AL");
+    expect(result.data.path(0, "state").value).toBe("WY");
   });
 });
