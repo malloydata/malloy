@@ -942,15 +942,13 @@ class ReduceExecutor implements QueryExecutor {
     }
   }
 
-  refineFrom(from: model.PipeSegment | undefined, to: model.PipeSegment) {
+  refineFrom(from: model.QuerySegment | undefined, to: model.QuerySegment) {
     if (from) {
       if (!this.order) {
-        if (model.isQuerySegment(from) && model.isQuerySegment(to)) {
-          if (from.orderBy) {
-            to.orderBy = from.orderBy;
-          } else if (from.by) {
-            to.by = from.by;
-          }
+        if (from.orderBy) {
+          to.orderBy = from.orderBy;
+        } else if (from.by) {
+          to.by = from.by;
         }
       }
       if (!this.limit && from.limit) {
@@ -962,13 +960,13 @@ class ReduceExecutor implements QueryExecutor {
       to.limit = this.limit;
     }
 
-    if (model.isQuerySegment(to) && this.order instanceof Top) {
+    if (this.order instanceof Top) {
       const topBy = this.order.getBy(this.outputFS);
       if (topBy) {
         to.by = topBy;
       }
     }
-    if (model.isQuerySegment(to) && this.order instanceof Ordering) {
+    if (this.order instanceof Ordering) {
       to.orderBy = this.order.orderBy();
     }
 
@@ -980,9 +978,14 @@ class ReduceExecutor implements QueryExecutor {
     }
   }
 
-  finalize(from: model.PipeSegment | undefined): model.PipeSegment {
-    if (from && from.type !== "reduce") {
-      throw new Error("refinement type mistmatch");
+  finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
+    let from: model.ReduceSegment | undefined;
+    if (fromSeg) {
+      if (fromSeg.type == "reduce") {
+        from = fromSeg;
+      } else {
+        throw new Error(`Refining a reduce with a ${fromSeg.type}`);
+      }
     }
     const reduceSegment: model.ReduceSegment = {
       type: "reduce",
@@ -1023,9 +1026,14 @@ class ProjectExecutor extends ReduceExecutor {
     }
   }
 
-  finalize(from: model.PipeSegment | undefined): model.PipeSegment {
-    if (from && from.type !== "project") {
-      throw new Error("refinement type mistmatch");
+  finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
+    let from: model.ProjectSegment | undefined;
+    if (fromSeg) {
+      if (fromSeg.type == "project") {
+        from = fromSeg;
+      } else {
+        throw new Error(`Refining a project with a ${fromSeg.type}`);
+      }
     }
     const projectSegment: model.ProjectSegment = {
       type: "project",
