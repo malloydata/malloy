@@ -233,23 +233,5 @@ describe("join expression tests", () => {
         .run();
       expect(result.data.value[0].f_sum2).toBe(60462);
     });
-
-    it(`model: double_pipe2 - ${database}`, async () => {
-      const result = await model
-        .loadQuery(
-          `
-          query: pipe is table('malloytest.state_facts')-> {
-            group_by: state
-            aggregate: f is count(*)
-          } -> {
-            aggregate: f_sum is f.sum()
-          }
-
-          query: x is ->pipe->{project: f_sum2 is f_sum+1 }
-          `
-        )
-        .run();
-      expect(result.data.value[0].f_sum2).toBe(52);
-    });
   });
 });
