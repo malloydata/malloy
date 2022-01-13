@@ -16,6 +16,7 @@ import { StyleDefaults } from "../data_styles";
 // import { getDrillPath, getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLNumberRenderer } from "./number";
+import { yieldTask } from "./utils";
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -42,6 +43,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       for (const field of table.field.intrinsicFields) {
         const childRenderer = this.childRenderers[field.name];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
+        await yieldTask();
         const rendered = await childRenderer.render(row.cell(field));
         renderedRow += `<td style="padding: ${
           childRenderer instanceof HTMLTableRenderer ? "0" : "8px"
