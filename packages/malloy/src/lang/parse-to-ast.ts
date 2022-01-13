@@ -295,7 +295,7 @@ export class MalloyToAST
     const joinFrom = fromExploreCx
       ? this.visitExplore(fromExploreCx)
       : new ast.NamedSource(joinAs);
-    const joinOn = this.getIdText(pcx.fieldName());
+    const joinOn = this.getFieldPath(pcx.fieldPath());
     const join = new ast.Join(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
