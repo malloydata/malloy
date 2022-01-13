@@ -12,21 +12,17 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { Connection, FixedConnectionMap, Result } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-import { PostgresConnection } from "@malloy-lang/db-postgres";
+import * as vscode from "vscode";
+import { Result } from "@malloy-lang/malloy";
+import { ConnectionConfig, ConnectionManager } from "../common";
 
-export const CONNECTION_MAP = new FixedConnectionMap(
-  new Map<string, Connection>(
-    Object.entries({
-      bigquery: new BigQueryConnection("bigquery", {
-        pageSize: 50,
-      }),
-      postgres: new PostgresConnection("postgres"),
-    })
-  ),
-  "bigquery"
-);
+export function getConnectionsConfig() {
+  return vscode.workspace
+    .getConfiguration("malloy")
+    .get("connections") as ConnectionConfig[]
+}
+
+export const CONNECTION_MANAGER = new ConnectionManager(getConnectionsConfig());
 
 export interface RunState {
   cancel: () => void;

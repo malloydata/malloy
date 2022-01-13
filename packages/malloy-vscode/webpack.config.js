@@ -65,6 +65,7 @@ const config = {
         enforce: "pre",
         use: ["source-map-loader"],
       },
+      { test: /\.node$/, loader: 'node-loader' },
     ],
   },
   plugins: [

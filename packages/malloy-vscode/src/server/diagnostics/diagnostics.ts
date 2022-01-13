@@ -19,9 +19,7 @@ import {
 import { LogMessage, MalloyError, Runtime, URL } from "@malloy-lang/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-
-const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery");
+import { CONNECTION_MANAGER } from "../connections";
 
 async function magicGetTheFile(
   documents: TextDocuments<TextDocument>,
@@ -46,7 +44,7 @@ export async function getMalloyDiagnostics(
   const files = {
     readURL: (url: URL) => magicGetTheFile(documents, url.toString()),
   };
-  const runtime = new Runtime(files, BIGQUERY_CONNECTION);
+  const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
   let errors: LogMessage[] = [];
   try {
     await runtime.getModel(new URL(uri));

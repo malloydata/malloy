@@ -34,12 +34,22 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "timestamp without time zone": "timestamp", // maybe not right
 };
 
+interface PostgresConnectionConfiguration {
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  databaseName?: string;
+}
+
 export class PostgresConnection extends Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private config: PostgresConnectionConfiguration;
 
-  constructor(name: string) {
+  constructor(name: string, config: PostgresConnectionConfiguration = {}) {
     super(name);
+    this.config = config;
   }
 
   get dialectName(): string {
@@ -71,7 +81,13 @@ export class PostgresConnection extends Connection {
     _rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
-    const client = new Client();
+    const client = new Client({
+      user: this.config.username,
+      password: this.config.password,
+      database: this.config.databaseName,
+      port: this.config.port,
+      host: this.config.host,
+    });
     await client.connect();
 
     let result = await client.query(sqlCommand);

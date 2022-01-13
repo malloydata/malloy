@@ -249,3 +249,13 @@ query: flights -> carrier_dashboard {? carriers.nickname: 'Jetblue' }
 query: flights -> airport_dashboard {? origin.code: 'SJC' }
 query: flights -> airport_dashboard {?  origin.code: 'SFO' }
 query: flights -> airport_dashboard {?  origin.code: 'SFO' }
+
+explore: airports2 is table('postgres2:malloytest.airports') {
+  primary_key: code
+  dimension: name is concat(code, ' - ', full_name)
+  measure: airport_count is count()
+}
+
+
+
+

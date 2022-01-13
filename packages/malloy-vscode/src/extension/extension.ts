@@ -32,6 +32,7 @@ import {
   showLicensesCommand,
 } from "./commands";
 import { showResultJSONCommand } from "./commands/show_result_json";
+import { CONNECTION_MANAGER, getConnectionsConfig } from "./state";
 
 let client: LanguageClient;
 
@@ -39,6 +40,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommands(context);
   setupLanguageServer(context);
   registerTreeDataProviders(context);
+  setupConfigurationHooks(context);
 }
 
 export function deactivate(): Promise<void> | undefined {
@@ -141,6 +143,7 @@ function setupLanguageServer(context: vscode.ExtensionContext): void {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "malloy" }],
     synchronize: {
+      configurationSection: "malloy",
       fileEvents: vscode.workspace.createFileSystemWatcher("**/.clientrc"),
     },
   };
@@ -153,4 +156,17 @@ function setupLanguageServer(context: vscode.ExtensionContext): void {
   );
 
   client.start();
+}
+
+function setupConfigurationHooks(context: vscode.ExtensionContext): void {
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      console.log("CONFIG CHANGED");
+      if (e.affectsConfiguration("malloy.connections")) {
+        CONNECTION_MANAGER.setConnectionsConfig(
+          getConnectionsConfig()
+        );
+      }
+    })
+  );
 }
