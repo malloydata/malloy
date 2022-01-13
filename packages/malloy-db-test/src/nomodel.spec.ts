@@ -64,7 +64,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "state").value).toBe("wy");
+    expect(result.data.path(0, "lower_state").value).toBe("wy");
   });
 
   // issue #157
