@@ -45,12 +45,12 @@ class ErrorFactory {
   static get structDef(): model.StructDef {
     const ret: model.StructDef = {
       type: "struct",
-      name: "undefined_error_structdef",
-      dialect: "undefined dialect",
+      name: "//undefined_error_structdef",
+      dialect: "//undefined_errror_dialect",
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
-        connectionName: "unknown connection",
+        connectionName: "//undefined_error_conection",
       },
       fields: [],
     };
@@ -63,6 +63,16 @@ class ErrorFactory {
       pipeline: [],
     };
   }
+}
+
+function opOutputStruct(
+  inputStruct: model.StructDef,
+  opDesc: model.PipeSegment
+): model.StructDef {
+  if (inputStruct.name === "//undefined_error_structdef") {
+    return ErrorFactory.structDef;
+  }
+  return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
 }
 
 type ChildBody = MalloyElement | MalloyElement[];
@@ -1178,9 +1188,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment,
       outputSpace: () =>
-        new StructSpace(
-          ModelQuerySegment.nextStructDef(inputFS.structDef(), segment)
-        ),
+        new StructSpace(opOutputStruct(inputFS.structDef(), segment)),
     };
   }
 }
@@ -1432,7 +1440,7 @@ export class PipelineDesc extends MalloyElement {
     pipeline: model.PipeSegment[]
   ): model.StructDef {
     for (const modelQop of pipeline) {
-      walkStruct = ModelQuerySegment.nextStructDef(walkStruct, modelQop);
+      walkStruct = opOutputStruct(walkStruct, modelQop);
     }
     return walkStruct;
   }

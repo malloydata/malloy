@@ -156,6 +156,10 @@ describe("top level definition", () => {
       query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
     `)
   );
+
+  test("undefined explore does not throw", () => {
+    expect(modelOK("query: x->{ group_by: y }")).not.toThrow(Error);
+  });
 });
 
 describe("expressions", () => {
