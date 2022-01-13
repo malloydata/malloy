@@ -38,19 +38,11 @@ const joinModelText = `
     join: seats is from(aircraft_models->manufacturer_seats)
         on manufacturer
   }
-
-// query: pipe is aircraft_models-> {
-//   group_by: manufacturer
-//   aggregate: f is count(*)
-// } -> {
-//   aggregate: f_sum is f.sum()
-// }
-
 `;
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  "postgres", //
+  // "postgres", //
 ]);
 
 afterAll(async () => {
@@ -153,7 +145,7 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-          query: from(aircraft_models->{
+          query: x is from(aircraft_models->{
             group_by: m is manufacturer
             aggregate: num_models is count(*)
             }){
@@ -184,15 +176,19 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-      explore (aircraft_models | manufacturer_models)
-        joins seats is (aircraft_models | manufacturer_seats)
+      explore: foo is from(models-> manufacturer_models){
+        join: seats is from(aircraft_models->manufacturer_seats)
           on manufacturer
-      | project
-        manufacturer,
-        num_models,
-        seats.total_seats,
-        order by 2 desc
-        limit 1
+      }
+      query: foo-> {
+        project: [
+          manufacturer,
+          num_models,
+          seats.total_seats
+        ]
+        order_by: 2 desc
+        limit: 1
+      }
         `
         )
         .run();
@@ -242,11 +238,18 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-      query: pipe->{project: f_sum2 is f_sum+1 }
-      `
+          query: pipe is table('malloytest.state_facts')-> {
+            group_by: state
+            aggregate: f is count(*)
+          } -> {
+            aggregate: f_sum is f.sum()
+          }
+
+          query: x is ->pipe->{project: f_sum2 is f_sum+1 }
+          `
         )
         .run();
-      expect(result.data.value[0].f_sum2).toBe(60462);
+      expect(result.data.value[0].f_sum2).toBe(52);
     });
   });
 });
