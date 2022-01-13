@@ -56,7 +56,7 @@ pipelineFromName
   ;
 
 exploreRoot
-  : (exploreName | exploreTable) exploreProperties?
+  : exploreSource exploreProperties?
   ;
 
 firstSegment

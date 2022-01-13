@@ -160,6 +160,13 @@ describe("top level definition", () => {
   test("undefined explore does not throw", () => {
     expect(modelOK("query: x->{ group_by: y }")).not.toThrow(Error);
   });
+
+  test(
+    "query from explore from query",
+    modelOK(
+      `query: from(ab->aturtle) { primary_key: astring } -> { project: * }`
+    )
+  );
 });
 
 describe("expressions", () => {

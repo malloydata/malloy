@@ -547,22 +547,7 @@ export class MalloyToAST
   }
 
   visitExploreRoot(pcx: parse.ExploreRootContext): ast.Mallobj {
-    let source: ast.Mallobj | undefined;
-
-    const tblCx = pcx.exploreTable();
-    if (tblCx) {
-      source = this.visitExploreTable(tblCx);
-    }
-
-    const nameCx = pcx.exploreName();
-    if (nameCx) {
-      source = this.visitExploreName(nameCx);
-    }
-
-    if (source === undefined) {
-      throw this.internalError(pcx, "unexpected explore source for query");
-    }
-
+    let source = this.getExploreSource(pcx.exploreSource());
     const refineCx = pcx.exploreProperties();
     if (refineCx) {
       source = this.astAt(
