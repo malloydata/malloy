@@ -295,7 +295,7 @@ export class MalloyToAST
     const joinFrom = fromExploreCx
       ? this.visitExplore(fromExploreCx)
       : new ast.NamedSource(joinAs);
-    const joinOn = this.getIdText(pcx.fieldName());
+    const joinOn = this.getFieldPath(pcx.fieldPath());
     const join = new ast.Join(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
@@ -547,22 +547,7 @@ export class MalloyToAST
   }
 
   visitExploreRoot(pcx: parse.ExploreRootContext): ast.Mallobj {
-    let source: ast.Mallobj | undefined;
-
-    const tblCx = pcx.exploreTable();
-    if (tblCx) {
-      source = this.visitExploreTable(tblCx);
-    }
-
-    const nameCx = pcx.exploreName();
-    if (nameCx) {
-      source = this.visitExploreName(nameCx);
-    }
-
-    if (source === undefined) {
-      throw this.internalError(pcx, "unexpected explore source for query");
-    }
-
+    let source = this.getExploreSource(pcx.exploreSource());
     const refineCx = pcx.exploreProperties();
     if (refineCx) {
       source = this.astAt(

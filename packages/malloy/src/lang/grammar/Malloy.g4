@@ -56,7 +56,7 @@ pipelineFromName
   ;
 
 exploreRoot
-  : (exploreName | exploreTable) exploreProperties?
+  : exploreSource exploreProperties?
   ;
 
 firstSegment
@@ -148,8 +148,8 @@ joinList
   ;
 
 joinDef
-  : joinNameDef IS explore ON fieldName
-  | joinNameDef ON fieldName
+  : joinNameDef IS explore ON fieldPath
+  | joinNameDef ON fieldPath
   ;
 
 filterStatement
