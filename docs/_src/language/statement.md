@@ -13,13 +13,22 @@ A Malloy model file can contain several _explores_, which define fields that can
 used in queries.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+explore: flights is table('malloy-data.faa.flights'){
   -- A dimension
-  distance_km is distance_mi / 1.609344
+  dimension: distance_km is distance / 1.609344
 
   -- A measure
-  flight_count is count()
-);
+  measure: flight_count is count()
+
+  query: by_carrier is  {
+    limit: 3
+    group_by: carrier
+    aggregate: flight_count
+  }
+}
+// run this query
+query: flights->by_carrier
 ```
 
 See [here](explore.md) for more information on explores.
@@ -29,10 +38,13 @@ See [here](explore.md) for more information on explores.
 Named queries can also be defined at the top level of a model.
 
 ```malloy
-define flights_by_carrier is (flights | reduce
-  carrier
-  flight_count
-)
+query: flights_by_destination is flights->{
+  group_by: destination
+  measure: [
+    flight_count
+    average_distance_in_km is distance_km.avg()
+  ]
+}
 ```
 
 See [here](query.md) for more information on queries.
