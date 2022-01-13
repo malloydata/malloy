@@ -915,7 +915,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo\\''}
+      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\''
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo'");
@@ -925,7 +926,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ aggregate: test is count() {? carrier: 'foo\\'' } }
+      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo\\'' } }
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -935,7 +936,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo\\\\\\'' }
+      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo\\'");
@@ -945,7 +947,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ aggregate: test is count() {? carrier: 'foo\\\\\\'' }}
+      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo\\\\\\'' }}
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -955,7 +957,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo \\\\'--' }
+      query: table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo \\");
@@ -967,7 +970,8 @@ describe("sql injection tests", () => {
       await runQuery(
         model,
         `
-        query: flights->{ aggregate: test is count() {? carrier: 'foo \\\\' THEN 0 else 1 END) as test--' }}      `
+        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo \\\\' THEN 0 else 1 END) as test--'
+        }}      `
       );
     } catch (e) {
       error = e;
@@ -981,7 +985,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo \\\\'--' }
+      query: flights->{ group_by: test is 'foo \\\\'--'
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo \\");
