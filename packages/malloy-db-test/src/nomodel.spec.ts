@@ -47,4 +47,23 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // console.log(result.data.toObject());
     expect(result.data.path(0, "state").value).toBe("WY");
   });
+
+  it(`query from query  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        query: from(
+          table('malloytest.state_facts)->{group_by:state}
+          ) {
+            measure: state_count is count(distinct state)
+          }
+        -> {
+          aggregate: state_count
+        }
+    `
+      )
+      .run();
+    // console.log(result.data.toObject());
+    expect(result.data.path(0, "state").value).toBe("WY");
+  });
 });
