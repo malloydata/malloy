@@ -15,17 +15,14 @@ used in queries.
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
 explore: flights is table('malloy-data.faa.flights'){
-  -- A dimension
   dimension: distance_km is distance / 1.609344
 
-  -- A measure
   measure: flight_count is count()
 
   query: by_carrier is  {
     group_by: carrier
     aggregate: flight_count
   }
-
 }
 ```
 See [here](explore.md) for more information on explores.
@@ -38,7 +35,7 @@ See [here](explore.md) for more information on explores.
 query: flights->by_carrier
 ```
 
-### Using modeled in query.
+### Using modeled with a filter.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
 query: flights{? origin: 'SFO'}->by_carrier
