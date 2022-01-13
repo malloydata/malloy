@@ -13,7 +13,7 @@ A Malloy model file can contain several _explores_, which define fields that can
 used in queries.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
 explore: flights is table('malloy-data.faa.flights'){
   -- A dimension
   dimension: distance_km is distance / 1.609344
@@ -22,29 +22,56 @@ explore: flights is table('malloy-data.faa.flights'){
   measure: flight_count is count()
 
   query: by_carrier is  {
-    limit: 3
     group_by: carrier
     aggregate: flight_count
   }
-}
-// run this query
-query: flights->by_carrier
-```
 
+}
+```
 See [here](explore.md) for more information on explores.
 
 ## Queries
 
-Named queries can also be defined at the top level of a model.
-
+### Using modeled in query.
 ```malloy
-query: flights_by_destination is flights->{
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+query: flights->by_carrier
+```
+
+### Using modeled in query.
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+query: flights{? origin: 'SFO'}->by_carrier
+```
+### Setting a limit on the Query
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+query: flights{? origin: 'SFO'}->by_carrier{limit: 2}
+```
+
+
+### Creating a brand new Query.
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+query: flights->{
   group_by: destination
-  measure: [
+  aggregate: [
     flight_count
     average_distance_in_km is distance_km.avg()
   ]
 }
 ```
 
+### Putting it all together.
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+query: flights->{
+  group_by: destination
+  aggregate: [
+    flight_count
+    average_distance_in_km is distance_km.avg()
+  ]
+  nest: top_carriers is by_carrier{limit: 2}
+}
+```
 See [here](query.md) for more information on queries.
