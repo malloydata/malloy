@@ -48,6 +48,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "state").value).toBe("WY");
   });
 
+  // Issue #149
   it(`query from query  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -65,5 +66,24 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.data.toObject());
     expect(result.data.path(0, "state").value).toBe("WY");
+  });
+
+  // issue #157
+  it(`explore - not -found  - ${databaseName}`, async () => {
+    // console.log(result.data.toObject());
+    let error;
+    try {
+      await runtime
+        .loadQuery(
+          `
+        explore: foo is table('malloytest.state_facts'){primary_key: state}
+        query: foox->{aggregate: c is count()}
+       `
+        )
+        .run();
+    } catch (e) {
+      error = e;
+    }
+    expect(error.toString()).not.toContain("Unknown Dialect");
   });
 });
