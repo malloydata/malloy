@@ -71,7 +71,6 @@ You can think of flight data as event data.  The below is a classic map/reduce r
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 query: flights {where: [carrier:'WN', dep_time: @2002-03-03]} -> sessionize
-
 ```
 
 ## The Malloy Model
@@ -79,221 +78,237 @@ query: flights {where: [carrier:'WN', dep_time: @2002-03-03]} -> sessionize
 All of the queries above are executed against the following model:
 
 ```malloy
-export define airports is (explore 'malloy-data.faa.airports'
-  primary key code
-  name is concat(code, ' - ', full_name)
-  airport_count is count()
-);
+explore: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+  dimension: name is concat(code, ' - ', full_name)
+  measure: airport_count is count()
+}
 
-define carriers is (explore 'malloy-data.faa.carriers'
-  primary key code
-  carrier_count is count()
-);
+explore: carriers is table('malloy-data.faa.carriers') {
+  primary_key: code
+  measure: carrier_count is count()
+}
 
-define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
-  primary key aircraft_model_code
-  aircraft_model_count is count()
-);
+explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+  primary_key: aircraft_model_code
+  measure: aircraft_model_count is count()
+}
 
-define aircraft is (explore 'malloy-data.faa.aircraft'
-  primary key tail_num
-  aircraft_count is count()
-  -- joins
-  aircraft_models is join on aircraft_model_code
-);
+explore: aircraft is table('malloy-data.faa.aircraft') {
+  primary_key: tail_num
+  measure: aircraft_count is count()
+  join: aircraft_models on aircraft_model_code
+}
 
-export define flights_base is (explore 'malloy-data.faa.flights'
-  primary key id2
-);
+explore: aircraft_facts is from(
+  table('malloy-data.faa.flights') -> {
+    group_by: tail_num
+    aggregate: [
+      lifetime_flights is count()
+      lifetime_distance is distance.sum()
+    ]
+  }
+) {
+  primary_key: tail_num
+  dimension: lifetime_flights_bucketed is floor(lifetime_flights/1000)*1000
+}
 
-define aircraft_facts is (explore
-  (explore flights_base | reduce
-    tail_num
-    lifetime_flights is count()
-    lifetime_distance is distance.sum()
-  )
-  lifetime_flights_bucketed is floor(lifetime_flights/1000)*1000
-);
+explore: flights is table('malloy-data.faa.flights') {
+  primary_key: id2
+  rename: origin_code is origin
+  rename: destination_code is destination
 
-export define flights is (explore flights_base
-  primary key id2
-  -- rename some fields
-  origin_code renames origin
-  destination_code renames destination
+  join: carriers on carrier
+  join: origin is airports on origin_code
+  join: destination is airports on destination_code
+  join: aircraft on tail_num
+  join: aircraft_facts on tail_num
 
-  -- joins
-  carriers is join on carrier
-  origin is join airports on origin_code
-  destination is join airports on destination_code,
-  aircraft is join on tail_num
-  aircraft_facts is join on tail_num
+  measure: [
+    flight_count is count()
+    total_distance is sum(distance)
+    seats_for_sale is sum(aircraft.aircraft_models.seats)
+    seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
+    -- average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
+    -- average_seats is aircraft.aircraft_models.seats.avg()
+  ]
 
-  -- measures
-  flight_count is count()
-  total_distance is sum(distance)
-  seats_for_sale is sum(aircraft.aircraft_models.seats)
-  seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
-
-  -- queries
-  measures is (reduce
-    flight_count
-    aircraft.aircraft_count
-    dest_count is destination.airport_count
-    origin_count is origin.airport_count
-  )
+  query: measures is {
+    aggregate: [
+      flight_count
+      aircraft.aircraft_count
+      dest_count is destination.airport_count
+      origin_count is origin.airport_count
+    ]
+  }
 
   -- shows carriers and number of destinations (bar chart)
-  by_carrier is (reduce
-    carriers.nickname
-    flight_count
-    destination_count is destination.count()
-  )
+  query: by_carrier is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+    aggregate: destination_count is destination.count()
+  }
 
   -- shows year over year growth (line chart)
-  year_over_year is (reduce
-    dep_month is month(dep_time)
-    flight_count
-    dep_year is dep_time.year
-  )
+  query: year_over_year is {
+    group_by: dep_month is month(dep_time)
+    aggregate: flight_count
+    group_by: dep_year is dep_time.year
+  }
 
   -- shows plane manufacturers and frequency of use
-  by_manufacturer is (reduce top 5
-    aircraft.aircraft_models.manufacturer
-    aircraft.aircraft_count
-    flight_count
-  )
+  query: by_manufacturer is {
+    top: 5
+    group_by: aircraft.aircraft_models.manufacturer
+    aggregate: [ aircraft.aircraft_count, flight_count ]
+  }
 
-  delay_by_hour_of_day is (reduce : [dep_delay >30]
-    dep_hour is hour(dep_time)
-    flight_count
-    delay is FLOOR(dep_delay)/30 * 30
-  )
+  query: delay_by_hour_of_day is {
+    where: dep_delay >30
+    group_by: dep_hour is hour(dep_time)
+    aggregate: flight_count
+    group_by: delay is FLOOR(dep_delay)/30 * 30
+  }
 
-  carriers_by_month is (reduce
-    dep_month is dep_time.month
-    flight_count
-    carriers.nickname
-  )
+  query: carriers_by_month is {
+    group_by: dep_month is dep_time.month
+    aggregate: flight_count
+    group_by: carriers.nickname
+  }
 
-  seats_by_distance is (reduce
+  query: seats_by_distance is {
     -- seats rounded to 5
-    seats is floor(aircraft.aircraft_models.seats/5)*5
-    flight_count
+    group_by: seats is floor(aircraft.aircraft_models.seats/5)*5
+    aggregate: flight_count
     -- distance rounded to 20
-    distance is floor(distance/20)*20
-  )
+    group_by: distance is floor(distance/20)*20
+  }
 
-  routes_map is (reduce
-    origin.latitude
-    origin.longitude
-    latitude2 is destination.latitude
-    longitude2 is destination.longitude
-    flight_count
-  )
+  query: routes_map is {
+    group_by: [
+      origin.latitude
+      origin.longitude
+      latitude2 is destination.latitude
+      longitude2 is destination.longitude
+    ]
+    aggregate: flight_count
+  }
 
-  destinations_by_month is (reduce
-    dep_time.`month`
-    flight_count
-    destination.name
-  )
+  query: destinations_by_month is {
+    group_by: dep_month is dep_time.month
+    aggregate: flight_count
+    group_by: destination.name
+  }
 
   -- explore flights : [origin.code : 'SJC'] | airport_dashboard
-  airport_dashboard is ( reduce top 10
-    code is destination_code
-    destination is destination.full_name
-    flight_count
-    carriers_by_month
-    routes_map
-    delay_by_hour_of_day
-  )
+  query: airport_dashboard is {
+    top: 10
+    group_by: code is destination_code
+    group_by: destination is destination.full_name
+    aggregate: flight_count
+    nest: [carriers_by_month, routes_map, delay_by_hour_of_day]
+  }
 
-  plane_usage is (reduce order by 1 desc : [aircraft.aircraft_count > 1]
-    aircraft_facts.lifetime_flights_bucketed
-    aircraft.aircraft_count
-    flight_count
-    by_manufacturer
-    by_carrier
-  )
+  query: plane_usage is {
+    order_by: 1 desc
+    where: aircraft.aircraft_count > 1
+    group_by: aircraft_facts.lifetime_flights_bucketed
+    aggregate: [aircraft.aircraft_count, flight_count]
+    nest: [by_manufacturer, by_carrier]
+  }
 
-  -- explore flights : [carriers.nickname : 'Southwest'] | carrier_dashboard
-  carrier_dashboard is ( reduce
-    destination_count is destination.airport_count
-    flight_count
-    by_manufacturer
-    by_month is (reduce
-      dep_month is dep_time.month
-      flight_count
-    )
-    hubs is (reduce : [destination.airport_count > 1] top 10
-      hub is origin.name
-      destination_count is destination.airport_count
-    )
-    origin_dashboard is (reduce top 10
-      code is origin_code
-      origin is origin.full_name
-      origin.city
-      flight_count
-      destinations_by_month
-      routes_map
-      year_over_year
-    )
-  )
 
-  detail is (project top 30 order by 2
-    id2, dep_time, tail_num, carrier, origin_code, destination_code, distance
-    aircraft.aircraft_model_code
-  )
+  -- query: southwest_flights is carrier_dashboard {? carriers.nickname : 'Southwest'}
+  query: carrier_dashboard is {
+    aggregate: destination_count is destination.airport_count
+    aggregate: flight_count
+    nest: by_manufacturer
+    nest: by_month is {
+      group_by: dep_month is dep_time.month
+      aggregate: flight_count
+    }
+    nest: hubs is {
+      top: 10
+      where: destination.airport_count > 1
+      group_by: hub is origin.name
+      aggregate: destination_count is destination.airport_count
+    }
+    nest: origin_dashboard is {
+      top: 10
+      group_by: [
+        code is origin_code,
+        origin is origin.full_name,
+        origin.city
+      ]
+      aggregate: flight_count
+      nest: [ destinations_by_month, routes_map, year_over_year]
+    }
+  }
 
-  -- query that you might run for to build a flight search interface
-  --   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
-  kayak is (reduce
-    carriers is (reduce
-      carriers.nickname
-      flight_count
-    )
-    by_hour is (reduce order by 1
-      dep_hour is hour(dep_time)
-      flight_count
-    )
-    flights is (reduce
-      dep_minute is dep_time.minute
-      carriers.name
-      flight_num
-      origin_code
-      destination_code
-      aircraft.aircraft_models.manufacturer
-      aircraft.aircraft_models.model
-    )
-  )
+  query: detail is {
+    top: 30 by dep_time
+    project: [
+      id2, dep_time, tail_num, carrier, origin_code, destination_code, distance, aircraft.aircraft_model_code
+    ]
+  }
 
-  -- example query that shows how you can build a map reduce job to sessionize flights
-  sessionize is (reduce
-    flight_date is dep_time.`date`
-    carrier
-    daily_flight_count is flight_count
-    per_plane_data is (reduce top 20
-      tail_num
-      plane_flight_count is flight_count
-      flight_legs is (reduce order by 2
-        tail_num
+-- query that you might run for to build a flight search interface
+--   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
+  query: kayak is {
+    nest: carriers is {
+      group_by: carriers.nickname
+      aggregate: flight_count
+    }
+    nest: by_hour is {
+      order_by: 1
+      group_by: dep_hour is hour(dep_time)
+      aggregate: flight_count
+    }
+    nest: flights is {
+      group_by: [
         dep_minute is dep_time.minute
+        carriers.name
+        flight_num
         origin_code
-        dest_code is destination_code
-        dep_delay
-        arr_delay
-      )
-    )
-  )
+        destination_code
+        aircraft.aircraft_models.manufacturer
+        aircraft.aircraft_models.model
+      ]
+    }
+  }
 
-  search_index is (index : [dep_time: @2004-01]
-    *, carriers.*,
-    origin.code, origin.state, origin.city, origin.full_name, origin.fac_type
-    destination.code, destination.state, destination.city, destination.full_name
-    aircraft.aircraft_model_code, aircraft.aircraft_models.manufacturer
-    aircraft.aircraft_models.model
-    on flight_count
-  )
-);
+-- example query that shows how you can build a map reduce job to sessionize flights
+  query: sessionize is {
+    group_by: flight_date is dep_time.day
+    group_by: carrier
+    aggregate: daily_flight_count is flight_count
+    nest: per_plane_data is {
+      top: 20
+      group_by: tail_num
+      aggregate: plane_flight_count is flight_count
+      nest: flight_legs is {
+        order_by: 2
+        group_by: [
+          tail_num
+          dep_minute is dep_time.minute
+          origin_code
+          dest_code is destination_code
+          dep_delay
+          arr_delay
+        ]
+      }
+    }
+  }
+
+  -- search_index is (index : [dep_time: @2004-01]
+  --   *, carriers.*,
+  --   origin.code, origin.state, origin.city, origin.full_name, origin.fac_type
+  --   destination.code, destination.state, destination.city, destination.full_name
+  --   aircraft.aircraft_model_code, aircraft.aircraft_models.manufacturer
+  --   aircraft.aircraft_models.model
+  --   on flight_count
+  -- )
+}
 ```
 
 ## Data Styles
