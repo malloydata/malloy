@@ -49,23 +49,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // Issue #149
-  it(`query from query  - ${databaseName}`, async () => {
+  it(`refine query from query  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         query: from(
-          table('malloytest.state_facts)->{group_by:state}
-          ) {
-            measure: state_count is count(distinct state)
+          table('malloytest.state_facts')->{group_by: state; order_by: 1 desc; limit: 1}
+          )
+          {
+            dimension: lower_state is lower(state)
           }
-        -> {
-          aggregate: state_count
-        }
-    `
+          -> {project: lower_state}
+        `
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "state").value).toBe("WY");
+    expect(result.data.path(0, "state").value).toBe("wy");
   });
 
   // issue #157
