@@ -8,8 +8,7 @@ Are they ontime?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights : [origin.code : 'SJC']
-| airport_dashboard
+query: flights -> airport_dashboard {where: origin.code: 'SJC'}
 ```
 
 
@@ -21,8 +20,7 @@ flying there long?  Increasing or decresing year by year?  Any seasonality?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights : [carriers.nickname : 'Jetblue']
-| carrier_dashboard
+query: flights -> carrier_dashboard {where: carriers.nickname : 'Jetblue'}
 ```
 
 
@@ -33,42 +31,47 @@ to render a Kayak page in a singe query.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights : [
-  origin.code : 'SJC',
-  destination.code : 'LAX'|'BUR',
-  dep_time : @2004-01-01
-]
-| kayak
+query: flights -> kayak {
+  where: [
+    origin.code : 'SJC',
+    destination.code : 'LAX'|'BUR',
+    dep_time : @2004-01-01
+  ]
+}
 ```
 
 ## Sessionizing Flight Data.
 You can think of flight data as event data.  The below is a classic map/reduce roll up of the filght data by carrier and day, plane and day, and individual events for each plane.
 
 ```malloy
-sessionize is ( reduce
-  flight_date is dep_time.`date`
-  carrier
-  daily_flight_count is flight_count
-  per_plane_data is (reduce top 20
-    tail_num
-    plane_flight_count is flight_count
-    flight_legs is (reduce order by 2
-      tail_num
-      dep_minute is dep_time.minute
-      origin_code
-      dest_code is destination_code
-      dep_delay
-      arr_delay
-    )
-  )
-)
+  query: sessionize is {
+    group_by: flight_date is dep_time.day
+    group_by: carrier
+    aggregate: daily_flight_count is flight_count
+    nest: per_plane_data is {
+      top: 20
+      group_by: tail_num
+      aggregate: plane_flight_count is flight_count
+      nest: flight_legs is {
+        order_by: 2
+        group_by: [
+          tail_num
+          dep_minute is dep_time.minute
+          origin_code
+          dest_code is destination_code
+          dep_delay
+          arr_delay
+        ]
+      }
+    }
+  }
 ```
 
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore flights : [carrier:'WN', dep_time: @2002-03-03]
-| sessionize
+query: flights {where: [carrier:'WN', dep_time: @2002-03-03]} -> sessionize
+
 ```
 
 ## The Malloy Model
