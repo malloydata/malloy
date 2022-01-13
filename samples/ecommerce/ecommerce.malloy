@@ -79,7 +79,7 @@ explore: brand_synergy is from(
 
 -- order_items with brand_synergy as well as base definitions.
 explore: order_items is order_items_base {
-  join: brand_synergy on ii.product.brand
+  -- join: brand_synergy on ii.product.brand
 
   query: top_brands is {
     top: 5
@@ -147,10 +147,10 @@ explore: order_items is order_items_base {
       top_products
       by_month
     ]
-    nest: synergistic_brands is {
-      group_by: brand_synergy.synergies.brand
-      aggregate: occurances is brand_synergy.synergies.occurances.sum()
-    }
+    -- nest: synergistic_brands is {
+    --   group_by: brand_synergy.synergies.brand
+    --   aggregate: occurances is brand_synergy.synergies.occurances.sum()
+    -- }
   }
 }
 

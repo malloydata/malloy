@@ -47,4 +47,43 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // console.log(result.data.toObject());
     expect(result.data.path(0, "state").value).toBe("WY");
   });
+
+  // Issue #149
+  it(`query from query  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        query: from(
+          table('malloytest.state_facts)->{group_by:state}
+          ) {
+            measure: state_count is count(distinct state)
+          }
+        -> {
+          aggregate: state_count
+        }
+    `
+      )
+      .run();
+    // console.log(result.data.toObject());
+    expect(result.data.path(0, "state").value).toBe("WY");
+  });
+
+  // issue #157
+  it(`explore - not -found  - ${databaseName}`, async () => {
+    // console.log(result.data.toObject());
+    let error;
+    try {
+      await runtime
+        .loadQuery(
+          `
+        explore: foo is table('malloytest.state_facts'){primary_key: state}
+        query: foox->{aggregate: c is count()}
+       `
+        )
+        .run();
+    } catch (e) {
+      error = e;
+    }
+    expect(error.toString()).not.toContain("Unknown Dialect");
+  });
 });
