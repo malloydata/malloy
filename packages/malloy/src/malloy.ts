@@ -940,7 +940,7 @@ export class Explore extends Entity {
               // field of type "date". Rather, they should be of type "number".
               if (
                 fieldDef.timeframe &&
-                ["day", "day_of_month", "day_of_week", "day_of_year"].includes(
+                ["day_of_month", "day_of_week", "day_of_year"].includes(
                   fieldDef.timeframe
                 )
               ) {
