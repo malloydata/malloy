@@ -14,7 +14,7 @@
 
 import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
-import { TestTranslator, pretty } from "./jest-factories";
+import { TestTranslator, pretty } from "./test-translator";
 
 const inspectCompile = false;
 
