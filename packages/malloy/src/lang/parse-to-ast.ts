@@ -968,4 +968,8 @@ export class MalloyToAST
     const url = this.stripQuotes(pcx.importURL().text);
     return this.astAt(new ast.ImportStatement(url, this.parse.sourceURL), pcx);
   }
+
+  visittJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
+    return this.getFieldExpr(pcx.fieldExpr());
+  }
 }

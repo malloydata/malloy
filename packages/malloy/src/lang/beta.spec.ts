@@ -86,7 +86,7 @@ expect.extend({
 
 class BetaExpression extends Testable {
   constructor(src: string) {
-    super(new TestTranslator(src, "fieldExpr"));
+    super(new TestTranslator(src, "malloyExpr"));
   }
 
   compile(): void {
@@ -318,6 +318,109 @@ describe("explore properties", () => {
       }
     `)
   );
+});
+
+describe("qops", () => {
+  test("group by single", modelOK("query: a->{ group_by: astring }"));
+  test(
+    "group by multiple",
+    modelOK("query: a->{ group_by: [astring,aninteger] }")
+  );
+  test("aggregate single", modelOK("query: a->{ aggregate: num is count() }"));
+  test(
+    "aggregate multiple",
+    modelOK(`
+      query: a->{
+        aggregate: [ num is count(), total is sum(aninteger) ]
+      }
+    `)
+  );
+  test("project ref", modelOK("query:ab->{ project: b.astring }"));
+  test("project *", modelOK("query:ab->{ project: * }"));
+  test("project def", modelOK("query:ab->{ project: one is 1 }"));
+  test(
+    "project multiple",
+    modelOK(`
+      query: a->{
+        project: [ one is 1, astring ]
+      }
+    `)
+  );
+  test("index single", modelOK("query:a->{index: astring}"));
+  test("index multiple", modelOK("query:a->{index: [astring,afloat]}"));
+  test("index star", modelOK("query:a->{index: *}"));
+  test("index by", modelOK("query:a->{index: * by aninteger}"));
+  test("top N", modelOK("query: a->{ top: 5; group_by: astring }"));
+  test(
+    "top N by field",
+    modelOK("query: a->{top: 5 by afloat; group_by: astring}")
+  );
+  test(
+    "top N by expression",
+    modelOK("query: ab->{top: 5 by acount; group_by: astring}")
+  );
+  test("limit N", modelOK("query: a->{ limit: 5; group_by: astring }"));
+  test(
+    "order by",
+    modelOK("query: a->{ order_by: afloat; group_by: astring }")
+  );
+  test(
+    "order by asc",
+    modelOK("query: a->{ order_by: afloat asc; group_by: astring }")
+  );
+  test(
+    "order by desc",
+    modelOK("query: a->{ order_by: afloat desc; group_by: astring }")
+  );
+  test(
+    "order by N",
+    modelOK("query: a->{ order_by: 1 asc; group_by: astring }")
+  );
+  test(
+    "order by multiple",
+    modelOK(`
+      query: a->{
+        order_by: [1 asc, afloat desc]
+        group_by: [ astring, afloat ]
+      }
+    `)
+  );
+  test(
+    "where single",
+    modelOK("query:a->{ group_by: astring; where: afloat > 10 }")
+  );
+  test(
+    "having single",
+    modelOK(
+      "query:ab->{ aggregate: acount; group_by: astring; having: acount > 10 }"
+    )
+  );
+  test(
+    "where multiple",
+    modelOK("query:a->{ group_by: astring; where: [afloat > 10,astring~'a%'] }")
+  );
+  test(
+    "nest single",
+    modelOK(`
+      query: a->{
+        group_by: aninteger
+        nest: nestbystr is { group_by: astring; aggregate: N is count() }
+      }
+    `)
+  );
+  test(
+    "nest multiple",
+    modelOK(`
+      query: a->{
+        group_by: aninteger
+        nest: [
+          nestbystr is { group_by: astring; aggregate: N is count() },
+          renest is { group_by: astring; aggregate: N is count() }
+        ]
+      }
+    `)
+  );
+  test("nest ref", modelOK("query: ab->{group_by: aninteger; nest: aturtle}"));
 });
 
 describe("expressions", () => {
