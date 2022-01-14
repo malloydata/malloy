@@ -46,7 +46,7 @@ export class ConnectionManager {
 
   constructor(initialConnectionsConfig: ConnectionConfig[]) {
     this._connections = new FixedConnectionMap(new Map());
-    this.buildConnectionMap(initialConnectionsConfig).then(map => {
+    this.buildConnectionMap(initialConnectionsConfig).then((map) => {
       this._connections = map;
     });
   }

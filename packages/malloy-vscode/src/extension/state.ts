@@ -13,13 +13,17 @@
 
 import { TextDocument, WebviewPanel } from "vscode";
 import * as vscode from "vscode";
-import { Result } from "@malloy-lang/malloy";
 import { ConnectionConfig, ConnectionManager } from "../common";
+import { Result } from "@malloy-lang/malloy";
+import {
+  QueryPanelMessage,
+  WebviewMessageManager,
+} from "./webview_message_manager";
 
-export function getConnectionsConfig() {
+export function getConnectionsConfig(): ConnectionConfig[] {
   return vscode.workspace
     .getConfiguration("malloy")
-    .get("connections") as ConnectionConfig[]
+    .get("connections") as ConnectionConfig[];
 }
 
 export const CONNECTION_MANAGER = new ConnectionManager(getConnectionsConfig());
@@ -27,6 +31,7 @@ export const CONNECTION_MANAGER = new ConnectionManager(getConnectionsConfig());
 export interface RunState {
   cancel: () => void;
   panel: WebviewPanel;
+  messages: WebviewMessageManager<QueryPanelMessage>;
   panelId: string;
   document: TextDocument;
   result?: Result;

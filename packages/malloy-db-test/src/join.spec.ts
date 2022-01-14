@@ -145,7 +145,7 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-          query: x is from(aircraft_models->{
+          query: from(aircraft_models->{
             group_by: m is manufacturer
             aggregate: num_models is count(*)
             }){
@@ -176,7 +176,7 @@ describe("join expression tests", () => {
       const result = await model
         .loadQuery(
           `
-      explore: foo is from(models-> manufacturer_models){
+      explore: foo is from(aircraft_models-> manufacturer_models){
         join: seats is from(aircraft_models->manufacturer_seats)
           on manufacturer
       }

@@ -14,6 +14,7 @@
 import { DataColumn, Field, Explore } from "@malloy-lang/malloy";
 import { StyleDefaults } from "../data_styles";
 import { ContainerRenderer } from "./container";
+import { yieldTask } from "./utils";
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -47,6 +48,7 @@ export class HTMLListRenderer extends ContainerRenderer {
       renderedItem += rendered;
       if (detailField) {
         const childRenderer = this.childRenderers[detailField.name];
+        await yieldTask();
         const rendered = await childRenderer.render(row.cell(detailField));
         renderedItem += ` (${rendered})`;
       }

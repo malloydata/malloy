@@ -74,6 +74,10 @@
       {
         "command": "malloy.showResultJSON",
         "title": "Show Result JSON"
+      },
+      {
+        "command": "malloy.editConnections",
+        "title": "Edit Connections"
       }
     ],
     "menus": {
@@ -81,6 +85,11 @@
         {
           "command": "malloy.refreshSchema",
           "when": "view == malloySchema",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.editConnections",
+          "when": "view == malloyConnections",
           "group": "navigation"
         }
       ],
@@ -111,6 +120,10 @@
         {
           "id": "malloySchema",
           "name": "Schema"
+        },
+        {
+          "id": "malloyConnections",
+          "name": "Connections"
         }
       ]
     },
@@ -177,6 +190,8 @@
     "@malloy-lang/render": "*",
     "@observablehq/plot": "^0.1.0",
     "keytar": "^7.7.0",
+    "react": "^17.0.2",
+    "styled-components": "^5.3.3",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
     "vega-lite": "4.17.0",
@@ -190,16 +205,22 @@
     "@types/jsdom": "^16.2.11",
     "@types/mocha": "^8.2.2",
     "@types/node": "^12.19.8",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "@types/styled-components": "^5.1.19",
     "@types/vscode": "1.56.0",
+    "@types/vscode-webview": "^1.57.0",
     "copy-webpack-plugin": "^9.0.1",
     "file-loader": "^6.2.0",
     "glob": "^7.1.7",
     "mocha": "^9.0.0",
     "node-loader": "^2.0.0",
+    "react-dom": "^17.0.2",
     "source-map-loader": "^3.0.0",
     "ts-loader": "^9.2.3",
-    "vsce": "^1.95.0",
+    "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
+    "vscode-webview": "^1.0.1-beta.1",
     "webpack": "^5.41.1",
     "webpack-cli": "^4.7.2"
   }

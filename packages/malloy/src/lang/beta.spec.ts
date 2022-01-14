@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2021 Google LLC
  *
@@ -13,7 +14,9 @@
 
 import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
-import { TestTranslator } from "./jest-factories";
+import { TestTranslator, pretty } from "./jest-factories";
+
+const inspectCompile = false;
 
 /*
  * Thinking of these tests as just "do things parse", there should maybe
@@ -53,7 +56,11 @@ class BetaModel extends Testable {
   }
 
   compile(): void {
-    const _compileTo = this.xlate.translate();
+    const compileTo = this.xlate.translate();
+    if (compileTo.translated && inspectCompile) {
+      console.log("MODEL: ", pretty(compileTo.translated.modelDef));
+      console.log("QUERIES: ", pretty(compileTo.translated.queryList));
+    }
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
 }
@@ -155,6 +162,18 @@ describe("top level definition", () => {
     modelOK(`
       query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
     `)
+  );
+
+  test("undefined explore does not throw", () => {
+    const m = new BetaModel("query: x->{ group_by: y }");
+    expect(m).not.toCompile();
+  });
+
+  test(
+    "query from explore from query",
+    modelOK(
+      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
+    )
   );
 });
 

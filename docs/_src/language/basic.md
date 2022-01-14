@@ -112,13 +112,16 @@ One of the main benefits of Malloy is the ability to save common calculations in
 add calculations for `county_and_state` and `airport_count`.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
 explore: airports is table('malloy-data.faa.airports'){
   dimension: county_and_state is concat(county, ', ', state)
   measure: airport_count is count()
   measure: average_elevation is avg(elevation)
 }
+```
 
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
 query: airports->{
   group_by:county_and_state
   aggregate: airport_count
