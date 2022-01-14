@@ -546,19 +546,6 @@ export class MalloyToAST
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
-  visitExploreRoot(pcx: parse.ExploreRootContext): ast.Mallobj {
-    let source = this.getExploreSource(pcx.exploreSource());
-    const refineCx = pcx.exploreProperties();
-    if (refineCx) {
-      source = this.astAt(
-        new ast.RefinedExplore(source, this.visitExploreProperties(refineCx)),
-        pcx
-      );
-    }
-
-    return source;
-  }
-
   visitFirstSegment(pcx: parse.FirstSegmentContext): ast.PipelineDesc {
     const qp = new ast.PipelineDesc();
     const nameCx = pcx.exploreQueryName();

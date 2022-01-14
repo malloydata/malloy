@@ -47,16 +47,12 @@ topLevelQueryDef
   ;
 
 query
-  : exploreRoot ARROW pipelineFromName              # exploreArrowQuery
+  : explore ARROW pipelineFromName              # exploreArrowQuery
   | ARROW queryName queryProperties? pipeElement*   # arrowQuery
   ;
 
 pipelineFromName
   : firstSegment pipeElement*
-  ;
-
-exploreRoot
-  : exploreSource exploreProperties?
   ;
 
 firstSegment
