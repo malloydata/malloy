@@ -799,28 +799,27 @@ export class MalloyToAST
 
     const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
 
-    // These require an expression ...
-    if (expr && pcx.aggregate().MIN()) {
+    if (pcx.aggregate().MIN()) {
       if (path) {
-        this.contextError(pcx, `Ignored ${path}. before min`);
+        this.contextError(pcx, `Path not legal for min()`);
+      } else if (expr) {
+        return new ast.ExprMin(expr);
+      } else {
+        this.contextError(pcx, "Missing expression for min");
       }
-      return new ast.ExprMin(expr);
-    }
-    if (expr && pcx.aggregate().MAX()) {
+    } else if (pcx.aggregate().MAX()) {
       if (path) {
-        this.contextError(pcx, `Ignored ${path}. before min`);
+        this.contextError(pcx, `Path not legal for max()`);
+      } else if (expr) {
+        return new ast.ExprMax(expr);
+      } else {
+        this.contextError(pcx, "Missing expression for max");
       }
-      return new ast.ExprMax(expr);
-    }
-
-    // The asymnetric functions have an optional expression
-    if (pcx.aggregate().AVG()) {
+    } else if (pcx.aggregate().AVG()) {
       return new ast.ExprAvg(expr, path);
-    }
-    if (pcx.aggregate().SUM()) {
+    } else if (pcx.aggregate().SUM()) {
       return new ast.ExprSum(expr, path);
     }
-    this.contextError(pcx, "Missing expression for aggregate function");
     return new ast.ExprNULL();
   }
 
