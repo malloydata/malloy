@@ -572,7 +572,7 @@ export class MalloyToAST
   }
 
   visitExploreArrowQuery(pcx: parse.ExploreArrowQueryContext): ast.FullQuery {
-    const root = this.visitExploreRoot(pcx.exploreRoot());
+    const root = this.visitExplore(pcx.explore());
     const queryPipe = this.visitPipelineFromName(pcx.pipelineFromName());
     return this.astAt(new ast.FullQuery(root, queryPipe), pcx);
   }
