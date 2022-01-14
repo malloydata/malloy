@@ -171,7 +171,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : OCURLY (exploreQueryDef COMMA?)* CCURLY
+  : OBRACK (exploreQueryDef COMMA?)* OBRACK
   | exploreQueryDef
   ;
 
