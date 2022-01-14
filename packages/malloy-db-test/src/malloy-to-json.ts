@@ -13,7 +13,7 @@
 /* eslint-disable no-console */
 import * as readline from "readline";
 import { Malloy, MalloyTranslator } from "@malloy-lang/malloy";
-import { pretty } from "@malloy-lang/malloy/src/lang/jest-factories";
+import { pretty } from "@malloy-lang/malloy/src/lang/test-translator";
 import { readFileSync } from "fs";
 
 /*

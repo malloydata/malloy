@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { TestTranslator } from "../jest-factories";
+import { TestTranslator } from "../test-translator";
 import { DocumentSymbol } from "./document-symbol-walker";
 
 class MalloyExplore {

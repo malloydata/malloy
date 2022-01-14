@@ -47,7 +47,7 @@ topLevelQueryDef
   ;
 
 query
-  : explore ARROW pipelineFromName              # exploreArrowQuery
+  : explore ARROW pipelineFromName                  # exploreArrowQuery
   | ARROW queryName queryProperties? pipeElement*   # arrowQuery
   ;
 
@@ -382,17 +382,11 @@ joinPath
   : joinName (DOT joinName)*
   ;
 
-joinField
-  : id
-  ;
+joinField: id;
+joinName: id;
+fieldName: id;
 
-joinName:
-  id
-  ;
-
-fieldName
-  : id
-  ;
+justExpr: fieldExpr EOF;
 
 json
   : jsonValue

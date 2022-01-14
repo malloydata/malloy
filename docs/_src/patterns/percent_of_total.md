@@ -9,31 +9,29 @@ flight performed by a particular carrier.
 ## Query for all flights ever made
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-explore flights
-| reduce
-  flight_count
+query: flights->{aggregate: flight_count}
 ```
 
 ## Query for Flights By Carrier
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
-explore flights
-| reduce
-  carriers.nickname
-  flight_count
+query: flights->{
+  group_by: carriers.nickname
+  aggregate: flight_count
+}
 ```
 
 ## In Malloy, can make both caculations at once with [*nested subtables*](nesting.md).
 The results are returned as a single row in a table with two columns, `flight_count` and `main_query`.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
-explore flights
-| reduce
-  flight_count
-  main_query is (reduce
-    carriers.nickname
-    flight_count
-  )
+query: flights->{
+  aggregate: flight_count
+  nest: main_query is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+  }
+}
 ```
 
 ## Use *project* to flatten the table and cross join
@@ -41,17 +39,19 @@ Using a pipeline with a `project` calculation to combine (essentially cross join
 We also add an additional column, the percentage of total calculation.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
-explore flights
-| reduce
-  flight_count
-  main_query is (reduce
-    carriers.nickname
-    flight_count
-  )
-| project
-  main_query.nickname
-  main_query.flight_count
-  flight_count_as_a_percent_of_total is main_query.flight_count/flight_count * 100.0
+query: flights->{
+  aggregate: flight_count
+  nest: main_query is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+  }
+}->{
+  project: [
+    main_query.nickname
+    main_query.flight_count
+    flight_count_as_a_percent_of_total is main_query.flight_count/flight_count * 100.0
+  ]
+}
 
 ```
 
@@ -59,15 +59,16 @@ explore flights
 We can use a wildcard against the nested query to to make this pattern easier to write.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
-explore flights
-| reduce
-  flight_count
-  main_query is (reduce
-    carriers.nickname
-    flight_count
-  )
-| project
-  main_query.*
-  flight_count_as_a_percent_of_total is main_query.flight_count/flight_count * 100.0
-
+query: flights->{
+  aggregate: flight_count
+  nest: main_query is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+  }
+}->{
+  project: [
+    main_query.*
+    flight_count_as_a_percent_of_total is main_query.flight_count/flight_count * 100.0
+  ]
+}
 ```
