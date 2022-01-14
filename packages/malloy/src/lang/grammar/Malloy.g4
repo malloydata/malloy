@@ -112,7 +112,6 @@ exploreStatement
   | MEASURE measureDefList             # defExploreMeasure
   | JOIN joinList                      # defExploreJoin
   | whereStatement                     # defExploreWhere
-  | havingStatement                    # defExploreHaving
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME fieldName IS fieldName      # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
@@ -172,7 +171,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : OCURLY (exploreQueryDef COMMA?)* CCURLY
+  : OBRACK (exploreQueryDef COMMA?)* CBRACK
   | exploreQueryDef
   ;
 

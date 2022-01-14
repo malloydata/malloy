@@ -28,21 +28,22 @@ When filtering a query's source, the filter applies to the whole query.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-explore flights : [distance > 1000]
-| reduce flight_count
+query: flights{where: distance > 1000}->{aggregate: flight_count}
 ```
 
-### Filtering a Query Stage
+### Filtering in a Query Stage
 
 A filter can also be applied to an individual query stage.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-explore flights
-| reduce carrier, flight_count
-| project : [carrier: 'UA' | 'AA']
-  carrier
-  flight_count
+query: flights->{
+  group_by: carrier
+  aggregate: flight_count
+}->{
+  where: carrier: 'UA' | 'AA'
+  project : [carrier, flight_count]
+}
 ```
 
 ### Filtering a Field
@@ -51,10 +52,12 @@ Individual fields or expressions may also be filtered. These expressions must be
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-explore flights
-| reduce
-  ca_flights is flight_count : [origin.state: 'CA']
-  ny_flights is count() : [origin.state: 'NY']
+query: flights->{
+  aggregate: [
+    ca_flights is flight_count{where: origin.state: 'CA'}
+    ny_flights is count(){where: origin.state: 'NY'}
+  ]
+}
 ```
 
 ## Common Patterns in Filters

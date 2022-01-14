@@ -124,8 +124,29 @@ function modelOK(s: string): TestFunc {
   };
 }
 
-describe("top level definition", () => {
-  test("explore", modelOK(`explore: testA is table('aTable')`));
+describe("model statements", () => {
+  test("explore table", modelOK(`explore: testA is table('aTable')`));
+  test(
+    "explore shorcut fitlered table",
+    modelOK(`
+      explore: testA is table('aTable') {? astring ~ 'a%' }
+    `)
+  );
+  test(
+    "explore fitlered table",
+    modelOK(`
+      explore: testA is table('aTable') { where: astring ~ 'a%' }
+    `)
+  );
+  test("explore explore", modelOK(`explore: testA is a`));
+  test(
+    "explore query",
+    modelOK(`explore: testA is from(a->{group_by: astring})`)
+  );
+  test(
+    "refine explore",
+    modelOK(`explore: aa is a { dimension: a is astring }`)
+  );
   test(
     "anonymous query",
     modelOK("query: table('aTable') -> { group_by: astring }")
@@ -135,16 +156,44 @@ describe("top level definition", () => {
     modelOK("query: name is table('aTable') -> { group_by: astring }")
   );
   test(
-    "query with filtered turtle",
+    "query from query",
+    modelOK(
+      `
+        query: q1 is ab->{ group_by: astring limit: 10 }
+        query: q2 is ->q1
+      `
+    )
+  );
+  test(
+    "query with refinements from query",
+    modelOK(
+      `
+        query: q1 is ab->{ group_by: astring limit: 10 }
+        query: q2 is ->q1 { aggregate: acount }
+      `
+    )
+  );
+  test(
+    "chained query operations",
+    modelOK(`
+      query: ab
+        -> { group_by: astring; aggregate: acount }
+        -> { top: 5; where: astring ~ 'a%' group_by: astring }
+    `)
+  );
+  test(
+    "query from explore from query",
+    modelOK(
+      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
+    )
+  );
+  test(
+    "query with shortcut filtered turtle",
     modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
   );
   test(
-    "refined turtle",
-    modelOK(`
-      explore: abNew is ab {
-        query: for1 is aturtle {? aninteger = 1 }
-      }
-    `)
+    "query with filtered turtle",
+    modelOK("query: allA is ab->aturtle { where: astring ~ 'a%' }")
   );
   test(
     "nest: in group_by:",
@@ -168,12 +217,106 @@ describe("top level definition", () => {
     const m = new BetaModel("query: x->{ group_by: y }");
     expect(m).not.toCompile();
   });
+});
 
+describe("explore properties", () => {
+  test("single dimension", modelOK("explore: aa is a { dimension: x is 1 }"));
   test(
-    "query from explore from query",
-    modelOK(
-      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
-    )
+    "multiple dimensions",
+    modelOK(`
+      explore: aa is a {
+        dimension: [
+          x is 1
+          y is 2
+        ]
+      }
+    `)
+  );
+  test("single measure", modelOK("explore: aa is a { measure: x is count() }"));
+  test(
+    "multiple measures",
+    modelOK(`
+      explore: aa is a {
+        dimension: [
+          x is count()
+          y is x * x
+        ]
+      }
+    `)
+  );
+  test("single where", modelOK("explore: aa is a { where: aninteger > 10 }"));
+  test(
+    "multiple where",
+    modelOK(`
+      explore: aa is a {
+        where: [
+          aninteger > 10,
+          afloat < 1000
+        ]
+      }
+    `)
+  );
+  test("simple join", modelOK("explore: nab is a { join: b on astring }"));
+  test("inverse join", modelOK("explore: nab is a { join: b on b.astring }"));
+  test("is join", modelOK("explore: nab is a { join: nb is b on astring }"));
+  test(
+    "multiple joins",
+    modelOK(`
+      explore: nab is a {
+        join: [
+          b on astring,
+          br is b on b.astring
+        ]
+      }
+    `)
+  );
+  test("primary_key", modelOK("explore: c is a { primary_key: aninteger }"));
+  test("rename", modelOK("explore: c is a { rename: anint is aninteger }"));
+  test("accept single", modelOK("explore: c is a { accept: astring }"));
+  test(
+    "accept multi",
+    modelOK("explore: c is a { accept: [ astring, afloat ] }")
+  );
+  test("except single", modelOK("explore: c is a { except: astring }"));
+  test(
+    "except multi",
+    modelOK("explore: c is a { except: [ astring, afloat ] }")
+  );
+  test(
+    "explore-query",
+    modelOK("explore: c is a {query: q is { group_by: astring }}")
+  );
+  test(
+    "refined explore-query",
+    modelOK(`
+      explore: abNew is ab {
+        query: for1 is aturtle {? aninteger = 1 }
+      }
+    `)
+  );
+  test(
+    "chained explore-query",
+    modelOK(`
+      explore: c is a {
+        query: chain is {
+          group_by: astring
+        } -> {
+          top: 10; order_by: astring
+          project: *
+        }
+      }
+    `)
+  );
+  test(
+    "multiple explore-query",
+    modelOK(`
+      explore: abNew is ab {
+        query: [
+          q1 is { group_by: astring },
+          q2 is { group_by: aninteger }
+        ]
+      }
+    `)
   );
 });
 

@@ -6,13 +6,14 @@ When a named query is nested inside of another query, it produces an aggregating
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
-explore airports | reduce
-  state
-  airport_count
-  by_facility is (reduce
-    fac_type
-    airport_count
-  )
+query: airports->{
+  group_by: state
+  aggregate: airport_count
+  nest:by_facility is {
+    group_by: fac_type
+    aggregate: airport_count
+  }
+}
 ```
 
 ## Nesting Nested Queries
@@ -21,18 +22,19 @@ Aggregating subqueries can be nested infinitely, meaning that a nested query can
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-explore airports
-| reduce
-  state
-  airport_count
-  top_5_counties is (reduce top 5
-    county
-    airport_count
-    by_facility is (reduce
-      fac_type
-      airport_count
-    )
-  )
+query: airports->{
+  group_by: state
+  aggregate: airport_count
+  nest: top_5_counties is {
+    top: 5
+    group_by: county
+    aggregate: airport_count
+    nest: by_facility is {
+      group_by: fac_type
+      aggregate: airport_count
+    }
+  }
+}
 ```
 
 ## Filtering Nested Queries
@@ -41,19 +43,22 @@ Filters can be applied at any level within nested queries.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-explore airports
-| reduce : [state : 'CA'|'NY'|'MN']
-  state
-  airport_count
-  top_5_counties is (reduce top 5
-    county
-    airport_count
-    major_facilities is (reduce : [major:'Y']
-      name is concat(code, ' - ', full_name)
-    )
-    by_facility is (reduce
-      fac_type
-      airport_count
-    )
-  )
+query: airports->{
+  where: state: 'CA'|'NY'|'MN'
+  group_by: state
+  aggregate: airport_count
+  nest: top_5_counties is {
+    top: 5
+    group_by: county
+    aggregate: airport_count
+    nest: major_facilities is {
+      where: major:'Y'
+      group_by: name is concat(code, ' - ', full_name)
+    }
+    nest: by_facility is {
+      group_by: fac_type
+      aggregate: airport_count
+    }
+  }
+}
 ```
