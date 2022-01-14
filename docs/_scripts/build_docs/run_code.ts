@@ -85,12 +85,18 @@ async function fetchFile(uri: string) {
 class DocsURLReader implements URLReader {
   private dataStyles: DataStyles = {};
   private readonly modelPath: string;
+  private readonly inMemoryURLs: Map<string, string>;
 
-  constructor(modelPath: string) {
+  constructor(modelPath: string, inMemoryURLs: Map<string, string>) {
     this.modelPath = modelPath;
+    this.inMemoryURLs = inMemoryURLs;
   }
 
   async readURL(url: URL): Promise<string> {
+    const inMemoryURL = this.inMemoryURLs.get(url.toString());
+    if (inMemoryURL !== undefined) {
+      return inMemoryURL;
+    }
     const contents = await fetchFile(url.toString());
     addDependency(this.modelPath, url.toString().replace(/^file:\/\//, ""));
     this.dataStyles = {
@@ -110,6 +116,19 @@ const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
   pageSize: 5,
 });
 
+function resolveSourcePath(sourcePath: string) {
+  return `file://${path.resolve(path.join(SAMPLES_PATH, sourcePath))}`;
+}
+
+function mapKeys<KA, V, KB>(
+  map: Map<KA, V>,
+  mapKey: (key: KA) => KB
+): Map<KB, V> {
+  return new Map(
+    [...map.entries()].map(([key, value]) => [mapKey(key), value])
+  );
+}
+
 /*
  * Run a `query` appearing within a document at `documentPath` with `options`,
  * and render the result as a string (HTML).
@@ -117,9 +136,13 @@ const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
 export async function runCode(
   query: string,
   documentPath: string,
-  options: RunOptions
+  options: RunOptions,
+  inlineModels: Map<string, string>
 ): Promise<string> {
-  const urlReader = new DocsURLReader(documentPath);
+  const urlReader = new DocsURLReader(
+    documentPath,
+    mapKeys(inlineModels, resolveSourcePath)
+  );
   const runtime = new Runtime(urlReader, BIGQUERY_CONNECTION);
   // Here, we assume that docs queries that reference a model only care about
   // things _exported_ from that model. In other words, a query with
@@ -134,9 +157,7 @@ export async function runCode(
   // it may be a good idea to force something to be exported if it needs to be
   // queried in a docs snippet.
   const fullQuery = options.source
-    ? `import "file://${path.resolve(
-        path.join(SAMPLES_PATH, options.source)
-      )}"\n${query}`
+    ? `import "${resolveSourcePath(options.source)}"\n${query}`
     : query;
 
   const querySummary = `"${query.split("\n").join(" ").substring(0, 50)}..."`;

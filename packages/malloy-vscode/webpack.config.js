@@ -84,6 +84,10 @@ const config = [
             from: "src/media/play.svg",
             to: "src/media/play.svg",
           },
+          {
+            from: "../../README.md",
+            to: "README.md",
+          },
         ],
       }),
     ],
