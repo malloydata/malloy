@@ -890,6 +890,7 @@ function getRefinedFields(
 interface QueryExecutor {
   execute(qp: QueryProperty): void;
   finalize(refineFrom: model.PipeSegment | undefined): model.PipeSegment;
+  outputFS: QueryFieldSpace;
 }
 
 class ReduceExecutor implements QueryExecutor {
@@ -1181,6 +1182,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   getOp(inputFS: FieldSpace): OpDesc {
     const qex = this.getExecutor(inputFS);
+    qex.outputFS.astEl = this;
     for (const qp of this.list) {
       qex.execute(qp);
     }

@@ -165,7 +165,8 @@ describe("top level definition", () => {
   );
 
   test("undefined explore does not throw", () => {
-    expect(modelOK("query: x->{ group_by: y }")).not.toThrow(Error);
+    const m = new BetaModel("query: x->{ group_by: y }");
+    expect(m).not.toCompile();
   });
 
   test(
