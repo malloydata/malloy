@@ -27,22 +27,6 @@ const inspectCompile = false;
 
 abstract class Testable extends TestTranslator {
   abstract compile(): void;
-
-  hasErrors(): boolean {
-    const t = this.translate();
-    if (t.final && (t.errors === undefined || t.errors.length === 0)) {
-      return false;
-    }
-    return true;
-  }
-
-  errReport(): string {
-    const t = this.translate();
-    if (t.errors) {
-      return this.prettyErrors();
-    }
-    return "no errors to report";
-  }
 }
 
 class BetaModel extends Testable {
@@ -110,7 +94,7 @@ class BetaExpression extends Testable {
       } else {
         throw new Error("Can't get simple namespace for expression tests");
       }
-    } else if (this.hasErrors()) {
+    } else if (this.logger.hasErrors()) {
       return;
     } else {
       const whatIsIt = exprAst?.toString() || "NO AST GENERATED";
