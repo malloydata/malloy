@@ -25,16 +25,11 @@ const inspectCompile = false;
  * and make sure they parse to ast and the ast generates something
  */
 
-abstract class Testable {
-  xlate: TestTranslator;
-  constructor(x: TestTranslator) {
-    this.xlate = x;
-  }
-
+abstract class Testable extends TestTranslator {
   abstract compile(): void;
 
   hasErrors(): boolean {
-    const t = this.xlate.translate();
+    const t = this.translate();
     if (t.final && (t.errors === undefined || t.errors.length === 0)) {
       return false;
     }
@@ -42,9 +37,9 @@ abstract class Testable {
   }
 
   errReport(): string {
-    const t = this.xlate.translate();
+    const t = this.translate();
     if (t.errors) {
-      return this.xlate.prettyErrors();
+      return this.prettyErrors();
     }
     return "no errors to report";
   }
@@ -52,11 +47,11 @@ abstract class Testable {
 
 class BetaModel extends Testable {
   constructor(s: string) {
-    super(new TestTranslator(s));
+    super(s);
   }
 
   compile(): void {
-    const compileTo = this.xlate.translate();
+    const compileTo = this.translate();
     if (compileTo.translated && inspectCompile) {
       console.log("MODEL: ", pretty(compileTo.translated.modelDef));
       console.log("QUERIES: ", pretty(compileTo.translated.queryList));
@@ -70,29 +65,46 @@ declare global {
   namespace jest {
     interface Matchers<R> {
       toCompile(): R;
+      toBeErrorless(): R;
     }
   }
+}
+
+function checkForErrors(trans: Testable) {
+  if (trans.logger === undefined) {
+    throw new Error("JESTERY BROKEN, CANT FIND ERORR LOG");
+  }
+  if (trans.logger.hasErrors()) {
+    return {
+      message: () => `Translation Errors:\n${trans.prettyErrors()}`,
+      pass: false,
+    };
+  }
+  return {
+    message: () => "Translation resulted in no errors",
+    pass: true,
+  };
 }
 
 expect.extend({
   toCompile: function (x: Testable) {
     x.compile();
-    if (x.hasErrors()) {
-      return { message: () => x.errReport(), pass: false };
-    }
-    return { message: () => "No errors", pass: true };
+    return checkForErrors(x);
+  },
+  toBeErrorless: function (trans: Testable) {
+    return checkForErrors(trans);
   },
 });
 
 class BetaExpression extends Testable {
   constructor(src: string) {
-    super(new TestTranslator(src, "justExpr"));
+    super(src, "justExpr");
   }
 
   compile(): void {
-    const exprAst = this.xlate.ast();
+    const exprAst = this.ast();
     if (exprAst instanceof ExpressionDef) {
-      const aStruct = this.xlate.internalModel.contents.ab;
+      const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
         const _exprDef = exprAst.getExpression(new StructSpace(aStruct));
       } else {
@@ -125,97 +137,135 @@ function modelOK(s: string): TestFunc {
 }
 
 describe("model statements", () => {
-  test("explore table", modelOK(`explore: testA is table('aTable')`));
-  test(
-    "explore shorcut fitlered table",
-    modelOK(`
-      explore: testA is table('aTable') {? astring ~ 'a%' }
-    `)
-  );
-  test(
-    "explore fitlered table",
-    modelOK(`
-      explore: testA is table('aTable') { where: astring ~ 'a%' }
-    `)
-  );
-  test("explore explore", modelOK(`explore: testA is a`));
-  test(
-    "explore query",
-    modelOK(`explore: testA is from(a->{group_by: astring})`)
-  );
-  test(
-    "refine explore",
-    modelOK(`explore: aa is a { dimension: a is astring }`)
-  );
-  test(
-    "anonymous query",
-    modelOK("query: table('aTable') -> { group_by: astring }")
-  );
-  test(
-    "query",
-    modelOK("query: name is table('aTable') -> { group_by: astring }")
-  );
-  test(
-    "query from query",
-    modelOK(
-      `
-        query: q1 is ab->{ group_by: astring limit: 10 }
-        query: q2 is ->q1
-      `
-    )
-  );
-  test(
-    "query with refinements from query",
-    modelOK(
-      `
-        query: q1 is ab->{ group_by: astring limit: 10 }
-        query: q2 is ->q1 { aggregate: acount }
-      `
-    )
-  );
-  test(
-    "chained query operations",
-    modelOK(`
-      query: ab
-        -> { group_by: astring; aggregate: acount }
-        -> { top: 5; where: astring ~ 'a%' group_by: astring }
-    `)
-  );
-  test(
-    "query from explore from query",
-    modelOK(
-      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
-    )
-  );
-  test(
-    "query with shortcut filtered turtle",
-    modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
-  );
-  test(
-    "query with filtered turtle",
-    modelOK("query: allA is ab->aturtle { where: astring ~ 'a%' }")
-  );
-  test(
-    "nest: in group_by:",
-    modelOK(`
-      query: ab -> {
-        group_by: astring;
-        nest: nested_count is {
-          aggregate: acount
+  describe("explore:", () => {
+    test("explore table", modelOK(`explore: testA is table('aTable')`));
+    test(
+      "explore shorcut fitlered table",
+      modelOK(`
+        explore: testA is table('aTable') {? astring ~ 'a%' }
+      `)
+    );
+    test(
+      "explore fitlered table",
+      modelOK(`
+        explore: testA is table('aTable') { where: astring ~ 'a%' }
+      `)
+    );
+    test("explore explore", modelOK(`explore: testA is a`));
+    test(
+      "explore query",
+      modelOK(`explore: testA is from(a->{group_by: astring})`)
+    );
+    test(
+      "refine explore",
+      modelOK(`explore: aa is a { dimension: a is astring }`)
+    );
+    test("undefined explore does not throw", () => {
+      const m = new BetaModel("query: x->{ group_by: y }");
+      expect(m).not.toCompile();
+    });
+  });
+  describe("query:", () => {
+    test(
+      "anonymous query",
+      modelOK("query: table('aTable') -> { group_by: astring }")
+    );
+    test(
+      "query",
+      modelOK("query: name is table('aTable') -> { group_by: astring }")
+    );
+    test(
+      "query from query",
+      modelOK(
+        `
+          query: q1 is ab->{ group_by: astring limit: 10 }
+          query: q2 is ->q1
+        `
+      )
+    );
+    test(
+      "query with refinements from query",
+      modelOK(
+        `
+          query: q1 is ab->{ group_by: astring limit: 10 }
+          query: q2 is ->q1 { aggregate: acount }
+        `
+      )
+    );
+    test(
+      "chained query operations",
+      modelOK(`
+        query: ab
+          -> { group_by: astring; aggregate: acount }
+          -> { top: 5; where: astring ~ 'a%' group_by: astring }
+      `)
+    );
+    test(
+      "query from explore from query",
+      modelOK(
+        `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
+      )
+    );
+    test(
+      "query with shortcut filtered turtle",
+      modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
+    );
+    test(
+      "query with filtered turtle",
+      modelOK("query: allA is ab->aturtle { where: astring ~ 'a%' }")
+    );
+    test(
+      "nest: in group_by:",
+      modelOK(`
+        query: ab -> {
+          group_by: astring;
+          nest: nested_count is {
+            aggregate: acount
+          }
         }
-      }
-    `)
-  );
-  test(
-    "reduce pipe project",
-    modelOK(`
-      query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
-    `)
-  );
-
-  test("undefined explore does not throw", () => {
-    const m = new BetaModel("query: x->{ group_by: y }");
-    expect(m).not.toCompile();
+      `)
+    );
+    test(
+      "reduce pipe project",
+      modelOK(`
+        query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+      `)
+    );
+  });
+  describe("import:", () => {
+    test("simple import", () => {
+      const docParse = new BetaModel(`import "child"`);
+      const xr = docParse.unresolved();
+      expect(docParse).toBeErrorless();
+      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      docParse.update({
+        urls: { "internal://test/child": "explore: aa is a" },
+      });
+      const yr = docParse.unresolved();
+      expect(yr).toBeNull();
+    });
+    test("missing import", () => {
+      const docParse = new BetaModel(`import "child"`);
+      const xr = docParse.unresolved();
+      expect(docParse).toBeErrorless();
+      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      const reportedError = "ENOWAY: No way to find your child";
+      docParse.update({
+        errors: { urls: { "internal://test/child": reportedError } },
+      });
+      docParse.translate();
+      expect(docParse).not.toBeErrorless();
+      expect(docParse.prettyErrors()).toContain(reportedError);
+    });
+    test("chained imports", () => {
+      const docParse = new BetaModel(`import "child"`);
+      docParse.update({
+        urls: { "internal://test/child": `import "grandChild"` },
+      });
+      const xr = docParse.unresolved();
+      expect(docParse).toBeErrorless();
+      expect(xr).toEqual({ urls: ["internal://test/grandChild"] });
+    });
   });
 });
 
