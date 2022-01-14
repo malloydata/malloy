@@ -124,8 +124,17 @@ function modelOK(s: string): TestFunc {
   };
 }
 
-describe("top level definition", () => {
-  test("explore", modelOK(`explore: testA is table('aTable')`));
+describe("model statements", () => {
+  test("explore table", modelOK(`explore: testA is table('aTable')`));
+  test("explore explore", modelOK(`explore: testA is a`));
+  test(
+    "explore query",
+    modelOK(`explore: testA is from(a->{group_by: astring})`)
+  );
+  test(
+    "refine explore",
+    modelOK(`explore: aa is a { dimension: a is astring }`)
+  );
   test(
     "anonymous query",
     modelOK("query: table('aTable') -> { group_by: astring }")
@@ -133,6 +142,21 @@ describe("top level definition", () => {
   test(
     "query",
     modelOK("query: name is table('aTable') -> { group_by: astring }")
+  );
+  test(
+    "query from query",
+    modelOK(
+      `
+        query: q1 is ab->{ group_by: astring limit: 10 }
+        query: q2 is ->q1
+      `
+    )
+  );
+  test(
+    "query from explore from query",
+    modelOK(
+      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
+    )
   );
   test(
     "query with filtered turtle",
@@ -168,13 +192,6 @@ describe("top level definition", () => {
     const m = new BetaModel("query: x->{ group_by: y }");
     expect(m).not.toCompile();
   });
-
-  test(
-    "query from explore from query",
-    modelOK(
-      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
-    )
-  );
 });
 
 describe("expressions", () => {
