@@ -73,15 +73,16 @@ export const aTableDef: StructDef = {
   structSource: { type: "table" },
   structRelationship: { type: "basetable", connectionName: "test" },
   fields: [
-    { type: "string", name: "astring" },
-    { type: "number", name: "afloat", numberType: "float" },
-    { type: "number", name: "aninteger", numberType: "integer" },
-    { type: "date", name: "adate" },
-    { type: "timestamp", name: "atimestamp" },
+    { type: "string", name: "astr" },
+    { type: "number", name: "af", numberType: "float" },
+    { type: "number", name: "ai", numberType: "integer" },
+    { type: "date", name: "ad" },
+    { type: "boolean", name: "abool" },
+    { type: "timestamp", name: "ats" },
   ],
 };
 
-export function mkStruct(name: string, primaryKey = "astring"): StructDef {
+export function mkStruct(name: string, primaryKey = "astr"): StructDef {
   return {
     ...cloneDeep(aTableDef),
     primaryKey: primaryKey,
@@ -200,18 +201,18 @@ export class TestTranslator extends MalloyTranslator {
     name: testURI,
     exports: [],
     contents: {
-      a: { ...aTableDef, primaryKey: "astring", as: "a" },
-      b: { ...aTableDef, primaryKey: "astring", as: "b" },
+      a: { ...aTableDef, primaryKey: "astr", as: "a" },
+      b: { ...aTableDef, primaryKey: "astr", as: "b" },
       ab: {
         ...aTableDef,
         as: "ab",
-        primaryKey: "astring",
+        primaryKey: "astr",
         fields: [
           ...aTableDef.fields,
           {
             ...aTableDef,
             as: "b",
-            structRelationship: { type: "foreignKey", foreignKey: "astring" },
+            structRelationship: { type: "foreignKey", foreignKey: "astr" },
           },
           {
             type: "number",
@@ -227,7 +228,7 @@ export class TestTranslator extends MalloyTranslator {
             pipeline: [
               {
                 type: "reduce",
-                fields: ["astring", "acount"],
+                fields: ["astr", "acount"],
               },
             ],
           },
