@@ -12,7 +12,7 @@ footer: /generated/footers/language/query.html
       </h1>
     <p>The basic syntax for a query in Malloy consists of a source
 and a "pipeline" of one or more <em>stages</em> seperated by a vertical bar (or "pipe"). The shape of the data defined in the original explore is transformed by each stage.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span> carrier<span class="token punctuation">,</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{ <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> }</pre>
       <h2>
         <a id="sources" class="header-link anchor" href="#sources">
           Sources
