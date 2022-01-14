@@ -29,15 +29,21 @@ import {
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { MalloyToAST } from "./src_to_ast";
+import { MalloyToAST } from "./parse-to-ast";
 import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
-import { passForHighlights, DocumentHighlight } from "./highlighter";
 import {
   DocumentSymbol,
   walkForDocumentSymbols,
 } from "./parse-tree-walkers/document-symbol-walker";
+
+import {
+  DocumentHighlight,
+  walkForDocumentHighlights,
+  passForHighlights,
+  sortHighlights,
+} from "./parse-tree-walkers/document-highlight-walker";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
   constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
@@ -73,6 +79,7 @@ export interface ParseMalloy {
   sourceURL: string;
   root: ParseTree;
   tokens: CommonTokenStream;
+  malloyVersion: string;
 }
 
 function runParser(
@@ -100,6 +107,7 @@ function runParser(
     sourceURL: sourceURL,
     root: parseFunc.call(malloyParser) as ParseTree,
     tokens: tokenStream,
+    malloyVersion: "0.2.0-beta",
   };
 }
 
@@ -172,7 +180,7 @@ export abstract class MalloyTranslation {
     this.modelDef = {
       name: sourceURL,
       exports: [],
-      structs: {},
+      contents: {},
     };
   }
 
@@ -199,9 +207,10 @@ export abstract class MalloyTranslation {
         const _checkFull = new URL(this.sourceURL);
         this.urlIsFullPath = true;
       } catch (e) {
+        const msg = e instanceof Error ? e.message : "";
         this.urlIsFullPath = false;
         this.root.logger.log({
-          message: `Could not compute full path URL: ${e.message}`,
+          message: `Could not compute full path URL: ${msg}`,
           sourceURL: this.sourceURL,
         });
       }
@@ -379,13 +388,14 @@ export abstract class MalloyTranslation {
     if (mustResolve) {
       return mustResolve;
     }
-    const parse = this.getParseResponse()?.parse;
+    const parseResponse = this.getParseResponse();
     // Errors in self or children will show up here ..
     if (this.root.logger.hasErrors()) {
       this.astResponse = this.fatalErrors();
       return this.astResponse;
     }
 
+    const parse = parseResponse.parse;
     if (!parse) {
       throw new Error(
         "TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser"
@@ -418,7 +428,7 @@ export abstract class MalloyTranslation {
       child.translate();
       const exports: NamedStructDefs = {};
       for (const fromChild of child.modelDef.exports) {
-        const modelEntry = child.modelDef.structs[fromChild];
+        const modelEntry = child.modelDef.contents[fromChild];
         if (modelEntry.type === "struct") {
           exports[fromChild] = modelEntry;
         }
@@ -447,9 +457,21 @@ export abstract class MalloyTranslation {
         } catch {
           // Do nothing, symbols already `undefined`
         }
+        let walkHighlights: DocumentHighlight[];
+        try {
+          walkHighlights = walkForDocumentHighlights(
+            tryParse.parse.tokens,
+            tryParse.parse.root
+          );
+        } catch {
+          walkHighlights = [];
+        }
         this.metadataResponse = {
           symbols,
-          highlights: passForHighlights(tryParse.parse.tokens),
+          highlights: sortHighlights([
+            ...passForHighlights(tryParse.parse.tokens),
+            ...walkHighlights,
+          ]),
           final: true,
         };
       }
@@ -471,6 +493,7 @@ export abstract class MalloyTranslation {
       return this.translateResponse;
     }
 
+    astResponse.ast.setTranslator(this);
     if (this.grammarRule === "malloyDocument") {
       if (astResponse.ast instanceof ast.Document) {
         const doc = astResponse.ast;

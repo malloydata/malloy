@@ -6,22 +6,23 @@ tables in a database, constant values to be used in later analyis, computed metr
 
 ## Defining Fields
 
-Fields are defined in the same way whether part of an
+Fields are defined in explores are reusable and are `dimension`, `measures` or `query`.  When these are used in a query, these fields are `project`, `group_by`, `aggregate` or `nest`.   The definitions are the same way whether part of an
 explore or a query stage. In either case, they are defined using the `is` keyword.
 
 **In an explore**
 
 ```malloy
-define users is (explore 'malloy-data.ecomm.users'
-  age_in_dog_years is age * 7
-);
+explore users is table('malloy-data.ecomm.users'){
+  dimension: age_in_dog_years is age * 7
+}
 ```
 
 **In a query stage**
 
 ```malloy
-users | reduce
-  age_in_dog_years is age * 7
+query: users->{
+  group_by: age_in_dog_years is age * 7
+}
 ```
 
 The right hand side of this kind of definition can be any
@@ -34,12 +35,13 @@ subquery." See the [Nesting](nesting.md) section for a
 detailed discussion of nested queries.
 
 ```malloy
-flights | reduce
-  carrier
-  by_month is (reduce
-    departure_month is dep_time.month
-    flight_count is count()
-  )
+query: flights->{
+  group_by: carrier
+  nest: by_month is {
+    group_by: departure_month is dep_time.month
+    aggregate: flight_count is count()
+  }
+}
 ```
 
 ## Field Names
@@ -59,9 +61,9 @@ Dimensions are defined using expressions that contain no
 aggregate functions.
 
 ```malloy
-define users is (explore 'malloy-data.ecomm.users'
-  full_name is concat(first_name, ' ', last_name)
-);
+expore users is table('malloy-data.ecomm.users'){
+  dimension: full_name is concat(first_name, ' ', last_name)
+}
 ```
 
 Dimensions may be used in both `reduce` and `project`
@@ -69,12 +71,16 @@ queries.
 
 ```malloy
 -- Show the top 10 full names by number of occurrances
-users | reduce top 10
-  full_name
-  occurances is count()
+query: users->{
+  top: 10
+  group_by: full_name
+  aggregate: occurances is count()
+}
 
 -- Show 10 users' full names
-users | project limit 10 full_name
+query: users->{
+  project full_name
+  limit: 10     // top and limit are synonyms
 ```
 
 ### Measures
@@ -85,11 +91,12 @@ multiple records.
 Measures may not be used in `project` queries. However, any measures that appear in a `reduce` query stage are "dimensionalized" as part of the query, and are therefore usable as dimensions in subsequent stages.
 
 ```malloy
-flights
-  | reduce
-    carrier
-    flight_count is count()
-  | project flight_count
+query: flights->{
+  group_by: carrier
+  aggregate: flight_count is count()
+} -> {
+  project: flight_count
+}
 ```
 
 ### Queries
@@ -98,20 +105,23 @@ Queries represent a pipelined data transformation including a source and one or 
 their source is implicit.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
-  by_carrier is (reduce
-    carrier
-    flight_count is count()
-  )
-);
+explore flights is table('malloy-data.faa.flights'){
+  query: by_carrier is {
+    group_by: carrier
+    aggregate: flight_count is count()
+  }
+}
 ```
 
 A named query's pipeline can always begin with another named query.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
+explore flights is table('malloy-data.faa.flights'){
   ...
-  top_carriers is (by_carrier | project carrier limit 5)
+  query: top_carriers is by_carrier->{
+    project: carrier
+    limit: 5
+  }
 );
 ```
 

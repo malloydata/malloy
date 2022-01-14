@@ -33,7 +33,8 @@ import {
   NamedStructDefs,
   Connection,
 } from "@malloy-lang/malloy";
-import { parseTableURL } from "@malloy-lang/malloy/src/malloy";
+import { parseTableURL } from "@malloy-lang/malloy";
+import { PooledConnection } from "@malloy-lang/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -151,6 +152,10 @@ export class BigQueryConnection extends Connection {
     } else {
       return options;
     }
+  }
+
+  public isPool(): this is PooledConnection {
+    return false;
   }
 
   public async runSQL(

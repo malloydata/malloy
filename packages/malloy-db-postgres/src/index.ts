@@ -11,4 +11,7 @@
  * GNU General Public License for more details.
  */
 
-export { PostgresConnection } from "./postgres_connection";
+export {
+  PostgresConnection,
+  PooledPostgresConnection,
+} from "./postgres_connection";

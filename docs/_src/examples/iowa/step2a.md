@@ -22,14 +22,11 @@ Notice that the greatest sales by dollar volume is *Hawkeye Vodka*, closely foll
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-explore iowa : [category_name: ~ r'VODKA']
-| reduce top 5
-  vendor_name
-  item_description
-  total_sale_dollars
-  total_bottles
-  avg_price_per_100ml
-
+query: iowa { where: category_name ~ r'VODKA' } -> {
+  top: 5
+  group_by: [ vendor_name, item_description ]
+  aggregate: [ total_sale_dollars, total_bottles, avg_price_per_100ml ]
+}
 ```
 
 ## Adding a Query to the model.
@@ -59,9 +56,7 @@ Once the query is in the model we can simply call it by name, adjusting our filt
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
-explore iowa : [category_name: ~ r'TEQUILA']
-| top_sellers_by_revenue
-
+query: iowa { where: category_name ~ r'TEQUILA' } -> top_sellers_by_revenue
 ```
 
 Here we can see that *Patron Tequila Silver* is the most premium brand, followed by *Jose Cuervo* as a mid-tier  brand, with *Juarez Tequila Gold* more of an economy brand.
@@ -72,13 +67,11 @@ The magic happens when we call a named query in the same way we would use any ot
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
-explore iowa : [category_name: ~ r'TEQUILA']
-| reduce
-  vendor_name
-  total_sale_dollars
-  avg_price_per_100ml
-  top_sellers_by_revenue -- entire query is a field
-
+query: iowa { where: category_name ~ r'TEQUILA' } -> {
+  group_by: vendor_name
+  aggregate: [ total_sale_dollars, avg_price_per_100ml ]
+  nest: top_sellers_by_revenue -- entire query is a field
+}
 ```
 
 These nested subtables allow us to view both the high-level information of "who are our top vendors" as well as the supporting detail in one simple Malloy query.
@@ -90,9 +83,8 @@ At the top we see our lowest cost options at under $1/mL, with the more pricey b
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
-explore iowa : [category_name: ~ r'TEQUILA']
-| reduce
-  price_per_100ml_bucket is floor(price_per_100ml),
-  top_sellers_by_revenue
-
+query: iowa { where: category_name ~ r'TEQUILA' } -> {
+  group_by: price_per_100ml_bucket is floor(price_per_100ml)
+  nest: top_sellers_by_revenue
+}
 ```

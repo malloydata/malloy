@@ -248,8 +248,8 @@ function getIconPath(fieldType: string, isAggregate: boolean) {
 export function runTurtleFromSchemaCommand(fieldItem: FieldItem): void {
   vscode.commands.executeCommand(
     "malloy.runQuery",
-    `explore ${fieldItem.topLevelExplore} | ${fieldItem.accessPath.join(".")}`,
-    `${fieldItem.topLevelExplore} | ${fieldItem.accessPath.join(".")}`
+    `query: ${fieldItem.topLevelExplore}->${fieldItem.accessPath.join(".")}`,
+    `${fieldItem.topLevelExplore}->${fieldItem.accessPath.join(".")}`
   );
 }
 

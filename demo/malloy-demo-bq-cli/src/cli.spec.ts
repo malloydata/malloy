@@ -14,10 +14,10 @@ import { InMemoryURLReader } from "@malloy-lang/malloy";
 import { run, pathToURL } from "./index";
 
 const unModeledQuery =
-  "'malloy-data.malloytest.flights' | reduce flight_count is count()";
-const modeledQuery = "flights | reduce flight_count";
+  "query: table('malloy-data.malloytest.flights')->{aggregate: flight_count is count()}";
+const modeledQuery = "query: flights->{ aggregate: flight_count}";
 const model =
-  "define flights is ('malloy-data.malloytest.flights' flight_count is count());";
+  "explore: flights is table('malloy-data.malloytest.flights'){measure: flight_count is count()}";
 
 const modelPath = "/flights.malloy";
 const modeledQueryPath = "/modeled_query.malloy";

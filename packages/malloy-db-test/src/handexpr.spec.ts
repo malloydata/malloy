@@ -16,16 +16,20 @@ import { ModelDef, Query, StructDef } from "@malloy-lang/malloy";
 import { fStringEq, fStringLike } from "./test_utils";
 
 import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes } from "./runtimes";
+import { RuntimeList } from "./runtimes";
 
-const runtimes = getRuntimes(["bigquery"]);
+const runtimes = new RuntimeList(["bigquery"]);
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
 
 async function validateCompilation(
   databaseName: string,
   sql: string
 ): Promise<boolean> {
   try {
-    const runtime = runtimes.get(databaseName);
+    const runtime = runtimes.runtimeMap.get(databaseName);
     if (runtime === undefined) {
       throw new Error(`Unknown database ${databaseName}`);
     }
@@ -217,13 +221,13 @@ export const aircraftHandStructDef: StructDef = {
 const handCodedModel: ModelDef = {
   name: "Hand Coded Models",
   exports: ["aircraft"],
-  structs: {
+  contents: {
     aircraft: aircraftHandStructDef,
   },
 };
 
 // BigQuery tests only on the Hand Coded models.
-const bqRuntime = runtimes.get("bigquery");
+const bqRuntime = runtimes.runtimeMap.get("bigquery");
 if (!bqRuntime) {
   throw new Error("Can't create bigquery RUntime");
 }
@@ -281,7 +285,7 @@ it(`hand turtle malloy - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-explore aircraft | hand_turtle
+    query: aircraft->hand_turtle
 `
     )
     .run();
@@ -292,7 +296,11 @@ it(`default sort order - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-      explore aircraft | reduce state, aircraft_count limit 10
+      query: aircraft->{
+        group_by: state
+        aggregate: aircraft_count
+        limit: 10
+      }
     `
     )
     .run();
@@ -303,7 +311,12 @@ it(`default sort order by dir - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-      explore aircraft | reduce state, aircraft_count order by 2 limit 10
+      query: aircraft->{
+        group_by: state
+        aggregate: aircraft_count
+        order_by: 2
+        limit:10
+      }
     `
     )
     .run();
@@ -414,13 +427,16 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-          explore aircraft | reduce
-            aircraft_models.total_seats,
-            total_seats2 is sum(aircraft_models.seats),
-            total_seats3 is aircraft_models.sum(aircraft_models.seats),
-            aircraft_models.boeing_seats,
-            boeing_seats2 is aircraft_models.sum(aircraft_models.seats) : [aircraft_models.manufacturer: 'BOEING'],
-            boeing_seats3 is aircraft_models.boeing_seats : [aircraft_models.manufacturer: ~'B%']
+          query: aircraft->{
+            aggregate: [
+              aircraft_models.total_seats,
+              total_seats2 is sum(aircraft_models.seats),
+              total_seats3 is aircraft_models.sum(aircraft_models.seats),
+              aircraft_models.boeing_seats,
+              boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer: 'BOEING'},
+              boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer: ~'B%'}
+            ]
+          }
         `
     )
     .run();
@@ -437,8 +453,9 @@ it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-            explore aircraft | reduce
-              total_seats3 is aircraft_models.sum(aircraft_models.seats),
+        query: aircraft->{
+          aggregate: total_seats3 is aircraft_models.sum(aircraft_models.seats)
+        }
           `
     )
     .run();
@@ -452,9 +469,12 @@ it(`hand: expression fixups. - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-            explore aircraft | reduce
-              aircraft_models.total_seats,
-              aircraft_models.boeing_seats
+            query: aircraft->{
+              aggregate: [
+                aircraft_models.total_seats,
+                aircraft_models.boeing_seats
+              ]
+            }
           `
     )
     .run();
@@ -466,8 +486,9 @@ it(`model: filtered measures - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-            explore aircraft | reduce
-              boeing_seats is aircraft_models.total_seats : [aircraft_models.manufacturer:'BOEING']
+            query: aircraft->{
+              aggregate: boeing_seats is aircraft_models.total_seats {? aircraft_models.manufacturer:'BOEING'}
+            }
           `
     )
     .run();
@@ -479,8 +500,9 @@ it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
   const result = await handModel
     .loadQuery(
       `
-            explore aircraft | reduce
-              boeing_aircraft is count() : [aircraft_models.manufacturer:'BOEING']
+            query: aircraft->{
+              aggregate: boeing_aircraft is count() {?aircraft_models.manufacturer:'BOEING'}
+            }
           `
     )
     .run();
@@ -514,7 +536,7 @@ it(`hand: filtered measures - ${databaseName}`, async () => {
 export const exprHandModelDef: ModelDef = {
   name: "Hand Coded Expressions",
   exports: ["aircraft"],
-  structs: { aircraft: aircraftHandStructDef },
+  contents: { aircraft: aircraftHandStructDef },
 };
 
 export const joinModelAircraftHandStructDef: StructDef = {
@@ -594,7 +616,7 @@ export const aircraftBModelInner: StructDef = {
 const joinModel: ModelDef = {
   name: "Hand Coded Join Models",
   exports: ["model_aircraft", "aircraft_modelb_inner"],
-  structs: {
+  contents: {
     model_aircraft: joinModelAircraftHandStructDef,
     aircraft_modelb_inner: aircraftBModelInner,
   },

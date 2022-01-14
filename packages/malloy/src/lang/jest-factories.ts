@@ -22,12 +22,12 @@ import {
   StructDef,
   Query,
   AtomicFieldType,
-  NamedMalloyObject,
+  NamedModelObject,
   ModelDef,
 } from "../model/malloy_types";
 import * as ast from "./ast";
 import { compressExpr, MalloyElement, ModelEntry, NameSpace } from "./ast";
-import { FieldSpace } from "./field-space";
+import { StructSpace } from "./field-space";
 import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
@@ -46,14 +46,11 @@ export function mkExprIdRef(s: string) {
   return new ast.ExprIdReference(s);
 }
 export function mkFieldDef(expr: string) {
-  return new ast.ExpressionFieldDef(mkExprIdRef(expr), mkFieldName("test"));
+  return new ast.ExprFieldDecl(mkExprIdRef(expr), "test");
 }
 export const aExpr = mkExprIdRef("a");
 export function mkExprStringDef(str: string) {
-  return new ast.ExpressionFieldDef(
-    new ast.ExprString(str),
-    mkFieldName("test")
-  );
+  return new ast.ExprFieldDecl(new ast.ExprString(str), "test");
 }
 export const caFilter = new ast.Filter([
   new ast.FilterElement(
@@ -62,12 +59,12 @@ export const caFilter = new ast.Filter([
   ),
 ]);
 
-export function mkExploreOf(
-  name: string,
-  init: ast.ExploreInterface = {}
-): ast.Explore {
-  return testAST(new ast.Explore(new ast.NamedSource(name), init));
-}
+// export function mkExploreOf(
+//   name: string,
+//   init: ast.ExploreInterface = {}
+// ): ast.Explore {
+//   return testAST(new ast.Explore(new ast.NamedSource(name), init));
+// }
 
 export const aTableDef: StructDef = {
   type: "struct",
@@ -109,7 +106,7 @@ export function mkFilters(...pairs: string[]): FilterExpression[] {
     const thingIs = `'${pairs[i + 1]}'`;
     const exprSrc = `${thing}:${thingIs}`;
     const expr = new ast.Apply(mkExprIdRef(thing), new ast.ExprString(thingIs));
-    const fs = new FieldSpace(aTableDef);
+    const fs = new StructSpace(aTableDef);
     filters.push({
       expression: compressExpr(expr.getExpression(fs).value),
       source: exprSrc,
@@ -184,10 +181,10 @@ class TestRoot extends MalloyElement implements NameSpace {
   }
 
   getEntry(name: string): ModelEntry | undefined {
-    const struct = this.modelDef.structs[name];
+    const struct = this.modelDef.contents[name];
     if (struct.type == "struct") {
       const exported = this.modelDef.exports.includes(name);
-      return { struct, exported };
+      return { entry: struct, exported };
     }
   }
 
@@ -202,9 +199,40 @@ export class TestTranslator extends MalloyTranslator {
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
-    structs: {
+    contents: {
       a: { ...aTableDef, primaryKey: "astring", as: "a" },
       b: { ...aTableDef, primaryKey: "astring", as: "b" },
+      ab: {
+        ...aTableDef,
+        as: "ab",
+        primaryKey: "astring",
+        fields: [
+          ...aTableDef.fields,
+          {
+            ...aTableDef,
+            as: "b",
+            structRelationship: { type: "foreignKey", foreignKey: "astring" },
+          },
+          {
+            type: "number",
+            name: "acount",
+            numberType: "integer",
+            aggregate: true,
+            e: ["COUNT()"],
+            source: "count()",
+          },
+          {
+            type: "turtle",
+            name: "aturtle",
+            pipeline: [
+              {
+                type: "reduce",
+                fields: ["astring", "acount"],
+              },
+            ],
+          },
+        ],
+      },
     },
   };
 
@@ -258,25 +286,20 @@ export class TestTranslator extends MalloyTranslator {
     }
   }
 
-  get nameSpace(): Record<string, NamedMalloyObject> {
+  get nameSpace(): Record<string, NamedModelObject> {
     const gotModel = this.translate();
-    return gotModel?.translated?.modelDef.structs || {};
+    return gotModel?.translated?.modelDef.contents || {};
+  }
+
+  exploreFor(exploreName: string): StructDef {
+    const explore = this.nameSpace[exploreName];
+    if (explore && explore.type === "struct") {
+      return explore;
+    }
+    throw new Error(`Expected model to contain explore '${exploreName}'`);
+  }
+
+  prettyErrors(): string {
+    return super.prettyErrors();
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-// export async function exploreFor(src: string) {
-//   const parse = new TestTranslator(src, "explore");
-//   const req = parse.translate();
-//   if (req.tables) {
-//     const tables = await Malloy.db.getSchemaForMissingTables(req.tables);
-//     parse.update({ tables });
-//   }
-//   const explore = parse.ast() as ast.Explore;
-//   return {
-//     schema: parse.schemaZone,
-//     explore,
-//     errors: parse.logger.getLog(),
-//     errorFree: parse.logger.noErrors(),
-//   };
-// }

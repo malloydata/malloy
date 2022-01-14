@@ -1,132 +1,163 @@
 --! styles ecommerce.styles.json
+explore: users is table('malloy-data.ecomm.users'){
+  primary_key: id
+  measure: user_count is count()
+}
 
-export define users is (explore 'malloy-data.ecomm.users'
-  primary key id
-  user_count is count()
-);
+explore: product is table('malloy-data.ecomm.products'){
+  primary_key: id
+  measure: product_count is count()
+}
 
-define product is (explore 'malloy-data.ecomm.products'
-  primary key id
-  product_count is count()
-);
+explore: ii is table('malloy-data.ecomm.inventory_items'){
+  primary_key: id
 
-define ii is (explore 'malloy-data.ecomm.inventory_items'
-  primary key id
-  item_count is count(distinct id)
-  total_cost is sum(cost)
-  joins
-    product on product_id
-);
+  join: product on product_id
 
-define user_order_facts is (
-  'malloy-data.ecomm.order_items' |
-  reduce
-    user_id
-    lifetime_orders is count()
-);
+  measure: [
+    item_count is count(distinct id)
+    total_cost is sum(cost)
+  ]
+}
 
-define order_items_base is (explore 'malloy-data.ecomm.order_items'
-  primary key id
+explore: user_order_facts is from(
+    table('malloy-data.ecomm.order_items') ->  {
+      group_by: user_id
+      aggregate: lifetime_orders is count()
+    }
+  ) { primary_key: user_id }
 
-  -- joins
-  users is join on user_id,
-  ii is join on inventory_item_id,
-  user_order_facts is join on user_id
+explore: order_items_base is table('malloy-data.ecomm.order_items'){
+  primary_key: id
 
-  -- measures
-  order_count is count(distinct order_id)
-  item_count is count(*)
-  total_sales is sale_price.sum()
-);
+  join: [
+    users on user_id
+    ii on inventory_item_id
+    user_order_facts on user_id
+  ]
 
---brand synergy / affinity analysis; extends base order_items
-export define brand_synergy is (
+  measure: [
+    order_count is count(distinct order_id)
+    item_count is count(*)
+    total_sales is sale_price.sum()
+  ]
+}
+
+explore: brand_synergy is from(
+-- query: brand_synergy is
   order_items_base
-  | reduce
-    order_id
-    brand1 is (reduce
-      ii.product.brand
-    )
-    brand2 is (reduce
-      ii.product.brand
-    )
-  | project : [brand1.brand != brand2.brand]
-    order_id
-    brand1 is brand1.brand
-    brand2 is brand2.brand
-  | reduce
-    brand1
-    brand2
-    occurances is count()
-  | reduce
-    brand is brand1
-    synergies is (project top 5 order by occurances desc
-      brand is brand2
-      occurances
-    )
-);
+  -> {
+    group_by: order_id
+    nest: brand1 is {group_by: ii.product.brand}
+    nest: brand2 is {group_by: ii.product.brand}
+  }
+  -> {
+    where: brand1.brand != brand2.brand
+    project: order_id
+    project: brand1 is brand1.brand
+    project: brand2 is brand2.brand
+  }
+  -> {
+    group_by: [
+      brand1
+      brand2
+    ]
+    aggregate: occurances is count()
+  }
+  -> {
+    group_by: brand is brand1
+    nest: synergies is {
+      top: 5
+      order_by: occurances
+      group_by: [
+        brand is brand2
+        occurances
+      ]
+    }
+  }
+)
 
 -- order_items with brand_synergy as well as base definitions.
-export define order_items is (explore order_items_base
-  brand_synergy is join on ii.product.brand
+explore: order_items is order_items_base {
+  -- join: brand_synergy on ii.product.brand
 
-  -- turtles
-  top_brands is (reduce top 5
-    ii.product.brand
-    total_sales
-    ii.product.product_count
-  )
-  top_products is (reduce top 5
-    ii.product.name
-    total_sales
-  )
-  by_year is (reduce
-    created_year is created_at.year
-    total_sales
-  )
-  by_month is (reduce
-    created_month is created_at.month
-    total_sales
-  )
+  query: top_brands is {
+    top: 5
+    order_by: total_sales
+    group_by: ii.product.brand
+    aggregate: [
+      total_sales
+      ii.product.product_count
+    ]
+  }
 
-  sales_by_state_2020 is (reduce: [created_at: @2020]
-    users.state
-    total_sales
-  )
+  query: top_products is {
+    top: 5
+    group_by: ii.product.name
+    aggregate: total_sales
+  }
 
-  sales_by_month_2020 is (reduce : [created_at : @2020]
-   order_month is created_at.month
-   total_sales
- )
+  query: by_year is {
+    group_by: created_year is created_at.year
+    aggregate: total_sales
+  }
 
-  orders_by_status is (reduce
-    status
-    order_count is count(distinct order_id)
-  )
+  query: by_month is {
+    group_by: created_month is created_at.month
+    aggregate: total_sales
+  }
 
-  order_by_category_and_day is (reduce
-    created_month is created_at.month
-    order_count
-    ii.product.category
-  )
+  query: sales_by_state_2020 is {
+    where: created_at = @2020
+    group_by: users.state
+    aggregate: total_sales
+  }
 
-  brand_dashboard is (reduce top 10
-    ii.product.brand
-    total_sales
-    order_count
-    item_count
-    ii.product.product_count
-    top_products
-    by_month
-    synergistic_brands is (reduce
-      brand_synergy.synergies.brand
-      occurances is brand_synergy.synergies.occurances.sum()
-    )
-  )
-);
+  query: sales_by_month_2020 is {
+    where: created_at = @2020
+    group_by: order_month is created_at.month
+    aggregate: total_sales
+  }
 
-explore order_items
-| reduce average_age is users.age.avg()
+  query: orders_by_status is {
+    group_by: status
+    aggregate: order_count is count(distinct order_id)
+  }
 
-explore users
-| reduce average_age is age.avg()
+  query: order_by_category_and_day is {
+    group_by: [
+      created_month is created_at.month
+      ii.product.category
+    ]
+    aggregate: order_count
+  }
+
+  query: brand_dashboard is {
+    top: 10
+    group_by: [
+      ii.product.brand
+    ]
+    aggregate: [
+      total_sales
+      order_count
+      item_count
+      ii.product.product_count
+    ]
+    nest: [
+      top_products
+      by_month
+    ]
+    -- nest: synergistic_brands is {
+    --   group_by: brand_synergy.synergies.brand
+    --   aggregate: occurances is brand_synergy.synergies.occurances.sum()
+    -- }
+  }
+}
+
+query: order_items -> {
+  aggregate: average_age is users.age.avg()
+}
+
+query: users -> {
+  aggregate: average_age is age.avg()
+}
