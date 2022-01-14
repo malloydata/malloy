@@ -286,15 +286,16 @@ to simply be split up among multiple files by using <code class="language-malloy
     <p>Before an explore definition, the <code class="language-malloy"><span class="token keyword">export</span></code> keyword means that the explore should
 be included in the file's <em>public namespace</em>.</p>
 <p>Consider a file <code>samples/faa/flights.malloy</code>:</p>
-<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  primary <span class="token keyword">key</span> code
-  name <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{}
+  <span class="token keyword">primary_key</span>: code
+  <span class="token keyword">dimension</span>: name <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
+  <span class="token keyword">measure</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
-<span class="token keyword">export</span> <span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  origin <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin_code
-  destination <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> destination_code
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+  <span class="token keyword">join</span>: origin <span class="token keyword">is</span> airports <span class="token keyword">on</span> origin_code
+  <span class="token keyword">join</span>: destination <span class="token keyword">is</span> airports <span class="token keyword">on</span> destination_code
   <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
 <span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>In this example, <code class="language-malloy">flights</code> is exported, but <code class="language-malloy">airports</code> is not, and therefore
 only <code class="language-malloy">flights</code> is part of the file's public namespace.</p>
@@ -310,7 +311,7 @@ exported explores from another file using <code class="language-malloy"><span cl
 <code class="language-malloy">flights</code> explore, you could write:</p>
 <pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
 
-flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> carrier<span class="token punctuation">,</span> flight_count</pre><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">top</span>: <span class="token number">5</span><span class="token punctuation">;</span> <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count}</pre><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
 
       <h3>
         <a id="import-locations" class="header-link anchor" href="#import-locations">

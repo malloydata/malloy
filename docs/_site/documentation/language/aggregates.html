@@ -289,66 +289,156 @@
         </a>
       </h3>
     <p>The <code class="language-malloy">count</code> aggregate function may be used to count the number of records appearing in an explore.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights <span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore flights | reduce flight_count is count()
-  | ^</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,561,525</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="distinct-counts" class="header-link anchor" href="#distinct-counts">
           Distinct Counts
         </a>
       </h3>
     <p>Distinct counts may be used to count the number of distinct values of a particular field within an explore.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> order_items <span class="token operator">|</span> <span class="token keyword">reduce</span> order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore order_items | reduce order_count is count(distinct order_id)
-  | ^</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">order_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">227,957</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="sums" class="header-link anchor" href="#sums">
           Sums
         </a>
       </h3>
     <p>The <code class="language-malloy">sum</code> function may be used to compute the sum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights <span class="token operator">|</span> <span class="token keyword">reduce</span> total_distance <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore flights | reduce total_distance is sum(distance)
-  | ^</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: total_distance <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;distance</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,540,298,839</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="averages" class="header-link anchor" href="#averages">
           Averages
         </a>
       </h3>
     <p>The <code class="language-malloy">avg</code> function may be used to compute the average of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> aircraft <span class="token operator">|</span> <span class="token keyword">reduce</span> average_seats <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft | reduce average_seats is sum(aircraft_models.seats)
-  | ^</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,013,033</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="minima" class="header-link anchor" href="#minima">
           Minima
         </a>
       </h3>
     <p>The <code class="language-malloy">min</code> function may be used to compute the minimum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> order_items <span class="token operator">|</span> <span class="token keyword">reduce</span> cheapest_price <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>sale_price<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore order_items | reduce cheapest_price is min(sale_price)
-  | ^</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: cheapest_price <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>sale_price<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">cheapest_&#8203;price</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.02</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="maxima" class="header-link anchor" href="#maxima">
           Maxima
         </a>
       </h3>
     <p>The <code class="language-malloy">max</code> function may be used to compute the maximum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights <span class="token operator">|</span> <span class="token keyword">reduce</span> longest_distance <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore flights | reduce longest_distance is max(distance)
-  | ^</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: longest_distance <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">longest_&#8203;distance</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,962</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h2>
         <a id="aggregate-locality" class="header-link anchor" href="#aggregate-locality">
           Aggregate Locality
@@ -372,21 +462,48 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
     <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 <span class="token keyword">FROM</span> aircraft
 <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> aircraft_models
-    <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">explore</span> aircraft
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft
-  | ^</div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
+    <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
 <p>To do this, you might decide to start with the <code class="language-malloy">aircraft_models</code> table instead.</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span> <span class="token function">AVG</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
-<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">explore</span> aircraft_models
-<span class="token operator">|</span> <span class="token keyword">reduce</span> average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft_models
-  | ^</div><p>However, this isn't actually the number you were interested in, because this measures the average number of seats across <em>all</em> aircraft models, not just the ones with actively-registered aircraft.</p>
+<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7.483</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>However, this isn't actually the number you were interested in, because this measures the average number of seats across <em>all</em> aircraft models, not just the ones with actively-registered aircraft.</p>
 <p>Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysists often resort to complicated <a href="https://www.zentut.com/data-warehouse/fact-table/">fact tables</a> to perform this kind of query.</p>
 
       <h3>
@@ -396,13 +513,26 @@ line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'
       </h3>
     <p>Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class="language-malloy">average_seats</code> is computed with respect to <code class="language-malloy">aircraft_models</code>,
 yielding the the average number of seats on aircraft models of aircraft listed in the <code class="language-malloy">aircraft</code> table.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> aircraft
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  average_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft
-  | ^</div><p>For convenience, <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code> can be written as <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>For convenience, <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code> can be written as <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>.</p>
 
       <h3>
         <a id="examples" class="header-link anchor" href="#examples">
@@ -410,28 +540,77 @@ line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'
         </a>
       </h3>
     <p>The following queries show six ways of calculating the average number of seats.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  aircraft_models_avg_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  aircraft_avg_models_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-  avg_aircraft_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore flights
-  | ^</div><pre class="language-malloy"><span class="token keyword">explore</span> aircraft
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  avg_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft
-  | ^</div><pre class="language-malloy"><span class="token keyword">explore</span> aircraft_models
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft_models
-  | ^</div><p>This table summarizes the meaning of each of these calculations.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    aircraft_models_avg_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    aircraft_avg_models_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+    avg_aircraft_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;models_&#8203;avg_&#8203;seats</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;avg_&#8203;models_&#8203;seats</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;aircraft_&#8203;models_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">108.427</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">142.71</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">134.414</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    avg_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">models_&#8203;avg_&#8203;seats</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;models_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;seats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7.483</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>This table summarizes the meaning of each of these calculations.</p>
 <table>
 <thead>
 <tr>
@@ -491,14 +670,31 @@ line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'
         </a>
       </h3>
     <p>Aggregating "on a field," e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy">avg</code> and <code class="language-malloy">sum</code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> aircraft
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  avg_on_explore <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-  avg_on_field <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
-FILE: internal://internal.malloy
-line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
-  | explore aircraft
-  | ^</div><!--
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    avg_on_explore <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+    avg_on_field <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;on_&#8203;explore</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;on_&#8203;field</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><!--
 In SQL, it is easy to make mistakes when computing sums and averages,
 particularly when joins are involved. An approach known as _symmetric aggregates_ solves one such common mistake by making the behavior of
 aggregate functions consistent regardless of the structure of the query.
@@ -577,10 +773,12 @@ In SQL, a query containing a join first computes a composite table, then perform
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
-explore order_items
-| reduce
-  symmetric_avg is users.age.avg()
-  asymmetric_avg is avg(users.age)
+query: order_items->{
+  aggregate: [
+    symmetric_avg is users.age.avg()
+    asymmetric_avg is avg(users.age)
+  ]
+}
 ```
 
 
