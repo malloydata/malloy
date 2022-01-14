@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2021 Google LLC
  *
@@ -13,7 +14,9 @@
 
 import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
-import { TestTranslator } from "./jest-factories";
+import { TestTranslator, pretty } from "./jest-factories";
+
+const inspectCompile = false;
 
 /*
  * Thinking of these tests as just "do things parse", there should maybe
@@ -53,7 +56,11 @@ class BetaModel extends Testable {
   }
 
   compile(): void {
-    const _compileTo = this.xlate.translate();
+    const compileTo = this.xlate.translate();
+    if (compileTo.translated && inspectCompile) {
+      console.log("MODEL: ", pretty(compileTo.translated.modelDef));
+      console.log("QUERIES: ", pretty(compileTo.translated.queryList));
+    }
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
 }
@@ -128,8 +135,16 @@ describe("top level definition", () => {
     modelOK("query: name is table('aTable') -> { group_by: astring }")
   );
   test(
-    "filtered turtle",
+    "query with filtered turtle",
     modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
+  );
+  test(
+    "refined turtle",
+    modelOK(`
+      explore: abNew is ab {
+        query: for1 is aturtle {? aninteger = 1 }
+      }
+    `)
   );
   test(
     "nest: in group_by:",
@@ -141,6 +156,24 @@ describe("top level definition", () => {
         }
       }
     `)
+  );
+  test(
+    "reduce pipe project",
+    modelOK(`
+      query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+    `)
+  );
+
+  test("undefined explore does not throw", () => {
+    const m = new BetaModel("query: x->{ group_by: y }");
+    expect(m).not.toCompile();
+  });
+
+  test(
+    "query from explore from query",
+    modelOK(
+      `query: from(ab -> {group_by: astring}) { dimension: bigstr is UPPER(astring) } -> { group_by: bigstr }`
+    )
   );
 });
 
@@ -214,14 +247,18 @@ describe("expressions", () => {
 
   test("filtered measure", exprOK("acount {? astring = 'why?' }"));
   describe("aggregate forms", () => {
-    test("count distinct", exprOK("count(distinct astring)"));
     test("count", exprOK("count()"));
-    test("join.field.count()", exprOK("b.astring.count()"));
+    test("count distinct", exprOK("count(distinct astring)"));
+    test("join.count()", exprOK("b.count()"));
     for (const f of ["sum", "min", "max", "avg"]) {
-      test(`${f}(afloat)`, exprOK(`${f}(afloat)`));
-    }
-    for (const f of ["sum", "min", "max", "avg"]) {
-      test(`b.afloat.${f}()`, exprOK(`b.afloat.${f}()`));
+      const fOfT = `${f}(afloat)`;
+      test(fOfT, exprOK(fOfT));
+      if (f !== "min" && f !== "max") {
+        const joinDot = `b.afloat.${f}()`;
+        test(joinDot, exprOK(joinDot));
+        const joinAgg = `b.${f}(afloat)`;
+        test(joinAgg, exprOK(joinAgg));
+      }
     }
   });
 

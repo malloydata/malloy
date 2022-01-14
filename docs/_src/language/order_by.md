@@ -13,23 +13,23 @@ important concept in the query.  Because the most recent data is usally the most
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-explore flights
-| reduce
-  dep_month is dep_time.month
-  flight_count is count()
+query: flights->{
+  group_by: dep_month is dep_time.month
+  aggregate: flight_count is count()
+}
 ```
 
 ### Rule 2: Largest first
 If there is a [measure](fields.md#measures) involved, Malloy sorts larger values first.
 
-In the following example, Rule 1 doesn't apply, so the default behavior is to sort by the measure `flight_count` with the largest values first.
+In the following example, Rule 1 doesn't apply, so the default behavior is to sort by first aggregate, `flight_count` with the largest values first.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-explore flights
-| reduce
-  carrier
-  flight_count is count()
+query: flights->{
+  group_by: carrier
+  aggregate: flight_count is count()
+}
 ```
 
 ## Explicit Ordering
@@ -40,10 +40,11 @@ In the following example, the results are ordered by `carrier` in reverse alphab
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-explore flights
-| reduce order by carrier desc
-  carrier
-  flight_count is count()
+query: flights->{
+  order_by: carrier desc
+  group_by: carrier
+  aggregate: flight_count is count()
+}
 ```
 
 Like in SQL, Malloy's `order by` always defaults to ascending order when `desc` is omitted. This is true for any column of any type. In the example below,
@@ -51,32 +52,24 @@ the results are ordered by `carrier` in alphabetical order.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-explore flights
-| reduce order by carrier
-  carrier
-  flight_count is count()
+query: flights->{
+  order_by: carrier
+  group_by: carrier
+  aggregate: flight_count is count()
+}
 ```
 
 ## Limiting
 
-In Malloy, you can limit the number of results returned using a `top n` clause on a `reduce` or `project` statement.
+In Malloy, you can limit the number of results returned using a `top: n` or `limit: n`.  Both are provided for readability.
 
 In the exmaple below, the results are limited to 2 rows, which are sorted by `dep_month` with newest results first (due to Rule 1).
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-explore flights
-| reduce top 2
-  dep_month is dep_time.month
-  flight_count is count()
-```
-
-Explicitly-ordered results (with `order by`) can be limited with `top n`.
-
-```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-explore flights
-| reduce top 2 order by flight_count desc
-  dep_month is dep_time.month
-  flight_count is count()
+query: flights->{
+  top: 2
+  group_by: dep_month is dep_time.month
+  aggregate: flight_count is count()
+}
 ```

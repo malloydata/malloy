@@ -29,6 +29,7 @@ import {
   QueryItem,
   NestDefinition,
   NestReference,
+  MalloyElement,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
@@ -48,13 +49,6 @@ import {
 } from "./space-field";
 
 type FieldMap = Record<string, SpaceEntry>;
-
-function nameOf(qfd: model.QueryFieldDef): string {
-  if (typeof qfd === "string") {
-    return qfd;
-  }
-  return qfd.as || qfd.name;
-}
 
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
@@ -303,19 +297,18 @@ export class NewFieldSpace extends StructSpace {
   }
 }
 
-type QuerySegType = "reduce" | "project";
+type QuerySegType = "reduce" | "project" | "index";
 /**
  * Maintains the two namespaces (computation space and output space)
  * for a query segment
  */
 export abstract class QueryFieldSpace extends NewFieldSpace {
   abstract segType: QuerySegType;
+  astEl?: MalloyElement | undefined;
 
   constructor(readonly inputSpace: FieldSpace) {
     super(inputSpace.emptyStructDef());
   }
-
-  abstract canAddFieldDef(qi: ExprFieldDecl): boolean;
 
   /**
    * Although this QueryFieldSpace is collecting definitions for the
@@ -343,13 +336,11 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       if (qi instanceof FieldName || qi instanceof NestReference) {
         this.addReference(qi.name);
       } else if (qi instanceof ExprFieldDecl) {
-        if (this.canAddFieldDef(qi)) {
-          this.addField(qi);
-        }
+        this.addField(qi);
       } else if (qi instanceof NestDefinition) {
         this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
       } else {
-        throw new Error("INTERNAL ERROR: Add Query Item");
+        throw new Error("INTERNAL ERROR: QueryFieldSpace unknown element");
       }
     }
   }
@@ -362,11 +353,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
-        if (member.isMeasure == false) {
-          this.addField(member);
-        } else {
-          member.log("Only dimension values allowed in project");
-        }
+        this.addField(member);
       }
     }
   }
@@ -375,13 +362,21 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     this.setEntry(ref, new FANSPaceField(ref, this));
   }
 
+  conContain(_qd: model.QueryFieldDef): boolean {
+    return true;
+  }
+
   queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.queryFieldDef();
         if (fieldQueryDef) {
-          fields.push(fieldQueryDef);
+          if (this.conContain(fieldQueryDef)) {
+            fields.push(fieldQueryDef);
+          } else {
+            this.log(`'${name}' not legal in ${this.segType}`);
+          }
         } else {
           throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
@@ -390,43 +385,64 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     return fields;
   }
 
-  querySegment(exisitingFields?: model.QueryFieldDef[]): model.QuerySegment {
-    const seg = {
-      type: this.segType,
-      fields: this.queryFieldDefs(),
-    };
-    if (exisitingFields) {
-      const newDefinition: Record<string, boolean> = {};
-      for (const field in seg.fields) {
-        const fieldName = nameOf(field);
-        newDefinition[fieldName] = true;
-      }
-      for (const field of exisitingFields) {
-        const fieldName = nameOf(field);
-        if (!newDefinition[fieldName]) {
-          seg.fields.push(field);
-        }
-      }
+  log(s: string): void {
+    if (this.astEl) {
+      this.astEl.log(s);
     }
-    return seg;
   }
 }
 
 export class ReduceFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "reduce";
-  canAddFieldDef(_qi: ExprFieldDecl): boolean {
-    return true;
-  }
 }
 
 export class ProjectFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "project";
+  inputStruct: model.StructDef;
+  constructor(inputFS: FieldSpace) {
+    super(inputFS);
+    this.inputStruct = inputFS.structDef();
+  }
 
-  canAddFieldDef(qi: ExprFieldDecl): boolean {
-    if (qi.isMeasure) {
-      qi.log("Aggreate definition illegal inside project query");
-      return false;
+  conContain(qd: model.QueryFieldDef): boolean {
+    if (typeof qd !== "string") {
+      if (model.isFilteredAliasedName(qd)) {
+        return true;
+      }
+      if (qd.type === "turtle") {
+        this.log("Cannot nest queries in project");
+        return false;
+      }
+      if (qd.aggregate) {
+        this.log("Cannot add aggregate measures to project");
+        return false;
+      }
     }
     return true;
+  }
+}
+
+export class IndexFieldSpace extends QueryFieldSpace {
+  segType: QuerySegType = "index";
+
+  indexSegment(exisitingFields?: model.QueryFieldDef[]): model.IndexSegment {
+    const seg: model.IndexSegment = {
+      type: "index",
+      fields: [],
+    };
+    const inIndex: Record<string, boolean> = {};
+    for (const [name, _] of this.entries()) {
+      inIndex[name] = true;
+      seg.fields.push(name);
+    }
+    if (exisitingFields) {
+      for (const exists of exisitingFields) {
+        if (typeof exists === "string" && !inIndex[exists]) {
+          seg.fields.push(exists);
+          inIndex[exists] = true;
+        }
+      }
+    }
+    return seg;
   }
 }

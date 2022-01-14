@@ -12,7 +12,7 @@
  */
 
 import { URL } from "url";
-import { cloneDeep, isTypedArray } from "lodash";
+import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
@@ -22,6 +22,7 @@ import {
   ProjectFieldSpace,
   NewFieldSpace,
   QueryFieldSpace,
+  IndexFieldSpace,
 } from "../field-space";
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
@@ -44,12 +45,12 @@ class ErrorFactory {
   static get structDef(): model.StructDef {
     const ret: model.StructDef = {
       type: "struct",
-      name: "undefined_error_structdef",
-      dialect: "undefined dialect",
+      name: "//undefined_error_structdef",
+      dialect: "//undefined_errror_dialect",
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
-        connectionName: "unknown connection",
+        connectionName: "//undefined_error_conection",
       },
       fields: [],
     };
@@ -62,6 +63,16 @@ class ErrorFactory {
       pipeline: [],
     };
   }
+}
+
+function opOutputStruct(
+  inputStruct: model.StructDef,
+  opDesc: model.PipeSegment
+): model.StructDef {
+  if (inputStruct.name === "//undefined_error_structdef") {
+    return ErrorFactory.structDef;
+  }
+  return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
 }
 
 type ChildBody = MalloyElement | MalloyElement[];
@@ -644,7 +655,8 @@ export type QueryProperty =
   | Top
   | Limit
   | Filter
-  | FieldCollection
+  | Index
+  | ProjectStatement
   | NestReference
   | NestDefinition
   | Nests
@@ -656,7 +668,8 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof Top ||
     q instanceof Limit ||
     q instanceof Filter ||
-    q instanceof FieldCollection ||
+    q instanceof Index ||
+    q instanceof ProjectStatement ||
     q instanceof Aggregate ||
     q instanceof Nests ||
     q instanceof NestReference ||
@@ -797,6 +810,9 @@ export class FieldReferences extends ListOf<FieldReference> {
     super("fieldReferenceList", members);
   }
 }
+export function isFieldReference(me: MalloyElement): me is FieldReference {
+  return me instanceof FieldName || me instanceof Wildcard;
+}
 
 export type FieldCollectionMember = FieldReference | ExprFieldDecl;
 export function isFieldCollectionMember(
@@ -808,8 +824,7 @@ export function isFieldCollectionMember(
     el instanceof ExprFieldDecl
   );
 }
-export class FieldCollection extends ListOf<FieldCollectionMember> {
-  collectFor?: "project" | "index";
+export class ProjectStatement extends ListOf<FieldCollectionMember> {
   constructor(members: FieldCollectionMember[]) {
     super("fieldCollection", members);
   }
@@ -843,15 +858,276 @@ export class Aggregate extends ListOf<QueryItem> {
   }
 }
 
+function nameOf(qfd: model.QueryFieldDef): string {
+  if (typeof qfd === "string") {
+    return qfd;
+  }
+  return qfd.as || qfd.name;
+}
+
+function getRefinedFields(
+  exisitingFields: model.QueryFieldDef[] | undefined,
+  addingFields: model.QueryFieldDef[]
+): model.QueryFieldDef[] {
+  if (!exisitingFields) {
+    return addingFields;
+  }
+  const newFields = [...addingFields];
+  const newDefinition: Record<string, boolean> = {};
+  for (const field of newFields) {
+    const fieldName = nameOf(field);
+    newDefinition[fieldName] = true;
+  }
+  for (const field of exisitingFields) {
+    const fieldName = nameOf(field);
+    if (!newDefinition[fieldName]) {
+      newFields.push(field);
+    }
+  }
+  return newFields;
+}
+
+interface QueryExecutor {
+  execute(qp: QueryProperty): void;
+  finalize(refineFrom: model.PipeSegment | undefined): model.PipeSegment;
+  outputFS: QueryFieldSpace;
+}
+
+class ReduceExecutor implements QueryExecutor {
+  inputFS: FieldSpace;
+  outputFS: QueryFieldSpace;
+  filters: model.FilterExpression[] = [];
+  order?: Top | Ordering;
+  limit?: number;
+
+  constructor(baseFS: FieldSpace, out?: QueryFieldSpace) {
+    this.inputFS = baseFS;
+    this.outputFS = out || new ReduceFieldSpace(baseFS);
+  }
+
+  handle(qp: QueryProperty): boolean {
+    if (
+      qp instanceof GroupBy ||
+      qp instanceof Aggregate ||
+      qp instanceof Nests
+    ) {
+      this.outputFS.addQueryItems(...qp.list);
+    } else if (isNestedQuery(qp)) {
+      this.outputFS.addQueryItems(qp);
+    } else if (qp instanceof Filter) {
+      this.filters.push(...qp.getFilterList(this.inputFS));
+    } else if (qp instanceof Top) {
+      if (this.limit) {
+        qp.log("Query operation already limited");
+      } else {
+        this.limit = qp.limit;
+      }
+      if (qp.by) {
+        if (this.order) {
+          qp.log("Query operation is already sorted");
+        } else {
+          this.order = qp;
+        }
+      }
+    } else if (qp instanceof Limit) {
+      if (this.limit) {
+        qp.log("Query operation already limited");
+      } else {
+        this.limit = qp.limit;
+      }
+    } else if (qp instanceof Ordering) {
+      if (this.order) {
+        qp.log("Query operation already sorted");
+      } else {
+        this.order = qp;
+      }
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  execute(qp: QueryProperty): void {
+    if (!this.handle(qp)) {
+      qp.log("Illegal statement in a group_by/aggregate query operation");
+    }
+  }
+
+  refineFrom(from: model.QuerySegment | undefined, to: model.QuerySegment) {
+    if (from) {
+      if (!this.order) {
+        if (from.orderBy) {
+          to.orderBy = from.orderBy;
+        } else if (from.by) {
+          to.by = from.by;
+        }
+      }
+      if (!this.limit && from.limit) {
+        to.limit = from.limit;
+      }
+    }
+
+    if (this.limit) {
+      to.limit = this.limit;
+    }
+
+    if (this.order instanceof Top) {
+      const topBy = this.order.getBy(this.outputFS);
+      if (topBy) {
+        to.by = topBy;
+      }
+    }
+    if (this.order instanceof Ordering) {
+      to.orderBy = this.order.orderBy();
+    }
+
+    const oldFilters = from?.filterList || [];
+    if (this.filters.length > 0 && !oldFilters) {
+      to.filterList = this.filters;
+    } else if (oldFilters) {
+      to.filterList = [...oldFilters, ...this.filters];
+    }
+  }
+
+  finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
+    let from: model.ReduceSegment | undefined;
+    if (fromSeg) {
+      if (fromSeg.type == "reduce") {
+        from = fromSeg;
+      } else {
+        throw new Error(`Refining a reduce with a ${fromSeg.type}`);
+      }
+    }
+    const reduceSegment: model.ReduceSegment = {
+      type: "reduce",
+      fields: getRefinedFields(from?.fields, this.outputFS.queryFieldDefs()),
+    };
+
+    this.refineFrom(from, reduceSegment);
+
+    return reduceSegment;
+  }
+}
+
+class ProjectExecutor extends ReduceExecutor {
+  constructor(baseFS: FieldSpace) {
+    super(baseFS, new ProjectFieldSpace(baseFS));
+  }
+
+  handle(qp: QueryProperty): boolean {
+    if (qp instanceof ProjectStatement) {
+      this.outputFS.addMembers(qp.list);
+      return true;
+    }
+    if (
+      qp instanceof NestDefinition ||
+      qp instanceof NestReference ||
+      qp instanceof Nests ||
+      qp instanceof Aggregate ||
+      qp instanceof GroupBy
+    ) {
+      return false;
+    }
+    return super.handle(qp);
+  }
+
+  execute(qp: QueryProperty): void {
+    if (!this.handle(qp)) {
+      qp.log("Illegal statement in a project query operation");
+    }
+  }
+
+  finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
+    let from: model.ProjectSegment | undefined;
+    if (fromSeg) {
+      if (fromSeg.type == "project") {
+        from = fromSeg;
+      } else {
+        throw new Error(`Refining a project with a ${fromSeg.type}`);
+      }
+    }
+    const projectSegment: model.ProjectSegment = {
+      type: "project",
+      fields: getRefinedFields(from?.fields, this.outputFS.queryFieldDefs()),
+    };
+
+    this.refineFrom(from, projectSegment);
+
+    return projectSegment;
+  }
+}
+
+class IndexExecutor implements QueryExecutor {
+  inputFS: FieldSpace;
+  outputFS: IndexFieldSpace;
+  filters: model.FilterExpression[] = [];
+  limit?: Limit;
+  indexOn?: FieldName;
+
+  constructor(baseFS: FieldSpace) {
+    this.inputFS = baseFS;
+    this.outputFS = new IndexFieldSpace(baseFS);
+  }
+
+  execute(qp: QueryProperty): void {
+    if (qp instanceof Filter) {
+      this.filters.push(...qp.getFilterList(this.inputFS));
+    } else if (qp instanceof Limit) {
+      if (this.limit) {
+        this.limit.log("Ignored, too many limit: statements");
+      }
+      this.limit = qp;
+    } else if (qp instanceof Index) {
+      this.outputFS.addMembers(qp.fields.list);
+      if (qp.weightBy) {
+        if (this.indexOn) {
+          this.indexOn.log("Ignoring previous BY");
+        }
+        this.indexOn = qp.weightBy;
+      }
+    } else {
+      qp.log("Not legal in an index query operation");
+    }
+  }
+
+  finalize(from: model.PipeSegment | undefined): model.PipeSegment {
+    if (from && from.type !== "index") {
+      throw new Error("refinement type mismatch");
+    }
+
+    const indexSegment = this.outputFS.indexSegment(from?.fields);
+
+    const oldFilters = from?.filterList || [];
+    if (this.filters.length > 0 && !oldFilters) {
+      indexSegment.filterList = this.filters;
+    } else if (oldFilters) {
+      indexSegment.filterList = [...oldFilters, ...this.filters];
+    }
+
+    if (from?.limit) {
+      indexSegment.limit = from.limit;
+    }
+    if (this.limit) {
+      indexSegment.limit = this.limit.limit;
+    }
+
+    if (this.indexOn) {
+      indexSegment.weightMeasure = this.indexOn.refString;
+    }
+
+    return indexSegment;
+  }
+}
+
 interface OpDesc {
   segment: model.PipeSegment;
   outputSpace: () => FieldSpace;
 }
-type QOPType = "grouping" | "aggregate" | "project";
+type QOPType = "grouping" | "aggregate" | "project" | "index";
 
 export class QOPDesc extends ListOf<QueryProperty> {
   opType: QOPType = "grouping";
-  private refineThis?: model.QuerySegment;
+  private refineThis?: model.PipeSegment;
   constructor(props: QueryProperty[]) {
     super("queryOperator", props);
   }
@@ -860,18 +1136,23 @@ export class QOPDesc extends ListOf<QueryProperty> {
     let firstGuess: QOPType | undefined;
     let anyGrouping = false;
     for (const el of this.list) {
-      if (el instanceof GroupBy) {
+      if (el instanceof Index) {
+        firstGuess ||= "index";
+        if (firstGuess !== "index") {
+          el.log(`index: not legal in ${firstGuess} segment`);
+        }
+      } else if (el instanceof GroupBy) {
         firstGuess ||= "grouping";
         anyGrouping = true;
-        if (firstGuess === "project") {
-          el.log("group_by: not legal in project: segment");
+        if (firstGuess === "project" || firstGuess === "index") {
+          el.log(`group_by: not legal in ${firstGuess}: segment`);
         }
       } else if (el instanceof Aggregate) {
         firstGuess ||= "aggregate";
-        if (firstGuess === "project") {
-          el.log("aggregate: not legal in project: segment");
+        if (firstGuess === "project" || firstGuess === "index") {
+          el.log(`aggregate: not legal in ${firstGuess}: segment`);
         }
-      } else if (el instanceof FieldCollection) {
+      } else if (el instanceof ProjectStatement) {
         firstGuess ||= "project";
       }
     }
@@ -883,82 +1164,33 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return guessType;
   }
 
-  refineFrom(existing: model.QuerySegment): void {
+  refineFrom(existing: model.PipeSegment): void {
     this.refineThis = existing;
   }
 
-  private getInputSpace(baseFS: FieldSpace): QueryFieldSpace {
+  private getExecutor(baseFS: FieldSpace): QueryExecutor {
     switch (this.computeType()) {
       case "aggregate":
       case "grouping":
-        return new ReduceFieldSpace(baseFS);
+        return new ReduceExecutor(baseFS);
       case "project":
-        return new ProjectFieldSpace(baseFS);
+        return new ProjectExecutor(baseFS);
+      case "index":
+        return new IndexExecutor(baseFS);
     }
   }
 
   getOp(inputFS: FieldSpace): OpDesc {
-    const pfs = this.getInputSpace(inputFS);
-    let didOrderBy: OrderBy | undefined;
-    let didLimit: Limit | undefined;
-    const segProp: Partial<model.QuerySegment> = { ...this.refineThis };
-    if (segProp.fields) {
-      delete segProp.fields;
-    }
+    const qex = this.getExecutor(inputFS);
+    qex.outputFS.astEl = this;
     for (const qp of this.list) {
-      const errTo = qp;
-      if (
-        qp instanceof GroupBy ||
-        qp instanceof Aggregate ||
-        qp instanceof Nests
-      ) {
-        pfs.addQueryItems(...qp.list);
-      } else if (qp instanceof Limit) {
-        delete segProp.by;
-        segProp.limit = qp.limit;
-      } else if (qp instanceof Filter) {
-        const newFilters = qp.getFilterList(pfs);
-        if (segProp.filterList) {
-          segProp.filterList.push(...newFilters);
-        } else {
-          segProp.filterList = newFilters;
-        }
-      } else if (qp instanceof Ordering) {
-        delete segProp.by;
-        segProp.orderBy = qp.list.map((o) => o.byElement());
-      } else if (qp instanceof FieldCollection) {
-        if (pfs instanceof ProjectFieldSpace) {
-          pfs.addMembers(qp.list);
-        } else {
-          qp.log(`Not a legal statement in a ${this.opType} query`);
-        }
-      } else if (qp instanceof Top) {
-        segProp.limit = qp.limit;
-        if (didLimit) {
-          didLimit.log("Ignored limit because top statement exists");
-        }
-        const topBy = qp.getBy(inputFS);
-        if (topBy) {
-          delete segProp.orderBy;
-          segProp.by = topBy;
-          if (didOrderBy) {
-            didOrderBy.log("Ignored order_by becauase top_statement exists");
-          }
-        }
-      } else if (qp instanceof NestDefinition || qp instanceof NestReference) {
-        pfs.addQueryItems(qp);
-      } else {
-        errTo.log(`Unrecognized segment parameter type`);
-      }
+      qex.execute(qp);
     }
-    const existingFields = this.refineThis?.fields;
-    const seg = { ...pfs.querySegment(existingFields), ...segProp };
+    const segment = qex.finalize(this.refineThis);
     return {
-      segment: seg,
+      segment,
       outputSpace: () =>
-        new StructSpace(
-          ModelQuerySegment.nextStructDef(inputFS.structDef(), seg)
-        ),
+        new StructSpace(opOutputStruct(inputFS.structDef(), segment)),
     };
   }
 }
@@ -1098,34 +1330,18 @@ export class Turtles extends ListOf<TurtleDecl> {
   }
 }
 
-// export class Index extends Segment {
-//   elementType = "index";
-//   fields: IndexField[] = [];
-//   filter?: Filter;
-//   on?: FieldName;
-//   limit?: number;
+export class Index extends MalloyElement {
+  elementType = "index";
+  weightBy?: FieldName;
+  constructor(readonly fields: FieldReferences) {
+    super({ fields });
+  }
 
-//   getPipeSegment(space: FieldSpace): model.IndexSegment {
-//     const fieldNames: string[] = [];
-//     for (const ref of this.fields) {
-//       fieldNames.push(...ref.members.map((m) => m.text));
-//     }
-//     const indexDef: model.IndexSegment = {
-//       type: "index",
-//       fields: fieldNames,
-//     };
-//     if (this.limit) {
-//       indexDef.limit = this.limit;
-//     }
-//     if (this.on) {
-//       indexDef.weightMeasure = this.on.name;
-//     }
-//     if (this.filter) {
-//       indexDef.filterList = this.filter.getFilterList(space);
-//     }
-//     return indexDef;
-//   }
-// }
+  useWeight(fn: FieldName): void {
+    this.has({ weightBy: fn });
+    this.weightBy = fn;
+  }
+}
 
 interface QueryComp {
   outputStruct: model.StructDef;
@@ -1226,7 +1442,7 @@ export class PipelineDesc extends MalloyElement {
     pipeline: model.PipeSegment[]
   ): model.StructDef {
     for (const modelQop of pipeline) {
-      walkStruct = ModelQuerySegment.nextStructDef(walkStruct, modelQop);
+      walkStruct = opOutputStruct(walkStruct, modelQop);
     }
     return walkStruct;
   }
@@ -1268,20 +1484,19 @@ export class PipelineDesc extends MalloyElement {
     }
     const queryEntry = this.modelEntry(this.headName);
     const seedQuery = queryEntry?.entry;
-    const oops = {
-      outputStruct: ErrorFactory.structDef,
-      query: ErrorFactory.query,
+    const oops = function () {
+      return {
+        outputStruct: ErrorFactory.structDef,
+        query: ErrorFactory.query,
+      };
     };
     if (!seedQuery) {
       this.log(`Reference to undefined query '${this.headName}'`);
-      return oops;
+      return oops();
     }
     if (seedQuery.type !== "query") {
       this.log(`Illegal eference to '${this.headName}', query expected`);
-      return oops;
-    }
-    if (this.qops.length == 0 && !this.headRefinement) {
-      return oops;
+      return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
     this.has({ queryHead });

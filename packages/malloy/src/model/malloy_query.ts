@@ -3024,14 +3024,12 @@ class QueryStruct extends QueryNode {
       }
     }
 
-    const addedFilters = (turtleDef as TurtleDefPlus).filterList;
-    if (addedFilters) {
-      pipeline = cloneDeep(pipeline);
-      pipeline[0].filterList = addedFilters.concat(
-        pipeline[0].filterList || [],
-        this.fieldDef.filterList || []
-      );
-    }
+    const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
+    pipeline = cloneDeep(pipeline);
+    pipeline[0].filterList = addedFilters.concat(
+      pipeline[0].filterList || [],
+      this.fieldDef.filterList || []
+    );
 
     const flatTurtleDef: TurtleDef = {
       type: "turtle",

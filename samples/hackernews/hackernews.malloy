@@ -3,7 +3,7 @@
 explore: stories is table('bigquery-public-data.hacker_news.full') {
   rename: poster is `by`
   rename: post_type is `type`
-  
+
   dimension: [
     threshold is 10
     is_good is score >= threshold
@@ -21,8 +21,8 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
         REGEXP_EXTRACT(url, '^http://([^\\/]*)\\/'),
           '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$')
 
-    score_class is IFNULL(score,0): 
-      pick 'blah' when < 5 
+    score_class is IFNULL(score,0):
+      pick 'blah' when < 5
       pick 'hmmm' when < 10
       pick 'oooh' when < 100
       else 'wow'
@@ -45,7 +45,7 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
 
   query: stories_by_month is {
     where: post_type = 'story'
-    nest: by_date 
+    nest: by_date
   }
 
   query: jobs_by_month is {
@@ -87,13 +87,15 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
 
   query: term_dashboard is {
     nest: by_date_and_type_line_chart is {
-      group_by: posted_at is post_time.month
+      group_by: posted_month is post_time.month
       aggregate: post_count
       group_by: post_type
     }
-    nest: top_poster
-    nest: top_sites
-    nest: stories
+    nest: [
+      top_poster
+      top_sites
+      stories
+    ]
   }
 
   query: poster_dashboard is {
@@ -104,8 +106,10 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
       post_count
       percent_good
     ]
-    nest: posts_over_time
-    nest: percent_good_over_time
+    nest: [
+      posts_over_time
+      percent_good_over_time
+    ]
     aggregate: first_post is min(post_time)
     nest: by_sites is {
       top: 10

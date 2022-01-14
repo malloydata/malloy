@@ -16,21 +16,17 @@ import { testModel } from "./models/faa_model";
 import { fStringEq } from "./test_utils";
 
 import "@malloy-lang/malloy/src/lang/jestery";
-
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import * as malloy from "@malloy-lang/malloy";
-import * as util from "util";
-import * as fs from "fs";
-import { Query } from "@malloy-lang/malloy";
 
-const bq = new BigQueryConnection("test");
-const files = {
-  readURL: async (url: malloy.URL) => {
-    const filePath = url.toString().replace(/^file:\/\//, "");
-    return await util.promisify(fs.readFile)(filePath, "utf8");
-  },
-};
-const runtime = new malloy.Runtime(files, bq);
+import { Query } from "@malloy-lang/malloy";
+import { RuntimeList } from "./runtimes";
+
+const runtimeList = new RuntimeList(["bigquery"]);
+const runtime = runtimeList.runtimeMap.get("bigquery");
+if (runtime === undefined) {
+  throw new Error("Couldn't build runtime");
+}
+const bq = runtimeList.bqConnection;
 
 function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
@@ -589,8 +585,9 @@ describe("expression tests", () => {
     const sql = await compileQuery(
       faa,
       `
-      query: flights->reduce
-        hour_of_day is dep_time.hour_of_day
+      query: flights->{
+        group_by: mon is dep_time.month
+      }
     `
     );
     await bqCompile(sql);
@@ -600,8 +597,9 @@ describe("expression tests", () => {
     const sql = await compileQuery(
       faa,
       `
-      query: flights->reduce
-        carrier_count is count(distinct carrier)
+      query: flights->{
+        aggregate: carrier_count is count(distinct carrier)
+      }
     `
     );
     // console.log(result.sql);
@@ -634,7 +632,7 @@ describe("expression tests", () => {
           name: "malloy-data.malloytest.bq_medicare_test",
           dialect: "standardsql",
           as: "mtest",
-          structRelationship: { type: "basetable", connectionName: "test" },
+          structRelationship: { type: "basetable", connectionName: "bigquery" },
           structSource: { type: "table" },
           fields: [
             {
@@ -810,25 +808,25 @@ describe("airport_tests", () => {
     const result = await runQuery(
       model,
       `
-        query: airports->{
-          aggregate: airport_count
-          nest: pipe_turtle is {
-            group_by: [
-              state
-              county
-            ]
-            aggregate: a is airport_count
-          } -> {
-            project: [
-              state is upper(state)
-              a
-            ]
-          } -> {
-            group_by: state
-            aggregate: total_airports is a.sum()
-          }
+      query: table('malloytest.airports')->{
+        aggregate: airport_count is count()
+        nest: pipe_turtle is {
+          group_by: [
+            state
+            county
+          ]
+          aggregate: a is count()
+        } -> {
+          project: [
+            state is upper(state)
+            a
+          ]
+        } -> {
+          group_by: state
+          aggregate: total_airports is a.sum()
         }
-    `
+      }
+      `
     );
 
     expect(
@@ -913,7 +911,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo\\''}
+      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\''
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo'");
@@ -923,7 +922,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ aggregate: test is count() {? carrier: 'foo\\'' } }
+      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo\\'' } }
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -933,7 +932,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo\\\\\\'' }
+      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo\\'");
@@ -943,7 +943,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ aggregate: test is count() {? carrier: 'foo\\\\\\'' }}
+      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo\\\\\\'' }}
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -953,7 +953,8 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo \\\\'--' }
+      query: table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo \\");
@@ -965,7 +966,8 @@ describe("sql injection tests", () => {
       await runQuery(
         model,
         `
-        query: flights->{ aggregate: test is count() {? carrier: 'foo \\\\' THEN 0 else 1 END) as test--' }}      `
+        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo \\\\' THEN 0 else 1 END) as test--'
+        }}      `
       );
     } catch (e) {
       error = e;
@@ -975,11 +977,12 @@ describe("sql injection tests", () => {
 
   test.todo("'malloytest\\'.tables' produces the wrong error...");
 
-  test("nested_table", async () => {
+  test("comment in literal", async () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo \\\\'--' }
+      query: flights->{ group_by: test is 'foo \\\\'--'
+      }
     `
     );
     expect(result.data.value[0].test).toBe("foo \\");

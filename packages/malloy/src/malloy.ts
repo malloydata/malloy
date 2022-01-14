@@ -1894,6 +1894,11 @@ class ExploreMaterializer extends FluentState<Explore> {
   }
 }
 
+export type ResultJSON = {
+  queryResult: QueryResult;
+  modelDef: ModelDef;
+};
+
 /**
  * The result of running a Malloy query.
  *
@@ -1916,6 +1921,14 @@ export class Result extends PreparedResult {
    */
   public get data(): DataArray {
     return new DataArray(this.inner.result, this.resultExplore);
+  }
+
+  public toJSON(): ResultJSON {
+    return { queryResult: this.inner, modelDef: this._modelDef };
+  }
+
+  public static fromJSON({ queryResult, modelDef }: ResultJSON): Result {
+    return new Result(queryResult, modelDef);
   }
 }
 

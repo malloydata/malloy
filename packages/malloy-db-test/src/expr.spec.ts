@@ -134,9 +134,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
       )
       .run();
-    expect(
-      result.data.path(0, "by_manufacturer", 0, "manufacturer").value
-    ).toBe("CESSNA");
+    expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
 
   // filtered turtle expressions

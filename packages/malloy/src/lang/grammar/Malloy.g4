@@ -47,16 +47,12 @@ topLevelQueryDef
   ;
 
 query
-  : exploreRoot ARROW pipelineFromName              # exploreArrowQuery
+  : explore ARROW pipelineFromName              # exploreArrowQuery
   | ARROW queryName queryProperties? pipeElement*   # arrowQuery
   ;
 
 pipelineFromName
   : firstSegment pipeElement*
-  ;
-
-exploreRoot
-  : (exploreName | exploreTable) exploreProperties?
   ;
 
 firstSegment
@@ -143,13 +139,13 @@ joinNameDef: id;
 measureDef: fieldDef;
 
 joinList
-  : OCURLY (joinDef COMMA?)* CCURLY
+  : OBRACK (joinDef COMMA?)* CBRACK
   | joinDef
   ;
 
 joinDef
-  : joinNameDef IS explore ON fieldName
-  | joinNameDef ON fieldName
+  : joinNameDef IS explore ON fieldPath
+  | joinNameDef ON fieldPath
   ;
 
 filterStatement
@@ -186,10 +182,6 @@ exploreQueryDef
   : exploreQueryNameDef IS pipelineFromName
   ;
 
-// indexStatement
-//   : INDEX fieldCollection
-//   ;
-
 groupByStatement
   : GROUP_BY groupByList
   ;
@@ -209,7 +201,7 @@ groupByEntry
 queryStatement
   : groupByStatement
   | projectStatement
-//| indexStatement
+  | indexStatement
   | aggregateStatement
   | topStatement
   | limitStatement
@@ -217,7 +209,6 @@ queryStatement
   | whereStatement
   | havingStatement
   | nestStatement
-//| exploreStatement
   ;
 
 nestStatement
@@ -276,6 +267,10 @@ bySpec
 
 topStatement
   : TOP INTEGER_LITERAL bySpec?
+  ;
+
+indexStatement
+  : INDEX fieldNameList (BY fieldName)?
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
@@ -358,7 +353,13 @@ fieldExprList
   ;
 
 fieldNameList
-  : fieldName ( COMMA fieldName)* COMMA
+  : fieldOrStar
+  | OBRACK fieldOrStar ( COMMA fieldOrStar)* COMMA? CBRACK
+  ;
+
+fieldOrStar
+  : STAR
+  | fieldName
   ;
 
 fieldCollection
@@ -429,27 +430,28 @@ fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
 fragment UNICODE: 'u' HEX HEX HEX HEX;
 fragment HEX: [0-9a-fA-F];
 fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
+fragment SPACE_CHAR: [ \u000B\t\r\n];
 
 // colon keywords ...
-ACCEPT: A C C E P T ':';
-AGGREGATE: A G G R E G A T E ':';
-DIMENSION: D I M E N S I O N ':';
-EXCEPT: E X C E P T ':';
-EXPLORE: E X P L O R E ':';
-GROUP_BY: G R O U P '_' B Y ':';
-HAVING: H A V I N G ':';
-INDEX: I N D E X ':';
-JOIN: J O I N ':';
-LIMIT: L I M I T ':';
-MEASURE: M E A S U R E ':';
-NEST: N E S T ':';
-ORDER_BY: O R D E R '_' B Y ':';
-PRIMARY_KEY: P R I M A R Y '_' K E Y ':';
-PROJECT: P R O J E C T ':';
-QUERY: Q U E R Y ':';
-RENAME: R E N A M E ':';
-TOP: T O P ':';
-WHERE: W H E R E ':';
+ACCEPT: A C C E P T SPACE_CHAR* ':';
+AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
+DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
+EXCEPT: E X C E P T SPACE_CHAR* ':';
+EXPLORE: E X P L O R E SPACE_CHAR* ':';
+GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
+HAVING: H A V I N G SPACE_CHAR* ':';
+INDEX: I N D E X SPACE_CHAR* ':';
+JOIN: J O I N SPACE_CHAR* ':';
+LIMIT: L I M I T SPACE_CHAR* ':';
+MEASURE: M E A S U R E SPACE_CHAR* ':';
+NEST: N E S T SPACE_CHAR* ':';
+ORDER_BY: O R D E R '_' B Y SPACE_CHAR* ':';
+PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
+PROJECT: P R O J E C T SPACE_CHAR* ':';
+QUERY: Q U E R Y SPACE_CHAR* ':';
+RENAME: R E N A M E SPACE_CHAR* ':';
+TOP: T O P SPACE_CHAR* ':';
+WHERE: W H E R E SPACE_CHAR* ':';
 
 // bare keywords
 AND: A N D ;
@@ -511,8 +513,6 @@ STRING_ESCAPE
   | '\\' .;
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
-
-fragment SPACE_CHAR: [ \u000B\t\r\n];
 
 AMPER: '&';
 ARROW: '->';
