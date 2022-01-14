@@ -135,6 +135,7 @@ export abstract class MalloyElement {
     } else if (this.parent) {
       return this.parent.namespace();
     }
+    throw new Error("INTERNAL ERROR: Translation without document scope");
   }
 
   modelEntry(str: string): ModelEntry | undefined {
@@ -336,6 +337,7 @@ class QueryHeadStruct extends Mallobj {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef);
+    this.has({ exploreReference: ns });
     return ns.structDef();
   }
 }
