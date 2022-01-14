@@ -60,7 +60,7 @@ test("query symbols are included", () => {
   ]);
 });
 
-test("expression field defs are included", () => {
+test.skip("expression field defs are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights')) {\n" +
       "  dimension: one is 1\n" +
@@ -88,7 +88,7 @@ test("expression field defs are included", () => {
   ]);
 });
 
-test("renamed fields are included", () => {
+test.skip("renamed fields are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       "  dimension: field_two renames field_2\n" +
@@ -116,7 +116,7 @@ test("renamed fields are included", () => {
   ]);
 });
 
-test("name only fields are included", () => {
+test.skip("name only fields are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       "  dmension: field_two is field_2\n" +
@@ -138,7 +138,7 @@ test("name only fields are included", () => {
   ]);
 });
 
-test("turtle fields are included", () => {
+test.skip("turtle fields are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       "  query: my_turtle is { group_by: a }\n" +
@@ -160,7 +160,7 @@ test("turtle fields are included", () => {
   ]);
 });
 
-test("turtle children fields are included", () => {
+test.skip("turtle children fields are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       "  query: my_turtle is { group_by: a a}\n" +
@@ -187,7 +187,7 @@ test("turtle children fields are included", () => {
   ]);
 });
 
-test("turtle children turtles are included", () => {
+test.skip("turtle children turtles are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       "  query: my_turtle is { nest: inner_turtle is { group_by: a }}\n" +
@@ -224,7 +224,7 @@ test("turtle children turtles are included", () => {
   ]);
 });
 
-test("joins are included", () => {
+test.skip("joins are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       " join: a is b on c\n" +
@@ -246,7 +246,7 @@ test("joins are included", () => {
   ]);
 });
 
-test("join ons in join section are included", () => {
+test.skip("join ons in join section are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       " join: a on b\n" +
@@ -268,7 +268,7 @@ test("join ons in join section are included", () => {
   ]);
 });
 
-test("join sources in join section are included", () => {
+test.skip("join sources in join section are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
       " join: a is b on c\n" +
