@@ -11,9 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { CommonTokenStream } from "antlr4ts";
+import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
+import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
+import { ParseTree } from "antlr4ts/tree";
+import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import * as parser from "../lib/Malloy/MalloyParser";
+import { MalloyParser } from "../lib/Malloy/MalloyParser";
 import { Token } from "antlr4ts/Token";
-import { MalloyParser } from "./lib/Malloy/MalloyParser";
 
 export interface DocumentHighlight {
   range: {
@@ -39,6 +43,9 @@ export const HighlightType = {
     Aggregate: "call.aggregate",
     TimeFrame: "call.time_frame",
     Cast: "call.cast",
+    Table: "call.table",
+    From: "call.from",
+    Function: "call.function",
   },
   // TODO many of these should probably be categorized further
   Keyword: {
@@ -48,28 +55,14 @@ export const HighlightType = {
     CastModifier: {
       As: "keyword.cast_modifier.as",
     },
-    Explore: "keyword.explore",
     Is: "keyword.is",
-    Top: "keyword.top",
-    // TODO should "order" parse as a keyword if it is not followed by "by"
-    Order: "keyword.order",
-    By: "keyword.by",
-    Limit: "keyword.limit",
     Join: "keyword.join",
     On: "keyword.on",
-    Renames: "keyword.renames",
-    // TODO should "primary" or "key" parse as keywords if not together?
-    Primary: "keyword.primary",
-    Key: "keyword.key",
-    Export: "keyword.export",
-    Define: "keyword.define",
     Desc: "keyword.desc",
     Asc: "keyword.asc",
     Pick: "keyword.pick",
     When: "keyword.when",
     Else: "keyword.else",
-    Accept: "keyword.accept",
-    Except: "keyword.except",
     // TODO or is this a meta type?
     JSON: "keyword.json",
     // TODO or is this a meta type?
@@ -81,18 +74,30 @@ export const HighlightType = {
     Boolean: "operator.boolean",
     Date: "operator.date",
   },
-  Transformation: {
-    Reduce: "transformation.reduce",
-    Index: "transformation.index",
-    Project: "transformation.project",
-  },
-  Label: {
-    Fields: "label.fields",
-    Joins: "label.joins",
-  },
   Comment: {
     Line: "comment.line",
     Block: "comment.block",
+  },
+  Property: {
+    Accept: "property.accept",
+    Aggregate: "property.aggregate",
+    Dimension: "property.dimension",
+    Except: "property.except",
+    Explore: "property.explore",
+    GroupBy: "property.group_by",
+    Having: "property.having",
+    Index: "property.index",
+    Join: "property.join",
+    Limit: "property.limit",
+    Measure: "property.measure",
+    Nest: "property.nest",
+    OrderBy: "property.order_by",
+    PrimaryKey: "property.primary_key",
+    Project: "property.project",
+    Query: "property.query",
+    Rename: "property.rename",
+    Top: "property.top",
+    Where: "property.where",
   },
 };
 
@@ -100,13 +105,14 @@ export function passForHighlights(
   tokens: CommonTokenStream
 ): DocumentHighlight[] {
   const highlights: DocumentHighlight[] = [];
-  const register = (token: Token, type: string) => {
+  const register = (token: Token, type: string, removeColon = false) => {
     const offset = token.startIndex - token.charPositionInLine;
     const tokenLines = token.text?.split("\n") || [];
     const numberOfLines = tokenLines.length;
     const lengthOfAllButLastLine = tokenLines
       .slice(0, -1)
       .reduce((a, l) => a + l.length, 0);
+    const colonAdjustment = removeColon ? 1 : 0;
     highlights.push({
       type,
       range: {
@@ -118,7 +124,8 @@ export function passForHighlights(
             2 -
             (numberOfLines > 1 ? token.startIndex : offset) -
             lengthOfAllButLastLine -
-            numberOfLines,
+            numberOfLines -
+            colonAdjustment,
         },
       },
     });
@@ -127,8 +134,68 @@ export function passForHighlights(
     const token = tokens.get(i);
 
     switch (token.type) {
+      case MalloyParser.ACCEPT:
+        register(token, HighlightType.Property.Accept, true);
+        break;
+      case MalloyParser.AGGREGATE:
+        register(token, HighlightType.Property.Aggregate, true);
+        break;
+      case MalloyParser.DIMENSION:
+        register(token, HighlightType.Property.Dimension, true);
+        break;
+      case MalloyParser.EXCEPT:
+        register(token, HighlightType.Property.Except, true);
+        break;
       case MalloyParser.EXPLORE:
-        register(token, HighlightType.Keyword.Explore);
+        register(token, HighlightType.Property.Explore, true);
+        break;
+      case MalloyParser.GROUP_BY:
+        register(token, HighlightType.Property.GroupBy, true);
+        break;
+      case MalloyParser.HAVING:
+        register(token, HighlightType.Property.Having, true);
+        break;
+      case MalloyParser.INDEX:
+        register(token, HighlightType.Property.Index, true);
+        break;
+      case MalloyParser.JOIN:
+        register(token, HighlightType.Property.Join, true);
+        break;
+      case MalloyParser.LIMIT:
+        register(token, HighlightType.Property.Limit, true);
+        break;
+      case MalloyParser.MEASURE:
+        register(token, HighlightType.Property.Measure, true);
+        break;
+      case MalloyParser.NEST:
+        register(token, HighlightType.Property.Nest, true);
+        break;
+      case MalloyParser.ORDER_BY:
+        register(token, HighlightType.Property.OrderBy, true);
+        break;
+      case MalloyParser.PRIMARY_KEY:
+        register(token, HighlightType.Property.PrimaryKey, true);
+        break;
+      case MalloyParser.PROJECT:
+        register(token, HighlightType.Property.Project, true);
+        break;
+      case MalloyParser.QUERY:
+        register(token, HighlightType.Property.Query, true);
+        break;
+      case MalloyParser.RENAME:
+        register(token, HighlightType.Property.Rename, true);
+        break;
+      case MalloyParser.TOP:
+        register(token, HighlightType.Property.Top, true);
+        break;
+      case MalloyParser.WHERE:
+        register(token, HighlightType.Property.Where, true);
+        break;
+      case MalloyParser.TABLE:
+        register(token, HighlightType.Call.Table);
+        break;
+      case MalloyParser.FROM:
+        register(token, HighlightType.Call.Table);
         break;
       case MalloyParser.STRING_LITERAL:
       case MalloyParser.JSON_STRING:
@@ -141,59 +208,14 @@ export function passForHighlights(
       case MalloyParser.HACKY_REGEX:
         register(token, HighlightType.Literal.RegularExpression);
         break;
-      case MalloyParser.REDUCE:
-        register(token, HighlightType.Transformation.Reduce);
-        break;
-      case MalloyParser.PROJECT:
-        register(token, HighlightType.Transformation.Project);
-        break;
-      case MalloyParser.INDEX:
-        register(token, HighlightType.Transformation.Index);
-        break;
       case MalloyParser.IS:
         register(token, HighlightType.Keyword.Is);
-        break;
-      case MalloyParser.TOP:
-        register(token, HighlightType.Keyword.Top);
-        break;
-      case MalloyParser.ORDER:
-        register(token, HighlightType.Keyword.Order);
-        break;
-      case MalloyParser.BY:
-        register(token, HighlightType.Keyword.By);
-        break;
-      case MalloyParser.LIMIT:
-        register(token, HighlightType.Keyword.Limit);
         break;
       case MalloyParser.DISTINCT:
         register(token, HighlightType.Keyword.AggregateModifier.Distinct);
         break;
-      case MalloyParser.FIELDS:
-        register(token, HighlightType.Label.Fields);
-        break;
-      case MalloyParser.JOINS:
-        register(token, HighlightType.Label.Joins);
-        break;
-      case MalloyParser.JOIN:
-        register(token, HighlightType.Keyword.Join);
-        break;
       case MalloyParser.ON:
         register(token, HighlightType.Keyword.On);
-        break;
-      case MalloyParser.RENAMES:
-        register(token, HighlightType.Keyword.Renames);
-        break;
-      case MalloyParser.PRIMARY:
-        register(token, HighlightType.Keyword.Primary);
-        break;
-      case MalloyParser.KEY:
-        register(token, HighlightType.Keyword.Key);
-        break;
-      case MalloyParser.DEFINE:
-        register(token, HighlightType.Keyword.Define);
-        break;
-      case MalloyParser.EXPORT:
-        register(token, HighlightType.Keyword.Export);
         break;
       case MalloyParser.DESC:
         register(token, HighlightType.Keyword.Desc);
@@ -215,12 +237,6 @@ export function passForHighlights(
         break;
       case MalloyParser.ELSE:
         register(token, HighlightType.Keyword.Else);
-        break;
-      case MalloyParser.ACCEPT:
-        register(token, HighlightType.Keyword.Accept);
-        break;
-      case MalloyParser.EXCEPT:
-        register(token, HighlightType.Keyword.Except);
         break;
       case MalloyParser.JSON:
         register(token, HighlightType.Keyword.JSON);
@@ -252,7 +268,7 @@ export function passForHighlights(
       case MalloyParser.FOR:
         register(token, HighlightType.Operator.Date);
         break;
-      case MalloyParser.DOUBLE_DASH_COMMENT:
+      case MalloyParser.COMMENT_TO_EOL:
         register(token, HighlightType.Comment.Line);
         break;
       case MalloyParser.BLOCK_COMMENT:
@@ -295,4 +311,66 @@ export function passForHighlights(
     }
   }
   return highlights;
+}
+
+class DocumentHighlightWalker implements MalloyListener {
+  constructor(
+    readonly tokens: CommonTokenStream,
+    readonly highlights: DocumentHighlight[]
+  ) {}
+
+  rangeOf(pcx: ParserRuleContext) {
+    const stopToken = pcx.stop || pcx.start;
+    return {
+      start: {
+        line: pcx.start.line - 1,
+        character: pcx.start.charPositionInLine,
+      },
+      end: {
+        line: stopToken.line - 1,
+        character:
+          stopToken.stopIndex -
+          (stopToken.startIndex - stopToken.charPositionInLine) +
+          1,
+      },
+    };
+  }
+
+  enterExprFunc(pcx: parser.ExprFuncContext) {
+    const id = pcx.id() || pcx.timeframe();
+    if (id) {
+      this.highlights.push({
+        range: this.rangeOf(id),
+        type: HighlightType.Call.Function,
+      });
+    }
+  }
+}
+
+export function walkForDocumentHighlights(
+  tokens: CommonTokenStream,
+  parseTree: ParseTree
+): DocumentHighlight[] {
+  const finder = new DocumentHighlightWalker(tokens, []);
+  const listener: MalloyListener = finder;
+  ParseTreeWalker.DEFAULT.walk(listener, parseTree);
+  return finder.highlights;
+}
+
+export function sortHighlights(
+  highlights: DocumentHighlight[]
+): DocumentHighlight[] {
+  return highlights.sort((a, b) => {
+    if (a.range.start.line < b.range.start.line) {
+      return -1;
+    } else if (a.range.start.line > b.range.start.line) {
+      return 1;
+    } else if (a.range.start.character < b.range.start.character) {
+      return -1;
+    } else if (a.range.start.character > b.range.start.character) {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
 }

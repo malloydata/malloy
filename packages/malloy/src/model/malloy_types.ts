@@ -345,7 +345,7 @@ export interface Query extends Pipeline, Filtered {
   structRef: StructRef;
 }
 
-export type NamedQuery = Query & AliasedName;
+export type NamedQuery = Query & NamedObject;
 
 export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
 
@@ -362,6 +362,11 @@ export interface ProjectSegment extends QuerySegment {
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
   return (pe as ProjectSegment).type === "project";
 }
+
+export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
+  return pe.type === "project" || pe.type === "reduce";
+}
+
 export interface IndexSegment extends Filtered {
   type: "index";
   fields: string[];
@@ -503,13 +508,13 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedMalloyObject = StructDef;
+export type NamedModelObject = StructDef | NamedQuery;
 
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
   exports: string[];
-  structs: Record<string, NamedMalloyObject>;
+  contents: Record<string, NamedModelObject>;
 }
 
 /** Very common record type */

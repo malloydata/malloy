@@ -5,7 +5,7 @@
 *See the complete [Iowa Liquor Malloy Model](source.md)*
 
 ## *total_sale_dollars* - What was the total volume of transactions?
-The calculation `total_sale_dollars` will show us the total amount, in dollars, that Iowa State stores sold. 
+The calculation `total_sale_dollars` will show us the total amount, in dollars, that Iowa State stores sold.
 
 ```malloy
 total_sale_dollars is sale_dollars.sum()
@@ -14,16 +14,15 @@ Having added this to the model, we can now reference `total_sale_dollars` to see
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce
-  vendor_name
-  item_description
-  total_sale_dollars
+query: iowa -> {
+  group_by: [ vendor_name, item_description ]
+  aggregate: total_sale_dollars
+}
 ```
 
 
-## *item_count* - How many different kinds of items were sold? 
- This lets us understand whether a vendor sells one item, or many different kinds of items.  
+## *item_count* - How many different kinds of items were sold?
+ This lets us understand whether a vendor sells one item, or many different kinds of items.
 
 ```malloy
 item_count is count(distinct item_number)
@@ -33,35 +32,31 @@ We can see which Vendors have the greatest breadth of products as it relates to 
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce
-  vendor_name
-  item_count
-  total_sale_dollars
+query: iowa -> {
+  group_by: [ vendor_name ]
+  aggregate: [ item_count, total_sale_dollars ]
+}
 ```
 
 A few observations here: Jim Bean Brands has the greatest variety of items in this dataset. Yahara Bay Distillers Inc sells 275 different items but only has $100K in sales, while Fifth Generation sells only 5 different items, yet has $3M in volume.
 
-## *gross_margin* - How much did the state of Iowa make on this item? 
+## *gross_margin* - How much did the state of Iowa make on this item?
 We have both the bottle cost (`state_bottle_cost`) and bottle price (`state_bottle_retail`), allowing us to calculate percent gross margin on a per-item basis, giving us a new a dimension.
 
 ```malloy
-gross_margin is 
-  100 * (state_bottle_retail - state_bottle_cost) / 
-    nullif(state_bottle_retail, 0) 
+gross_margin is
+  100 * (state_bottle_retail - state_bottle_cost) /
+    nullif(state_bottle_retail, 0)
 ```
 
 Looking at gross margin across top selling items, we see that the gross margin is a *consistent 33.3 percent*.  A quick google search reveals that Iowa state law dictates the state can mark up liquor by up to 50% of the price from the vendor, so this makes sense!
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
-explore iowa
-| reduce
-  item_description
-  state_bottle_retail
-  state_bottle_cost
-  gross_margin
-  total_sale_dollars
+query: iowa -> {
+  group_by: [ item_description, state_bottle_retail, state_bottle_cost, gross_margin ]
+  aggregate: total_sale_dollars
+}
 ```
 
 ## *total_bottles* - How many individual bottles were sold?

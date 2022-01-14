@@ -27,7 +27,7 @@ function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
     kind:
       type === "explore"
         ? SymbolKind.Namespace
-        : type === "turtle"
+        : type === "query"
         ? SymbolKind.Class
         : type === "join"
         ? SymbolKind.Interface

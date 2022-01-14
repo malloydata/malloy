@@ -20,7 +20,16 @@ The source of a query can be a table, an [explore](explore.md), or a [named quer
 **A query against an explore**
 
 ```malloy
-flights | reduce total_distance is sum(distance)
+--! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
+explore: airports is table('malloy-data.faa.airports'){
+  measure: airport_count is count(*)
+
+  query: by_state is {
+    where: state != null
+    group_by: state
+    aggregate: airport_count
+  }
+}
 ```
 
 **A query starting from another query**
