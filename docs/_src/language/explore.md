@@ -17,9 +17,10 @@ An explore's source can be any of the following:
 An explore can be created from a SQL table or view from a connected database.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
-  ...
-);
+--! {"isModel": true, "modelPath": "/inline/e1.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
 ```
 
 When defining an explore in this way, all the columns from
@@ -27,10 +28,16 @@ the source table are available for use in field definitions
 or queries.
 
 ```malloy
-flights | reduce
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e1.malloy"}
+query: flights->{
   -- Columns from the source table are available
-  distance
-  carrier
+  group_by: [
+    carrier
+    origin
+  ]
+  aggregate: flight_count
+  limit: 3
+}
 ```
 
 ### Explores from Other Explores
@@ -41,7 +48,10 @@ This is useful for performing in-depth analysis without altering
 the base explore with modifications only relevant in that specific context.
 
 ```malloy
-define sfo_flights is (explore flights : [origin = 'SFO']);
+--! {"isModel": true, "modelPath": "/inline/e1.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
 ```
 
 ### Explores from Queries

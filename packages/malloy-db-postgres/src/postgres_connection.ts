@@ -19,9 +19,10 @@ import {
   NamedStructDefs,
   AtomicFieldType,
   QueryData,
+  PooledConnection,
+  parseTableURL,
 } from "@malloy-lang/malloy";
-import { Client } from "pg";
-import { parseTableURL } from "@malloy-lang/malloy/src/malloy";
+import { Client, Pool } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "character varying": "string",
@@ -45,6 +46,10 @@ export class PostgresConnection extends Connection {
     return "postgres";
   }
 
+  public isPool(): this is PooledConnection {
+    return false;
+  }
+
   public async fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs> {
@@ -60,7 +65,7 @@ export class PostgresConnection extends Connection {
     return tableStructDefs;
   }
 
-  private async runPostgresQuery(
+  protected async runPostgresQuery(
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
@@ -119,7 +124,7 @@ export class PostgresConnection extends Connection {
           name: row["column_name"] as string,
         });
       } else {
-        console.log(`unknown postgres type ${postgresDataType}`);
+        throw new Error(`unknown postgres type ${postgresDataType}`);
       }
     }
     return structDef;
@@ -149,5 +154,43 @@ export class PostgresConnection extends Connection {
 
     this.resultCache.set(hash, result);
     return result;
+  }
+}
+
+export class PooledPostgresConnection
+  extends PostgresConnection
+  implements PooledConnection
+{
+  private pool: Pool;
+
+  constructor(name: string) {
+    super(name);
+    this.pool = new Pool();
+  }
+
+  public isPool(): true {
+    return true;
+  }
+
+  public async drain(): Promise<void> {
+    await this.pool.end();
+  }
+
+  protected async runPostgresQuery(
+    sqlCommand: string,
+    _pageSize: number,
+    _rowIndex: number,
+    deJSON: boolean
+  ): Promise<MalloyQueryData> {
+    let result = await this.pool.query(sqlCommand);
+    if (result instanceof Array) {
+      result = result.pop();
+    }
+    if (deJSON) {
+      for (let i = 0; i < result.rows.length; i++) {
+        result.rows[i] = result.rows[i].row;
+      }
+    }
+    return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 }

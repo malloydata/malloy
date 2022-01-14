@@ -3024,14 +3024,12 @@ class QueryStruct extends QueryNode {
       }
     }
 
-    const addedFilters = (turtleDef as TurtleDefPlus).filterList;
-    if (addedFilters) {
-      pipeline = cloneDeep(pipeline);
-      pipeline[0].filterList = addedFilters.concat(
-        pipeline[0].filterList || [],
-        this.fieldDef.filterList || []
-      );
-    }
+    const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
+    pipeline = cloneDeep(pipeline);
+    pipeline[0].filterList = addedFilters.concat(
+      pipeline[0].filterList || [],
+      this.fieldDef.filterList || []
+    );
 
     const flatTurtleDef: TurtleDef = {
       type: "turtle",
@@ -3107,15 +3105,17 @@ export class QueryModel {
 
   loadModelFromDef(modelDef: ModelDef): void {
     this.modelDef = modelDef;
-    for (const s of Object.values(this.modelDef.structs)) {
+    for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (s.type === "struct") {
         qs = new QueryStruct(s, { model: this });
+        this.structs.set(getIdentifier(s), qs);
+        qs.resolveQueryFields();
+      } else if (s.type === "query") {
+        /* TODO */
       } else {
         throw new Error("Internal Error: Unknown structure type");
       }
-      this.structs.set(getIdentifier(s), qs);
-      qs.resolveQueryFields();
     }
   }
 

@@ -15,9 +15,9 @@ import * as model from "../model/malloy_types";
 import {
   ColumnSpaceField,
   DefinedParameter,
-  TurtleFieldStruct,
+  QueryFieldStruct,
 } from "./space-field";
-import { FieldSpace } from "./field-space";
+import { StructSpace } from "./field-space";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
@@ -42,7 +42,7 @@ describe("structdef comprehension", () => {
       type: "string",
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -55,7 +55,7 @@ describe("structdef comprehension", () => {
       numberType: "float",
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -68,7 +68,7 @@ describe("structdef comprehension", () => {
       numberType: "integer",
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -80,7 +80,7 @@ describe("structdef comprehension", () => {
       type: "boolean",
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -96,7 +96,7 @@ describe("structdef comprehension", () => {
       fields: [{ type: "string", name: "b" }],
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t.b")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -112,7 +112,7 @@ describe("structdef comprehension", () => {
       fields: [{ type: "string", name: "a" }],
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t.a")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -128,7 +128,7 @@ describe("structdef comprehension", () => {
       fields: [{ type: "string", name: "a" }],
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("t.a")).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
@@ -146,8 +146,8 @@ describe("structdef comprehension", () => {
       ],
     };
     const struct = mkStructDef(field);
-    const space = new FieldSpace(struct);
-    expect(space.findEntry("t")).toBeInstanceOf(TurtleFieldStruct);
+    const space = new StructSpace(struct);
+    expect(space.findEntry("t")).toBeInstanceOf(QueryFieldStruct);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -168,7 +168,7 @@ describe("structdef comprehension", () => {
         constant: false,
       },
     };
-    const space = new FieldSpace(struct);
+    const space = new StructSpace(struct);
     expect(space.findEntry("cReqStr")).toBeInstanceOf(DefinedParameter);
     expect(space.findEntry("cOptStr")).toBeInstanceOf(DefinedParameter);
   });
