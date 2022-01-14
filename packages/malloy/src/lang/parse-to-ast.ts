@@ -969,7 +969,7 @@ export class MalloyToAST
     return this.astAt(new ast.ImportStatement(url, this.parse.sourceURL), pcx);
   }
 
-  visittJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
+  visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
     return this.getFieldExpr(pcx.fieldExpr());
   }
 }

@@ -86,7 +86,7 @@ expect.extend({
 
 class BetaExpression extends Testable {
   constructor(src: string) {
-    super(new TestTranslator(src, "malloyExpr"));
+    super(new TestTranslator(src, "justExpr"));
   }
 
   compile(): void {
@@ -427,7 +427,8 @@ describe("expressions", () => {
   describe("literals", () => {
     test("integer", exprOK("42"));
     test("string", exprOK(`'fortywo-two'`));
-    test("string with quotes", exprOK(`'Isn'''t this nice'`));
+    test("string with \\'", exprOK(`'Isn` + `\\` + `'t this nice'`));
+    test("string with \\\\", exprOK(`'Is ` + `\\` + `\\` + ` nice'`));
     test("year", exprOK("@1960"));
     test("quarter", exprOK("@1960-Q1"));
     test("week", exprOK("@WK1960-06-26"));
@@ -520,9 +521,10 @@ describe("expressions", () => {
     test(
       "applied",
       exprOK(`
-        astring: pick 'the answer' when '42'
-        pick 'the questionable answer' '54'
-        else 'random'
+        astring:
+          pick 'the answer' when = '42'
+          pick 'the questionable answer' when = '54'
+          else 'random'
     `)
     );
     test(
@@ -545,9 +547,9 @@ describe("expressions", () => {
       "transforming",
       exprOK(`
         aninteger:
-          pick "small" when < 10
-          pick "medium" when < 100
-          else "large"
+          pick 'small' when < 10
+          pick 'medium' when < 100
+          else 'large'
     `)
     );
   });
