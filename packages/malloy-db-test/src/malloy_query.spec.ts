@@ -16,21 +16,17 @@ import { testModel } from "./models/faa_model";
 import { fStringEq } from "./test_utils";
 
 import "@malloy-lang/malloy/src/lang/jestery";
-
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import * as malloy from "@malloy-lang/malloy";
-import * as util from "util";
-import * as fs from "fs";
-import { Query } from "@malloy-lang/malloy";
 
-const bq = new BigQueryConnection("test");
-const files = {
-  readURL: async (url: malloy.URL) => {
-    const filePath = url.toString().replace(/^file:\/\//, "");
-    return await util.promisify(fs.readFile)(filePath, "utf8");
-  },
-};
-const runtime = new malloy.Runtime(files, bq);
+import { Query } from "@malloy-lang/malloy";
+import { RuntimeList } from "./runtimes";
+
+const runtimeList = new RuntimeList(["bigquery"]);
+const runtime = runtimeList.runtimeMap.get("bigquery");
+if (runtime === undefined) {
+  throw new Error("Couldn't build runtime");
+}
+const bq = runtimeList.bqConnection;
 
 function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
@@ -636,7 +632,7 @@ describe("expression tests", () => {
           name: "malloy-data.malloytest.bq_medicare_test",
           dialect: "standardsql",
           as: "mtest",
-          structRelationship: { type: "basetable", connectionName: "test" },
+          structRelationship: { type: "basetable", connectionName: "bigquery" },
           structSource: { type: "table" },
           fields: [
             {
