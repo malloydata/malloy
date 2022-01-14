@@ -7,7 +7,7 @@ Filtering which data is used in a query is an incredibly important aspect of dat
 Regardless of the placement of a filter, the syntax looks the same.
 
 ```malloy
-source : [ filter_one, filter_two ]
+.. source{ where: filter_one, filter_two }
 ```
 
 Each filter be any expression of type `boolean`, whether that's a boolean field `is_commercial_flight`, a comparison `distance > 1000`, or any of the other kinds of boolean expressions that Malloy supports. For examples see [the table below](#examples-of-filter-expressions), or for detailed information on the kinds of expressions Malloy supports, see the [Expressions](expressions.md) section.

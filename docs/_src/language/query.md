@@ -4,7 +4,7 @@ The basic syntax for a query in Malloy consists of a source
 and a "pipeline" of one or more _stages_ seperated by a vertical bar (or "pipe"). The shape of the data defined in the original explore is transformed by each stage.
 
 ```malloy
-flights | reduce carrier, flight_count is count()
+query: flights->{ group_by: carrier; aggregate: flight_count is count() }
 ```
 
 ## Sources
