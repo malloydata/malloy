@@ -16,14 +16,13 @@ import { testModel } from "./models/faa_model";
 import { fStringEq } from "./test_utils";
 
 import "@malloy-lang/malloy/src/lang/jestery";
-
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { BigQueryTestConnection } from "./runtimes";
 import * as malloy from "@malloy-lang/malloy";
 import * as util from "util";
 import * as fs from "fs";
 import { Query } from "@malloy-lang/malloy";
 
-const bq = new BigQueryConnection("test");
+const bq = new BigQueryTestConnection("test");
 const files = {
   readURL: async (url: malloy.URL) => {
     const filePath = url.toString().replace(/^file:\/\//, "");
