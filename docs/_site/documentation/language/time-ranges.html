@@ -366,7 +366,7 @@ data type (e.g. it would make no sense to attempt to truncate a <code class="lan
         </a>
       </h3>
     <p>A truncation made this way (unlike a truncation make in SQL with
-<code class="language-malloy">TIMESTAMP_TRUNC<span class="token punctuation">(</span><span class="token punctuation">)</span></code>) can also function as a range. The range begins
+<code class="language-malloy">TIMESTAMP_TRUNC<span class="token function"></span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>) can also function as a range. The range begins
 at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example <code class="language-malloy">eventDate<span class="token punctuation">.</span><span class="token timeframe">year</span></code>
 would be a range covering the entire year which contains <code class="language-malloy">eventDate</code></p>
@@ -406,7 +406,7 @@ would be a range covering the entire year which contains <code class="language-m
 </tr>
 
 <tr>
-<td><code class="language-malloy">day_of_week<span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+<td><code class="language-malloy">day_of_week<span class="token function"></span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
 
 <td>day of week 1-7</td>
 

@@ -23,24 +23,11 @@ flight performed by a particular carrier.</p>
       </h2>
     <pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  flight_count</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">344,827</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+  flight_count</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div>
       <h2>
         <a id="query-for-flights-by-carrier" class="header-link anchor" href="#query-for-flights-by-carrier">
           Query for Flights By Carrier
@@ -49,68 +36,11 @@ flight performed by a particular carrier.</p>
     <pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   carriers<span class="token punctuation">.</span>nickname
-  flight_count</pre><div class="result-outer medium">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Northwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">United</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Delta</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,130</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental Express</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,074</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American Eagle</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,869</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Atlantic Southeast</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,769</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">America West</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,750</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Alaska</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,453</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,139</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jetblue</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,842</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Comair</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,420</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,033</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+  flight_count</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div>
       <h2>
         <a id="in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-" class="header-link anchor" href="#in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-">
           In Malloy, can make both caculations at once with <a href="nesting.html"><em>nested subtables</em></a>.
@@ -123,81 +53,11 @@ flight performed by a particular carrier.</p>
   main_query <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
     carriers<span class="token punctuation">.</span>nickname
     flight_count
-  <span class="token punctuation">)</span></pre><div class="result-outer medium">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">main_&#8203;query</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">344,827</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Northwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">United</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Delta</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,130</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental Express</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,074</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American Eagle</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,869</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Atlantic Southeast</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,769</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">America West</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,750</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Alaska</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,453</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,139</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jetblue</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,842</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Comair</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,420</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,033</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+  <span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div>
       <h2>
         <a id="use-em-project-em-to-flatten-the-table-and-cross-join" class="header-link anchor" href="#use-em-project-em-to-flatten-the-table-and-cross-join">
           Use <em>project</em> to flatten the table and cross join
@@ -216,84 +76,11 @@ We also add an additional column, the percentage of total calculation.</p>
   main_query<span class="token punctuation">.</span>nickname
   main_query<span class="token punctuation">.</span>flight_count
   flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count<span class="token operator">/</span>flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
-</pre><div class="result-outer medium">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count_&#8203;as_&#8203;a_&#8203;percent_&#8203;of_&#8203;total</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25.738</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10.928</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10.027</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Northwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.738</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">United</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Delta</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,130</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.318</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental Express</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,074</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.661</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American Eagle</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,869</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.602</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Atlantic Southeast</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,769</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.573</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">America West</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,750</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.828</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Alaska</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,453</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.451</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,139</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.07</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jetblue</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,842</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.404</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Comair</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,420</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.282</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,033</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.88</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div>
       <h2>
         <a id="using-a-em-wildcard-em-against-the-nested-query" class="header-link anchor" href="#using-a-em-wildcard-em-against-the-nested-query">
           Using a <em>wildcard</em> against the Nested Query
@@ -310,81 +97,8 @@ We also add an additional column, the percentage of total calculation.</p>
 <span class="token operator">|</span> <span class="token keyword">project</span>
   main_query<span class="token punctuation">.</span><span class="token operator">*</span>
   flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count<span class="token operator">/</span>flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
-</pre><div class="result-outer medium">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count_&#8203;as_&#8203;a_&#8203;percent_&#8203;of_&#8203;total</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25.738</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10.928</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10.027</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Northwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.738</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">United</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Delta</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,130</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.318</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental Express</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,074</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.661</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American Eagle</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,869</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.602</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Atlantic Southeast</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,769</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.573</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">America West</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,750</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.828</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Alaska</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,453</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.451</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Continental</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,139</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.07</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jetblue</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,842</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.404</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Comair</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,420</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.282</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,033</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.88</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div></div>
+</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div></div>

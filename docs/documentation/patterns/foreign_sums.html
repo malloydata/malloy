@@ -18,11 +18,11 @@ footer: /generated/footers/patterns/foreign_sums.html
 <span class="token comment">-- 'aircraft_models' is data about the kind of aircraft</span>
 
 <span class="token keyword">define</span> aircraft_models <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft_models'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> aircraft_model_code
+  primary <span class="token keyword">key</span> aircraft_model_code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
 <span class="token keyword">define</span> aircraft <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> tail_num
+  primary <span class="token keyword">key</span> tail_num
   aircraft_models <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> aircraft_model_code
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 
@@ -44,65 +44,8 @@ footer: /generated/footers/patterns/foreign_sums.html
   <span class="token comment">-- count the seat once for each plane</span>
   seats_on_all_planes <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
   <span class="token comment">-- average number of seats on each model by model</span>
-  average_seats_per_model <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;model_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">seats_&#8203;for_&#8203;sale</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">seats_&#8203;on_&#8203;all_&#8203;planes</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats_&#8203;per_&#8203;model</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,592</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">364</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,984,163</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">51,595</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">110.217</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">66,786</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">351</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">69</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,374,497</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">54,407</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21.986</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,722</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">524</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,666,057</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">105,340</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">190.565</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47,285</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">490</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,637,350</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">114,169</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">263.417</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,888</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">398</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,731,475</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">65,482</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">211.818</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div></div>
+  average_seats_per_model <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 6: mismatched input 'define' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
+  | ^</div></div>

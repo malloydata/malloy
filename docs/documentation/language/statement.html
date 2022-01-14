@@ -24,22 +24,308 @@ modeled <em>explore</em>.</p>
       </h2>
     <p>A Malloy model file can contain several <em>explores</em>, which define fields that can be
 used in queries.</p>
-<pre class="language-malloy"><span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  <span class="token comment">-- A dimension</span>
-  distance_km <span class="token keyword">is</span> distance_mi <span class="token operator">/</span> <span class="token number">1.609344</span>
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">dimension</span>: distance_km <span class="token keyword">is</span> distance <span class="token operator">/</span> <span class="token number">1.609344</span>
 
-  <span class="token comment">-- A measure</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>See <a href="explore.html">here</a> for more information on explores.</p>
+  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+  <span class="token keyword">query</span>: by_carrier <span class="token keyword">is</span>  {
+    <span class="token keyword">group_by</span>: carrier
+    <span class="token keyword">aggregate</span>: flight_count
+  }
+}</pre><p>See <a href="explore.html">here</a> for more information on explores.</p>
 
       <h2>
         <a id="queries" class="header-link anchor" href="#queries">
           Queries
         </a>
       </h2>
-    <p>Named queries can also be defined at the top level of a model.</p>
-<pre class="language-malloy"><span class="token keyword">define</span> flights_by_carrier <span class="token keyword">is</span> <span class="token punctuation">(</span>flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  carrier
-  flight_count
-<span class="token punctuation">)</span></pre><p>See <a href="query.html">here</a> for more information on queries.</p>
+    
+      <h3>
+        <a id="using-modeled-in-query-" class="header-link anchor" href="#using-modeled-in-query-">
+          Using modeled in query.
+        </a>
+      </h3>
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="using-modeled-with-a-filter-" class="header-link anchor" href="#using-modeled-with-a-filter-">
+          Using modeled with a filter.
+        </a>
+      </h3>
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights{? origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">338,723</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">105,581</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">82,468</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44,694</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,351</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="setting-a-limit-on-the-query" class="header-link anchor" href="#setting-a-limit-on-the-query">
+          Setting a limit on the Query
+        </a>
+      </h3>
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights{? origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">338,723</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">105,581</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="creating-a-brand-new-query-" class="header-link anchor" href="#creating-a-brand-new-query-">
+          Creating a brand new Query.
+        </a>
+      </h3>
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: destination
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    flight_count
+    average_distance_in_km <span class="token keyword">is</span> distance_km<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;distance_&#8203;in_&#8203;km</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,036,343</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">480.732</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,963,535</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">403.987</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,812,062</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">490.644</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,300,241</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">631.292</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,059,054</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">554.576</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="putting-it-all-together-" class="header-link anchor" href="#putting-it-all-together-">
+          Putting it all together.
+        </a>
+      </h3>
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: destination
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    flight_count
+    average_distance_in_km <span class="token keyword">is</span> distance_km<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+  <span class="token keyword">nest</span>: top_carriers <span class="token keyword">is</span> by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;distance_&#8203;in_&#8203;km</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">top_&#8203;carriers</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,036,343</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">480.732</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">754,774</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">597,817</td>
+</tr>
+
+		</tbody>
+	</table></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,963,535</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">403.987</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,247,710</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">EV</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">288,405</td>
+</tr>
+
+		</tbody>
+	</table></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,812,062</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">490.644</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">968,201</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MQ</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">379,017</td>
+</tr>
+
+		</tbody>
+	</table></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,300,241</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">631.292</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">272,279</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">243,946</td>
+</tr>
+
+		</tbody>
+	</table></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,059,054</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">554.576</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">433,442</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">381,772</td>
+</tr>
+
+		</tbody>
+	</table></td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>See <a href="query.html">here</a> for more information on queries.</p>
 </div>

@@ -277,7 +277,7 @@
       </h1>
     <p>The plugin currently supports US maps and state names. The model and data styles for the subsequent examples are:</p>
 <pre class="language-malloy"><span class="token keyword">export</span> <span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
+  primary <span class="token keyword">key</span> code
   airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
   by_state <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
     state
@@ -295,13 +295,11 @@
         </a>
       </h2>
     <pre class="language-malloy"><span class="token keyword">explore</span> airports
-<span class="token operator">|</span> by_state</pre><div class="result-outer medium">
-    <div class="result-middle">
-      <div class="result-inner">
-        Error: Invalid field type for shape map.
-      </div>
-    </div>
-  </div>
+<span class="token operator">|</span> by_state</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore airports
+  | ^</div>
       <h2>
         <a id="running-a-named-query" class="header-link anchor" href="#running-a-named-query">
           Running a named query
@@ -309,13 +307,11 @@
       </h2>
     <pre class="language-malloy"><span class="token keyword">explore</span> airports
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  by_state</pre><div class="result-outer medium">
-    <div class="result-middle">
-      <div class="result-inner">
-        Error: Invalid field type for shape map.
-      </div>
-    </div>
-  </div>
+  by_state</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore airports
+  | ^</div>
       <h2>
         <a id="run-as-a-trellis" class="header-link anchor" href="#run-as-a-trellis">
           Run as a trellis
@@ -326,13 +322,11 @@
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   faa_region
   airport_count<span class="token punctuation">,</span>
-  by_state</pre><div class="result-outer large">
-    <div class="result-middle">
-      <div class="result-inner">
-        Error: Invalid field type for shape map.
-      </div>
-    </div>
-  </div>
+  by_state</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore airports
+  | ^</div>
       <h2>
         <a id="run-as-a-trellis-repeated-with-different-filters" class="header-link anchor" href="#run-as-a-trellis-repeated-with-different-filters">
           Run as a trellis, repeated with different filters
@@ -344,13 +338,11 @@
   airport_count<span class="token punctuation">,</span>
   by_state
   heliports <span class="token keyword">is</span> by_state : <span class="token punctuation">[</span>fac_type :<span class="token string">'HELIPORT'</span><span class="token punctuation">]</span>
-  seaplane_bases <span class="token keyword">is</span> by_state : <span class="token punctuation">[</span>fac_type :<span class="token string">'SEAPLANE BASE'</span><span class="token punctuation">]</span></pre><div class="result-outer large">
-    <div class="result-middle">
-      <div class="result-inner">
-        Error: Invalid field type for shape map.
-      </div>
-    </div>
-  </div></div>
+  seaplane_bases <span class="token keyword">is</span> by_state : <span class="token punctuation">[</span>fac_type :<span class="token string">'SEAPLANE BASE'</span><span class="token punctuation">]</span></pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore airports
+  | ^</div></div>
           </div>
         </div>
       </div>

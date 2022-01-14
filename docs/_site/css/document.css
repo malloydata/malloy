@@ -267,15 +267,16 @@ div.document pre {
 }
 
 div.document span.token.keyword {
-  color: #cc52c2;
+  color: #AF00DB;
 }
 
 div.document span.token.comment {
   color: #4f984f;
 }
 
-div.document span.token.function {
-  color: #5353da;
+div.document span.token.function,
+div.document span.token.function_keyword {
+  color: #795E26;
 }
 
 div.document span.token.string {
@@ -291,14 +292,18 @@ div.document span.token.punctuation {
   color: #505050;
 }
 
-div.document span.token.number,
+div.document span.token.number {
+  color: #09866a;
+}
+
 div.document span.token.type,
 div.document span.token.timeframe {
-  color: #bb831d;
+  color: #0070C1;
 }
 
 div.document span.token.date {
-  color: #8730b3;
+  color: #09866a;
+  /* color: #8730b3; */
 }
 
 div.document span.token.property {

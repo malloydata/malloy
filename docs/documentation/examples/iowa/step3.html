@@ -19,14 +19,13 @@ footer: /generated/footers/examples/iowa/step3.html
         </a>
       </h2>
     <p>Using the query below, we can see that there are 68 different category names in the data set.  We can notice there is <em>80 Proof Vodka</em>, <em>Flavored Vodka</em> and more.  It would be helpful if we just could have all of these categorized together as vodkas.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  distinct_number_of_category_names <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> category_name<span class="token punctuation">)</span>
-  sizes <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    category_name
-    line_item_count
-    item_count
-  <span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">aggregate</span>: distinct_number_of_category_names <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> category_name<span class="token punctuation">)</span>
+  <span class="token keyword">nest</span>: sizes <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: category_name
+    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> item_count<span class="token punctuation">,</span> line_item_count <span class="token punctuation">]</span>
+  }
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -42,418 +41,418 @@ footer: /generated/footers/examples/iowa/step3.html
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">category_&#8203;name</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">line_&#8203;item_&#8203;count</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">item_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">line_&#8203;item_&#8203;count</th>
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CANADIAN WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,213,048</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">300</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,953,410</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">338</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAIGHT BOURBON WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,399,275</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">744</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VODKA 80 PROOF</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,265,974</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPICED RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,155,787</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">126</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLENDED WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">997,123</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">373</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHISKEY LIQUEUR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">985,969</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">149</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">844,123</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">346</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN FLAVORED VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">637,286</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">405</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FLAVORED RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">606,494</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">321</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TENNESSEE WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">603,995</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">114</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN DRY GINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">513,293</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">187</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREAM LIQUEURS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">502,946</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">195</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VODKA FLAVORED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">502,813</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">514</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TEQUILA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">435,298</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">356</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">424,243</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">142</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">408,744</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCOTCH WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">408,378</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">484</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PUERTO RICO & VIRGIN ISLANDS RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">395,376</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">160</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">100% AGAVE TEQUILA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">376,151</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">422</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COCKTAILS / RTD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">374,793</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">372,796</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN CORDIALS & LIQUEUR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">311,516</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">254</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHITE RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">307,232</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">101</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED CORDIALS & LIQUEURS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">303,527</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">249</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN COCKTAILS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">284,695</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">208</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MIXTO TEQUILA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">281,263</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">65</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">271,252</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">155</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA - MISC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">256,241</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">327</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED FLAVORED VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">255,055</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">191</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED DRY GINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">254,099</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">132</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IRISH WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">250,286</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">264</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISC. IMPORTED CORDIALS & LIQUEURS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246,088</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">400</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN GRAPE BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">243,144</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">62</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SINGLE MALT SCOTCH</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">194,124</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">437</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPECIAL ORDER ITEMS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">899</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,872</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TEMPORARY & SPECIALTY PACKAGES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">177,186</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">758</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">177,186</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED GRAPE BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">155,688</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">165</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAIGHT RYE WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,354</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">204</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COFFEE LIQUEURS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,276</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISC. AMERICAN CORDIALS & LIQUEURS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">127,044</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEPPERMINT SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">120,504</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">62</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">100 PROOF VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">99,124</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">56</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TRIPLE SEC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">97,567</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GOLD RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,503</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">92</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63,400</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DISTILLED SPIRITS SPECIALTY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">60,521</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">115</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLACKBERRY BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,714</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN AMARETTO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53,417</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEUTRAL GRAIN SPIRITS FLAVORED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">42,133</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">46</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DECANTERS & SPECIALTY PACKAGES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,551</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">353</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">APRICOT BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38,509</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGED DARK RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,520</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">111</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CINNAMON SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,235</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUTTERSCOTCH SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,865</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">APPLE SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,099</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISCELLANEOUS SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,375</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEUTRAL GRAIN SPIRITS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,875</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SINGLE BARREL BOURBON WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,254</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">89</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN DISTILLED SPIRIT SPECIALTY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,816</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">134</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPECIAL ORDER ITEMS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,872</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">899</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAIGHT BOURBON WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">744</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,399,275</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">null</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25,040</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">552</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25,040</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN ALCOHOL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24,351</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VODKA FLAVORED</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">514</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">502,813</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FLAVORED GIN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21,868</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCOTCH WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">484</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">408,378</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BOTTLED IN BOND BOURBON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,200</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">51</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SINGLE MALT SCOTCH</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">437</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">194,124</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WATERMELON SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,844</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">100% AGAVE TEQUILA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">422</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">376,151</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN FLAVORED VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">405</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">637,286</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISC. IMPORTED CORDIALS & LIQUEURS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">400</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246,088</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLENDED WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">373</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">997,123</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TEQUILA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">356</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">435,298</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DECANTERS & SPECIALTY PACKAGES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">353</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,551</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">346</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">844,123</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">338</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,953,410</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA - MISC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">327</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">256,241</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FLAVORED RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">321</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">606,494</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CANADIAN WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">300</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,213,048</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IRISH WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">264</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">250,286</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN CORDIALS & LIQUEUR</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">254</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">311,516</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED CORDIALS & LIQUEURS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">249</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">303,527</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COCKTAILS / RTD</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">374,793</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN COCKTAILS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">208</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">284,695</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAIGHT RYE WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">204</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,354</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREAM LIQUEURS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">195</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">502,946</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED FLAVORED VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">191</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">255,055</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VODKA 80 PROOF</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,265,974</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISC. AMERICAN CORDIALS & LIQUEURS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">127,044</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN DRY GINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">187</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">513,293</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED GRAPE BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">165</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">155,688</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PUERTO RICO & VIRGIN ISLANDS RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">160</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">395,376</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">155</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">271,252</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHISKEY LIQUEUR</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">149</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">985,969</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">142</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">424,243</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">408,744</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN DISTILLED SPIRIT SPECIALTY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">134</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,816</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED DRY GINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">132</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">254,099</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPICED RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">126</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,155,787</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED DISTILLED SPIRIT SPECIALTY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,949</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">124</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,949</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JAMAICA RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,288</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">36</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DISTILLED SPIRITS SPECIALTY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">115</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">60,521</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,070</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TENNESSEE WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">114</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">603,995</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROOT BEER SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,615</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGED DARK RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">111</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,520</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHERRY BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,216</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHITE RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">101</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">307,232</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RASPBERRY SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,207</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GOLD RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">92</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,503</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GRAPE SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,044</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED AMARETTO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,789</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAWBERRY SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,853</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SLOE GINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,254</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TROPICAL FRUIT SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,644</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BARBADOS RUM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,909</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORN WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,684</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GREEN CREME DE MENTHE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,961</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MEZCAL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,560</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">76</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHITE CREME DE CACAO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,213</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DARK CREME DE CACAO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,591</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SINGLE BARREL BOURBON WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">89</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,254</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISCELLANEOUS  BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,214</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,214</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OTHER PROOF VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,398</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MEZCAL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">76</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,560</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPEARMINT SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,928</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORN WHISKIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,684</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IOWA DISTILLERIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,855</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MIXTO TEQUILA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">65</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">281,263</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCK & RYE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,660</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN GRAPE BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">62</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">243,144</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHITE CREME DE MENTHE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,459</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEPPERMINT SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">62</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">120,504</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREME DE ALMOND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,631</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">100 PROOF VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">56</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">99,124</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOW PROOF VODKA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,565</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BOTTLED IN BOND BOURBON</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">51</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,200</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANISETTE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,441</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COFFEE LIQUEURS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,276</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JAPANESE WHISKY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">286</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISCELLANEOUS SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,375</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEUTRAL GRAIN SPIRITS FLAVORED</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">46</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">42,133</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FLAVORED GIN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21,868</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">372,796</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">APRICOT BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38,509</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JAMAICA RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">36</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,288</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TRIPLE SEC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">97,567</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BARBADOS RUM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,909</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN AMARETTO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53,417</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLACKBERRY BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,714</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEUTRAL GRAIN SPIRITS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,875</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IOWA DISTILLERY WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">124</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMARETTO - IMPORTED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DELISTED / SPECIAL ORDER ITEMS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">124</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOLIDAY VAP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">48</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">48</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HIGH PROOF BEER - AMERICAN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JAPANESE WHISKY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">286</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SLOE GINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,254</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DELISTED / SPECIAL ORDER ITEMS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63,400</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">APPLE SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,099</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CINNAMON SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,235</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TROPICAL FRUIT SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,644</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN ALCOHOL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24,351</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROOT BEER SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,615</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUTTERSCOTCH SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,865</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,070</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHITE CREME DE CACAO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,213</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHERRY BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,216</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RASPBERRY SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,207</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOW PROOF VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,565</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREME DE ALMOND</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,631</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DARK CREME DE CACAO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,591</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED AMARETTO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,789</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GREEN CREME DE MENTHE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,961</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OTHER PROOF VODKA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,398</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHNAPPS - IMPORTED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA - CHERRY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED GINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WATERMELON SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,844</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED WHISKIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCK & RYE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,660</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IOWA DISTILLERIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,855</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANISETTE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,441</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WHITE CREME DE MENTHE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,459</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GRAPE SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,044</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAWBERRY SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,853</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HIGH PROOF BEER - AMERICAN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMARETTO - IMPORTED</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPEARMINT SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,928</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN WHISKIES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA - CHERRY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED GINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
 
 		</tbody>
@@ -481,14 +480,14 @@ footer: /generated/footers/examples/iowa/step3.html
         </a>
       </h2>
     <p>Let's take a look at each category class and see how many individual items it has.  We'll also build a nested query that shows the <code class="language-malloy">category_name</code>s that map into that category class.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  category_class
-  item_count
-  names_list <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    category_name
-    item_count
-  <span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: category_class
+  <span class="token keyword">aggregate</span>: item_count
+  <span class="token keyword">nest</span>: names_list <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: category_name
+    <span class="token keyword">aggregate</span>: item_count
+  }
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -548,11 +547,11 @@ footer: /generated/footers/examples/iowa/step3.html
         </a>
       </h2>
     <p>With our new lens, we can now see the top sellers in each <code class="language-malloy">category_class</code>, allowing us to get an entire market summary with a single simple query.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  category_class
-  total_sale_dollars
-  top_sellers_by_revenue</pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: category_class
+  <span class="token keyword">aggregate</span>: total_sale_dollars
+  <span class="token keyword">nest</span>: top_sellers_by_revenue
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -579,9 +578,9 @@ footer: /generated/footers/examples/iowa/step3.html
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">74,832,427.3</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,012,063</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.014</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">83,113,248.41</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,782,473</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.015</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Fireball Cinnamon Whiskey</td>
@@ -591,21 +590,21 @@ footer: /generated/footers/examples/iowa/step3.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Lbl</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">56,658,460.72</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,218,284</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.771</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,106,277.36</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,305,669</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.782</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39,276,942.12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,451,476</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.007</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,400,807.23</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,814,857</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.075</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Canadian Whisky</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38,416,124.98</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,460,093</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.896</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,044,259.02</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,518,446</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.899</td>
 </tr>
 
 		</tbody>
@@ -632,27 +631,27 @@ footer: /generated/footers/examples/iowa/step3.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hawkeye Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,966,417.22</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,033,024</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44,760,545.67</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,452,080</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.655</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Swedish Vodka 80 Prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30,589,898.47</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,529,969</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.21</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,352,277.34</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,568,069</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.207</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grey Goose Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,083,401.51</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,115,389</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.515</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,152,628.98</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,173,797</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.518</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Five O'clock Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,577,117.08</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,115,805</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.665</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,383,432.47</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,254,537</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.666</td>
 </tr>
 
 		</tbody>
@@ -673,15 +672,15 @@ footer: /generated/footers/examples/iowa/step3.html
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Spiced Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,865,393.75</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,397,528</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.735</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">65,299,484.41</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,711,754</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.739</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Original Spiced</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,106,931.34</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,924,912</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.773</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,963,416.2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,927,997</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.776</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Heaven Hill Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Admiral Nelson Spiced Rum</td>
@@ -691,15 +690,15 @@ footer: /generated/footers/examples/iowa/step3.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Malibu Coconut Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,789,471.07</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,453,480</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.502</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22,404,274</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,563,027</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.504</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi Superior Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,772,850.23</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,410,343</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.505</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,275,428.79</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,448,122</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.508</td>
 </tr>
 
 		</tbody>
@@ -720,33 +719,33 @@ footer: /generated/footers/examples/iowa/step3.html
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sidney Frank Importing Co.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,111,823.5</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,663,487</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.48</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,602,445.79</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,746,158</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.481</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MHW Ltd</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumchata</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,108,833.96</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">907,321</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.522</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,949,385.8</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">949,053</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.523</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bailey's Original Irish Cream</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,226,756.77</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">454,764</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,950,934.53</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">441,703</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.524</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mast-Jagermeister US, Inc</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,799,752.27</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">469,602</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.542</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kahlua Coffee Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,355,315.45</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">418,269</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.354</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,814,056.37</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">440,633</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.357</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Baileys Original Irish Cream</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,816,662.9</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">346,042</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.756</td>
 </tr>
 
 		</tbody>
@@ -767,32 +766,32 @@ footer: /generated/footers/examples/iowa/step3.html
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado Tequila</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,599,217.09</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,190,493</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.022</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,176,738.93</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,226,756</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.026</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">The Patron Spirits Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Tequila Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,077,149.92</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">391,050</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.377</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,943,952.83</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">412,186</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.383</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Juarez Tequila Gold</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,939,134.34</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">843,290</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.151</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,699,309.06</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">909,047</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.161</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,607,797.75</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">188,076</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.688</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,976,206.4</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">458,172</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.106</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,463,119.16</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">425,431</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,690,730.29</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">442,029</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.112</td>
 </tr>
 
@@ -814,33 +813,33 @@ footer: /generated/footers/examples/iowa/step3.html
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Authentic Lime Margarita</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,023,285.22</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">674,029</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.75</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,231,715.3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">691,478</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.752</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Everclear Alcohol</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,701,047.74</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">281,778</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.748</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tortilla Gold Dss</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,229,716.52</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">470,790</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.684</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Golden Margarita</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,188,088.6</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">207,287</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.954</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,994,971.01</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">303,390</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.751</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Juarez Gold Dss</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,026,797.42</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">414,280</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.734</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,333,864.3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">455,268</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.737</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Peach</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,294,331.48</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">134,282</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.283</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Golden Margarita</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,273,242.22</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">212,483</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.955</td>
 </tr>
 
 		</tbody>
@@ -859,35 +858,35 @@ footer: /generated/footers/examples/iowa/step3.html
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,833,962.14</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,838,321</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.206</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,770,401.78</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,692,720</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.269</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,936,439.64</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">854,399</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.402</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy Vs Cognac</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,969,085.39</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">429,811</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.724</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,773,203.8</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">522,042</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.77</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Remy Martin VSOP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,897,599.84</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">635,109</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.966</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paul Masson Grande Amber Brandy</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,542,350.87</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,390,785</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,826,606.11</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,445,688</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.319</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA         .</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Remy Martin VSOP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,491,613.27</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">350,984</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.982</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Heaven Hill Brands</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Christian Bros Brandy</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,353,948.64</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">673,820</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.188</td>
 </tr>
 
 		</tbody>
@@ -914,9 +913,9 @@ footer: /generated/footers/examples/iowa/step3.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumple Minze Peppermint Schnapps Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,349,883.77</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">535,872</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.532</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,147,436.28</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">572,077</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.534</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Dr McGillicuddys Cherry</td>
@@ -930,11 +929,11 @@ footer: /generated/footers/examples/iowa/step3.html
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">477,959</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.232</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumple Minze Peppermint Schnapps Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,223,537.83</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">194,209</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.553</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paramount Peppermint Schnapps</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,295,969.76</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">646,443</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.717</td>
 </tr>
 
 		</tbody>
@@ -955,26 +954,26 @@ footer: /generated/footers/examples/iowa/step3.html
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tanqueray Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,708,421.26</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">683,305</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.401</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,324,545.53</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">709,824</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.403</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Seagrams Extra Dry Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,957,360.45</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,464,403</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.289</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,336,077.61</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,541,358</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.29</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bombay Sapphire Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,888,426.81</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">278,400</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.58</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,220,990.67</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">292,066</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.579</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tanqueray Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,980,771.57</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">210,697</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,364,647.3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">184,178</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.47</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">E & J Gallo Winery</td>
@@ -1000,13 +999,13 @@ footer: /generated/footers/examples/iowa/step3.html
       </h2>
     <p>In this data set, there is a column called <code class="language-malloy">bottle_volume_ml</code>, which is the bottle size in mL. Let's take a look.</p>
 <p>A first query reveals that there are 34 distinct bottle sizes in this data set, and that 750ml, 1750ml and 1000ml are by far the most common.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  distinct_number_of_sizes <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> bottle_volume_ml<span class="token punctuation">)</span>
-  sizes <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    bottle_volume_ml
-    line_item_count
-  <span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">aggregate</span>: distinct_number_of_sizes <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> bottle_volume_ml<span class="token punctuation">)</span>
+  <span class="token keyword">nest</span>: sizes <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: bottle_volume_ml
+    <span class="token keyword">aggregate</span>: line_item_count
+  }
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1149,10 +1148,10 @@ footer: /generated/footers/examples/iowa/step3.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">425</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">378,000</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,500</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,500</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">378,000</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,000</td>
@@ -1173,20 +1172,17 @@ footer: /generated/footers/examples/iowa/step3.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">355</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,508</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,000</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">180,000</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,580</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189,000</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
@@ -1195,6 +1191,9 @@ footer: /generated/footers/examples/iowa/step3.html
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,580</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 
@@ -1207,13 +1206,14 @@ footer: /generated/footers/examples/iowa/step3.html
       </div>
     </div>
   </div><p>Visualizing this query suggests that we might wish to create 3 distinct buckets to approximate small, medium and large bottles.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  distinct_number_of_sizes <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> bottle_volume_ml<span class="token punctuation">)</span>
-  sizes <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> : <span class="token punctuation">[</span>bottle_volume_ml <span class="token operator">&lt;</span> <span class="token number">6000</span><span class="token punctuation">]</span>
-    bottle_volume_ml
-    line_item_count
-  <span class="token punctuation">)</span></pre><div class="result-outer medium">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">aggregate</span>: distinct_number_of_sizes <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> bottle_volume_ml<span class="token punctuation">)</span>
+  <span class="token keyword">nest</span>: sizes <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: bottle_volume_ml
+    <span class="token keyword">aggregate</span>: line_item_count
+    <span class="token keyword">where</span>: bottle_volume_ml <span class="token operator">&lt;</span> <span class="token number">6000</span>
+  }
+}</pre><div class="result-outer medium">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1243,13 +1243,11 @@ footer: /generated/footers/examples/iowa/step3.html
     <span class="token keyword">pick</span> <span class="token string">'jumbo (over 1000ml)'</span> <span class="token keyword">when</span> <span class="token operator">></span> <span class="token number">1001</span>
     <span class="token keyword">pick</span> <span class="token string">'liter-ish'</span> <span class="token keyword">when</span> <span class="token operator">>=</span> <span class="token number">750</span>
     <span class="token keyword">else</span> <span class="token string">'small or mini (under 750ml)'</span></pre><p>Look at the data through the new mapping.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">1</span>
-  bottle_size
-  total_sale_dollars
-  line_item_count
-  item_count
-</pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: bottle_size
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> total_sale_dollars<span class="token punctuation">,</span> line_item_count<span class="token punctuation">,</span> item_count <span class="token punctuation">]</span>
+  <span class="token keyword">order_by</span>: bottle_size
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1263,7 +1261,7 @@ footer: /generated/footers/examples/iowa/step3.html
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">jumbo (over 1000ml)</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">832,050,629.369</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">832,050,629.37</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,692,836</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,008</td>
 </tr>

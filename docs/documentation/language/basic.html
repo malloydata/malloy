@@ -19,10 +19,11 @@ footer: /generated/footers/language/basic.html
         </a>
       </h2>
     <p>In Malloy, the source of a query is always first, and can be either a raw table, a <a href="explore.html">modeled explore</a>, or even another query.</p>
-<p>To reference a table (or view) in the database, simply put the path and name of the table in a quoted string.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span> <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  state
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<p>To the table function references a table (or view) in the database.  We are explicit about which fields are grouped and which files are aggregated.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -64,9 +65,10 @@ footer: /generated/footers/language/basic.html
 <p>The second type of <code>SELECT</code> in SQL does not perform any aggregation; In Malloy, this command is called <code class="language-malloy"><span class="token keyword">project</span></code>.</p>
 <p>When using <code class="language-malloy"><span class="token keyword">reduce</span></code>, Malloy knows which fields to group by and which to use as aggregate calculations.</p>
 <p>In the query below, the data will be grouped by <code class="language-malloy">state</code> and will produce an aggregate calculation for <code class="language-malloy">airport_count</code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span> <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  state<span class="token punctuation">,</span>
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -98,11 +100,11 @@ footer: /generated/footers/language/basic.html
       </div>
     </div>
   </div><p>Multiple aggregations can be computed within the same <code class="language-malloy"><span class="token keyword">reduce</span></code> command.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  fac_type
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: fac_type
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">aggregate</span>: max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -139,6 +141,56 @@ footer: /generated/footers/language/basic.html
 	</table>
       </div>
     </div>
+  </div><p>Groups and aggregates can contain lists of fields</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>state<span class="token punctuation">,</span> county<span class="token punctuation">]</span>
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">max_&#8203;elevation</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,420</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HARRIS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">774</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AZ</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARICOPA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">117</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,995</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,748</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TARRANT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">895</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
   </div>
       <h2>
         <a id="everything-has-a-name" class="header-link anchor" href="#everything-has-a-name">
@@ -147,8 +199,9 @@ footer: /generated/footers/language/basic.html
       </h2>
     <p>In Malloy, all output fields have names. This means that any time a query includes a
 calculation or agregation, it must be aliased.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span> <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -167,9 +220,12 @@ calculation or agregation, it must be aliased.</p>
     </div>
   </div><p>Malloy uses <code class="language-malloy">name <span class="token keyword">is</span> value</code> instead of SQL's <code class="language-malloy">value <span class="token keyword">as</span> name</code>, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.</p>
 <p>Columns from a table and fields defined in an explore already have names, and can be referenced directly.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span> <span class="token operator">|</span> <span class="token keyword">project</span>
-  full_name
-  elevation</pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">project</span>: <span class="token punctuation">[</span>
+    full_name
+    elevation
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -207,12 +263,15 @@ calculation or agregation, it must be aliased.</p>
         </a>
       </h2>
     <p>Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand given a knowledge of SQL.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span> <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  county_and_state <span class="token keyword">is</span> concat<span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
-  min_elevation <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
-  avg_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span></pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: county_and_state <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+    min_elevation <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+    avg_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -270,14 +329,14 @@ calculation or agregation, it must be aliased.</p>
       </h2>
     <p>One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create an <em>explore</em> object named <code class="language-malloy">airports</code> and
 add calculations for <code class="language-malloy">county_and_state</code> and <code class="language-malloy">airport_count</code>.</p>
-<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  county_and_state <span class="token keyword">is</span> concat<span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token keyword">explore</span> airports <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  county_and_state
-  airport_count</pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">dimension</span>: county_and_state <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
+  <span class="token keyword">measure</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">measure</span>: average_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+}</pre><pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>:county_and_state
+  <span class="token keyword">aggregate</span>: airport_count
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -316,10 +375,11 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
       </h2>
     <p>In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some <a href="order_by.html">reasonable defaults</a>.</p>
 <p>The <code class="language-malloy"><span class="token keyword">top</span></code> statement limits the number of rows returned, sorted by default by the first measure decending—in this case, <code class="language-malloy">airport_count</code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">2</span>
-  state
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">top</span>: <span class="token number">2</span>
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -342,10 +402,11 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
       </div>
     </div>
   </div><p>Default ordering can be overridden with <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code>, as in the following query, which shows the states in alphabetical order.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> state
-  state
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">order_by</span>: state
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -392,10 +453,11 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
     <p>A filter on a table narrows down which data is included from that table. This translates
 to a <code>WHERE</code> clause in SQL.
 In this case, the data from the table is filtered to just airports in California.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span> : <span class="token punctuation">[</span>state <span class="token operator">=</span> <span class="token string">'CA'</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">2</span>
-  county
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span>}<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">top</span>: <span class="token number">2</span>
+  <span class="token keyword">group_by</span>: county
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -424,12 +486,14 @@ In this case, the data from the table is filtered to just airports in California
         </a>
       </h3>
     <p>A filter on an aggregate calculation (a <em>measure</em>) narrows down the data used in that specific calculation. In the example below, the calculations for <code class="language-malloy">airports</code> and <code class="language-malloy">heliports</code> are filtered separately.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span>
-  state
-  airports  <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>fac_type <span class="token operator">=</span> <span class="token string">'AIRPORT'</span><span class="token punctuation">]</span>
-  heliports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>fac_type <span class="token operator">=</span> <span class="token string">'HELIPORT'</span><span class="token punctuation">]</span>
-  total     <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    airports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: fac_type <span class="token operator">=</span> <span class="token string">'AIRPORT'</span>}
+    heliports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {? fac_type <span class="token operator">=</span> <span class="token string">'HELIPORT'</span>} <span class="token comment">-- ? is shorthad for 'where:'</span>
+    total <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -474,18 +538,22 @@ In this case, the data from the table is filtered to just airports in California
     </div>
   </div>
       <h3>
-        <a id="filtering-query-stages" class="header-link anchor" href="#filtering-query-stages">
-          Filtering Query Stages
+        <a id="filtering-in-query-stages" class="header-link anchor" href="#filtering-in-query-stages">
+          Filtering in Query Stages
         </a>
       </h3>
     <p>Filters can also be applied to <code class="language-malloy"><span class="token keyword">reduce</span></code> and <code class="language-malloy"><span class="token keyword">project</span></code> commands. When using a filter in this way, it only applies to
 the data for that command alone. This will become more important later when we have more than one <code class="language-malloy"><span class="token keyword">reduce</span></code> in a query.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span>state: <span class="token string">'AL'</span> <span class="token operator">|</span> <span class="token string">'KY'</span><span class="token punctuation">]</span> <span class="token keyword">top</span> <span class="token number">5</span>
-  state
-  airports  <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>fac_type: <span class="token string">'AIRPORT'</span><span class="token punctuation">]</span>
-  heliports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>fac_type: <span class="token string">'HELIPORT'</span><span class="token punctuation">]</span>
-  total     <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">where</span>: state: <span class="token string">'AL'</span> <span class="token operator">|</span> <span class="token string">'KY'</span>
+  <span class="token keyword">top</span>: <span class="token number">5</span>
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    airports  <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {? fac_type: <span class="token string">'AIRPORT'</span>}
+    heliports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {? fac_type: <span class="token string">'HELIPORT'</span>}
+    total     <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -529,8 +597,9 @@ the data for that command alone. This will become more important later when we h
     <p>Literals of type <code class="language-malloy"><span class="token type">date</span></code> and <code class="language-malloy"><span class="token type">timestamp</span></code> are notated with an <code class="language-malloy"><span class="token date">@</span></code>, e.g. <code class="language-malloy"><span class="token date">@2003-03-29</span></code> or <code class="language-malloy"><span class="token date">@1994-07-14 10:23:59</span></code>. Similarly, years (<code class="language-malloy"><span class="token date">@2021</span></code>), quarters (<code class="language-malloy"><span class="token date">@2020-Q1</span></code>), months (<code class="language-malloy"><span class="token date">@2019-03</span></code>), weeks (<code class="language-malloy"><span class="token date">@WK2021-08-01</span></code>), and minutes (<code class="language-malloy"><span class="token date">@2017-01-01 10:53</span></code>) can be expressed.</p>
 <p>Time literals can be used as values, but are more often useful in filters. For example, the following query
 shows the number of flights in 2003.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span> : <span class="token punctuation">[</span>dep_time: <span class="token date">@2003</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {? dep_time: <span class="token date">@2003</span>}<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -548,19 +617,22 @@ shows the number of flights in 2003.</p>
       </div>
     </div>
   </div><p>There is a special time literal <code class="language-malloy">now</code>, referring to the current timestamp, which allows for relative time filters.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span> : <span class="token punctuation">[</span>dep_time <span class="token operator">></span> now <span class="token operator">-</span> <span class="token number">6</span> <span class="token timeframe">hours</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> flights_last_6_hours <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{? dep_time <span class="token operator">></span> now <span class="token operator">-</span> <span class="token number">6</span> <span class="token timeframe">hours</span>}<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: flights_last_6_hours <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre>
       <h3>
         <a id="truncation" class="header-link anchor" href="#truncation">
           Truncation
         </a>
       </h3>
     <p>Time values can be truncated to a given timeframe, which can be <code class="language-malloy"><span class="token timeframe">second</span></code>, <code class="language-malloy"><span class="token timeframe">minute</span></code>, <code class="language-malloy"><span class="token timeframe">hour</span></code>, <code class="language-malloy"><span class="token timeframe">day</span></code>, <code class="language-malloy"><span class="token timeframe">week</span></code>, <code class="language-malloy"><span class="token timeframe">month</span></code>, <code class="language-malloy"><span class="token timeframe">quarter</span></code>, or <code class="language-malloy"><span class="token timeframe">year</span></code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  flight_year <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">year</span>
-  flight_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
+    flight_year <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">year</span>
+    flight_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
+  <span class="token punctuation">]</span>
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -573,24 +645,24 @@ shows the number of flights in 2003.</p>
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-04</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">594,337</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-03</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">617,328</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-10</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">592,650</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-07</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">627,574</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-11</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">566,014</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-07</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">627,574</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-10</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">592,650</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-08</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">630,566</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-06</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">608,955</td>
 </tr>
 
 		</tbody>
@@ -604,10 +676,11 @@ shows the number of flights in 2003.</p>
         </a>
       </h3>
     <p>Numeric values can be extracted from time values, e.g. <code class="language-malloy"><span class="token timeframe">day_of_year</span><span class="token punctuation">(</span>some_date<span class="token punctuation">)</span></code> or <code class="language-malloy"><span class="token timeframe">minute</span><span class="token punctuation">(</span>some_time<span class="token punctuation">)</span></code>. See the full list of extraction functions <a href="time-ranges.html#extraction">here</a>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">1</span>
-  day_of_week <span class="token keyword">is</span> <span class="token timeframe">day</span><span class="token punctuation">(</span>dep_time<span class="token punctuation">)</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">order_by</span>: <span class="token number">1</span>
+  <span class="token keyword">group_by</span>: day_of_week <span class="token keyword">is</span> <span class="token timeframe">day</span><span class="token punctuation">(</span>dep_time<span class="token punctuation">)</span>
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -654,8 +727,9 @@ And likewise for any other data type that has interesting output metadata. -->
         </a>
       </h3>
     <p>Two kinds of time ranges are given special syntax: the range between two times and the range starting at some time for some duration. These are represented like <code class="language-malloy"><span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span></code> and <code class="language-malloy"><span class="token date">@2004-Q1</span> <span class="token keyword">for</span> <span class="token number">6</span> <span class="token timeframe">quarters</span></code> respectively. These ranges can be used in filters just like time literals.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span> : <span class="token punctuation">[</span>dep_time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{? dep_time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span>}<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>:flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -675,23 +749,29 @@ And likewise for any other data type that has interesting output metadata. -->
   </div><p>Time literals and truncations can also behave like time ranges. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. <code class="language-malloy"><span class="token date">@2003</span></code> represents the whole of the year 2003, and <code class="language-malloy"><span class="token date">@2004-Q1</span></code> lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the
 timeframe from the truncation, e.g. <code class="language-malloy">now<span class="token punctuation">.</span><span class="token timeframe">month</span></code> means the entirety of the current month.</p>
 <p>When a time range is used in a comparison, <code class="language-malloy"><span class="token operator">=</span></code> checks for "is in the range", <code class="language-malloy"><span class="token operator">></span></code> "is after", and <code class="language-malloy"><span class="token operator">&lt;</span></code> "is before." So <code class="language-malloy">some_time <span class="token operator">></span> <span class="token date">@2003</span></code> filters dates starting on January 1, 2004, while <code class="language-malloy">some_time <span class="token operator">=</span> <span class="token date">@2003</span></code> filters to dates in the year 2003.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span> : <span class="token punctuation">[</span>dep_time <span class="token operator">></span> <span class="token date">@2003</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">3</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">1</span> <span class="token keyword">asc</span>
-  departure_date <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">day</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{? dep_time <span class="token operator">></span> <span class="token date">@2003</span>}<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">top</span>: <span class="token number">3</span><span class="token punctuation">;</span> <span class="token keyword">order_by</span>: <span class="token number">1</span> <span class="token keyword">asc</span>
+  <span class="token keyword">group_by</span>:departure_date <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">day</span>
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">departure_&#8203;date</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
       </tr>
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">[object Object]</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,206</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">[object Object]</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,053</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">[object Object]</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,252</td>
 </tr>
 
 		</tbody>
@@ -705,9 +785,9 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         </a>
       </h2>
     <p>The next several examples will use this simple explore definition:</p>
-<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
+<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
   airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+}<span class="token punctuation">;</span></pre>
       <h3>
         <a id="aggregating-subqueries" class="header-link anchor" href="#aggregating-subqueries">
           Aggregating Subqueries
@@ -715,14 +795,14 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
       </h3>
     <p>In Malloy, queries can be <a href="nesting.html">nested</a> to produce subtables on each output row. Such nested queries are called <em>aggregating subqueries</em>, or simply "nested queries." When a query is nested inside another query, each output row of the outer query will have a nested table for the inner query which only includes data limited to that row.</p>
 <pre class="language-malloy">
-<span class="token keyword">explore</span> airports
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  state
-  airport_count
-  by_facility <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span>
-    fac_type
-    airport_count
-  <span class="token punctuation">)</span></pre><div class="result-outer small">
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count
+  <span class="token keyword">nest</span>: by_facility <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: fac_type
+    <span class="token keyword">aggregate</span>: airport_count
+  }
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -788,6 +868,9 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
 
 		</tbody>
 	</table></td>
@@ -813,6 +896,12 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BALLOONPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
@@ -846,6 +935,9 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
+</tr>
 
 		</tbody>
 	</table></td>
@@ -875,6 +967,9 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+</tr>
 
 		</tbody>
 	</table></td>
@@ -886,18 +981,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
     </div>
   </div><p>Here we can see that the <code class="language-malloy">by_facility</code> column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.</p>
 <p>Queries can be nested infinitely, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> airports
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  state
-  airport_count
-  top_5_counties <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span>
-    county
-    airport_count
-    by_facility <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-      fac_type
-      airport_count
-    <span class="token punctuation">)</span>
-  <span class="token punctuation">)</span></pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count
+  <span class="token keyword">nest</span>: top_5_counties <span class="token keyword">is</span> {
+    <span class="token keyword">top</span>: <span class="token number">5</span>
+    <span class="token keyword">group_by</span>: county
+    <span class="token keyword">aggregate</span>: airport_count
+    <span class="token keyword">nest</span>: by_facility <span class="token keyword">is</span> {
+      <span class="token keyword">group_by</span>: fac_type
+      <span class="token keyword">aggregate</span>: airport_count
+    }
+  }
+}</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1251,7 +1347,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 		</tbody>
 	</table></td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LEE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WINNEBAGO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 <td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -1262,13 +1358,10 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
 
 		</tbody>
@@ -1559,17 +1652,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         </a>
       </h3>
     <p>Filters can be isolated to any level of nesting. In the following example, we limit the <code class="language-malloy">major_facilities</code> query to only airports where <code class="language-malloy">major</code> is <code class="language-malloy"><span class="token string">'Y'</span></code>. This particular filter applies <em>only</em> to <code class="language-malloy">major_facilities</code>, and not to other parts of the outer query.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> airports
-<span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span>state <span class="token operator">=</span> <span class="token string">'CA'</span><span class="token punctuation">]</span>
-  county
-  airport_count
-  major_facilities <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span> : <span class="token punctuation">[</span>major <span class="token operator">=</span> <span class="token string">'Y'</span><span class="token punctuation">]</span>
-    name <span class="token keyword">is</span> concat<span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' ('</span><span class="token punctuation">,</span> full_name<span class="token punctuation">,</span> <span class="token string">')'</span><span class="token punctuation">)</span>
-  <span class="token punctuation">)</span>
-  by_facility <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    fac_type
-    airport_count
-  <span class="token punctuation">)</span></pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span>
+  <span class="token keyword">group_by</span>: county
+  <span class="token keyword">aggregate</span>: airport_count
+  <span class="token keyword">nest</span>: major_facilities <span class="token keyword">is</span> {
+    <span class="token keyword">where</span>: major <span class="token operator">=</span> <span class="token string">'Y'</span>
+    <span class="token keyword">group_by</span>: name <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' ('</span><span class="token punctuation">,</span> full_name<span class="token punctuation">,</span> <span class="token string">')'</span><span class="token punctuation">)</span>
+  }
+  <span class="token keyword">nest</span>: by_facility <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: fac_type
+    <span class="token keyword">aggregate</span>: airport_count
+  }
+}</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1769,14 +1864,15 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         </a>
       </h2>
     <p>The output from one stage of a query can be "piped" into another stage using <code class="language-malloy"><span class="token operator">|</span></code>. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> airports
-<span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span>state : <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span><span class="token punctuation">]</span>
-  state
-  airport_count
-  by_county <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    county
-    airport_count
-  <span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span>
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count
+  <span class="token keyword">nest</span>: by_county <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: county
+    <span class="token keyword">aggregate</span>: airport_count
+  }
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1807,10 +1903,10 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KERN</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN DIEGO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN DIEGO</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KERN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RIVERSIDE</td>
@@ -1831,16 +1927,16 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VENTURA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SUTTER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TULARE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">EL DORADO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SUTTER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KINGS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">EL DORADO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MERCED</td>
@@ -1858,19 +1954,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SISKIYOU</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MADERA</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPERIAL</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPERIAL</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MADERA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SONOMA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MODOC</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUTTE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUTTE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MODOC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHASTA</td>
@@ -1885,6 +1981,12 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEVADA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COLUSA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">INYO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YOLO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
@@ -1894,25 +1996,10 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HUMBOLDT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COLUSA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CONTRA COSTA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">INYO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLACER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLUMAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MENDOCINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SOLANO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAKE</td>
@@ -1924,8 +2011,14 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SANTA CRUZ</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TUOLUMNE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLACER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLUMAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SOLANO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMADOR</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
@@ -1933,13 +2026,16 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TRINITY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TUOLUMNE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LASSEN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARIN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MONO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LASSEN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YUBA</td>
@@ -1957,19 +2053,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLENN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARIPOSA</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DEL NORTE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN FRANCISCO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DEL NORTE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARIPOSA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SIERRA</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALPINE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALPINE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SIERRA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ESMERALDA</td>
@@ -1995,16 +2091,16 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ERIE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DUTCHESS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NIAGARA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONONDAGA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DUTCHESS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONEIDA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONONDAGA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULSTER</td>
@@ -2040,10 +2136,10 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OSWEGO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WESTCHESTER</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">QUEENS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">QUEENS</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WESTCHESTER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CATTARAUGUS</td>
@@ -2052,34 +2148,34 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ESSEX</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WAYNE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SULLIVAN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STEUBEN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WAYNE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JEFFERSON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORLEANS</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WYOMING</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHOHARIE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WYOMING</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STEUBEN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GREENE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORLEANS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FULTON</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JEFFERSON</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLINTON</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LIVINGSTON</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GREENE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHEMUNG</td>
@@ -2088,22 +2184,31 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COLUMBIA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ST LAWRENCE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLINTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CAYUGA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MADISON</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ST LAWRENCE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FULTON</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TOMPKINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHUYLER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HERKIMER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RENSSELAER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHENECTADY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MADISON</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HAMILTON</td>
@@ -2112,34 +2217,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BROOME</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TOMPKINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEW YORK</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHUYLER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RENSSELAER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OTSEGO</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GENESEE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GENESEE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OTSEGO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHENANGO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TIOGA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALLEGANY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WASHINGTON</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YATES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SENECA</td>
@@ -2148,28 +2238,34 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCKLAND</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YATES</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WASHINGTON</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALLEGANY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WARREN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORTLAND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TIOGA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FRANKLIN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORTLAND</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PUTNAM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KINGS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BRONX</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LEWIS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KINGS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 
@@ -2183,19 +2279,24 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
     </div>
   </div><p>Next, we'll use the output of that query as the input to another, where we determine which counties have the highest
 percentage of airports compared to the whole state, taking advantage of the nested structure of the data to to so.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> airports
-<span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span>state : <span class="token string">'CA'</span><span class="token operator">|</span><span class="token string">'NY'</span><span class="token punctuation">]</span>
-  state
-  airport_count
-  by_county <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    county
-    airport_count
-  <span class="token punctuation">)</span>
-<span class="token operator">|</span> <span class="token keyword">project</span> <span class="token keyword">top</span> <span class="token number">10</span> <span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token number">4</span> <span class="token keyword">desc</span>
-  by_county<span class="token punctuation">.</span>county
-  airports_in_county <span class="token keyword">is</span> by_county<span class="token punctuation">.</span>airport_count
-  airports_in_state <span class="token keyword">is</span> airport_count
-  percent_in_county <span class="token keyword">is</span> by_county<span class="token punctuation">.</span>airport_count <span class="token operator">/</span> airport_count</pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span>
+  <span class="token keyword">group_by</span>: state
+  <span class="token keyword">aggregate</span>: airport_count
+  <span class="token keyword">nest</span>: by_county <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: county
+    <span class="token keyword">aggregate</span>: airport_count
+  }
+}
+<span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">top</span>: <span class="token number">10</span><span class="token punctuation">;</span> <span class="token keyword">order_by</span>: <span class="token number">4</span> <span class="token keyword">desc</span>
+  <span class="token keyword">project</span>: <span class="token punctuation">[</span>
+    by_county<span class="token punctuation">.</span>county
+    airports_in_county <span class="token keyword">is</span> by_county<span class="token punctuation">.</span>airport_count
+    airports_in_state <span class="token keyword">is</span> airport_count
+    percent_in_county <span class="token keyword">is</span> by_county<span class="token punctuation">.</span>airport_count <span class="token operator">/</span> airport_count
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -2245,20 +2346,19 @@ percentage of airports compared to the whole state, taking advantage of the nest
         </a>
       </h2>
     <p>Joins are declared as part of an explore, and link primary and foreign keys.</p>
-<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">primary_key</span>: code
+}
 
-<span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">join</span>: origin_airport <span class="token keyword">is</span> airports <span class="token keyword">on</span> origin
+}
 
-  origin_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
-
-<span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  origin_state <span class="token keyword">is</span> origin_airport<span class="token punctuation">.</span>state
-  flight_count</pre><div class="result-outer small">
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: origin_state <span class="token keyword">is</span> origin_airport<span class="token punctuation">.</span>state
+  <span class="token keyword">aggregate</span>: flight_count
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -2292,19 +2392,21 @@ percentage of airports compared to the whole state, taking advantage of the nest
   </div><p>In this example, the <code class="language-malloy">airports</code> explore is joined to <code class="language-malloy">flights</code>, linking the foreign key <code class="language-malloy">origin</code> of <code class="language-malloy">flights</code> to the primary key <code class="language-malloy">code</code> of <code class="language-malloy">airports</code>. The resulting joined explore is aliased as <code class="language-malloy">origin_airport</code> within <code class="language-malloy">flights</code>.</p>
 
       <h2>
-        <a id="aggregates" class="header-link anchor" href="#aggregates">
-          Aggregates
+        <a id="aggregate-calculations" class="header-link anchor" href="#aggregate-calculations">
+          Aggregate Calculations
         </a>
       </h2>
-    <p>As in SQL, aggregates <code class="language-malloy">sum</code>, <code class="language-malloy">count</code>, and <code class="language-malloy">avg</code> are available, and their use in
+    <p>As in SQL, aggregate functions <code class="language-malloy">sum</code>, <code class="language-malloy">count</code>, and <code class="language-malloy">avg</code> are available, and their use in
 an expression identifies the corresponding field as a <a href="fields.html#measures">measure</a>.</p>
 <p>Aggregates may be computed with respect to any joined explore, allowing for a wider variety of measurements to be calculated than is possible in SQL. See the <a href="aggregates.html#aggregate-locality">Aggregate Locality</a> section for more information.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> aircraft
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  <span class="token comment">-- The average number of seats on models of registered aircraft</span>
-  models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token comment">-- The average number of seats on registered aircraft</span>
-  aircraft_avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    <span class="token comment">-- The average number of seats on models of registered aircraft</span>
+    models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">-- The average number of seats on registered aircraft</span>
+    aircraft_avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -2315,8 +2417,8 @@ an expression identifies the corresponding field as a <a href="fields.html#measu
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12.919</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.672</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
 </tr>
 
 		</tbody>
@@ -2329,22 +2431,24 @@ an expression identifies the corresponding field as a <a href="fields.html#measu
           Comments
         </a>
       </h2>
-    <p>Malloy code can include both line and block comments. Line comments, which begin with <code class="language-malloy"><span class="token comment">--</span></code>,
+    <p>Malloy code can include both line and block comments. Line comments, which begin with <code class="language-malloy"><span class="token comment">--</span></code> or <code class="language-malloy"><span class="token comment">//</span></code>,
 may appear anywhere within a line, and cause all subsequent characters on that line to be ignored.
 Block comments, which are enclosed between <code>/*</code> and <code>*/</code>, cause all enclosed characters to be ignored
 and may span multiple lines.</p>
 <pre class="language-malloy"><span class="token comment">-- The total number of flight entries</span>
-flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  flight_count <span class="token comment">-- Defined simply as `count()`</span>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">aggregate</span>: flight_count <span class="token comment">// Defined simply as `count()`</span>
+}
 
 <span class="token comment">/*
  * A comparison of the total number of flights
  * for each of the tracked carriers.
  */</span>
-flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  carrier
-  flight_count
-  <span class="token comment">/* total_distance */</span></pre><!-- ## Joins are between primary and foriegn keys.
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count
+  <span class="token comment">/* total_distance */</span>
+}</pre><!-- ## Joins are between primary and foriegn keys.
 
 
 ## Full graph of the data is available to query

@@ -20,11 +20,10 @@ footer: /generated/footers/examples/iowa/step2.html
       </h2>
     <p>The calculation <code class="language-malloy">total_sale_dollars</code> will show us the total amount, in dollars, that Iowa State stores sold.</p>
 <pre class="language-malloy">total_sale_dollars <span class="token keyword">is</span> sale_dollars<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><p>Having added this to the model, we can now reference <code class="language-malloy">total_sale_dollars</code> to see the top items purchased by Liquor stores.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  vendor_name
-  item_description
-  total_sale_dollars</pre><div class="result-outer small">
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> vendor_name<span class="token punctuation">,</span> item_description <span class="token punctuation">]</span>
+  <span class="token keyword">aggregate</span>: total_sale_dollars
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -42,7 +41,7 @@ footer: /generated/footers/examples/iowa/step2.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">74,832,427.3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">83,113,248.41</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Fireball Cinnamon Whiskey</td>
@@ -50,39 +49,43 @@ footer: /generated/footers/examples/iowa/step2.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Spiced Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,865,393.75</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">65,299,484.41</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Lbl</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">56,658,460.72</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,106,277.36</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hawkeye Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,966,417.22</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44,760,545.67</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,400,807.23</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,968,329.11</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Canadian Whisky</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,044,259.02</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39,276,942.12</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Canadian Whisky</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38,416,124.98</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,758,582.94</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jameson</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,860,356.16</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sidney Frank Importing Co.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,111,823.5</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,602,445.79</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Swedish Vodka 80 Prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30,589,898.47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jameson</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30,259,894.55</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,352,277.34</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Heaven Hill Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet</td>
@@ -90,91 +93,79 @@ footer: /generated/footers/examples/iowa/step2.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Original Spiced</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,106,931.34</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,031,889.47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grey Goose Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,083,401.51</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,963,416.2</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Regal Apple</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24,820,384.8</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,697,487.21</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grey Goose Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,152,628.98</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Heaven Hill Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Admiral Nelson Spiced Rum</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23,683,369.35</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,844,826.17</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Malibu Coconut Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,789,471.07</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CONSTELLATION BRANDS INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,270,264.91</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22,404,274</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi Superior Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,772,850.23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado Tequila</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,599,217.09</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,275,428.79</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Five O'clock Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,577,117.08</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,383,432.47</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado Tequila</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,176,738.93</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MHW Ltd</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumchata</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,108,833.96</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,949,385.8</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Regal Apple</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,797,914.22</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Label</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,958,424.68</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Barton Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,674,297.93</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Seagrams 7 Crown Bl Whiskey</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,347,655.56</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Fireball Cinnamon Whiskey Mini Dispenser</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,321,446.98</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Seagrams 7 Crown Bl Whiskey</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,674,319.05</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Barton Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,458,163.68</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Label</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,258,880.08</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,202,601.88</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">The Patron Spirits Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Tequila Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,077,149.92</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff Vodka 80 Prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,858,314.78</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tanqueray Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,708,979.98</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PERNOD RICARD USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jameson</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,436,416.51</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,943,952.83</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Spiced Barrel</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14,943,169.5</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,872,314.34</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tanqueray Gin</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,325,104.25</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff Vodka 80 Prf</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,579,834.58</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Regal Apple</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14,920,811.81</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Dr. Mcgillicuddy's Cherry Schnapps</td>
@@ -186,251 +177,259 @@ footer: /generated/footers/examples/iowa/step2.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Original Spiced</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14,547,999.63</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,936,439.64</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14,691,514.77</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,913,576.74</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14,664,739.5</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown Forman Corp.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Label</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,763,268.76</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Spiced Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,592,691.18</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy Vs Cognac</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,953,492.02</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Fireball Cinnamon Whiskey PET</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,586,827.19</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LUXCO INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hawkeye Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,834,787.27</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Wilson Daniels Ltd.</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Infinium Spirits</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Templeton Rye</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,573,865.03</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,574,380.69</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Canadian Club Whisky</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,266,483.31</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumple Minze Peppermint Schnapps Liqueur</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,147,436.28</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown Forman Corp.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Label</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,063,724.16</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CONSTELLATION BRANDS INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,989,443.8</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kessler Blend Whiskey</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,952,284.97</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumple Minze Peppermint Schnapps Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,349,883.77</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PERNOD RICARD USA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jameson</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,835,954.9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy Vs Cognac</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,149,373.61</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff 80prf</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,791,669.85</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Canadian Ltd Whisky</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,771,398.59</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,483,505.98</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mccormick Distilling Company</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mccormick Vodka Pet</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,926,669.25</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paramount White Rum</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,813,948.58</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Fireball Cinnamon Whisky</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,649,079.74</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown Forman Corp.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Lbl</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,604,253.93</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southern Comfort</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,464,205.08</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paramount White Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,344,996.63</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Uv Blue (raspberry) Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,426,501.44</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LUXCO INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hawkeye Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,040,658.82</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bailey's Original Irish Cream</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,226,756.77</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,950,934.53</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Uv Blue (raspberry) Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,167,926.39</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Remy Martin VSOP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,924,225.56</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff 80prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,152,523.02</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Five Star</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,819,099.52</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southern Comfort</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,011,583.47</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,781,145.18</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mccormick Distilling Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mccormick Vodka Pet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,829,127.38</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Swedish Vodka 80prf</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,732,251</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Juarez Tequila Gold</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,699,309.06</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Svedka Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,650,466.48</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Makers Mark</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,358,017.78</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Svedka Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,298,831.53</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Five Star</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,222,151.86</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Ketel One Imported Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,263,009.29</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">E & J Gallo Winery</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">New Amsterdam Vodka</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,104,612.24</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Ketel One Imported Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,952,987.27</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Juarez Tequila Gold</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,939,134.34</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mast-Jagermeister US, Inc</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,799,752.27</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kahlua Coffee Liqueur</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,814,056.37</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Nikolai Vodka</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,581,525.32</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kahlua Coffee Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,355,315.45</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff 80prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,178,105.78</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi Limon</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,061,749.84</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Swedish Vodka 80prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,025,109.84</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Authentic Lime Margarita</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,023,285.22</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,437,456.37</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Seagrams Extra Dry Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,957,360.45</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,336,077.61</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Authentic Lime Margarita</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,231,715.3</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Spiced Rum</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,158,600.52</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown Forman Corp.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Lbl</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,156,437.29</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Baileys Original Irish Cream</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,816,662.9</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet Toasted Caramel</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,585,619.86</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mast-Jagermeister US, Inc</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,309,129.98</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pinnacle Vodka</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,290,433.53</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bombay Sapphire Gin</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,221,116.67</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">William Grant & Sons Inc</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sailor Jerry Spiced Navy Rum</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,191,002.03</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Dr McGillicuddys Cherry</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,134,290.89</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Baileys Original Irish Cream</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,114,535.14</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Prestige Wine and Spirits Group</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kinky Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,053,465</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff Vodka 80 Prf Pet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,924,660.94</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Canadian Whisky</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,907,482.64</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bombay Sapphire Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,888,552.81</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cedar Ridge Vineyards,LLC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cedar Ridge Bourbon</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,799,608.6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PERNOD RICARD USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Malibu Coconut Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,723,282.64</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,103,722.5</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Ten High</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,709,553.29</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,607,797.75</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PERNOD RICARD USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Swedish Vodka 80prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,596,723.91</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet Toasted Caramel</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,595,828.35</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,463,119.16</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,101,752.94</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,382,202.65</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,976,206.4</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cedar Ridge Vineyards,LLC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cedar Ridge Bourbon</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,964,542.6</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff Vodka 80 Prf Pet</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,801,133.01</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Silver</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,690,730.29</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniel's Tennessee Honey</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,548,914.65</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Smirnoff 80prf</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,538,958.95</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Original Spiced Rum Pet</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,486,446.29</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Dewars White Label Scotch</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,348,905.46</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Platinum 7x Vodka</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,270,441.42</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniel's Tennessee Honey</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,237,261.35</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi Superior</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,234,440.64</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Baileys Original Irish Cream</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,216,399.9</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BACARDI USA INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Silver</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,193,948.5</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Citron (lemon Vodka)</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,003,334.37</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,136,924.57</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Dewars White Label Scotch</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,986,243.87</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grey Goose</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,133,066.49</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UV Vodka PET</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,120,126.25</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Infinium Spirits</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Templeton 4YR Rye</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,970,764.29</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Original Spiced Rum Pet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,940,274.07</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Seagrams 7 Crown</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,843,969.46</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paul Masson Grande Amber Brandy</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,836,138.61</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Skol Vodka</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,815,151.8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Windsor Canadian Pet</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,762,123.35</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi Superior</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,671,147.26</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UV Vodka PET</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,625,284.8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grey Goose</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,552,195.73</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paul Masson Grande Amber Brandy</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,551,883.37</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">E & J Gallo Winery</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">New Amsterdam Peach</td>
@@ -448,12 +447,11 @@ footer: /generated/footers/examples/iowa/step2.html
         </a>
       </h2>
     <p>This lets us understand whether a vendor sells one item, or many different kinds of items.</p>
-<pre class="language-malloy">item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> item_number<span class="token punctuation">)</span></pre><p>We can see which Vendors have the greatest breadth of products as it relates to sales volume.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  vendor_name
-  item_count
-  total_sale_dollars</pre><div class="result-outer small">
+<pre class="language-malloy">item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> item_number<span class="token punctuation">)</span></pre><p>We can see which Vendors have the greatest breadth of products as it relates to sales volume.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> vendor_name <span class="token punctuation">]</span>
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> item_count<span class="token punctuation">,</span> total_sale_dollars <span class="token punctuation">]</span>
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -466,176 +464,168 @@ footer: /generated/footers/examples/iowa/step2.html
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">934</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">489,474,670.209</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">942</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">521,358,833.199</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">894</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246,025,136.57</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">754</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">155,266,827.56</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">748</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">253,330,732.07</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">591</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">187,150,990.55</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Yahara Bay Distillers, Inc</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">560</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">486,163.27</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">558</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">515,051.64</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">544</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">162,741,721.81</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">545</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">174,180,509.91</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Heaven Hill Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">437</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">116,854,963.37</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MHW Ltd</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">424</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,003,276.11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">399</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">136,925,992.3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">310</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">115,803,540.83</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">425</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">29,245,900.25</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PERNOD RICARD USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">296</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">61,912,524.84</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">410</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">50,473,736.74</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mhw LTD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">286</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,421,516.75</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YAHARA BAY DISTILLERS INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">281</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">62,336.25</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">396</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">144,767,246.98</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LUXCO INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">279</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">42,684,999.9</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">324</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,843,745.22</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">274</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">76,389,438.52</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mhw LTD</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">323</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,178,892.61</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">309</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">119,641,938.39</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">272</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">79,845,745.49</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">275</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">83,056,533.96</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Park Street Imports</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">268</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,288,815.86</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">254</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">133,631,959.31</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">241</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">55,714,881.89</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC NORTH AMERICA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">221</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25,188,097.64</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sazerac North America</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">265</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,121,531.28</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BACARDI USA INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">220</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39,499,651.6</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">262</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35,661,254.04</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">258</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">140,510,449.93</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage Company</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">242</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">58,509,495.8</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC NORTH AMERICA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">234</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,456,004.88</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PROXIMO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">234</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25,195,309.47</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YAHARA BAY DISTILLERS INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">231</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,447.88</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown Forman Corp.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">206</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38,462,716.71</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">202</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">72,954,285.56</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">197</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,347,861.73</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">E & J Gallo Winery</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">194</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,938,857.24</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PROXIMO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">187</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,406,097.94</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">185</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">51,358,788.67</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Campari(skyy)</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">184</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,750,065.52</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Phillips Beverage</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">173</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,142,475.64</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown Forman Corp.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">160</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">45,341,207.33</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">188</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,259,075.33</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">147</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">118,867,864.41</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">148</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">131,782,465.29</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WILLIAM GRANT AND SONS, INC.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">137</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,593,590.52</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">William Grant & Sons Inc</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">145</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,862,009.67</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Skyy Spirits Inc</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">132</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,955,183.78</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Infinium Spirits</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">129</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35,049,831.04</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Prestige Wine and Spirits Group</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">127</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,048,380.51</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">129</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,508,798.14</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WESTERN SPIRITS BEVERAGE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">126</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,472,018.13</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mccormick Distilling Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">126</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,359,602.23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Wilson Daniels Ltd.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">125</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25,401,928.83</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,080,176.64</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CONSTELLATION BRANDS INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">122</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22,257,637.32</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOTALING & CO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">119</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">605,718.58</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CONSTELLATION BRANDS INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">112</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35,172,238.2</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Prestige Wine & Spirits Group</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">107</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,114,370.91</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">McCormick Distilling Co.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">104</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,304,145.36</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Campari America</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,782,763.44</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21,595,496.89</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Skyy Spirits Inc</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">101</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,464,193.59</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">William Grant & Sons Inc</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">99</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,268,419.15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Prestige Wine & Spirits Group</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">94</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,574,788.54</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Gemini Spirits</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">87</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,853,392.13</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Infinium Spirits</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">84</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,647,902.21</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">McCormick Distilling Co.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">80</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,024,719.77</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISSISSIPPI RIVER DISTIL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">82</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,652,205.05</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DEHNER DISTILLERY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">79</td>
@@ -645,77 +635,69 @@ footer: /generated/footers/examples/iowa/step2.html
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">78</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,936,117.17</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,866,235.21</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cedar Ridge Vineyards,LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">69</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,422,634.39</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,913,701.72</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MISSISSIPPI RIVER DISTIL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">69</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,348,909.86</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA         .</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">66</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22,044,670.3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mississippi River Distilling Co.</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Stoli Group</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">65</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,303,295.19</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,758,223.49</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Shaw-Ross International</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,082,721.82</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Stoli Group</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,482,802.73</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Edrington Group USA LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">60</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,696,927.75</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLI GROUP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">58</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,945,561.32</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Levecke Corporation</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">57</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,504,087.91</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">The Patron Spirits Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">56</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25,321,844.76</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">57</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,221,292.59</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLI GROUP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">54</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,220,982.08</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CEDAR RIDGE VINEYARDS LL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">55</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,513,890.39</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">W J Deutsch & Sons LTD</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,269,491.51</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CEDAR RIDGE VINEYARDS LL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,004,957.72</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sidney Frank Importing Co.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,484,948.61</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35,921,638.7</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JDSO INC / Red Boot Distillery</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">46</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,919,182.02</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,821,564.91</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Niche Import Co</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">46</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">458,358.55</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Piedmont Distillers</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">42</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,522,276.43</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,521,334.21</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Castle Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">835,712.39</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Niche Import Co.</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">321,660.32</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,336,981.88</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sugarlands Distilling Company LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39</td>
@@ -723,147 +705,163 @@ footer: /generated/footers/examples/iowa/step2.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Aiko Importers Inc</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">62,962.26</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">69,319.25</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,888,596.78</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Serralles USA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">547,670.7</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Vision Wine & Spirit LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">126,646.39</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Palm Bay Imports, Inc.</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Spirits Company</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,557,283.19</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mast-Jagermeister US, Inc</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246,592.99</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,577,288.07</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLLER IMPORTS INC / MARSALLE COMPANY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">161,884.67</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Serralles USA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">526,947.82</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird & Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">36</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,111,484.64</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">145,502.97</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Marsalle Company</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Palm Bay Imports, Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">36</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">242,206.26</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PIEDMONT DISTILLERS INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">216,827.55</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">534,023.62</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARSALLE COMPANY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">233,209.25</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Disaronno International LLC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,572,260.62</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paterno Imports LTD / Terlato Wines International</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">216,209.84</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Spirits Company</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,456,731.02</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Disaronno International LLC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,387,113.13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAVOS BRANDS LLC</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird & Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">971,276</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VINO COM LLC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">54,608.54</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,663,099.54</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Foundry Distilling Company, LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,725,976.53</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Imperial Brands, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,126,681.14</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,212,571</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAVOS BRANDS LLC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">29</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">403,463.28</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hood River Distillers, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,431,387.22</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,419,231.23</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DISARONNO INTERNATIONAL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,171,045.54</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JEM Beverage Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,354,941.35</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mast-Jagermeister US, Inc</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,013,978.16</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SPIRITS EXCHANGE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">153,241.45</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PIEDMONT DISTILLERS INC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">533,081.4</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GoAmericaGo Beverages LLC / WhistlePig</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,502,944.93</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SERRALLES USA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">111,765.89</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Aveniu Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">133,861.17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">133,945.05</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MINHAS MICRO DISTILLERY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,031,413.9</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Niche Import Co</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TY KU LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">136,698.23</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">567,812.72</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PALM BAY INTERNATIONAL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,915.8</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DV Spirits LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">356,853.09</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grand Prix Beverage LLC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">220,808.25</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Old Elk Distilleries LLC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">417,331.74</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FOUR ROSES DISTILLERY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grand Prix Beverage LLC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">220,808.25</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kobrand Corporation</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,750,630.06</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">92,779.41</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-Cleveland</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,867.83</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DISARONNO INTERNATIONAL</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FOUR ROSES DISTILLERY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,356,193.03</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,750,630.06</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VINO COM LLC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30,998.76</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Vino.com dba Total Beverage Solution</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23,609.78</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">3 BADGE CORPORATION</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">55,039.29</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mango Bottling, Inc.</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">466,141.86</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kobrand Corporation</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">86,361.99</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PALM BAY INTERNATIONAL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">21</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">77,529.07</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SERRALLES USA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">132,488.77</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">3 Badge Mixology</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">139,191.63</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">476,757.87</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPEX BEVERAGE INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53,788.75</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">3 Badge Mixology</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">147,443.62</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Charles Jacquin Et. Cie., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">623,080.37</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Trinchero Family Estates</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">164,964.09</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cats Eye Distillery</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">405,510.94</td>
 </tr>
 
 		</tbody>
@@ -878,16 +876,13 @@ footer: /generated/footers/examples/iowa/step2.html
         </a>
       </h2>
     <p>We have both the bottle cost (<code class="language-malloy">state_bottle_cost</code>) and bottle price (<code class="language-malloy">state_bottle_retail</code>), allowing us to calculate percent gross margin on a per-item basis, giving us a new a dimension.</p>
-<pre class="language-malloy">gross_margin <span class="token keyword">is</span> 
-  <span class="token number">100</span> <span class="token operator">*</span> <span class="token punctuation">(</span>state_bottle_retail <span class="token operator">-</span> state_bottle_cost<span class="token punctuation">)</span> <span class="token operator">/</span> 
-    nullif<span class="token punctuation">(</span>state_bottle_retail<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> </pre><p>Looking at gross margin across top selling items, we see that the gross margin is a <em>consistent 33.3 percent</em>.  A quick google search reveals that Iowa state law dictates the state can mark up liquor by up to 50% of the price from the vendor, so this makes sense!</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> iowa
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  item_description
-  state_bottle_retail
-  state_bottle_cost
-  gross_margin
-  total_sale_dollars</pre><div class="result-outer small">
+<pre class="language-malloy">gross_margin <span class="token keyword">is</span>
+  <span class="token number">100</span> <span class="token operator">*</span> <span class="token punctuation">(</span>state_bottle_retail <span class="token operator">-</span> state_bottle_cost<span class="token punctuation">)</span> <span class="token operator">/</span>
+    <span class="token function">nullif</span><span class="token punctuation">(</span>state_bottle_retail<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span></pre><p>Looking at gross margin across top selling items, we see that the gross margin is a <em>consistent 33.3 percent</em>.  A quick google search reveals that Iowa state law dictates the state can mark up liquor by up to 50% of the price from the vendor, so this makes sense!</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> item_description<span class="token punctuation">,</span> state_bottle_retail<span class="token punctuation">,</span> state_bottle_cost<span class="token punctuation">,</span> gross_margin <span class="token punctuation">]</span>
+  <span class="token keyword">aggregate</span>: total_sale_dollars
+}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -1526,7 +1521,7 @@ footer: /generated/footers/examples/iowa/step2.html
         </a>
       </h2>
     <p>Given the price of a bottle and its size (in ml), we can compute how much 100ml costs.  This becomes an attribute of an individual line item (a dimension, not a measure).</p>
-<pre class="language-malloy">price_per_100ml <span class="token keyword">is</span> state_bottle_retail <span class="token operator">/</span> nullif<span class="token punctuation">(</span>bottle_volume_ml<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">100</span></pre>
+<pre class="language-malloy">price_per_100ml <span class="token keyword">is</span> state_bottle_retail <span class="token operator">/</span> <span class="token function">nullif</span><span class="token punctuation">(</span>bottle_volume_ml<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">100</span></pre>
       <h2>
         <a id="-em-avg_price_per_100ml-em-how-expensive-is-this-class-of-booze-" class="header-link anchor" href="#-em-avg_price_per_100ml-em-how-expensive-is-this-class-of-booze-">
           <em>avg_price_per_100ml</em> - How expensive is this class of booze?

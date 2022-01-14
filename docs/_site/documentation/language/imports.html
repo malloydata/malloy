@@ -287,8 +287,8 @@ to simply be split up among multiple files by using <code class="language-malloy
 be included in the file's <em>public namespace</em>.</p>
 <p>Consider a file <code>samples/faa/flights.malloy</code>:</p>
 <pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
-  name <span class="token keyword">is</span> concat<span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
+  primary <span class="token keyword">key</span> code
+  name <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
   airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span><span class="token punctuation">;</span>
 

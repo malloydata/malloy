@@ -302,24 +302,11 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>distance <span class="token operator">></span> <span class="token number">1000</span><span class="token punctuation">]</span>
-<span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count</pre><div class="result-outer large">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">90,002</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+<span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights : [distance > 1000]
+  | ^</div>
       <h3>
         <a id="filtering-a-query-stage" class="header-link anchor" href="#filtering-a-query-stage">
           Filtering a Query Stage
@@ -330,29 +317,11 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 <span class="token operator">|</span> <span class="token keyword">reduce</span> carrier<span class="token punctuation">,</span> flight_count
 <span class="token operator">|</span> <span class="token keyword">project</span> : <span class="token punctuation">[</span>carrier: <span class="token string">'UA'</span> <span class="token operator">|</span> <span class="token string">'AA'</span><span class="token punctuation">]</span>
   carrier
-  flight_count</pre><div class="result-outer large">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+  flight_count</pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div>
       <h3>
         <a id="filtering-a-field" class="header-link anchor" href="#filtering-a-field">
           Filtering a Field
@@ -362,26 +331,11 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 <pre class="language-malloy"><span class="token keyword">explore</span> flights
 <span class="token operator">|</span> <span class="token keyword">reduce</span>
   ca_flights <span class="token keyword">is</span> flight_count : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span><span class="token punctuation">]</span>
-  ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span><span class="token punctuation">]</span></pre><div class="result-outer large">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;flights</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40,670</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,641</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+  ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> : <span class="token punctuation">[</span>origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span><span class="token punctuation">]</span></pre><div class="error">Error: Error: Error(s) compiling model:
+FILE: internal://internal.malloy
+line 2: extraneous input 'explore' expecting {<EOF>, EXPLORE, QUERY, IMPORT, ';'}
+  | explore flights
+  | ^</div>
       <h2>
         <a id="common-patterns-in-filters" class="header-link anchor" href="#common-patterns-in-filters">
           Common Patterns in Filters
