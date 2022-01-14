@@ -171,7 +171,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : OBRACK (exploreQueryDef COMMA?)* OBRACK
+  : OBRACK (exploreQueryDef COMMA?)* CBRACK
   | exploreQueryDef
   ;
 
