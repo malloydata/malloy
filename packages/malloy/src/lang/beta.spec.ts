@@ -247,14 +247,18 @@ describe("expressions", () => {
 
   test("filtered measure", exprOK("acount {? astring = 'why?' }"));
   describe("aggregate forms", () => {
-    test("count distinct", exprOK("count(distinct astring)"));
     test("count", exprOK("count()"));
-    test("join.field.count()", exprOK("b.astring.count()"));
+    test("count distinct", exprOK("count(distinct astring)"));
+    test("join.count()", exprOK("b.count()"));
     for (const f of ["sum", "min", "max", "avg"]) {
-      test(`${f}(afloat)`, exprOK(`${f}(afloat)`));
-    }
-    for (const f of ["sum", "min", "max", "avg"]) {
-      test(`b.afloat.${f}()`, exprOK(`b.afloat.${f}()`));
+      const fOfT = `${f}(afloat)`;
+      test(fOfT, exprOK(fOfT));
+      if (f !== "min" && f !== "max") {
+        const joinDot = `b.afloat.${f}()`;
+        test(joinDot, exprOK(joinDot));
+        const joinAgg = `b.${f}(afloat)`;
+        test(joinAgg, exprOK(joinAgg));
+      }
     }
   });
 

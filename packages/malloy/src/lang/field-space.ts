@@ -29,6 +29,7 @@ import {
   QueryItem,
   NestDefinition,
   NestReference,
+  MalloyElement,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
@@ -303,6 +304,7 @@ type QuerySegType = "reduce" | "project" | "index";
  */
 export abstract class QueryFieldSpace extends NewFieldSpace {
   abstract segType: QuerySegType;
+  astEl?: MalloyElement | undefined;
 
   constructor(readonly inputSpace: FieldSpace) {
     super(inputSpace.emptyStructDef());
@@ -338,7 +340,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
       } else if (qi instanceof NestDefinition) {
         this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
       } else {
-        throw new Error("INTERNAL ERROR: Add Query Item");
+        throw new Error("INTERNAL ERROR: QueryFieldSpace unknown element");
       }
     }
   }
@@ -360,19 +362,33 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     this.setEntry(ref, new FANSPaceField(ref, this));
   }
 
+  conContain(_qd: model.QueryFieldDef): boolean {
+    return true;
+  }
+
   queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.queryFieldDef();
         if (fieldQueryDef) {
-          fields.push(fieldQueryDef);
+          if (this.conContain(fieldQueryDef)) {
+            fields.push(fieldQueryDef);
+          } else {
+            this.log(`'${name}' not legal in ${this.segType}`);
+          }
         } else {
           throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
       }
     }
     return fields;
+  }
+
+  log(s: string): void {
+    if (this.astEl) {
+      this.astEl.log(s);
+    }
   }
 }
 
@@ -382,6 +398,28 @@ export class ReduceFieldSpace extends QueryFieldSpace {
 
 export class ProjectFieldSpace extends QueryFieldSpace {
   segType: QuerySegType = "project";
+  inputStruct: model.StructDef;
+  constructor(inputFS: FieldSpace) {
+    super(inputFS);
+    this.inputStruct = inputFS.structDef();
+  }
+
+  conContain(qd: model.QueryFieldDef): boolean {
+    if (typeof qd !== "string") {
+      if (model.isFilteredAliasedName(qd)) {
+        return true;
+      }
+      if (qd.type === "turtle") {
+        this.log("Cannot nest queries in project");
+        return false;
+      }
+      if (qd.aggregate) {
+        this.log("Cannot add aggregate measures to project");
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 export class IndexFieldSpace extends QueryFieldSpace {
