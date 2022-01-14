@@ -13,6 +13,8 @@
 
 import { StructDef } from "@malloy-lang/malloy";
 
+// will it build?
+
 /** Medicare Model */
 export const medicareModel: StructDef = {
   as: "medicare_test",
