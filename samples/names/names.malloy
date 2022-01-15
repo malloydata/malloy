@@ -9,7 +9,7 @@ query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   ]
   aggregate: cohort_population is `number`.sum()
   nest: by_name is { group_by: name; aggregate: population is `number`.sum() }
-} 
+}
 
 explore: names is from(->namesQuery) {
   dimension: name is concat(by_name.name,'') // !?BUG !?
@@ -58,8 +58,8 @@ explore: names is from(->namesQuery) {
     nest: by_decade is {
       group_by: decade
       aggregate: births_per_100k
-    } 
-  } 
+    }
+  }
   -> {
     where: births_per_100k > 50
     group_by: by_decade.decade
@@ -70,11 +70,11 @@ explore: names is from(->namesQuery) {
         group_by: name
         aggregate: popularity is (by_decade.births_per_100k - births_per_100k) /births_per_100k
       }
-    }  
+    }
   }
 }
 
-query:  jes_dashboard is names -> name_dashboard {? name ~ r'Jes' }
+query:  jes_dashboard is names -> name_dashboard {where: name ~ r'Jes' }
 
 query: jessie_over_time is names -> {
   where: name = 'Jessie'
@@ -87,8 +87,8 @@ query: jessie_over_time is names -> {
   }
 }
 
-query: alabama_iconic_names_by_decade is names -> time_iconic_names {? state: 'AL' }
+query: alabama_iconic_names_by_decade is names -> time_iconic_names {where: state: 'AL' }
 
-query: newyork_iconic_names_by_decade is names -> time_iconic_names {? state: 'NY' }
+query: newyork_iconic_names_by_decade is names -> time_iconic_names {where: state: 'NY' }
 
-query: old_iconic_names_by_state is names -> location_iconic_names {? decade <= 1940 }
+query: old_iconic_names_by_state is names -> location_iconic_names {where: decade <= 1940 }

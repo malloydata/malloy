@@ -183,7 +183,7 @@ query: table('malloy-data.faa.airports')->{
   group_by: state
   aggregate: [
     airports is count() {where: fac_type = 'AIRPORT'}
-    heliports is count() {? fac_type = 'HELIPORT'} -- ? is shorthad for 'where:'
+    heliports is count() {where: fac_type = 'HELIPORT'} -- ? is shorthad for 'where:'
     total is count()
   ]
 }
@@ -201,8 +201,8 @@ query: table('malloy-data.faa.airports')-> {
   top: 5
   group_by: state
   aggregate: [
-    airports  is count() {? fac_type: 'AIRPORT'}
-    heliports is count() {? fac_type: 'HELIPORT'}
+    airports  is count() {where: fac_type: 'AIRPORT'}
+    heliports is count() {where: fac_type: 'HELIPORT'}
     total     is count()
   ]
 }
@@ -221,7 +221,7 @@ shows the number of flights in 2003.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto"}
-query: table('malloy-data.faa.flights') {? dep_time: @2003}->{
+query: table('malloy-data.faa.flights') {where: dep_time: @2003}->{
   aggregate: flight_count is count()
 }
 ```
@@ -229,7 +229,7 @@ query: table('malloy-data.faa.flights') {? dep_time: @2003}->{
 There is a special time literal `now`, referring to the current timestamp, which allows for relative time filters.
 
 ```malloy
-query: table('malloy-data.faa.flights'){? dep_time > now - 6 hours}->{
+query: table('malloy-data.faa.flights'){where: dep_time > now - 6 hours}->{
   aggregate: flights_last_6_hours is count()
 }
 ```
@@ -273,7 +273,7 @@ Two kinds of time ranges are given special syntax: the range between two times a
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto"}
-query: table('malloy-data.faa.flights'){? dep_time: @2003 to @2005}->{
+query: table('malloy-data.faa.flights'){where: dep_time: @2003 to @2005}->{
   aggregate:flight_count is count()
 }
 ```
@@ -285,7 +285,7 @@ When a time range is used in a comparison, `=` checks for "is in the range", `>`
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto"}
-query: table('malloy-data.faa.flights'){? dep_time > @2003}->{
+query: table('malloy-data.faa.flights'){where: dep_time > @2003}->{
   top: 3; order_by: 1 asc
   group_by:departure_date is dep_time.day
   aggregate: flight_count is count()

@@ -29,19 +29,19 @@ query: flights->{aggregate: flight_count is count()}
 
 **A query starting from another query**
 ```malloy
-query: flights_by_carrier is table('malloy-data.faa.flights'){
+query: flights_by_carrier is table('malloy-data.faa.flights')->{
   group_by: carrier
-  aggregate: flight_count
+  aggregate: flight_count is count()
 }
 
-query: flights_by_carrier->{project: carrier; limit: 2}
+query: ->flights_by_carrier->{project: carrier; limit: 2}
 ```
 
 When a query is defined as part of an explore or nested inside
 another query stage, the source is implicit.
 
 ```malloy
-query: table('malloy-data.faa.flights'){
+query: table('malloy-data.faa.flights')->{
   group_by:  dep_year is dep_time.year
   nest: by_carrier is {
     group_by: carrier
