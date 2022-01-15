@@ -348,7 +348,7 @@ used in queries.</p>
           Using modeled with a filter.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights{? origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -385,7 +385,7 @@ used in queries.</p>
           Setting a limit on the Query
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights{? origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">

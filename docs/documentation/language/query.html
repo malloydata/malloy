@@ -25,14 +25,14 @@ and a "pipeline" of one or more <em>stages</em> seperated by a vertical bar (or 
 
 <span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>}
 </pre><p><strong>A query starting from another query</strong></p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights_by_carrier <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights_by_carrier <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carrier
-  <span class="token keyword">aggregate</span>: flight_count
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }
 
-<span class="token keyword">query</span>: flights_by_carrier<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><p>When a query is defined as part of an explore or nested inside
+<span class="token keyword">query</span>: <span class="token operator">-</span><span class="token operator">></span>flights_by_carrier<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><p>When a query is defined as part of an explore or nested inside
 another query stage, the source is implicit.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>:  dep_year <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">year</span>
   <span class="token keyword">nest</span>: by_carrier <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carrier
