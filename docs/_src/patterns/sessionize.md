@@ -5,7 +5,7 @@ flight data and sessionize it by carrier and date.  Compute statistics and the s
 Retain the original flight events.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
+--! {"isRunnable": true, "showAs": "json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
 query: table('malloy-data.faa.flights'){
   where: carrier='WN' and dep_time: @2002-03-03
   measure: flight_count is count()

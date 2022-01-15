@@ -17,7 +17,7 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, HTMLView } from "@malloy-lang/render";
+import { DataStyles, HTMLView, JSONView } from "@malloy-lang/render";
 import { Malloy, Runtime, URL, URLReader } from "@malloy-lang/malloy";
 import { BigQueryConnection } from "@malloy-lang/db-bigquery";
 import path from "path";
@@ -54,6 +54,7 @@ interface RunOptions {
   size?: string;
   pageSize?: number;
   dataStyles: DataStyles;
+  showAs?: "html" | "json";
 }
 
 export async function dataStylesForFile(
@@ -191,7 +192,12 @@ export async function runCode(
     ...urlReader.getHackyAccumulatedDataStyles(),
   };
 
-  const result = await new HTMLView().render(queryResult.data, dataStyles);
+  let result;
+  if (options.showAs === "json") {
+    result = await new JSONView().render(queryResult.data);
+  } else {
+    result = await new HTMLView().render(queryResult.data, dataStyles);
+  }
 
   return `<div class="result-outer ${options.size || "small"}">
     <div class="result-middle">
