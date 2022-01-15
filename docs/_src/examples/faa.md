@@ -218,7 +218,7 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 
 
-  -- query: southwest_flights is carrier_dashboard {? carriers.nickname : 'Southwest'}
+  -- query: southwest_flights is carrier_dashboard {where: carriers.nickname : 'Southwest'}
   query: carrier_dashboard is {
     aggregate: destination_count is destination.airport_count
     aggregate: flight_count

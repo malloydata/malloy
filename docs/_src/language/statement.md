@@ -38,12 +38,12 @@ query: flights->by_carrier
 ### Using modeled with a filter.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights{? origin: 'SFO'}->by_carrier
+query: flights{where: origin: 'SFO'}->by_carrier
 ```
 ### Setting a limit on the Query
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights{? origin: 'SFO'}->by_carrier{limit: 2}
+query: flights{where: origin: 'SFO'}->by_carrier{limit: 2}
 ```
 
 
