@@ -104,8 +104,12 @@
       ]
     },
     {
-      "title": "Visualizations",
+      "title": "Rendering Results",
       "items": [
+        {
+          "title": "Tables and Dashboards",
+          "link": "/visualizations/dashboards.md"
+        },
         {
           "title": "Bar Charts",
           "link": "/visualizations/bar_charts.md"
