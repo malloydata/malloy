@@ -31,25 +31,25 @@ See [here](explore.md) for more information on explores.
 
 ### Using modeled in query.
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights->by_carrier
 ```
 
 ### Using modeled with a filter.
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights{where: origin: 'SFO'}->by_carrier
 ```
 ### Setting a limit on the Query
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights{where: origin: 'SFO'}->by_carrier{limit: 2}
 ```
 
 
 ### Creating a brand new Query.
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights->{
   group_by: destination
   aggregate: [
@@ -61,7 +61,7 @@ query: flights->{
 
 ### Putting it all together.
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights->{
   group_by: destination
   aggregate: [
