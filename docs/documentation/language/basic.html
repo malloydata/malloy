@@ -10,7 +10,7 @@ footer: /generated/footers/language/basic.html
           Malloy Quickstart
         </a>
       </h1>
-    <p>This guide will introduce the basics of querying and modeling with Malloy.</p>
+    <p>This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render results as tables, charts or dashboards, but fundementally the Malloy just returns data.</p>
 <p><em>Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there.</em></p>
 
       <h2>
@@ -19,176 +19,187 @@ footer: /generated/footers/language/basic.html
         </a>
       </h2>
     <p>In Malloy, the source of a query is always first, and can be either a raw table, a <a href="explore.html">modeled explore</a>, or even another query.</p>
-<p>To the table function references a table (or view) in the database.  We are explicit about which fields are grouped and which files are aggregated.</p>
+<p>To the table function references a table (or view) in the database.  We are explicit about which fields are grouped, aggregate or projected.</p>
+<p>Queries are of the form <code class="language-malloy">source <span class="token operator">-</span><span class="token operator">></span> operation</code></p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,845</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">890</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">856</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">804</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "TX",
+    "airport_count": 1845
+  },
+  {
+    "state": "CA",
+    "airport_count": 984
+  },
+  {
+    "state": "IL",
+    "airport_count": 890
+  },
+  {
+    "state": "FL",
+    "airport_count": 856
+  },
+  {
+    "state": "PA",
+    "airport_count": 804
+  }
+]</pre>
       </div>
     </div>
-  </div><p>To the right of the source, data is piped from one command to the next.</p>
-
+  </div>
       <h2>
-        <a id="projecting-and-reducing" class="header-link anchor" href="#projecting-and-reducing">
-          Projecting and Reducing
+        <a id="query-operators" class="header-link anchor" href="#query-operators">
+          Query Operators
         </a>
       </h2>
-    <p>In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, this kind of command is called a <code class="language-malloy"><span class="token keyword">reduce</span></code>.</p>
-<p>The second type of <code>SELECT</code> in SQL does not perform any aggregation; In Malloy, this command is called <code class="language-malloy"><span class="token keyword">project</span></code>.</p>
-<p>When using <code class="language-malloy"><span class="token keyword">reduce</span></code>, Malloy knows which fields to group by and which to use as aggregate calculations.</p>
-<p>In the query below, the data will be grouped by <code class="language-malloy">state</code> and will produce an aggregate calculation for <code class="language-malloy">airport_count</code>.</p>
+    <p>In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, the query operator for this is <code class="language-malloy"><span class="token keyword">group_by</span>:</code>.  Calculation about data in the group are made using <code class="language-malloy"><span class="token keyword">aggregate</span>:</code>.</p>
+<p>The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called <code class="language-malloy"><span class="token keyword">project</span>:</code>.</p>
+<p>In the query below, the data will be grouped by <code class="language-malloy">state</code> and will produce an aggregate calculation for <code class="language-malloy">airport_count</code> and <code class="language-malloy">average_elevation</code>.  <code class="language-malloy"><span class="token keyword">group_by</span>:</code> and <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> can contain lists of fields or individual fields.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
-  <span class="token keyword">group_by</span>: state
-  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,845</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">890</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">856</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">804</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div><p>Multiple aggregations can be computed within the same <code class="language-malloy"><span class="token keyword">reduce</span></code> command.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
-  <span class="token keyword">group_by</span>: fac_type
-  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">aggregate</span>: max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">max_&#8203;elevation</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,925</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,927</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,135</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,442</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">473</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,229</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">125</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,110</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">86</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,650</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div><p>Groups and aggregates can contain lists of fields</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
-  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>state<span class="token punctuation">,</span> county<span class="token punctuation">]</span>
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
+    state
+    county
+  <span class="token punctuation">]</span>
+  <span class="token keyword">aggregate</span>:<span class="token punctuation">[</span>
+    airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
+    average_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">max_&#8203;elevation</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,420</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HARRIS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">774</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AZ</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARICOPA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">117</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,995</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,748</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TARRANT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">895</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "CA",
+    "county": "LOS ANGELES",
+    "airport_count": 176,
+    "average_elevation": 689.164772727273
+  },
+  {
+    "state": "TX",
+    "county": "HARRIS",
+    "airport_count": 135,
+    "average_elevation": 106.4666666666667
+  },
+  {
+    "state": "AZ",
+    "county": "MARICOPA",
+    "airport_count": 117,
+    "average_elevation": 1395.6666666666663
+  },
+  {
+    "state": "CA",
+    "county": "SAN BERNARDINO",
+    "airport_count": 71,
+    "average_elevation": 2376.056338028169
+  },
+  {
+    "state": "TX",
+    "county": "TARRANT",
+    "airport_count": 63,
+    "average_elevation": 646.7936507936511
+  }
+]</pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="multiple-field-perations" class="header-link anchor" href="#multiple-field-perations">
+          Multiple Field )perations
+        </a>
+      </h3>
+    <p>Multiple <code class="language-malloy"><span class="token keyword">group_by</span>:</code> and <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> statements can appear in the same query operation.  This can be helful in providing fields in a specific order.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: fac_type
+  <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">group_by</span>: county
+  <span class="token keyword">aggregate</span>: max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <pre>[
+  {
+    "fac_type": "HELIPORT",
+    "airport_count": 151,
+    "county": "LOS ANGELES",
+    "max_elevation": 3244
+  },
+  {
+    "fac_type": "AIRPORT",
+    "airport_count": 142,
+    "county": "WASHINGTON",
+    "max_elevation": 5105
+  },
+  {
+    "fac_type": "HELIPORT",
+    "airport_count": 110,
+    "county": "HARRIS",
+    "max_elevation": 774
+  },
+  {
+    "fac_type": "AIRPORT",
+    "airport_count": 105,
+    "county": "JEFFERSON",
+    "max_elevation": 8040
+  },
+  {
+    "fac_type": "AIRPORT",
+    "airport_count": 98,
+    "county": "FRANKLIN",
+    "max_elevation": 4728
+  }
+]</pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="project" class="header-link anchor" href="#project">
+          Project
+        </a>
+      </h3>
+    <p><code class="language-malloy"><span class="token keyword">project</span></code> produces a list of fields.  For every row in the input table, there is arow in the output table.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">project</span>: <span class="token punctuation">[</span>code<span class="token punctuation">,</span> full_name<span class="token punctuation">,</span> city<span class="token punctuation">,</span> county<span class="token punctuation">]</span>
+  <span class="token keyword">where</span>: county<span class="token operator">=</span><span class="token string">'SANTA CRUZ'</span>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <pre>[
+  {
+    "code": "2AZ8",
+    "full_name": "TUBAC ULTRALIGHT FLIGHTPARK",
+    "city": "TUBAC",
+    "county": "SANTA CRUZ"
+  },
+  {
+    "code": "OLS",
+    "full_name": "NOGALES INTL",
+    "city": "NOGALES",
+    "county": "SANTA CRUZ"
+  },
+  {
+    "code": "NSI",
+    "full_name": "SAN NICOLAS ISLAND NOLF",
+    "city": "SAN NICOLAS ISLAND",
+    "county": "SANTA CRUZ"
+  },
+  {
+    "code": "CL77",
+    "full_name": "BONNY DOON VILLAGE",
+    "city": "SANTA CRUZ",
+    "county": "SANTA CRUZ"
+  },
+  {
+    "code": "CA37",
+    "full_name": "DOMINICAN SANTA CRUZ HOSPITAL",
+    "city": "SANTA CRUZ",
+    "county": "SANTA CRUZ"
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -204,18 +215,11 @@ calculation or agregation, it must be aliased.</p>
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">max_&#8203;elevation</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,442</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "max_elevation": 12442
+  }
+]</pre>
       </div>
     </div>
   </div><p>Malloy uses <code class="language-malloy">name <span class="token keyword">is</span> value</code> instead of SQL's <code class="language-malloy">value <span class="token keyword">as</span> name</code>, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.</p>
@@ -228,32 +232,28 @@ calculation or agregation, it must be aliased.</p>
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">full_&#8203;name</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">elevation</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MILI</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KILI</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MALOELAP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UTIRIK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NAMORIK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "full_name": "MILI",
+    "elevation": 4
+  },
+  {
+    "full_name": "KILI",
+    "elevation": 5
+  },
+  {
+    "full_name": "MALOELAP",
+    "elevation": 4
+  },
+  {
+    "full_name": "UTIRIK",
+    "elevation": 4
+  },
+  {
+    "full_name": "NAMORIK",
+    "elevation": 15
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -274,50 +274,43 @@ calculation or agregation, it must be aliased.</p>
 }</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county_&#8203;and_&#8203;state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">max_&#8203;elevation</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">min_&#8203;elevation</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;elevation</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES, CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,420</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">689.165</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HARRIS, TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">774</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">106.467</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARICOPA, AZ</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">117</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,995</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">737</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,395.667</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO, CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,748</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">631</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,376.056</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TARRANT, TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">895</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">472</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">646.794</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "county_and_state": "LOS ANGELES, CA",
+    "airport_count": 176,
+    "max_elevation": 3420,
+    "min_elevation": 0,
+    "avg_elevation": 689.164772727273
+  },
+  {
+    "county_and_state": "HARRIS, TX",
+    "airport_count": 135,
+    "max_elevation": 774,
+    "min_elevation": 9,
+    "avg_elevation": 106.4666666666667
+  },
+  {
+    "county_and_state": "MARICOPA, AZ",
+    "airport_count": 117,
+    "max_elevation": 3995,
+    "min_elevation": 737,
+    "avg_elevation": 1395.6666666666663
+  },
+  {
+    "county_and_state": "SAN BERNARDINO, CA",
+    "airport_count": 71,
+    "max_elevation": 6748,
+    "min_elevation": 631,
+    "avg_elevation": 2376.056338028169
+  },
+  {
+    "county_and_state": "TARRANT, TX",
+    "airport_count": 63,
+    "max_elevation": 895,
+    "min_elevation": 472,
+    "avg_elevation": 646.7936507936511
+  }
+]</pre>
       </div>
     </div>
   </div><p>The basic types of Malloy expressions are <code class="language-malloy"><span class="token type">string</span></code>, <code class="language-malloy"><span class="token type">number</span></code>, <code class="language-malloy"><span class="token type">boolean</span></code>, <code class="language-malloy"><span class="token type">date</span></code>, and <code class="language-malloy"><span class="token type">timestamp</span></code>.</p>
@@ -328,7 +321,7 @@ calculation or agregation, it must be aliased.</p>
         </a>
       </h2>
     <p>One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create an <em>explore</em> object named <code class="language-malloy">airports</code> and
-add calculations for <code class="language-malloy">county_and_state</code> and <code class="language-malloy">airport_count</code>.</p>
+add a <code class="language-malloy"><span class="token keyword">dimension</span>:</code> calculation for <code class="language-malloy">county_and_state</code> and <code class="language-malloy"><span class="token keyword">measure</span>:</code> calculation for <code class="language-malloy">airport_count</code>.  Dimensions can be used in <code class="language-malloy"><span class="token keyword">group_by</span>:</code>, <code class="language-malloy"><span class="token keyword">project</span>:</code> and <code class="language-malloy"><span class="token keyword">where</span>:</code>.  Measures can be used in <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> and <code class="language-malloy"><span class="token keyword">having</span>:</code>.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
   <span class="token keyword">dimension</span>: county_and_state <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
   <span class="token keyword">measure</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -339,32 +332,28 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county_&#8203;and_&#8203;state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES, CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HARRIS, TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARICOPA, AZ</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">117</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO, CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TARRANT, TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "county_and_state": "LOS ANGELES, CA",
+    "airport_count": 176
+  },
+  {
+    "county_and_state": "HARRIS, TX",
+    "airport_count": 135
+  },
+  {
+    "county_and_state": "MARICOPA, AZ",
+    "airport_count": 117
+  },
+  {
+    "county_and_state": "SAN BERNARDINO, CA",
+    "airport_count": 71
+  },
+  {
+    "county_and_state": "TARRANT, TX",
+    "airport_count": 63
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -374,7 +363,7 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
         </a>
       </h2>
     <p>In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some <a href="order_by.html">reasonable defaults</a>.</p>
-<p>The <code class="language-malloy"><span class="token keyword">top</span></code> statement limits the number of rows returned, sorted by default by the first measure decending—in this case, <code class="language-malloy">airport_count</code>.</p>
+<p>The <code class="language-malloy"><span class="token keyword">top</span>:</code> and <code class="language-malloy"><span class="token keyword">limit</span>:</code> statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure decending—in this case, <code class="language-malloy">airport_count</code>.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">top</span>: <span class="token number">2</span>
   <span class="token keyword">group_by</span>: state
@@ -382,26 +371,19 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,845</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "TX",
+    "airport_count": 1845
+  },
+  {
+    "state": "CA",
+    "airport_count": 984
+  }
+]</pre>
       </div>
     </div>
-  </div><p>Default ordering can be overridden with <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code>, as in the following query, which shows the states in alphabetical order.</p>
+  </div><p>Default ordering can be overridden with <code class="language-malloy"><span class="token keyword">order_by</span>:</code>, as in the following query, which shows the states in alphabetical order.  <code class="language-malloy"><span class="token keyword">order_by</span>:</code> can take a field index nuber or the name of a field.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">order_by</span>: state
   <span class="token keyword">group_by</span>: state
@@ -409,32 +391,28 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">null</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">608</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">260</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">299</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": null,
+    "airport_count": 23
+  },
+  {
+    "state": "AK",
+    "airport_count": 608
+  },
+  {
+    "state": "AL",
+    "airport_count": 260
+  },
+  {
+    "state": "AR",
+    "airport_count": 299
+  },
+  {
+    "state": "AS",
+    "airport_count": 4
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -450,7 +428,7 @@ add calculations for <code class="language-malloy">county_and_state</code> and <
           Filtering Tables
         </a>
       </h3>
-    <p>A filter on a table narrows down which data is included from that table. This translates
+    <p>A filter on a data source table narrows down which data is included to be passed to the Query Operation. This translates
 to a <code>WHERE</code> clause in SQL.
 In this case, the data from the table is filtered to just airports in California.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span>}<span class="token operator">-</span><span class="token operator">></span>{
@@ -460,23 +438,16 @@ In this case, the data from the table is filtered to just airports in California
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "county": "LOS ANGELES",
+    "airport_count": 176
+  },
+  {
+    "county": "SAN BERNARDINO",
+    "airport_count": 71
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -496,44 +467,38 @@ In this case, the data from the table is filtered to just airports in California
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airports</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">heliports</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,389</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">435</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,845</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">625</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">245</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">890</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">569</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">396</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OH</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">537</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">201</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">749</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">511</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">280</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">856</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "TX",
+    "airports": 1389,
+    "heliports": 435,
+    "total": 1845
+  },
+  {
+    "state": "IL",
+    "airports": 625,
+    "heliports": 245,
+    "total": 890
+  },
+  {
+    "state": "CA",
+    "airports": 569,
+    "heliports": 396,
+    "total": 984
+  },
+  {
+    "state": "OH",
+    "airports": 537,
+    "heliports": 201,
+    "total": 749
+  },
+  {
+    "state": "FL",
+    "airports": 511,
+    "heliports": 280,
+    "total": 856
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -542,8 +507,8 @@ In this case, the data from the table is filtered to just airports in California
           Filtering in Query Stages
         </a>
       </h3>
-    <p>Filters can also be applied to <code class="language-malloy"><span class="token keyword">reduce</span></code> and <code class="language-malloy"><span class="token keyword">project</span></code> commands. When using a filter in this way, it only applies to
-the data for that command alone. This will become more important later when we have more than one <code class="language-malloy"><span class="token keyword">reduce</span></code> in a query.</p>
+    <p>Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to
+the data for that opeation alone alone. This will become more important later when we get to <code class="language-malloy"><span class="token keyword">nest</span>:</code> oprations in queries.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: state: <span class="token string">'AL'</span> <span class="token operator">|</span> <span class="token string">'KY'</span>
   <span class="token keyword">top</span>: <span class="token number">5</span>
@@ -556,29 +521,20 @@ the data for that command alone. This will become more important later when we h
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airports</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">heliports</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">180</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">260</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">142</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">55</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">202</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "AL",
+    "airports": 180,
+    "heliports": 75,
+    "total": 260
+  },
+  {
+    "state": "KY",
+    "airports": 142,
+    "heliports": 55,
+    "total": 202
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -602,18 +558,11 @@ shows the number of flights in 2003.</p>
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,493,690</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "flight_count": 6493690
+  }
+]</pre>
       </div>
     </div>
   </div><p>There is a special time literal <code class="language-malloy">now</code>, referring to the current timestamp, which allows for relative time filters.</p>
@@ -635,38 +584,53 @@ shows the number of flights in 2003.</p>
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">flight_&#8203;year</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">flight_&#8203;month</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-07</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">627,574</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-11</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">566,014</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-10</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">592,650</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-08</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">630,566</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-06</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">608,955</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "flight_year": {
+      "value": "2005-01-01"
+    },
+    "flight_month": {
+      "value": "2005-07-01"
+    },
+    "flight_count": 627574
+  },
+  {
+    "flight_year": {
+      "value": "2005-01-01"
+    },
+    "flight_month": {
+      "value": "2005-11-01"
+    },
+    "flight_count": 566014
+  },
+  {
+    "flight_year": {
+      "value": "2005-01-01"
+    },
+    "flight_month": {
+      "value": "2005-10-01"
+    },
+    "flight_count": 592650
+  },
+  {
+    "flight_year": {
+      "value": "2005-01-01"
+    },
+    "flight_month": {
+      "value": "2005-08-01"
+    },
+    "flight_count": 630566
+  },
+  {
+    "flight_year": {
+      "value": "2005-01-01"
+    },
+    "flight_month": {
+      "value": "2005-06-01"
+    },
+    "flight_count": 608955
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -683,38 +647,36 @@ shows the number of flights in 2003.</p>
 }</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">day_&#8203;of_&#8203;week</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,220,298</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,232,955</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,229,187</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,221,663</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,229,545</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,238,003</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,242,262</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "day_of_week": 1,
+    "flight_count": 1220298
+  },
+  {
+    "day_of_week": 2,
+    "flight_count": 1232955
+  },
+  {
+    "day_of_week": 3,
+    "flight_count": 1229187
+  },
+  {
+    "day_of_week": 4,
+    "flight_count": 1221663
+  },
+  {
+    "day_of_week": 5,
+    "flight_count": 1229545
+  },
+  {
+    "day_of_week": 6,
+    "flight_count": 1238003
+  },
+  {
+    "day_of_week": 7,
+    "flight_count": 1242262
+  }
+]</pre>
       </div>
     </div>
   </div><!-- TODO it may be worth having a doc describing what the JSON+Metadata
@@ -732,18 +694,11 @@ And likewise for any other data type that has interesting output metadata. -->
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,621,381</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "flight_count": 13621381
+  }
+]</pre>
       </div>
     </div>
   </div><p>Time literals and truncations can also behave like time ranges. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. <code class="language-malloy"><span class="token date">@2003</span></code> represents the whole of the year 2003, and <code class="language-malloy"><span class="token date">@2004-Q1</span></code> lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the
@@ -756,26 +711,26 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">departure_&#8203;date</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">[object Object]</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,206</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">[object Object]</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,053</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">[object Object]</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,252</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "departure_date": {
+      "value": "2004-01-01T00:00:00.000Z"
+    },
+    "flight_count": 17206
+  },
+  {
+    "departure_date": {
+      "value": "2004-01-02T00:00:00.000Z"
+    },
+    "flight_count": 19053
+  },
+  {
+    "departure_date": {
+      "value": "2004-01-03T00:00:00.000Z"
+    },
+    "flight_count": 17252
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -805,178 +760,158 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,845</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,389</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">435</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">569</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">396</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">890</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">625</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">245</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BALLOONPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">856</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">511</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">280</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">43</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">804</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">468</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">307</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "TX",
+    "airport_count": 1845,
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 1389
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 435
+      },
+      {
+        "fac_type": "STOLPORT",
+        "airport_count": 8
+      },
+      {
+        "fac_type": "ULTRALIGHT",
+        "airport_count": 8
+      },
+      {
+        "fac_type": "GLIDERPORT",
+        "airport_count": 5
+      }
+    ]
+  },
+  {
+    "state": "CA",
+    "airport_count": 984,
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 569
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 396
+      },
+      {
+        "fac_type": "SEAPLANE BASE",
+        "airport_count": 12
+      },
+      {
+        "fac_type": "GLIDERPORT",
+        "airport_count": 3
+      },
+      {
+        "fac_type": "STOLPORT",
+        "airport_count": 2
+      },
+      {
+        "fac_type": "ULTRALIGHT",
+        "airport_count": 2
+      }
+    ]
+  },
+  {
+    "state": "IL",
+    "airport_count": 890,
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 625
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 245
+      },
+      {
+        "fac_type": "SEAPLANE BASE",
+        "airport_count": 8
+      },
+      {
+        "fac_type": "ULTRALIGHT",
+        "airport_count": 6
+      },
+      {
+        "fac_type": "STOLPORT",
+        "airport_count": 2
+      },
+      {
+        "fac_type": "GLIDERPORT",
+        "airport_count": 2
+      },
+      {
+        "fac_type": "BALLOONPORT",
+        "airport_count": 2
+      }
+    ]
+  },
+  {
+    "state": "FL",
+    "airport_count": 856,
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 511
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 280
+      },
+      {
+        "fac_type": "SEAPLANE BASE",
+        "airport_count": 43
+      },
+      {
+        "fac_type": "STOLPORT",
+        "airport_count": 13
+      },
+      {
+        "fac_type": "ULTRALIGHT",
+        "airport_count": 5
+      },
+      {
+        "fac_type": "GLIDERPORT",
+        "airport_count": 4
+      }
+    ]
+  },
+  {
+    "state": "PA",
+    "airport_count": 804,
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 468
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 307
+      },
+      {
+        "fac_type": "ULTRALIGHT",
+        "airport_count": 13
+      },
+      {
+        "fac_type": "SEAPLANE BASE",
+        "airport_count": 10
+      },
+      {
+        "fac_type": "STOLPORT",
+        "airport_count": 3
+      },
+      {
+        "fac_type": "GLIDERPORT",
+        "airport_count": 3
+      }
+    ]
+  }
+]</pre>
       </div>
     </div>
   </div><p>Here we can see that the <code class="language-malloy">by_facility</code> column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.</p>
@@ -996,653 +931,468 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 }</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">top_&#8203;5_&#8203;counties</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,845</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HARRIS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">135</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">110</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">25</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TARRANT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">63</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DENTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DALLAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">42</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BEXAR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">151</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN DIEGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KERN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">890</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COOK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">51</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LA SALLE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">35</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MC HENRY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">29</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DE KALB</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WINNEBAGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">856</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PALM BEACH</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">45</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DADE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POLK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">43</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARION</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">36</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">804</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUCKS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">55</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MONTGOMERY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">29</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALLEGHENY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHESTER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHILADELPHIA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "TX",
+    "airport_count": 1845,
+    "top_5_counties": [
+      {
+        "county": "HARRIS",
+        "airport_count": 135,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 110
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 25
+          }
+        ]
+      },
+      {
+        "county": "TARRANT",
+        "airport_count": 63,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 35
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 26
+          },
+          {
+            "fac_type": "ULTRALIGHT",
+            "airport_count": 1
+          },
+          {
+            "fac_type": "STOLPORT",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "DENTON",
+        "airport_count": 53,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 47
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 6
+          }
+        ]
+      },
+      {
+        "county": "DALLAS",
+        "airport_count": 42,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 32
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 9
+          },
+          {
+            "fac_type": "STOLPORT",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "BEXAR",
+        "airport_count": 40,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 24
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 16
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "state": "CA",
+    "airport_count": 984,
+    "top_5_counties": [
+      {
+        "county": "LOS ANGELES",
+        "airport_count": 176,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 151
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 23
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 2
+          }
+        ]
+      },
+      {
+        "county": "SAN BERNARDINO",
+        "airport_count": 71,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 47
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 24
+          }
+        ]
+      },
+      {
+        "county": "ORANGE",
+        "airport_count": 53,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 47
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 6
+          }
+        ]
+      },
+      {
+        "county": "SAN DIEGO",
+        "airport_count": 49,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 30
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 17
+          },
+          {
+            "fac_type": "GLIDERPORT",
+            "airport_count": 2
+          }
+        ]
+      },
+      {
+        "county": "KERN",
+        "airport_count": 49,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 41
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 7
+          },
+          {
+            "fac_type": "ULTRALIGHT",
+            "airport_count": 1
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "state": "IL",
+    "airport_count": 890,
+    "top_5_counties": [
+      {
+        "county": "COOK",
+        "airport_count": 51,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 44
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 7
+          }
+        ]
+      },
+      {
+        "county": "LA SALLE",
+        "airport_count": 39,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 35
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 4
+          }
+        ]
+      },
+      {
+        "county": "MC HENRY",
+        "airport_count": 29,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 20
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 7
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 2
+          }
+        ]
+      },
+      {
+        "county": "DE KALB",
+        "airport_count": 27,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 24
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 3
+          }
+        ]
+      },
+      {
+        "county": "WINNEBAGO",
+        "airport_count": 24,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 15
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 9
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "state": "FL",
+    "airport_count": 856,
+    "top_5_counties": [
+      {
+        "county": "PALM BEACH",
+        "airport_count": 45,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 30
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 14
+          },
+          {
+            "fac_type": "GLIDERPORT",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "DADE",
+        "airport_count": 44,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 27
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 12
+          },
+          {
+            "fac_type": "GLIDERPORT",
+            "airport_count": 2
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 2
+          },
+          {
+            "fac_type": "STOLPORT",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "POLK",
+        "airport_count": 43,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 18
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 16
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 9
+          }
+        ]
+      },
+      {
+        "county": "MARION",
+        "airport_count": 37,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 27
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 7
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 2
+          },
+          {
+            "fac_type": "STOLPORT",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "ORANGE",
+        "airport_count": 36,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 24
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 8
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 4
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "state": "PA",
+    "airport_count": 804,
+    "top_5_counties": [
+      {
+        "county": "BUCKS",
+        "airport_count": 55,
+        "by_facility": [
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 32
+          },
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 19
+          },
+          {
+            "fac_type": "ULTRALIGHT",
+            "airport_count": 2
+          },
+          {
+            "fac_type": "STOLPORT",
+            "airport_count": 1
+          },
+          {
+            "fac_type": "GLIDERPORT",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "MONTGOMERY",
+        "airport_count": 44,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 29
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 14
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "ALLEGHENY",
+        "airport_count": 31,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 22
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 8
+          },
+          {
+            "fac_type": "SEAPLANE BASE",
+            "airport_count": 1
+          }
+        ]
+      },
+      {
+        "county": "CHESTER",
+        "airport_count": 27,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 16
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 11
+          }
+        ]
+      },
+      {
+        "county": "PHILADELPHIA",
+        "airport_count": 26,
+        "by_facility": [
+          {
+            "fac_type": "HELIPORT",
+            "airport_count": 22
+          },
+          {
+            "fac_type": "AIRPORT",
+            "airport_count": 4
+          }
+        ]
+      }
+    ]
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -1667,194 +1417,124 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 }</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">major_&#8203;facilities</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;facility</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUR (BURBANK-GLENDALE-PASADENA)</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX (LOS ANGELES INTL)</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LGB (LONG BEACH /DAUGHERTY FIELD/)</td>
-</tr>
-
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">151</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONT (ONTARIO INTL)</td>
-</tr>
-
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SNA (JOHN WAYNE AIRPORT-ORANGE COUNTY)</td>
-</tr>
-
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">47</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN DIEGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN (SAN DIEGO INTL-LINDBERGH FLD)</td>
-</tr>
-
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KERN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BFL (MEADOWS FIELD)</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IYK (INYOKERN)</td>
-</tr>
-
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "county": "LOS ANGELES",
+    "airport_count": 176,
+    "major_facilities": [
+      {
+        "name": "BUR (BURBANK-GLENDALE-PASADENA)"
+      },
+      {
+        "name": "LAX (LOS ANGELES INTL)"
+      },
+      {
+        "name": "LGB (LONG BEACH /DAUGHERTY FIELD/)"
+      }
+    ],
+    "by_facility": [
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 151
+      },
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 23
+      },
+      {
+        "fac_type": "SEAPLANE BASE",
+        "airport_count": 2
+      }
+    ]
+  },
+  {
+    "county": "SAN BERNARDINO",
+    "airport_count": 71,
+    "major_facilities": [
+      {
+        "name": "ONT (ONTARIO INTL)"
+      }
+    ],
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 47
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 24
+      }
+    ]
+  },
+  {
+    "county": "ORANGE",
+    "airport_count": 53,
+    "major_facilities": [
+      {
+        "name": "SNA (JOHN WAYNE AIRPORT-ORANGE COUNTY)"
+      }
+    ],
+    "by_facility": [
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 47
+      },
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 6
+      }
+    ]
+  },
+  {
+    "county": "SAN DIEGO",
+    "airport_count": 49,
+    "major_facilities": [
+      {
+        "name": "SAN (SAN DIEGO INTL-LINDBERGH FLD)"
+      }
+    ],
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 30
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 17
+      },
+      {
+        "fac_type": "GLIDERPORT",
+        "airport_count": 2
+      }
+    ]
+  },
+  {
+    "county": "KERN",
+    "airport_count": 49,
+    "major_facilities": [
+      {
+        "name": "BFL (MEADOWS FIELD)"
+      },
+      {
+        "name": "IYK (INYOKERN)"
+      }
+    ],
+    "by_facility": [
+      {
+        "fac_type": "AIRPORT",
+        "airport_count": 41
+      },
+      {
+        "fac_type": "HELIPORT",
+        "airport_count": 7
+      },
+      {
+        "fac_type": "ULTRALIGHT",
+        "airport_count": 1
+      }
+    ]
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -1875,406 +1555,500 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">by_&#8203;county</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN DIEGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KERN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RIVERSIDE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">46</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FRESNO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">40</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SACRAMENTO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SANTA BARBARA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN JOAQUIN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VENTURA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TULARE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SUTTER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KINGS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">EL DORADO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MERCED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALAMEDA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN LUIS OBISPO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MONTEREY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SISKIYOU</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPERIAL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MADERA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SONOMA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUTTE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MODOC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHASTA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SANTA CLARA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STANISLAUS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEVADA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COLUSA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">INYO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YOLO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TEHAMA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HUMBOLDT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CONTRA COSTA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MENDOCINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAKE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NAPA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SANTA CRUZ</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLACER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLUMAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SOLANO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMADOR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TRINITY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TUOLUMNE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LASSEN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARIN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MONO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YUBA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CALAVERAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BENITO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN MATEO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLENN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DEL NORTE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN FRANCISCO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MARIPOSA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALPINE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SIERRA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ESMERALDA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">576</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SUFFOLK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ERIE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NIAGARA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DUTCHESS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONEIDA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONONDAGA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULSTER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NASSAU</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ONTARIO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHAUTAUQUA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MONROE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALBANY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DELAWARE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SARATOGA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MONTGOMERY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OSWEGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">QUEENS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WESTCHESTER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CATTARAUGUS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ESSEX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SULLIVAN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WAYNE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WYOMING</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHOHARIE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STEUBEN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORLEANS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JEFFERSON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLINTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LIVINGSTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GREENE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHEMUNG</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COLUMBIA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CAYUGA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ST LAWRENCE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FULTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TOMPKINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHUYLER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HERKIMER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RENSSELAER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHENECTADY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MADISON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HAMILTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BROOME</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEW YORK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GENESEE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OTSEGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHENANGO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">YATES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SENECA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCKLAND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WASHINGTON</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALLEGANY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WARREN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TIOGA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FRANKLIN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORTLAND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PUTNAM</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KINGS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BRONX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LEWIS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "state": "CA",
+    "airport_count": 984,
+    "by_county": [
+      {
+        "county": "LOS ANGELES",
+        "airport_count": 176
+      },
+      {
+        "county": "SAN BERNARDINO",
+        "airport_count": 71
+      },
+      {
+        "county": "ORANGE",
+        "airport_count": 53
+      },
+      {
+        "county": "SAN DIEGO",
+        "airport_count": 49
+      },
+      {
+        "county": "KERN",
+        "airport_count": 49
+      },
+      {
+        "county": "RIVERSIDE",
+        "airport_count": 46
+      },
+      {
+        "county": "FRESNO",
+        "airport_count": 40
+      },
+      {
+        "county": "SACRAMENTO",
+        "airport_count": 24
+      },
+      {
+        "county": "SANTA BARBARA",
+        "airport_count": 22
+      },
+      {
+        "county": "SAN JOAQUIN",
+        "airport_count": 20
+      },
+      {
+        "county": "VENTURA",
+        "airport_count": 19
+      },
+      {
+        "county": "TULARE",
+        "airport_count": 16
+      },
+      {
+        "county": "SUTTER",
+        "airport_count": 16
+      },
+      {
+        "county": "KINGS",
+        "airport_count": 15
+      },
+      {
+        "county": "EL DORADO",
+        "airport_count": 15
+      },
+      {
+        "county": "MERCED",
+        "airport_count": 15
+      },
+      {
+        "county": "ALAMEDA",
+        "airport_count": 14
+      },
+      {
+        "county": "SAN LUIS OBISPO",
+        "airport_count": 14
+      },
+      {
+        "county": "MONTEREY",
+        "airport_count": 13
+      },
+      {
+        "county": "SISKIYOU",
+        "airport_count": 13
+      },
+      {
+        "county": "IMPERIAL",
+        "airport_count": 12
+      },
+      {
+        "county": "MADERA",
+        "airport_count": 12
+      },
+      {
+        "county": "SONOMA",
+        "airport_count": 12
+      },
+      {
+        "county": "BUTTE",
+        "airport_count": 11
+      },
+      {
+        "county": "MODOC",
+        "airport_count": 11
+      },
+      {
+        "county": "SHASTA",
+        "airport_count": 11
+      },
+      {
+        "county": "SANTA CLARA",
+        "airport_count": 10
+      },
+      {
+        "county": "STANISLAUS",
+        "airport_count": 10
+      },
+      {
+        "county": "NEVADA",
+        "airport_count": 10
+      },
+      {
+        "county": "COLUSA",
+        "airport_count": 9
+      },
+      {
+        "county": "INYO",
+        "airport_count": 9
+      },
+      {
+        "county": "YOLO",
+        "airport_count": 9
+      },
+      {
+        "county": "TEHAMA",
+        "airport_count": 9
+      },
+      {
+        "county": "HUMBOLDT",
+        "airport_count": 9
+      },
+      {
+        "county": "CONTRA COSTA",
+        "airport_count": 9
+      },
+      {
+        "county": "MENDOCINO",
+        "airport_count": 8
+      },
+      {
+        "county": "LAKE",
+        "airport_count": 8
+      },
+      {
+        "county": "NAPA",
+        "airport_count": 8
+      },
+      {
+        "county": "SANTA CRUZ",
+        "airport_count": 8
+      },
+      {
+        "county": "PLACER",
+        "airport_count": 8
+      },
+      {
+        "county": "PLUMAS",
+        "airport_count": 8
+      },
+      {
+        "county": "SOLANO",
+        "airport_count": 8
+      },
+      {
+        "county": "AMADOR",
+        "airport_count": 7
+      },
+      {
+        "county": "TRINITY",
+        "airport_count": 7
+      },
+      {
+        "county": "TUOLUMNE",
+        "airport_count": 7
+      },
+      {
+        "county": "LASSEN",
+        "airport_count": 6
+      },
+      {
+        "county": "MARIN",
+        "airport_count": 6
+      },
+      {
+        "county": "MONO",
+        "airport_count": 6
+      },
+      {
+        "county": "YUBA",
+        "airport_count": 5
+      },
+      {
+        "county": "CALAVERAS",
+        "airport_count": 5
+      },
+      {
+        "county": "SAN BENITO",
+        "airport_count": 4
+      },
+      {
+        "county": "SAN MATEO",
+        "airport_count": 4
+      },
+      {
+        "county": "GLENN",
+        "airport_count": 4
+      },
+      {
+        "county": "DEL NORTE",
+        "airport_count": 3
+      },
+      {
+        "county": "SAN FRANCISCO",
+        "airport_count": 3
+      },
+      {
+        "county": "MARIPOSA",
+        "airport_count": 3
+      },
+      {
+        "county": "ALPINE",
+        "airport_count": 2
+      },
+      {
+        "county": "SIERRA",
+        "airport_count": 2
+      },
+      {
+        "county": "ESMERALDA",
+        "airport_count": 1
+      }
+    ]
+  },
+  {
+    "state": "NY",
+    "airport_count": 576,
+    "by_county": [
+      {
+        "county": "SUFFOLK",
+        "airport_count": 34
+      },
+      {
+        "county": "ERIE",
+        "airport_count": 26
+      },
+      {
+        "county": "NIAGARA",
+        "airport_count": 20
+      },
+      {
+        "county": "DUTCHESS",
+        "airport_count": 20
+      },
+      {
+        "county": "ONEIDA",
+        "airport_count": 18
+      },
+      {
+        "county": "ONONDAGA",
+        "airport_count": 18
+      },
+      {
+        "county": "ULSTER",
+        "airport_count": 17
+      },
+      {
+        "county": "ORANGE",
+        "airport_count": 16
+      },
+      {
+        "county": "NASSAU",
+        "airport_count": 15
+      },
+      {
+        "county": "ONTARIO",
+        "airport_count": 15
+      },
+      {
+        "county": "CHAUTAUQUA",
+        "airport_count": 14
+      },
+      {
+        "county": "MONROE",
+        "airport_count": 13
+      },
+      {
+        "county": "ALBANY",
+        "airport_count": 13
+      },
+      {
+        "county": "DELAWARE",
+        "airport_count": 13
+      },
+      {
+        "county": "SARATOGA",
+        "airport_count": 12
+      },
+      {
+        "county": "MONTGOMERY",
+        "airport_count": 12
+      },
+      {
+        "county": "OSWEGO",
+        "airport_count": 12
+      },
+      {
+        "county": "QUEENS",
+        "airport_count": 11
+      },
+      {
+        "county": "WESTCHESTER",
+        "airport_count": 11
+      },
+      {
+        "county": "CATTARAUGUS",
+        "airport_count": 11
+      },
+      {
+        "county": "ESSEX",
+        "airport_count": 10
+      },
+      {
+        "county": "SULLIVAN",
+        "airport_count": 10
+      },
+      {
+        "county": "WAYNE",
+        "airport_count": 10
+      },
+      {
+        "county": "WYOMING",
+        "airport_count": 9
+      },
+      {
+        "county": "SCHOHARIE",
+        "airport_count": 9
+      },
+      {
+        "county": "STEUBEN",
+        "airport_count": 9
+      },
+      {
+        "county": "ORLEANS",
+        "airport_count": 9
+      },
+      {
+        "county": "JEFFERSON",
+        "airport_count": 9
+      },
+      {
+        "county": "CLINTON",
+        "airport_count": 8
+      },
+      {
+        "county": "LIVINGSTON",
+        "airport_count": 8
+      },
+      {
+        "county": "GREENE",
+        "airport_count": 8
+      },
+      {
+        "county": "CHEMUNG",
+        "airport_count": 8
+      },
+      {
+        "county": "COLUMBIA",
+        "airport_count": 8
+      },
+      {
+        "county": "CAYUGA",
+        "airport_count": 8
+      },
+      {
+        "county": "ST LAWRENCE",
+        "airport_count": 8
+      },
+      {
+        "county": "FULTON",
+        "airport_count": 8
+      },
+      {
+        "county": "TOMPKINS",
+        "airport_count": 7
+      },
+      {
+        "county": "SCHUYLER",
+        "airport_count": 7
+      },
+      {
+        "county": "HERKIMER",
+        "airport_count": 7
+      },
+      {
+        "county": "RENSSELAER",
+        "airport_count": 7
+      },
+      {
+        "county": "SCHENECTADY",
+        "airport_count": 7
+      },
+      {
+        "county": "MADISON",
+        "airport_count": 7
+      },
+      {
+        "county": "HAMILTON",
+        "airport_count": 7
+      },
+      {
+        "county": "BROOME",
+        "airport_count": 7
+      },
+      {
+        "county": "NEW YORK",
+        "airport_count": 7
+      },
+      {
+        "county": "GENESEE",
+        "airport_count": 6
+      },
+      {
+        "county": "OTSEGO",
+        "airport_count": 6
+      },
+      {
+        "county": "CHENANGO",
+        "airport_count": 5
+      },
+      {
+        "county": "YATES",
+        "airport_count": 4
+      },
+      {
+        "county": "SENECA",
+        "airport_count": 4
+      },
+      {
+        "county": "ROCKLAND",
+        "airport_count": 4
+      },
+      {
+        "county": "WASHINGTON",
+        "airport_count": 4
+      },
+      {
+        "county": "ALLEGANY",
+        "airport_count": 4
+      },
+      {
+        "county": "WARREN",
+        "airport_count": 4
+      },
+      {
+        "county": "TIOGA",
+        "airport_count": 4
+      },
+      {
+        "county": "FRANKLIN",
+        "airport_count": 2
+      },
+      {
+        "county": "CORTLAND",
+        "airport_count": 2
+      },
+      {
+        "county": "PUTNAM",
+        "airport_count": 1
+      },
+      {
+        "county": "KINGS",
+        "airport_count": 1
+      },
+      {
+        "county": "BRONX",
+        "airport_count": 1
+      },
+      {
+        "county": "LEWIS",
+        "airport_count": 1
+      }
+    ]
+  }
+]</pre>
       </div>
     </div>
   </div><p>Next, we'll use the output of that query as the input to another, where we determine which counties have the highest
@@ -2299,44 +2073,38 @@ percentage of airports compared to the whole state, taking advantage of the nest
 }</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airports_&#8203;in_&#8203;county</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airports_&#8203;in_&#8203;state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">percent_&#8203;in_&#8203;county</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOS ANGELES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">176</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17.89%</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN BERNARDINO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">71</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7.22%</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SUFFOLK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">576</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.9%</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORANGE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.39%</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KERN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">49</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">984</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.98%</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "county": "LOS ANGELES",
+    "airports_in_county": 176,
+    "airports_in_state": 984,
+    "percent_in_county": 0.17886178861788618
+  },
+  {
+    "county": "SAN BERNARDINO",
+    "airports_in_county": 71,
+    "airports_in_state": 984,
+    "percent_in_county": 0.07215447154471545
+  },
+  {
+    "county": "SUFFOLK",
+    "airports_in_county": 34,
+    "airports_in_state": 576,
+    "percent_in_county": 0.059027777777777776
+  },
+  {
+    "county": "ORANGE",
+    "airports_in_county": 53,
+    "airports_in_state": 984,
+    "percent_in_county": 0.05386178861788618
+  },
+  {
+    "county": "KERN",
+    "airports_in_county": 49,
+    "airports_in_state": 984,
+    "percent_in_county": 0.049796747967479675
+  }
+]</pre>
       </div>
     </div>
   </div>
@@ -2361,32 +2129,28 @@ percentage of airports compared to the whole state, taking advantage of the nest
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">origin_&#8203;state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,368,374</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,516,461</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,354,901</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,055,560</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "origin_state": "CA",
+    "flight_count": 4501447
+  },
+  {
+    "origin_state": "TX",
+    "flight_count": 4368374
+  },
+  {
+    "origin_state": "IL",
+    "flight_count": 2516461
+  },
+  {
+    "origin_state": "FL",
+    "flight_count": 2354901
+  },
+  {
+    "origin_state": "GA",
+    "flight_count": 2055560
+  }
+]</pre>
       </div>
     </div>
   </div><p>In this example, the <code class="language-malloy">airports</code> explore is joined to <code class="language-malloy">flights</code>, linking the foreign key <code class="language-malloy">origin</code> of <code class="language-malloy">flights</code> to the primary key <code class="language-malloy">code</code> of <code class="language-malloy">airports</code>. The resulting joined explore is aliased as <code class="language-malloy">origin_airport</code> within <code class="language-malloy">flights</code>.</p>
@@ -2409,20 +2173,12 @@ an expression identifies the corresponding field as a <a href="fields.html#measu
 }</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">models_&#8203;avg_&#8203;seats</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;avg_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre>[
+  {
+    "models_avg_seats": 5.145145145145145,
+    "aircraft_avg_seats": 8.372722397134547
+  }
+]</pre>
       </div>
     </div>
   </div>

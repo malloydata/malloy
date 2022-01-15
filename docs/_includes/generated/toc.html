@@ -141,8 +141,14 @@
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Visualizations</div>
-        <div class='sidebar-item {% if page.url == "/documentation/visualizations/bar_charts.html" %}active{% endif %}'>
+        <div class="sidebar-section-title">Rendering Results</div>
+        <div class='sidebar-item {% if page.url == "/documentation/visualizations/dashboards.html" %}active{% endif %}'>
+            <a href="{{ site.baseurl }}/documentation/visualizations/dashboards.html">
+              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
+              Tables and Dashboards
+            </a>
+          </div>
+<div class='sidebar-item {% if page.url == "/documentation/visualizations/bar_charts.html" %}active{% endif %}'>
             <a href="{{ site.baseurl }}/documentation/visualizations/bar_charts.html">
               <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
               Bar Charts
