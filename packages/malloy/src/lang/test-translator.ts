@@ -176,8 +176,4 @@ export class TestTranslator extends MalloyTranslator {
     }
     throw new Error(`Expected model to contain explore '${exploreName}'`);
   }
-
-  prettyErrors(): string {
-    return super.prettyErrors();
-  }
 }
