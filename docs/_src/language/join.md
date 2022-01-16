@@ -81,6 +81,11 @@ query: flights->{
 ## Join Example
 
 This example demonstrates the definition of several different joins in a model and their use in a query.
+Entire subtrees of data can be joined.  In the example below, `aircraft` joins `aircraft_models`.  `flights`
+jois aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
+retained.
+
+  `group_by: aircraft.aircraft_models.manufacturer`
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "size":"large"}
@@ -108,13 +113,8 @@ explore: flights is table('malloy-data.faa.flights') {
   join: aircraft on tail_num
 }
 
-query: flights{
-  where: [
-    dep_time : @2003-01,
-    origin_airport.code : 'SJC'
-  ]
- }->{
-  group_by: destination_code is destination_airport.code
+query: flights->{
+  group_by: aircraft.aircraft_models.manufacturer
   aggregate: [
     flight_count is count()
     aircraft_count is aircraft.count()
