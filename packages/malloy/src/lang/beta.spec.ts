@@ -144,10 +144,6 @@ describe("model statements", () => {
       "refine explore",
       modelOK(`explore: aa is a { dimension: a is astr }`)
     );
-    test("undefined explore does not throw", () => {
-      const m = new BetaModel("query: x->{ group_by: y }");
-      expect(m).not.toCompile();
-    });
   });
   describe("query:", () => {
     test(
@@ -565,5 +561,26 @@ describe("expressions", () => {
           else 'large'
     `)
     );
+  });
+});
+
+describe("error handling", () => {
+  test("query reference to undefined explore", () => {
+    const m = new BetaModel("query: x->{ group_by: y }");
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Undefined data source 'x'");
+  });
+
+  test("join reference before definition", () => {
+    const m = new BetaModel(`
+    explore: newAB is a { join: newB is bb on astring }
+    explore: newB is b
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Undefined data source 'bb'");
   });
 });

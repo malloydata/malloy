@@ -56,4 +56,30 @@ by tying the field name to a renderer in the styles file.
 -- documtation rendering bug: should be
 -- query: county_dahsboard is airports->by_state_and_county
 query: airports->{ nest: county_dashboard is by_state_and_county{limit:10}}
+
+```
+
+## Charting.
+The Malloy Renderer uses [Vega](https://vega.github.io/vega-lite/) for charting.  Including some style information (that gets returned with the results) allows the renderer to
+style nested queries using charts and more.
+
+Add styels for `by_fac_type` and `by_county`
+
+Data Style:
+```json
+{
+  "by_fac_type": {
+    "renderer": "bar_chart"
+  },
+  "by_county: {
+    "renderer": "bar_chart"
+  }
+}
+```
+
+```malloy
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy", "dataStyles": {"by_fac_type": {"renderer": "bar_chart"},"by_county": {"renderer": "bar_chart"}}}
+-- documtation rendering bug: should be
+-- query: county_dahsboard is airports->by_state_and_county
+query: airports->{ nest: county_dashboard is by_state_and_county{limit:10}}
 ```
