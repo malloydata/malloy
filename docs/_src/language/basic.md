@@ -1,6 +1,6 @@
 # Malloy Quickstart
 
-This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render results as tables, charts or dashboards, but fundementally the Malloy just returns data.
+This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render [results as tables, charts or dashboards](../visualizations/dashboards.md), but fundementally the Malloy just returns data.
 
 _Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there._
 
