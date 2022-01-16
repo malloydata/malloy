@@ -12,3 +12,4 @@ steps:
     args:
       - -c
       - "(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 & sleep 2) && (./cloudbuild/build-test/$TRIGGER_NAME.sh
+  
