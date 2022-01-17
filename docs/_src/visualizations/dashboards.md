@@ -5,6 +5,11 @@ this data is shown as JSON.  Malloy includes a rendering library that can show t
 The rendering libary is a separate layer from Malloy's data access layer and using configuration an
 convention to figure out how to show data.
 
+The rendering engine works by mapping at the names of the fields to a renderer.
+By default nested queries are rendered in tables, but, for example the field name ends in '_bar_chart' it is rendered as a bar chart instead.
+
+This map can also be specified in a datastyles file and included in the model.
+
 ## Example Model
 
 ```malloy
