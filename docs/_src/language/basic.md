@@ -8,9 +8,10 @@ _Note: If you'd like to follow along with this guide, you can create a new <code
 
 In Malloy, the source of a query is always first, and can be either a raw table, a [modeled explore](explore.md), or even query.
 
-The `table()` function references a table (or view) in the database.  We are explicit about which fields are grouped, aggregate or projected.
+Queries are of the form "_source_ `->` _operation_"
 
-Queries are of the form `source -> operation`
+In this example the `table()` function provides the _source_ from a table (or view) in the database.  We are explicit about which fields are grouped, aggregate or projected.
+
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
