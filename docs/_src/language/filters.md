@@ -46,9 +46,9 @@ query: flights->{
 }
 ```
 
-### Filtering a Field
+### Filtering Aggregate Calculations
 
-Individual fields or expressions may also be filtered. These expressions must be measures or nested queries—dimensions can not be filtered.
+Any measure can be filtered by adding a where clause.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
@@ -56,6 +56,61 @@ query: flights->{
   aggregate: [
     ca_flights is flight_count{where: origin.state: 'CA'}
     ny_flights is count(){where: origin.state: 'NY'}
+    avg_km_from_ca is avg(distance/0.621371){where: origin.state='CA'}
+  ]
+}
+```
+
+### Filtering Complex Meausre
+
+Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.
+
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
+-- add a couple of measures to the `flights` explore
+explore: my_flights is flights {
+  measure: delayed_flights is flight_count {where: dep_delay>30}
+  measure: percent_delayed is delayed_flights/flight_count
+}
+
+query: my_flights->{
+  aggregate: [
+    ca_flights is flight_count {where: origin.state: 'CA'}
+    ca_delayed_flights is delayed_flights {where: origin.state: 'CA'}
+    ca_percent_delayed is percent_delayed {where: origin.state: 'CA'}
+    ny_flights is flight_count {where: origin.state: 'NY'}
+    ny_delayed_flights is delayed_flights {where: origin.state: 'NY'}
+    ny_percent_delayed is percent_delayed {where: origin.state: 'NY'}
+  ]
+}
+```
+
+### Filtering Nested Queries
+
+Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.
+
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
+-- add a couple of measures to the `flights` explore
+explore: my_flights is flights {
+  measure: delayed_flights is flight_count {where: dep_delay>30}
+  query: delay_stats is {
+    aggregate: [
+      flight_count
+      delayed_flights
+      percent_delayed is delayed_flights/flight_count
+    ]
+  }
+}
+
+query: my_flights->{
+  nest: [
+    ca_stats is delay_stats {where: origin.state: 'CA'}
+    ny_stats is delay_stats {where: origin.state: 'NY'}
   ]
 }
 ```
