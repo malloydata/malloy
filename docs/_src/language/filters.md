@@ -46,7 +46,7 @@ query: flights->{
 }
 ```
 
-### Filtering Measures
+### Filtering Aggregate Calculations
 
 Any measure can be filtered by adding a where clause.
 
@@ -56,6 +56,7 @@ query: flights->{
   aggregate: [
     ca_flights is flight_count{where: origin.state: 'CA'}
     ny_flights is count(){where: origin.state: 'NY'}
+    avg_km_from_ca is avg(distance/0.621371){where: origin.state='CA'}
   ]
 }
 ```
