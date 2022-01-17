@@ -361,15 +361,16 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
   </div>
       <h3>
-        <a id="filtering-a-field" class="header-link anchor" href="#filtering-a-field">
-          Filtering a Field
+        <a id="filtering-aggregate-calculations" class="header-link anchor" href="#filtering-aggregate-calculations">
+          Filtering Aggregate Calculations
         </a>
       </h3>
-    <p>Individual fields or expressions may also be filtered. These expressions must be measures or nested queries—dimensions can not be filtered.</p>
+    <p>Any measure can be filtered by adding a where clause.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     ca_flights <span class="token keyword">is</span> flight_count{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
     ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+    avg_km_from_ca <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>distance<span class="token operator">/</span><span class="token number">0.621371</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span>}
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
     <div class="result-middle">
@@ -379,11 +380,137 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 			<tr>
 				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;km_&#8203;from_&#8203;ca</th>
       </tr>
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,617,694</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,385.174</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-complex-meausre" class="header-link anchor" href="#filtering-complex-meausre">
+          Filtering Complex Meausre
+        </a>
+      </h3>
+    <p>Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.</p>
+<pre class="language-malloy"><span class="token comment">-- add a couple of measures to the `flights` explore</span>
+<span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
+  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: dep_delay<span class="token operator">></span><span class="token number">30</span>}
+  <span class="token keyword">measure</span>: percent_delayed <span class="token keyword">is</span> delayed_flights<span class="token operator">/</span>flight_count
+}
+
+<span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    ca_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
+    ca_delayed_flights <span class="token keyword">is</span> delayed_flights {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
+    ca_percent_delayed <span class="token keyword">is</span> percent_delayed {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
+    ny_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+    ny_delayed_flights <span class="token keyword">is</span> delayed_flights {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+    ny_percent_delayed <span class="token keyword">is</span> percent_delayed {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;delayed_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;percent_&#8203;delayed</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;delayed_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;percent_&#8203;delayed</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">371,416</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.083</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,617,694</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,338</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.095</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-nested-queries" class="header-link anchor" href="#filtering-nested-queries">
+          Filtering Nested Queries
+        </a>
+      </h3>
+    <p>Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.</p>
+<pre class="language-malloy"><span class="token comment">-- add a couple of measures to the `flights` explore</span>
+<span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
+  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: dep_delay<span class="token operator">></span><span class="token number">30</span>}
+  <span class="token keyword">query</span>: delay_stats <span class="token keyword">is</span> {
+    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+      flight_count
+      delayed_flights
+      percent_delayed <span class="token keyword">is</span> delayed_flights<span class="token operator">/</span>flight_count
+    <span class="token punctuation">]</span>
+  }
+}
+
+<span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">nest</span>: <span class="token punctuation">[</span>
+    ca_stats <span class="token keyword">is</span> delay_stats {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
+    ny_stats <span class="token keyword">is</span> delay_stats {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">ca_&#8203;stats</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">ny_&#8203;stats</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">delayed_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">percent_&#8203;delayed</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">371,416</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.083</td>
+</tr>
+
+		</tbody>
+	</table></td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">delayed_&#8203;flights</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">percent_&#8203;delayed</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,617,694</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,338</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.095</td>
+</tr>
+
+		</tbody>
+	</table></td>
 </tr>
 
 		</tbody>
