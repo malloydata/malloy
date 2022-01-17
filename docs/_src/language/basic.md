@@ -8,7 +8,7 @@ _Note: If you'd like to follow along with this guide, you can create a new <code
 
 Queries are of the form "_source_ `->` _operation_"
 
-In Malloy, the source of a query be either a raw table, a [modeled explore](explore.md), or another query.
+In Malloy, the source of a query is either a raw table, a [modeled explore](explore.md), or another query.
 
 In this example the `table()` function provides the query _source_ from a table (or view) in the database.
 They query _operation_ is explicit about which fields are grouped, aggregated or projected.
