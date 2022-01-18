@@ -17,6 +17,14 @@ explore: words is table('malloy-data.malloytest.words2'){
       word_count
       use_count is letters.count()
     ]
+  }
+
+  query: common_letters_and_positions is {
+    group_by: letters.letter
+    aggregate: [
+      word_count
+      use_count is letters.count()
+    ]
     nest: positition_order is {
       group_by: letters.position
       aggregate: word_count
@@ -29,6 +37,18 @@ explore: words is table('malloy-data.malloytest.words2'){
       letters.position
     ]
     aggregate: word_count
+  }
+
+
+  query: letter_position_and_words is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+    nest: words_list is {
+      group_by: word
+    }
   }
 
   query: word_score is {
@@ -54,3 +74,11 @@ explore: words is table('malloy-data.malloytest.words2'){
 --     and word ~ r'.....'    -- GREEN/YELLOW: charaters in these spots/not spots
 --     and not word ~ r'[]'   -- GRAY doesn't have these characters
 -- }
+
+query:  words->word_score{
+  where:
+    1=1
+    -- and word ~ r'[]'       -- YELLOW: has these characters
+    and word ~ r'.ro.y'    -- GREEN/YELLOW: charaters in these spots/not spots
+    and not word ~ r'[slatecn]'   -- GRAY doesn't have these characters
+}
