@@ -15,7 +15,7 @@ import {
   DateTimeframe,
   TimestampTimeframe,
   DataArray,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import { timeToString } from "./html/utils";
 
 type FilterItem = { key: string; value: string | undefined };

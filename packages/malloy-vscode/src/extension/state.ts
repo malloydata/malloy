@@ -12,9 +12,9 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import { Connection, FixedConnectionMap, Result } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-import { PostgresConnection } from "@malloy-lang/db-postgres";
+import { Connection, FixedConnectionMap, Result } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { PostgresConnection } from "@malloydata/db-postgres";
 import {
   QueryPanelMessage,
   WebviewMessageManager,

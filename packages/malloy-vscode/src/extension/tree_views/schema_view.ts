@@ -21,7 +21,7 @@ import {
   Field,
   QueryField,
   AtomicField,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
