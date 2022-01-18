@@ -48,7 +48,7 @@ We can then add a few named queries to the model to easily access or reference e
 
 ```malloy
 --! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large"}
-query: sessions_dashboard is ga_sessions -> {
+query: ga_sessions -> {
   nest: [
     by_region
     , by_device
