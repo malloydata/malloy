@@ -26,24 +26,7 @@ footer: /generated/footers/language/aggregates.html
     <p>The <code class="language-malloy">count</code> aggregate function may be used to count the number of records appearing in an explore.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,561,525</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div>
       <h3>
         <a id="distinct-counts" class="header-link anchor" href="#distinct-counts">
           Distinct Counts
@@ -130,24 +113,7 @@ footer: /generated/footers/language/aggregates.html
     <p>The <code class="language-malloy">min</code> function may be used to compute the minimum of all records of a particular field.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: cheapest_price <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>sale_price<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">cheapest_&#8203;price</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.02</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div>
+}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div>
       <h3>
         <a id="maxima" class="header-link anchor" href="#maxima">
           Maxima
@@ -199,24 +165,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
 <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> aircraft_models
     <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
+}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
 <p>To do this, you might decide to start with the <code class="language-malloy">aircraft_models</code> table instead.</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span> <span class="token function">AVG</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
 <span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
@@ -307,26 +256,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     avg_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">models_&#8203;avg_&#8203;seats</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;models_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -410,26 +340,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     avg_on_explore <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
     avg_on_field <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
-}</pre><div class="result-outer small">
-    <div class="result-middle">
-      <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;on_&#8203;explore</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;on_&#8203;field</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-</tr>
-
-		</tbody>
-	</table>
-      </div>
-    </div>
-  </div><!--
+}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div><!--
 In SQL, it is easy to make mistakes when computing sums and averages,
 particularly when joins are involved. An approach known as _symmetric aggregates_ solves one such common mistake by making the behavior of
 aggregate functions consistent regardless of the structure of the query.
