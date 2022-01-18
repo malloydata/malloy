@@ -18,15 +18,9 @@ explore: words is table('malloy-data.wordle.words2'){
 
   dimension: is_five_letters is word ~ r'^[a-z]....$'
   dimension: ends_in_s_or_ed is word !~ r'(s|ed)$'
-
   
   measure: word_count is count()
-  dimension: w1 is substr(word, 1,1)
-  dimension: w2 is substr(word, 2,1)
-  dimension: w3 is substr(word, 3,1)
-  dimension: w4 is substr(word, 4,1)
-  dimension: w5 is substr(word, 5,1)
-
+ 
   // How do we write this?  Can we make queries against
   //  nested structures work?
   // dimension: has_double_letter
@@ -102,16 +96,19 @@ explore: words is table('malloy-data.wordle.words2'){
 
 query: hardest_words is words->word_score->{project: *; order_by: 2 asc}
 
-query: words->stats_dashboard{
-  where: w1='b'
-}
+-- query:  words->word_score{
+--   where: 
+--     1=1 
+--     and word ~ r'[]'             -- YELLOW: has these characters
+--     and word ~ r'.....'          -- GREEN/YELLOW: has these charaters in these spots
+--     and not word ~ r'[]'   -- GRAY doesn't have these characters
+-- }
 
-query: words->{
-  // where: not word ~ r'(c|y|a)'
-  group_by: word
-  group_by: matches is word ~ r'a'
-}
-->{
-  where: not matches
-  project: word
+
+query:  words->word_score{
+  where: 
+    1=1 
+    -- and word ~ r'[]'             -- YELLOW: has these characters
+    and word ~ r'..rge'          -- GREEN/YELLOW: has these charaters in these spots
+    and not word ~ r'[puwatbin]'   -- GRAY doesn't have these characters
 }
