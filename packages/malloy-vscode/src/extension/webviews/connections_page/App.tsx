@@ -19,10 +19,44 @@ import { ConnectionConfig } from "../../../common";
 import {
   ConnectionMessageType,
   ConnectionPanelMessage,
+  ConnectionMessageTest,
+  ConnectionTestStatus,
+  ConnectionServiceAccountKeyRequestStatus,
+  QueryPanelMessage,
 } from "../../webview_message_manager";
+import { useVSCodeContext } from "../vscode_context";
+import { ConnectionEditorList } from "./ConnectionEditorList";
 
 export const App: React.FC = () => {
+  const vscode = useVSCodeContext();
+  useEffect(() => {
+    vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
+  });
+
   const [connections, setConnections] = useState<ConnectionConfig[]>([]);
+  const [testStatuses, setTestStatuses] = useState<ConnectionMessageTest[]>([]);
+
+  const postConnections = () => {
+    vscode.postMessage({ type: "set-connections", connections });
+  };
+
+  const testConnection = (connection: ConnectionConfig) => {
+    const message: ConnectionMessageTest = {
+      type: ConnectionMessageType.TestConnection,
+      connection,
+      status: ConnectionTestStatus.Waiting,
+    };
+    vscode.postMessage(message);
+    setTestStatuses([...testStatuses, message]);
+  };
+
+  const requestServiceAccountKeyPath = (connectionId: string) => {
+    vscode.postMessage({
+      type: ConnectionMessageType.RequestBigQueryServiceAccountKeyFile,
+      connectionId,
+      status: ConnectionServiceAccountKeyRequestStatus.Waiting,
+    });
+  };
 
   useEffect(() => {
     const listener = (event: MessageEvent<ConnectionPanelMessage>) => {
@@ -31,6 +65,29 @@ export const App: React.FC = () => {
       switch (message.type) {
         case ConnectionMessageType.SetConnections:
           setConnections(message.connections);
+          break;
+        case ConnectionMessageType.TestConnection:
+          setTestStatuses([...testStatuses, message]);
+          break;
+        case ConnectionMessageType.RequestBigQueryServiceAccountKeyFile: {
+          if (
+            message.status === ConnectionServiceAccountKeyRequestStatus.Success
+          ) {
+            setConnections(
+              connections.map((connection) => {
+                if (connection.id === message.connectionId) {
+                  return {
+                    ...connection,
+                    serviceAccountKeyPath: message.serviceAccountKeyPath,
+                  };
+                } else {
+                  return connection;
+                }
+              })
+            );
+          }
+          break;
+        }
       }
     };
     window.addEventListener("message", listener);
@@ -38,13 +95,13 @@ export const App: React.FC = () => {
   });
 
   return (
-    <div>
-      {connections.map((config) => (
-        <div>
-          <div>Name: {config.name}</div>
-          <div>Backend: {config.backend}</div>
-        </div>
-      ))}
-    </div>
+    <ConnectionEditorList
+      connections={connections}
+      setConnections={setConnections}
+      saveConnections={postConnections}
+      testConnection={testConnection}
+      testStatuses={testStatuses}
+      requestServiceAccountKeyPath={requestServiceAccountKeyPath}
+    />
   );
 };

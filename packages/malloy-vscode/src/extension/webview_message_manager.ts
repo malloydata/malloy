@@ -123,6 +123,8 @@ export type QueryPanelMessage = QueryMessageStatus | QueryMessageAppReady;
 export enum ConnectionMessageType {
   SetConnections = "set-connections",
   AppReady = "app-ready",
+  TestConnection = "test-connection",
+  RequestBigQueryServiceAccountKeyFile = "request-bigquery-service-account-key-file",
 }
 
 interface ConnectionMessageSetConnections {
@@ -134,6 +136,60 @@ interface ConnectionMessageAppReady {
   type: ConnectionMessageType.AppReady;
 }
 
+export enum ConnectionTestStatus {
+  Waiting = "waiting",
+  Success = "success",
+  Error = "error",
+}
+
+interface ConnectionMessageTestConnectionWaiting {
+  type: ConnectionMessageType.TestConnection;
+  status: ConnectionTestStatus.Waiting;
+  connection: ConnectionConfig;
+}
+
+interface ConnectionMessageTestConnectionSuccess {
+  type: ConnectionMessageType.TestConnection;
+  status: ConnectionTestStatus.Success;
+  connection: ConnectionConfig;
+}
+
+interface ConnectionMessageTestConnectionError {
+  type: ConnectionMessageType.TestConnection;
+  status: ConnectionTestStatus.Error;
+  error: string;
+  connection: ConnectionConfig;
+}
+
+export type ConnectionMessageTest =
+  | ConnectionMessageTestConnectionWaiting
+  | ConnectionMessageTestConnectionSuccess
+  | ConnectionMessageTestConnectionError;
+
+export enum ConnectionServiceAccountKeyRequestStatus {
+  Waiting = "waiting",
+  Success = "success",
+}
+
+interface ConnectionMessageServiceAccountKeyRequestWaiting {
+  type: ConnectionMessageType.RequestBigQueryServiceAccountKeyFile;
+  status: ConnectionServiceAccountKeyRequestStatus.Waiting;
+  connectionId: string;
+}
+
+interface ConnectionMessageServiceAccountKeyRequestSuccess {
+  type: ConnectionMessageType.RequestBigQueryServiceAccountKeyFile;
+  status: ConnectionServiceAccountKeyRequestStatus.Success;
+  connectionId: string;
+  serviceAccountKeyPath: string;
+}
+
+export type ConnectionMessageServiceAccountKeyRequest =
+  | ConnectionMessageServiceAccountKeyRequestWaiting
+  | ConnectionMessageServiceAccountKeyRequestSuccess;
+
 export type ConnectionPanelMessage =
   | ConnectionMessageAppReady
-  | ConnectionMessageSetConnections;
+  | ConnectionMessageSetConnections
+  | ConnectionMessageTest
+  | ConnectionMessageServiceAccountKeyRequest;

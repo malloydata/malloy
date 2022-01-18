@@ -11,4 +11,8 @@
  * GNU General Public License for more details.
  */
 
-export { ConnectionConfig, ConnectionManager } from "./connection_manager";
+export { ConnectionManager } from "./connection_manager";
+export {
+  ConnectionConfig,
+  ConnectionBackend,
+} from "./connection_manager_types";

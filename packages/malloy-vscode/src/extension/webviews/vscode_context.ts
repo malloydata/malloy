@@ -15,15 +15,17 @@
  */
 
 import * as _webviewAPI from "vscode-webview";
-import ReactDOM from "react-dom";
-import React from "react";
-import { App } from "./App";
-import { getVSCodeAPI, VSCodeContext } from "../vscode_context";
+import React, { useContext } from "react";
+import { WebviewApi } from "./vscode_wrapper";
 
-(() => {
-  const vscode = getVSCodeAPI();
-  const el = React.createElement(VSCodeContext.Provider, { value: vscode }, [
-    React.createElement(App, {}, null),
-  ]);
-  ReactDOM.render(el, document.getElementById("app"));
-})();
+export const VSCodeContext = React.createContext<WebviewApi<unknown>>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  undefined as any
+);
+
+export function useVSCodeContext(): WebviewApi<unknown> {
+  const vscode = useContext(VSCodeContext);
+  return vscode;
+}
+
+export { getVSCodeAPI } from "./vscode_wrapper";

@@ -151,6 +151,10 @@ export class PostgresConnection extends Connection {
     return queryData.rows;
   }
 
+  public async test(): Promise<void> {
+    await this.executeSQLRaw("SELECT 1");
+  }
+
   public async runSQL(
     sqlCommand: string,
     pageSize = 1000,

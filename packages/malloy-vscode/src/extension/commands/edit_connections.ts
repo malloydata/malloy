@@ -20,15 +20,19 @@ import { getWebviewHtml } from "../webviews";
 import {
   ConnectionMessageType,
   ConnectionPanelMessage,
+  ConnectionServiceAccountKeyRequestStatus,
+  ConnectionTestStatus,
   WebviewMessageManager,
 } from "../webview_message_manager";
-import { getConnectionsConfig } from "../state";
+import { CONNECTION_MANAGER, getConnectionsConfig } from "../state";
+import { ConnectionBackend, ConnectionConfig } from "../../common";
+import { setPassword } from "keytar";
 
 export function editConnectionsCommand(): void {
   const panel = vscode.window.createWebviewPanel(
     "malloyConnections",
     "Edit Connections",
-    vscode.ViewColumn.Beside,
+    vscode.ViewColumn.One,
     { enableScripts: true, retainContextWhenHidden: true }
   );
 
@@ -50,4 +54,85 @@ export function editConnectionsCommand(): void {
     type: ConnectionMessageType.SetConnections,
     connections,
   });
+
+  messageManager.onReceiveMessage(async (message) => {
+    switch (message.type) {
+      case ConnectionMessageType.SetConnections: {
+        const connections = await handleConnectionsPreSave(message.connections);
+        vscode.workspace
+          .getConfiguration("malloy")
+          .update("connections", connections);
+        messageManager.postMessage({
+          type: ConnectionMessageType.SetConnections,
+          connections,
+        });
+        break;
+      }
+      case ConnectionMessageType.TestConnection: {
+        try {
+          const connection = await CONNECTION_MANAGER.connectionForConfig(
+            message.connection
+          );
+          await connection.test();
+          messageManager.postMessage({
+            type: ConnectionMessageType.TestConnection,
+            status: ConnectionTestStatus.Success,
+            connection: message.connection,
+          });
+        } catch (error) {
+          messageManager.postMessage({
+            type: ConnectionMessageType.TestConnection,
+            status: ConnectionTestStatus.Error,
+            connection: message.connection,
+            error: error.toString(),
+          });
+        }
+        break;
+      }
+      case ConnectionMessageType.RequestBigQueryServiceAccountKeyFile: {
+        const result = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          filters: {
+            JSON: ["json"],
+          },
+        });
+        if (result) {
+          messageManager.postMessage({
+            type: ConnectionMessageType.RequestBigQueryServiceAccountKeyFile,
+            status: ConnectionServiceAccountKeyRequestStatus.Success,
+            connectionId: message.connectionId,
+            serviceAccountKeyPath: result[0].fsPath,
+          });
+        }
+        break;
+      }
+    }
+  });
+}
+
+async function handleConnectionsPreSave(
+  connections: ConnectionConfig[]
+): Promise<ConnectionConfig[]> {
+  const modifiedConnections = [];
+  for (const connection of connections) {
+    if (
+      connection.backend === ConnectionBackend.Postgres &&
+      connection.password !== undefined &&
+      connection.password !== ""
+    ) {
+      modifiedConnections.push({
+        ...connection,
+        password: undefined,
+        useKeychainPassword: true,
+      });
+      await setPassword(
+        "com.malloy-lang.vscode-extension",
+        `connections.${connection.id}.password`,
+        connection.password
+      );
+    } else {
+      modifiedConnections.push(connection);
+    }
+  }
+  return modifiedConnections;
 }

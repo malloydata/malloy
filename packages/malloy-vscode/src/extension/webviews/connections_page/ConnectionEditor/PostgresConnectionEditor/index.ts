@@ -14,16 +14,4 @@
  * limitations under the License.
  */
 
-import * as _webviewAPI from "vscode-webview";
-import ReactDOM from "react-dom";
-import React from "react";
-import { App } from "./App";
-import { getVSCodeAPI, VSCodeContext } from "../vscode_context";
-
-(() => {
-  const vscode = getVSCodeAPI();
-  const el = React.createElement(VSCodeContext.Provider, { value: vscode }, [
-    React.createElement(App, {}, null),
-  ]);
-  ReactDOM.render(el, document.getElementById("app"));
-})();
+export { PostgresConnectionEditor } from "./PostgresConnectionEditor";

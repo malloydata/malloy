@@ -30,6 +30,15 @@
     "url": "https://github.com/looker-open-source/malloy"
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "malloy",
+          "title": "Malloy",
+          "icon": "src/media/struct.svg"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "malloy.showLicenses",
@@ -116,7 +125,7 @@
       }
     ],
     "views": {
-      "explorer": [
+      "malloy": [
         {
           "id": "malloySchema",
           "name": "Schema"
@@ -208,6 +217,7 @@
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "@types/styled-components": "^5.1.19",
+    "@types/uuid": "^8.3.4",
     "@types/vscode": "1.56.0",
     "@types/vscode-webview": "^1.57.0",
     "copy-webpack-plugin": "^9.0.1",
@@ -218,6 +228,7 @@
     "react-dom": "^17.0.2",
     "source-map-loader": "^3.0.0",
     "ts-loader": "^9.2.3",
+    "uuid": "^8.3.2",
     "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
     "vscode-webview": "^1.0.1-beta.1",

@@ -57,7 +57,11 @@ const allDatabases = ["postgres", "bigquery"];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
-  bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
+  bqConnection = new BigQueryTestConnection(
+    "bigquery",
+    {},
+    { defaultProject: "malloy-data" }
+  );
   postgresConnection = new PostgresTestConnection("postgres");
   runtimeMap = new Map<string, Runtime>();
   closeFunctions: (() => void)[] = [];
@@ -70,7 +74,11 @@ export class RuntimeList {
             "bigquery",
             new Runtime(
               files,
-              new BigQueryTestConnection("bigquery", {}, "malloy-data")
+              new BigQueryTestConnection(
+                "bigquery",
+                {},
+                { defaultProject: "malloy-data" }
+              )
             )
           );
           break;
