@@ -17,9 +17,9 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, HTMLView, JSONView } from "@malloy-lang/render";
-import { Malloy, Runtime, URL, URLReader } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { DataStyles, HTMLView, JSONView } from "@malloydata/render";
+import { Malloy, Runtime, URL, URLReader } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
 import path from "path";
 import { promises as fs } from "fs";
 import { performance } from "perf_hooks";

@@ -1,4 +1,4 @@
-import * as malloy from "@malloy-lang/malloy";
+import * as malloy from "@malloydata/malloy";
 import { BigQueryConnection } from "./bigquery_connection";
 import { BigQuery as BigQuerySDK, TableMetadata } from "@google-cloud/bigquery";
 import * as util from "util";

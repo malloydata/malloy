@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DateTimeframe, TimestampTimeframe } from "@malloy-lang/malloy";
+import { DateTimeframe, TimestampTimeframe } from "@malloydata/malloy";
 
 export function getColorScale(
   type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,

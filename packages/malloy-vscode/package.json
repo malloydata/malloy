@@ -1,6 +1,6 @@
 {
   "name": "malloy-vscode",
-  "publisher": "malloy-lang",
+  "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
   "version": "0.0.1",
@@ -125,10 +125,10 @@
     "package": "yarn vsce package --yarn --githubBranch=main"
   },
   "dependencies": {
-    "@malloy-lang/db-bigquery": "*",
-    "@malloy-lang/db-postgres": "*",
-    "@malloy-lang/malloy": "*",
-    "@malloy-lang/render": "*",
+    "@malloydata/db-bigquery": "*",
+    "@malloydata/db-postgres": "*",
+    "@malloydata/malloy": "*",
+    "@malloydata/render": "*",
     "@observablehq/plot": "^0.1.0",
     "react": "^17.0.2",
     "styled-components": "^5.3.3",

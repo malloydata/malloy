@@ -15,10 +15,10 @@ import { test } from "@jest/globals";
 import { testModel } from "./models/faa_model";
 import { fStringEq } from "./test_utils";
 
-import "@malloy-lang/malloy/src/lang/jestery";
-import * as malloy from "@malloy-lang/malloy";
+import "@malloydata/malloy/src/lang/jestery";
+import * as malloy from "@malloydata/malloy";
 
-import { Query } from "@malloy-lang/malloy";
+import { Query } from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 const runtimeList = new RuntimeList(["bigquery"]);
