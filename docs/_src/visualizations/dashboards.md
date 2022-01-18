@@ -5,6 +5,11 @@ this data is shown as JSON.  Malloy includes a rendering library that can show t
 The rendering libary is a separate layer from Malloy's data access layer and using configuration an
 convention to figure out how to show data.
 
+The rendering engine works by mapping at the names of the fields to a renderer.
+By default nested queries are rendered in tables, but, for example the field name ends in '_bar_chart' it is rendered as a bar chart instead.
+
+This map can also be specified in a datastyles file and included in the model.
+
 ## Example Model
 
 ```malloy
@@ -53,6 +58,32 @@ by tying the field name to a renderer in the styles file.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+-- documtation rendering bug: should be
+-- query: county_dahsboard is airports->by_state_and_county
+query: airports->{ nest: county_dashboard is by_state_and_county{limit:10}}
+
+```
+
+## Charting.
+The Malloy Renderer uses [Vega](https://vega.github.io/vega-lite/) for charting.  Including some style information (that gets returned with the results) allows the renderer to
+style nested queries using charts and more.
+
+Add styels for `by_fac_type` and `by_county`
+
+Data Style:
+```json
+{
+  "by_fac_type": {
+    "renderer": "bar_chart"
+  },
+  "by_county: {
+    "renderer": "bar_chart"
+  }
+}
+```
+
+```malloy
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy", "dataStyles": {"by_fac_type": {"renderer": "bar_chart"},"by_county": {"renderer": "bar_chart"}}}
 -- documtation rendering bug: should be
 -- query: county_dahsboard is airports->by_state_and_county
 query: airports->{ nest: county_dashboard is by_state_and_county{limit:10}}
