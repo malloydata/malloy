@@ -197,13 +197,16 @@ export function makeRenderer(
       return new HTMLBooleanRenderer();
     } else if (renderDef.renderer === "link") {
       return new HTMLLinkRenderer();
-    } else if (renderDef.renderer === "list") {
+    } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
       return ContainerRenderer.make(
         HTMLListRenderer,
         isContainer(field),
         dataStyles
       );
-    } else if (renderDef.renderer === "list_detail") {
+    } else if (
+      renderDef.renderer === "list_detail" ||
+      field.name.endsWith("_list_detail")
+    ) {
       return ContainerRenderer.make(
         HTMLListDetailRenderer,
         isContainer(field),
