@@ -289,9 +289,10 @@
           Leading with the Source
         </a>
       </h2>
-    <p>In Malloy, the source of a query is always first, and can be either a raw table, a <a href="explore.html">modeled explore</a>, or even another query.</p>
-<p>To the table function references a table (or view) in the database.  We are explicit about which fields are grouped, aggregate or projected.</p>
-<p>Queries are of the form <code class="language-malloy">source <span class="token operator">-</span><span class="token operator">></span> operation</code></p>
+    <p>Queries are of the form "<em>source</em> <code class="language-malloy"><span class="token operator">-</span><span class="token operator">></span></code> <em>operation</em>"</p>
+<p>In Malloy, the source of a query is either a raw table, a <a href="explore.html">modeled explore</a>, or another query.</p>
+<p>In this example the <code class="language-malloy"><span class="token function">table</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> function provides the query <em>source</em> from a table (or view) in the database.
+They query <em>operation</em> is explicit about which fields are grouped, aggregated or projected.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -330,7 +331,7 @@
       </h2>
     <p>In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, the query operator for this is <code class="language-malloy"><span class="token keyword">group_by</span>:</code>.  Calculation about data in the group are made using <code class="language-malloy"><span class="token keyword">aggregate</span>:</code>.</p>
 <p>The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called <code class="language-malloy"><span class="token keyword">project</span>:</code>.</p>
-<p>In the query below, the data will be grouped by <code class="language-malloy">state</code> and will produce an aggregate calculation for <code class="language-malloy">airport_count</code> and <code class="language-malloy">average_elevation</code>.  <code class="language-malloy"><span class="token keyword">group_by</span>:</code> and <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> can contain lists of fields or individual fields.</p>
+<p>In the query below, the data will be grouped by <code class="language-malloy">state</code> and will produce an aggregate calculation for <code class="language-malloy">airport_count</code> and <code class="language-malloy">average_elevation</code>.  <code class="language-malloy"><span class="token keyword">group_by</span>:</code>. The <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> list can contain refernces to existing aggregate fields or add new aggregate computations.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     state
@@ -379,11 +380,11 @@
     </div>
   </div>
       <h3>
-        <a id="multiple-field-perations" class="header-link anchor" href="#multiple-field-perations">
-          Multiple Field )perations
+        <a id="multiple-field-operations" class="header-link anchor" href="#multiple-field-operations">
+          Multiple Field Operations
         </a>
       </h3>
-    <p>Multiple <code class="language-malloy"><span class="token keyword">group_by</span>:</code> and <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> statements can appear in the same query operation.  This can be helful in providing fields in a specific order.</p>
+    <p>Multiple <code class="language-malloy"><span class="token keyword">group_by</span>:</code> and <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> statements can appear in the same query operation.  This can be helful in rendering when the order of fields in the query output is significant.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: fac_type
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -432,7 +433,7 @@
           Project
         </a>
       </h3>
-    <p><code class="language-malloy"><span class="token keyword">project</span></code> produces a list of fields.  For every row in the input table, there is arow in the output table.</p>
+    <p><code class="language-malloy"><span class="token keyword">project</span></code> produces a list of fields.  For every row in the input table, there is a row in the output table.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>code<span class="token punctuation">,</span> full_name<span class="token punctuation">,</span> city<span class="token punctuation">,</span> county<span class="token punctuation">]</span>
   <span class="token keyword">where</span>: county<span class="token operator">=</span><span class="token string">'SANTA CRUZ'</span>
@@ -479,8 +480,9 @@
           Everything has a Name
         </a>
       </h2>
-    <p>In Malloy, all output fields have names. This means that any time a query includes a
-calculation or agregation, it must be aliased.</p>
+    <p>In Malloy, all output fields have names. This means that any time a query
+introduces a new aggregate computation, it must be named. <em>(unlike SQL,
+which allows un-named expressions)</em></p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
@@ -493,8 +495,11 @@ calculation or agregation, it must be aliased.</p>
 ]</pre>
       </div>
     </div>
-  </div><p>Malloy uses <code class="language-malloy">name <span class="token keyword">is</span> value</code> instead of SQL's <code class="language-malloy">value <span class="token keyword">as</span> name</code>, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.</p>
-<p>Columns from a table and fields defined in an explore already have names, and can be referenced directly.</p>
+  </div><p>Notice that Malloy uses the form "<em>name</em> <code class="language-malloy"><span class="token keyword">is</span></code> <em>value</em>" instead of SQL's "<em>value</em> <code class="language-malloy"><span class="token keyword">as</span></code> <em>name</em>".
+Having the output column name written first makes it easier for someone reading
+the code to visualize the resulting query structure.</p>
+<p>Named objects, like columns from a table, and fields defined in an explore, can be included
+in field lists without an <code class="language-malloy"><span class="token keyword">is</span></code></p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     full_name
@@ -533,7 +538,7 @@ calculation or agregation, it must be aliased.</p>
           Expressions
         </a>
       </h2>
-    <p>Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand given a knowledge of SQL.</p>
+    <p>Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand, given a knowledge of SQL.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: county_and_state <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
@@ -732,7 +737,7 @@ In this case, the data from the table is filtered to just airports in California
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     airports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: fac_type <span class="token operator">=</span> <span class="token string">'AIRPORT'</span>}
-    heliports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: fac_type <span class="token operator">=</span> <span class="token string">'HELIPORT'</span>} <span class="token comment">-- ? is shorthad for 'where:'</span>
+    heliports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: fac_type <span class="token operator">=</span> <span class="token string">'HELIPORT'</span>}
     total <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer small">
@@ -779,7 +784,7 @@ In this case, the data from the table is filtered to just airports in California
         </a>
       </h3>
     <p>Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to
-the data for that opeation alone alone. This will become more important later when we get to <code class="language-malloy"><span class="token keyword">nest</span>:</code> oprations in queries.</p>
+the data for that opeation alone. (More on this later, in the section on <code class="language-malloy"><span class="token keyword">nest</span>:</code> operations in queries.)</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: state: <span class="token string">'AL'</span> <span class="token operator">|</span> <span class="token string">'KY'</span>
   <span class="token keyword">top</span>: <span class="token number">5</span>
@@ -861,9 +866,9 @@ shows the number of flights in 2003.</p>
       "value": "2005-01-01"
     },
     "flight_month": {
-      "value": "2005-07-01"
+      "value": "2005-10-01"
     },
-    "flight_count": 627574
+    "flight_count": 592650
   },
   {
     "flight_year": {
@@ -879,27 +884,27 @@ shows the number of flights in 2003.</p>
       "value": "2005-01-01"
     },
     "flight_month": {
-      "value": "2005-10-01"
+      "value": "2005-07-01"
     },
-    "flight_count": 592650
+    "flight_count": 627574
   },
   {
     "flight_year": {
       "value": "2005-01-01"
     },
     "flight_month": {
-      "value": "2005-08-01"
+      "value": "2005-04-01"
     },
-    "flight_count": 630566
+    "flight_count": 594337
   },
   {
     "flight_year": {
       "value": "2005-01-01"
     },
     "flight_month": {
-      "value": "2005-06-01"
+      "value": "2005-12-01"
     },
-    "flight_count": 608955
+    "flight_count": 572227
   }
 ]</pre>
       </div>
@@ -1109,15 +1114,15 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 6
       },
       {
-        "fac_type": "STOLPORT",
-        "airport_count": 2
-      },
-      {
         "fac_type": "GLIDERPORT",
         "airport_count": 2
       },
       {
         "fac_type": "BALLOONPORT",
+        "airport_count": 2
+      },
+      {
+        "fac_type": "STOLPORT",
         "airport_count": 2
       }
     ]
@@ -1173,11 +1178,11 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 10
       },
       {
-        "fac_type": "STOLPORT",
+        "fac_type": "GLIDERPORT",
         "airport_count": 3
       },
       {
-        "fac_type": "GLIDERPORT",
+        "fac_type": "STOLPORT",
         "airport_count": 3
       }
     ]
@@ -1444,16 +1449,20 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         ]
       },
       {
-        "county": "WINNEBAGO",
+        "county": "LEE",
         "airport_count": 24,
         "by_facility": [
           {
             "fac_type": "AIRPORT",
-            "airport_count": 15
+            "airport_count": 18
           },
           {
             "fac_type": "HELIPORT",
-            "airport_count": 9
+            "airport_count": 5
+          },
+          {
+            "fac_type": "ULTRALIGHT",
+            "airport_count": 1
           }
         ]
       }
@@ -1494,11 +1503,11 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
             "airport_count": 12
           },
           {
-            "fac_type": "GLIDERPORT",
+            "fac_type": "SEAPLANE BASE",
             "airport_count": 2
           },
           {
-            "fac_type": "SEAPLANE BASE",
+            "fac_type": "GLIDERPORT",
             "airport_count": 2
           },
           {
@@ -1904,19 +1913,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 14
       },
       {
-        "county": "MONTEREY",
-        "airport_count": 13
-      },
-      {
         "county": "SISKIYOU",
         "airport_count": 13
       },
       {
-        "county": "IMPERIAL",
-        "airport_count": 12
+        "county": "MONTEREY",
+        "airport_count": 13
       },
       {
         "county": "MADERA",
+        "airport_count": 12
+      },
+      {
+        "county": "IMPERIAL",
         "airport_count": 12
       },
       {
@@ -1924,11 +1933,11 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 12
       },
       {
-        "county": "BUTTE",
+        "county": "MODOC",
         "airport_count": 11
       },
       {
-        "county": "MODOC",
+        "county": "BUTTE",
         "airport_count": 11
       },
       {
@@ -1936,7 +1945,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 11
       },
       {
-        "county": "SANTA CLARA",
+        "county": "NEVADA",
         "airport_count": 10
       },
       {
@@ -1944,11 +1953,11 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 10
       },
       {
-        "county": "NEVADA",
+        "county": "SANTA CLARA",
         "airport_count": 10
       },
       {
-        "county": "COLUSA",
+        "county": "TEHAMA",
         "airport_count": 9
       },
       {
@@ -1960,7 +1969,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 9
       },
       {
-        "county": "TEHAMA",
+        "county": "CONTRA COSTA",
         "airport_count": 9
       },
       {
@@ -1968,27 +1977,15 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 9
       },
       {
-        "county": "CONTRA COSTA",
+        "county": "COLUSA",
         "airport_count": 9
-      },
-      {
-        "county": "MENDOCINO",
-        "airport_count": 8
-      },
-      {
-        "county": "LAKE",
-        "airport_count": 8
       },
       {
         "county": "NAPA",
         "airport_count": 8
       },
       {
-        "county": "SANTA CRUZ",
-        "airport_count": 8
-      },
-      {
-        "county": "PLACER",
+        "county": "MENDOCINO",
         "airport_count": 8
       },
       {
@@ -1997,6 +1994,18 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
       },
       {
         "county": "SOLANO",
+        "airport_count": 8
+      },
+      {
+        "county": "SANTA CRUZ",
+        "airport_count": 8
+      },
+      {
+        "county": "LAKE",
+        "airport_count": 8
+      },
+      {
+        "county": "PLACER",
         "airport_count": 8
       },
       {
@@ -2016,11 +2025,11 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 6
       },
       {
-        "county": "MARIN",
+        "county": "MONO",
         "airport_count": 6
       },
       {
-        "county": "MONO",
+        "county": "MARIN",
         "airport_count": 6
       },
       {
@@ -2044,7 +2053,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 4
       },
       {
-        "county": "DEL NORTE",
+        "county": "MARIPOSA",
         "airport_count": 3
       },
       {
@@ -2052,7 +2061,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 3
       },
       {
-        "county": "MARIPOSA",
+        "county": "DEL NORTE",
         "airport_count": 3
       },
       {
@@ -2082,19 +2091,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 26
       },
       {
-        "county": "NIAGARA",
-        "airport_count": 20
-      },
-      {
         "county": "DUTCHESS",
         "airport_count": 20
       },
       {
-        "county": "ONEIDA",
-        "airport_count": 18
+        "county": "NIAGARA",
+        "airport_count": 20
       },
       {
         "county": "ONONDAGA",
+        "airport_count": 18
+      },
+      {
+        "county": "ONEIDA",
         "airport_count": 18
       },
       {
@@ -2106,16 +2115,20 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 16
       },
       {
-        "county": "NASSAU",
+        "county": "ONTARIO",
         "airport_count": 15
       },
       {
-        "county": "ONTARIO",
+        "county": "NASSAU",
         "airport_count": 15
       },
       {
         "county": "CHAUTAUQUA",
         "airport_count": 14
+      },
+      {
+        "county": "DELAWARE",
+        "airport_count": 13
       },
       {
         "county": "MONROE",
@@ -2126,11 +2139,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 13
       },
       {
-        "county": "DELAWARE",
-        "airport_count": 13
-      },
-      {
-        "county": "SARATOGA",
+        "county": "OSWEGO",
         "airport_count": 12
       },
       {
@@ -2138,12 +2147,8 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 12
       },
       {
-        "county": "OSWEGO",
+        "county": "SARATOGA",
         "airport_count": 12
-      },
-      {
-        "county": "QUEENS",
-        "airport_count": 11
       },
       {
         "county": "WESTCHESTER",
@@ -2154,20 +2159,20 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 11
       },
       {
-        "county": "ESSEX",
-        "airport_count": 10
+        "county": "QUEENS",
+        "airport_count": 11
       },
       {
         "county": "SULLIVAN",
         "airport_count": 10
       },
       {
-        "county": "WAYNE",
+        "county": "ESSEX",
         "airport_count": 10
       },
       {
-        "county": "WYOMING",
-        "airport_count": 9
+        "county": "WAYNE",
+        "airport_count": 10
       },
       {
         "county": "SCHOHARIE",
@@ -2178,27 +2183,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 9
       },
       {
-        "county": "ORLEANS",
-        "airport_count": 9
-      },
-      {
         "county": "JEFFERSON",
         "airport_count": 9
       },
       {
-        "county": "CLINTON",
-        "airport_count": 8
+        "county": "WYOMING",
+        "airport_count": 9
       },
       {
-        "county": "LIVINGSTON",
-        "airport_count": 8
+        "county": "ORLEANS",
+        "airport_count": 9
       },
       {
-        "county": "GREENE",
-        "airport_count": 8
-      },
-      {
-        "county": "CHEMUNG",
+        "county": "FULTON",
         "airport_count": 8
       },
       {
@@ -2210,23 +2207,31 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 8
       },
       {
+        "county": "LIVINGSTON",
+        "airport_count": 8
+      },
+      {
+        "county": "CHEMUNG",
+        "airport_count": 8
+      },
+      {
+        "county": "GREENE",
+        "airport_count": 8
+      },
+      {
+        "county": "CLINTON",
+        "airport_count": 8
+      },
+      {
         "county": "ST LAWRENCE",
         "airport_count": 8
       },
       {
-        "county": "FULTON",
-        "airport_count": 8
-      },
-      {
-        "county": "TOMPKINS",
+        "county": "NEW YORK",
         "airport_count": 7
       },
       {
         "county": "SCHUYLER",
-        "airport_count": 7
-      },
-      {
-        "county": "HERKIMER",
         "airport_count": 7
       },
       {
@@ -2238,11 +2243,11 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 7
       },
       {
-        "county": "MADISON",
+        "county": "HAMILTON",
         "airport_count": 7
       },
       {
-        "county": "HAMILTON",
+        "county": "TOMPKINS",
         "airport_count": 7
       },
       {
@@ -2250,15 +2255,19 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 7
       },
       {
-        "county": "NEW YORK",
+        "county": "MADISON",
         "airport_count": 7
       },
       {
-        "county": "GENESEE",
-        "airport_count": 6
+        "county": "HERKIMER",
+        "airport_count": 7
       },
       {
         "county": "OTSEGO",
+        "airport_count": 6
+      },
+      {
+        "county": "GENESEE",
         "airport_count": 6
       },
       {
@@ -2266,15 +2275,7 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 5
       },
       {
-        "county": "YATES",
-        "airport_count": 4
-      },
-      {
-        "county": "SENECA",
-        "airport_count": 4
-      },
-      {
-        "county": "ROCKLAND",
+        "county": "WARREN",
         "airport_count": 4
       },
       {
@@ -2286,7 +2287,15 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 4
       },
       {
-        "county": "WARREN",
+        "county": "ROCKLAND",
+        "airport_count": 4
+      },
+      {
+        "county": "YATES",
+        "airport_count": 4
+      },
+      {
+        "county": "SENECA",
         "airport_count": 4
       },
       {
@@ -2306,15 +2315,15 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         "airport_count": 1
       },
       {
-        "county": "KINGS",
-        "airport_count": 1
-      },
-      {
         "county": "BRONX",
         "airport_count": 1
       },
       {
         "county": "LEWIS",
+        "airport_count": 1
+      },
+      {
+        "county": "KINGS",
         "airport_count": 1
       }
     ]

@@ -36,7 +36,24 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>}<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>}<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,784,806</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="filtering-in-a-query-stage" class="header-link anchor" href="#filtering-in-a-query-stage">
           Filtering in a Query Stage
@@ -49,7 +66,29 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 }<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: carrier: <span class="token string">'UA'</span> <span class="token operator">|</span> <span class="token string">'AA'</span>
   <span class="token keyword">project</span> : <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> flight_count<span class="token punctuation">]</span>
-}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div>
+}</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="filtering-aggregate-calculations" class="header-link anchor" href="#filtering-aggregate-calculations">
           Filtering Aggregate Calculations

@@ -713,7 +713,32 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
   <span class="token keyword">top</span>: <span class="token number">3</span><span class="token punctuation">;</span> <span class="token keyword">order_by</span>: <span class="token number">1</span> <span class="token keyword">asc</span>
   <span class="token keyword">group_by</span>:departure_date <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">day</span>
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <pre>[
+  {
+    "departure_date": {
+      "value": "2004-01-01T00:00:00.000Z"
+    },
+    "flight_count": 17206
+  },
+  {
+    "departure_date": {
+      "value": "2004-01-02T00:00:00.000Z"
+    },
+    "flight_count": 19053
+  },
+  {
+    "departure_date": {
+      "value": "2004-01-03T00:00:00.000Z"
+    },
+    "flight_count": 17252
+  }
+]</pre>
+      </div>
+    </div>
+  </div>
       <h2>
         <a id="nested-queries" class="header-link anchor" href="#nested-queries">
           Nested Queries
@@ -2154,7 +2179,18 @@ an expression identifies the corresponding field as a <a href="fields.html#measu
     <span class="token comment">-- The average number of seats on registered aircraft</span>
     aircraft_avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
-}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div>
+}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <pre>[
+  {
+    "models_avg_seats": 5.145145145145145,
+    "aircraft_avg_seats": 8.372722397134547
+  }
+]</pre>
+      </div>
+    </div>
+  </div>
       <h2>
         <a id="comments" class="header-link anchor" href="#comments">
           Comments

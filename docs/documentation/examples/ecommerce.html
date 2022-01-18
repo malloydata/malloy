@@ -17,7 +17,38 @@ footer: /generated/footers/examples/ecommerce.html
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: status
   <span class="token keyword">aggregate</span>: order_item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
-}</pre><div class="error">Error: Error: Exceeded rate limits: too many concurrent queries for this project_and_region. For more information, see https://cloud.google.com/bigquery/docs/troubleshoot-quotas</div><p>The use of <code class="language-malloy"><span class="token keyword">group_by</span></code> in the above query invokes a <code class="language-malloy">SELECT</code> with a <code class="language-malloy">GROUP <span class="token keyword">BY</span></code> in SQL. Malloy also has a <code class="language-malloy"><span class="token keyword">project</span></code> transformation, which will <code class="language-malloy">SELECT</code> without a <code class="language-malloy">GROUP <span class="token keyword">BY</span></code>.</p>
+}</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">status</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">order_&#8203;item_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Complete</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">221,175</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Cancelled</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,268</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Returned</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,261</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Shipped</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,482</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Processing</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">862</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>The use of <code class="language-malloy"><span class="token keyword">group_by</span></code> in the above query invokes a <code class="language-malloy">SELECT</code> with a <code class="language-malloy">GROUP <span class="token keyword">BY</span></code> in SQL. Malloy also has a <code class="language-malloy"><span class="token keyword">project</span></code> transformation, which will <code class="language-malloy">SELECT</code> without a <code class="language-malloy">GROUP <span class="token keyword">BY</span></code>.</p>
 <p>Notice that after you write this, small "Run | Render" code lens will appear above the query. Run will show the JSON result, while Render will show a table by default, or a visualization if you've configured one (more on this later). Click the code lens to run the query. This will produce the following SQL:</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span>
   base<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token keyword">as</span> <span class="token keyword">status</span><span class="token punctuation">,</span>
