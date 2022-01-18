@@ -1,42 +1,11 @@
--- I can't write this query in Malloy yet, so I just ran it 
---  and saved it to a new table
+explore: words is table('malloy-data.malloytest.words2'){
 
--- SELECT 
---   word,
---   ARRAY_AGG(
---       CASE WHEN SUBSTR(word,n,1) <> '' THEN
---         STRUCT (substr(word,n,1) as letter, n as position)
---       END IGNORE NULLS
---   ) as letters
--- FROM `malloy-data.wordle.words`,
---     UNNEST(generate_array(1,20,1)) as n
--- GROUP BY 1
--- limit 10
-
-explore: words is table('malloy-data.wordle.words2'){
   where: is_five_letters and ends_in_s_or_ed
 
   dimension: is_five_letters is word ~ r'^[a-z]....$'
   dimension: ends_in_s_or_ed is word !~ r'(s|ed)$'
-  
+
   measure: word_count is count()
- 
-  // How do we write this?  Can we make queries against
-  //  nested structures work?
-  // dimension: has_double_letter
-  //
-  // SELECT MAX(occurences)
-  //  FROM (
-  //    SELECT letter, count() occurences FROM UNNEST(letters)) = 1
-  // )
-  //
-  // dimension: has_double_letter is letters->{
-  //  group_by: letter
-  //  aggregate: count
-  // }->{
-  //  aggregate: max(count) > 1
-  // }
-     
 
   query: five_letter_count is {
     aggregate: five_letter_count is word_count
@@ -73,42 +42,15 @@ explore: words is table('malloy-data.wordle.words2'){
     }
   }
   -> {
-      where: words.word !~ r'(s|ed)$'
       group_by: words.word
       aggregate: score is word_count.sum()
   }
-
-  // this should be legal
-  // query: hardest_words is word_score->{project: *; order_by: 1 asc}
-
-  // Here is an example of where we want ot modify the last stage.
-  // query: hardest_words is word_score{order_by: 1 asc}
-
-  query: stats_dashboard is {
-    aggregate: word_count
-    nest: [
-      common_letters
-      letter_position
-      word_score
-    ]
-  }
 }
-
-query: hardest_words is words->word_score->{project: *; order_by: 2 asc}
 
 -- query:  words->word_score{
---   where: 
---     1=1 
---     and word ~ r'[]'             -- YELLOW: has these characters
---     and word ~ r'.....'          -- GREEN/YELLOW: has these charaters in these spots
+--   where:
+--     1=1
+--     and word ~ r'[]'       -- YELLOW: has these characters
+--     and word ~ r'.....'    -- GREEN/YELLOW: charaters in these spots/not spots
 --     and not word ~ r'[]'   -- GRAY doesn't have these characters
 -- }
-
-
-query:  words->word_score{
-  where: 
-    1=1 
-    -- and word ~ r'[]'             -- YELLOW: has these characters
-    and word ~ r'..rge'          -- GREEN/YELLOW: has these charaters in these spots
-    and not word ~ r'[puwatbin]'   -- GRAY doesn't have these characters
-}
