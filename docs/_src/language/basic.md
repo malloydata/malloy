@@ -6,11 +6,13 @@ _Note: If you'd like to follow along with this guide, you can create a new <code
 
 ## Leading with the Source
 
-In Malloy, the source of a query is always first, and can be either a raw table, a [modeled explore](explore.md), or even another query.
+Queries are of the form "_source_ `->` _operation_"
 
-To the table function references a table (or view) in the database.  We are explicit about which fields are grouped, aggregate or projected.
+In Malloy, the source of a query is either a raw table, a [modeled explore](explore.md), or another query.
 
-Queries are of the form `source -> operation`
+In this example the `table()` function provides the query _source_ from a table (or view) in the database.
+They query _operation_ is explicit about which fields are grouped, aggregated or projected.
+
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -27,7 +29,7 @@ In SQL, the <code>SELECT</code> command does two very different things.  A <code
 
 The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called `project:`.
 
-In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count` and `average_elevation`.  `group_by:` and `aggregate:` can contain lists of fields or individual fields.
+In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count` and `average_elevation`.  `group_by:`. The `aggregate:` list can contain refernces to existing aggregate fields or add new aggregate computations.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -43,9 +45,9 @@ query: table('malloy-data.faa.airports')->{
 }
 ```
 
-### Multiple Field )perations
+### Multiple Field Operations
 
-Multiple `group_by:` and `aggregate:` statements can appear in the same query operation.  This can be helful in providing fields in a specific order.
+Multiple `group_by:` and `aggregate:` statements can appear in the same query operation.  This can be helful in rendering when the order of fields in the query output is significant.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -58,7 +60,7 @@ query: table('malloy-data.faa.airports')->{
 ```
 
 ### Project
-`project` produces a list of fields.  For every row in the input table, there is arow in the output table.
+`project` produces a list of fields.  For every row in the input table, there is a row in the output table.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -70,8 +72,9 @@ query: table('malloy-data.faa.airports')->{
 
 ## Everything has a Name
 
-In Malloy, all output fields have names. This means that any time a query includes a
-calculation or agregation, it must be aliased.
+In Malloy, all output fields have names. This means that any time a query
+introduces a new aggregate computation, it must be named. _(unlike SQL,
+which allows un-named expressions)_
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -80,9 +83,12 @@ query: table('malloy-data.faa.airports')->{
 }
 ```
 
-Malloy uses `name is value` instead of SQL's `value as name`, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.
+Notice that Malloy uses the form "_name_ `is` _value_" instead of SQL's "_value_ `as` _name_".
+Having the output column name written first makes it easier for someone reading
+the code to visualize the resulting query structure.
 
-Columns from a table and fields defined in an explore already have names, and can be referenced directly.
+Named objects, like columns from a table, and fields defined in an explore, can be included
+in field lists without an `is`
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -96,7 +102,7 @@ query: table('malloy-data.faa.airports')->{
 
 ## Expressions
 
-Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand given a knowledge of SQL.
+Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand, given a knowledge of SQL.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
@@ -190,7 +196,7 @@ query: table('malloy-data.faa.airports')->{
   group_by: state
   aggregate: [
     airports is count() {where: fac_type = 'AIRPORT'}
-    heliports is count() {where: fac_type = 'HELIPORT'} -- ? is shorthad for 'where:'
+    heliports is count() {where: fac_type = 'HELIPORT'}
     total is count()
   ]
 }
@@ -199,7 +205,7 @@ query: table('malloy-data.faa.airports')->{
 ### Filtering in Query Stages
 
 Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to
-the data for that opeation alone alone. This will become more important later when we get to `nest:` oprations in queries.
+the data for that opeation alone. (More on this later, in the section on `nest:` operations in queries.)
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
