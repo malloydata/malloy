@@ -1,21 +1,22 @@
 /*
  * Copyright 2021 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 import React from "react";
 import { PostgresConnectionConfig } from "../../../../../common/connection_manager_types";
+import { TextField } from "../../../components";
+import { VSCodeRadio } from "../../../components/fast";
+import { Label } from "../Label";
+import { LabelCell } from "../LabelCell";
 
 interface PostgresConnectionEditorProps {
   config: PostgresConnectionConfig;
@@ -25,128 +26,157 @@ interface PostgresConnectionEditorProps {
 export const PostgresConnectionEditor: React.FC<PostgresConnectionEditorProps> =
   ({ config, setConfig }) => {
     return (
-      <div>
-        <div>
-          Name:
-          <input
-            value={config.name}
-            onChange={(e) => {
-              setConfig({ ...config, name: e.target.value });
-            }}
-          ></input>
-        </div>
-        <div>
-          Host:
-          <input
-            value={config.host}
-            onChange={(e) => {
-              setConfig({ ...config, host: e.target.value });
-            }}
-          ></input>
-        </div>
-        <div>
-          Port:
-          <input
-            value={config.port}
-            onChange={(e) => {
-              setConfig({ ...config, port: parseInt(e.target.value) });
-            }}
-            type="number"
-          ></input>
-        </div>
-        <div>
-          Database Name:
-          <input
-            value={config.databaseName}
-            onChange={(e) => {
-              setConfig({ ...config, databaseName: e.target.value });
-            }}
-          ></input>
-        </div>
-        <div>
-          Username:
-          <input
-            value={config.username}
-            onChange={(e) => {
-              setConfig({ ...config, username: e.target.value });
-            }}
-          ></input>
-        </div>
-        <div>
-          Password:
-          <div>
+      <table>
+        <tr>
+          <LabelCell>
+            <Label>Name:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.name}
+              setValue={(name) => {
+                setConfig({ ...config, name });
+              }}
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Host:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.host || ""}
+              setValue={(host) => {
+                setConfig({ ...config, host });
+              }}
+            ></TextField>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Port:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.port ? config.port.toString() : ""}
+              setValue={(port) => {
+                setConfig({ ...config, port: parseInt(port) });
+              }}
+            ></TextField>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Database Name:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.databaseName || ""}
+              setValue={(databaseName) => {
+                setConfig({ ...config, databaseName });
+              }}
+            ></TextField>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Username:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.username || ""}
+              setValue={(username) => {
+                setConfig({ ...config, username });
+              }}
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Password:</Label>
+          </LabelCell>
+          <td>
             {config.useKeychainPassword !== undefined && (
               <div>
-                <input
-                  type="radio"
+                <VSCodeRadio
                   value="keychain"
                   checked={config.useKeychainPassword}
-                  onChange={() =>
-                    setConfig({
-                      ...config,
-                      password: undefined,
-                      useKeychainPassword: true,
-                    })
-                  }
-                />
-                Use existing value
+                  onChange={(event) => {
+                    if (event?.target && (event?.target as any).checked) {
+                      setConfig({
+                        ...config,
+                        password: undefined,
+                        useKeychainPassword: true,
+                      });
+                    }
+                  }}
+                >
+                  Use existing value
+                </VSCodeRadio>
               </div>
             )}
             <div>
-              <input
-                type="radio"
+              <VSCodeRadio
                 value="none"
                 key="none"
                 checked={
                   !config.useKeychainPassword && config.password === undefined
                 }
-                onChange={() =>
-                  setConfig({
-                    ...config,
-                    password: undefined,
-                    useKeychainPassword: config.useKeychainPassword
-                      ? false
-                      : undefined,
-                  })
-                }
-              />
-              No password
+                onChange={(event) => {
+                  if (event?.target && (event?.target as any).checked) {
+                    setConfig({
+                      ...config,
+                      password: undefined,
+                      useKeychainPassword:
+                        config.useKeychainPassword === undefined
+                          ? undefined
+                          : false,
+                    });
+                  }
+                }}
+              >
+                No password
+              </VSCodeRadio>
             </div>
             <div>
-              <input
-                type="radio"
+              <VSCodeRadio
                 value="specified"
                 key="specified"
                 checked={config.password !== undefined}
-                onChange={() =>
-                  setConfig({
-                    ...config,
-                    password: "",
-                    useKeychainPassword: config.useKeychainPassword
-                      ? false
-                      : undefined,
-                  })
-                }
-              />
-              Enter a password
+                onChange={(event) => {
+                  if (event?.target && (event?.target as any).checked) {
+                    setConfig({
+                      ...config,
+                      password: "",
+                      useKeychainPassword:
+                        config.useKeychainPassword === undefined
+                          ? undefined
+                          : false,
+                    });
+                  }
+                }}
+              >
+                Enter a password
+                {config.password !== undefined && ":"}
+              </VSCodeRadio>
+            </div>
+            <div>
               {config.password !== undefined && (
-                <span>
-                  :
-                  <input
-                    value={config.password}
-                    onChange={(e) => {
-                      setConfig({
-                        ...config,
-                        password: e.target.value,
-                      });
-                    }}
-                    placeholder="Optional"
-                  />
-                </span>
+                <TextField
+                  value={config.password}
+                  setValue={(password) => {
+                    setConfig({
+                      ...config,
+                      password,
+                    });
+                  }}
+                  placeholder="Optional"
+                />
               )}
             </div>
-          </div>
-        </div>
-      </div>
+          </td>
+        </tr>
+      </table>
     );
   };

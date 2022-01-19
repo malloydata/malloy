@@ -11,4 +11,11 @@
  * GNU General Public License for more details.
  */
 
-export { ConnectionEditorList } from "./ConnectionEditorList";
+import styled from "styled-components";
+
+export const LabelCell = styled.td`
+  width: 200px;
+  text-align: right;
+  vertical-align: top;
+  padding: 6px 0px;
+`;

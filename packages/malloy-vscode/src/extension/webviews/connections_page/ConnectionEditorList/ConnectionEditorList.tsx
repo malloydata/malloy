@@ -1,26 +1,26 @@
 /*
  * Copyright 2021 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
-import React from "react";
+import React, { useState } from "react";
+import styled from "styled-components";
 import { v4 as uuidv4 } from "uuid";
 import {
   ConnectionBackend,
   ConnectionConfig,
 } from "../../../../common/connection_manager_types";
 import { ConnectionMessageTest } from "../../../webview_message_manager";
+import { VSCodeButton } from "../../components";
+import { ButtonGroup } from "../ButtonGroup";
 import { ConnectionEditor } from "../ConnectionEditor";
 
 interface ConnectionEditorListProps {
@@ -40,6 +40,8 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
   testStatuses,
   requestServiceAccountKeyPath,
 }) => {
+  const [dirty, setDirty] = useState(false);
+
   const addConnection = () => {
     setConnections([
       ...connections,
@@ -48,7 +50,12 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
   };
 
   return (
-    <div>
+    <div style={{ marginTop: "20px" }}>
+      <ButtonGroup style={{ margin: "10px" }}>
+        <VSCodeButton onClick={addConnection} key="new">
+          New Connection
+        </VSCodeButton>
+      </ButtonGroup>
       {connections.map((config, index) => (
         <ConnectionEditor
           key={index}
@@ -57,11 +64,13 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
             const copy = [...connections];
             copy[index] = config;
             setConnections(copy);
+            setDirty(true);
           }}
           deleteConfig={() => {
             const copy = [...connections];
             copy.splice(index, 1);
             setConnections(copy);
+            setDirty(true);
           }}
           testConfig={() => {
             testConnection(connections[index]);
@@ -72,12 +81,36 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
           requestServiceAccountKeyPath={requestServiceAccountKeyPath}
         />
       ))}
-      <button onClick={addConnection} key="new">
-        New Connection
-      </button>
-      <button onClick={saveConnections} key="save">
-        Save Connections
-      </button>
+      {connections.length === 0 && (
+        <EmptyStateBox>NO CONNECTIONS</EmptyStateBox>
+      )}
+      {dirty && (
+        <ButtonGroup style={{ margin: "10px" }}>
+          <VSCodeButton
+            onClick={() => {
+              setDirty(false);
+              saveConnections();
+            }}
+            key="save"
+          >
+            Save
+          </VSCodeButton>
+        </ButtonGroup>
+      )}
     </div>
   );
 };
+
+const EmptyStateBox = styled.div`
+  margin: 10px;
+  background-color: var(--vscode-list-hoverBackground);
+  padding: 10px;
+  border: 1px solid var(--vscode-contrastBorder);
+  color: var(--foreground);
+  font-family: var(--font-family);
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+`;

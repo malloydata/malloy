@@ -11,4 +11,10 @@
  * GNU General Public License for more details.
  */
 
-export { ConnectionEditorList } from "./ConnectionEditorList";
+import styled from "styled-components";
+
+export const ButtonGroup = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+`;

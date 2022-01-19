@@ -12,7 +12,7 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
-      // "debugWebviews": true,
+      "debugWebviews": true,
       "outFiles": ["${workspaceFolder}/packages/**/dist/**"],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",

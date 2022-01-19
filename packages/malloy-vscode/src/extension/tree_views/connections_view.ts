@@ -12,6 +12,7 @@
  */
 
 import * as vscode from "vscode";
+import { ConnectionBackend } from "../../common";
 import { getConnectionsConfig } from "../state";
 
 export class ConnectionsProvider
@@ -51,7 +52,8 @@ export class ConnectionsProvider
 class ConnectionItem extends vscode.TreeItem {
   constructor(public name: string, public backend: string) {
     super(name, vscode.TreeItemCollapsibleState.None);
-    this.description = backend;
+    this.description =
+      backend === ConnectionBackend.BigQuery ? "(BigQuery)" : "(Postgres)";
 
     // this.iconPath = {
     //   light: getIconPath(`struct_${subtype}`, false),

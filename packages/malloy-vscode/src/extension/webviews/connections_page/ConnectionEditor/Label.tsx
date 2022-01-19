@@ -11,4 +11,12 @@
  * GNU General Public License for more details.
  */
 
-export { ConnectionEditorList } from "./ConnectionEditorList";
+import styled from "styled-components";
+
+export const Label = styled.label`
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: var(--font-family);
+  margin-inline-end: calc(var(--design-unit) * 2px + 2px);
+  padding-inline-start: calc(var(--design-unit) * 2px + 2px);
+`;

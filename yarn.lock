@@ -754,6 +754,36 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
+"@microsoft/fast-element@^1.6.0", "@microsoft/fast-element@^1.6.2":
+  version "1.6.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/fast-element/-/fast-element-1.6.2.tgz#414abc9f49fde85e12002e01025c5cc3dddc16ac"
+  integrity sha512-TrFOpe9k9xIK2iLfIG5T2+bavUAWBvAC/KQ/3ecFsK65l9PAZ/j3zlkyLxNrpIksFtUBkfVdV03kwFurZjqzKQ==
+
+"@microsoft/fast-foundation@^2.21.0", "@microsoft/fast-foundation@^2.30.0":
+  version "2.30.0"
+  resolved "https://registry.yarnpkg.com/@microsoft/fast-foundation/-/fast-foundation-2.30.0.tgz#e30c9ac6673b2acf92bfa1e585872a1a57b1de91"
+  integrity sha512-9rJo8bLMke8pPWkdQBvJPxfqIiqqBkuEUtx65szbkU7HvKyHFX5+C1u+vLOahk7jkehFm4oTB6lp6DfsE878uQ==
+  dependencies:
+    "@microsoft/fast-element" "^1.6.2"
+    "@microsoft/fast-web-utilities" "^5.0.2"
+    tabbable "^5.2.0"
+    tslib "^1.13.0"
+
+"@microsoft/fast-react-wrapper@^0.1.21":
+  version "0.1.21"
+  resolved "https://registry.yarnpkg.com/@microsoft/fast-react-wrapper/-/fast-react-wrapper-0.1.21.tgz#255543c8a9de6b364bf023402723aac0f3059c91"
+  integrity sha512-dgPMkFFNA7z3/aKRbixwoSZGFRE9j46AvtTeFtuC/HMsEMrSCacp6QAjpG57zAmXzWGwqk+vSLy3gwT3xGoiiA==
+  dependencies:
+    "@microsoft/fast-element" "^1.6.2"
+    "@microsoft/fast-foundation" "^2.30.0"
+
+"@microsoft/fast-web-utilities@^5.0.2":
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/@microsoft/fast-web-utilities/-/fast-web-utilities-5.0.2.tgz#666631e38108893e4ec63cd8f52025f5f35a34a1"
+  integrity sha512-J8Wy64V1NWF/UjFJ1mvmJNNPChbWobsNkJ8xNaV5/M+VKOQEOheojrOS+RmOUG7DKTBlCLIbUvyXsj1YiCfwkA==
+  dependencies:
+    exenv-es6 "^1.0.0"
+
 "@nodelib/fs.scandir@2.1.5":
   version "2.1.5"
   resolved "https://registry.yarnpkg.com/@nodelib/fs.scandir/-/fs.scandir-2.1.5.tgz#7619c2eb21b25483f6d167548b4cfd5a7488c3d5"
@@ -1200,6 +1230,14 @@
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
+
+"@vscode/webview-ui-toolkit@^0.8.5":
+  version "0.8.5"
+  resolved "https://registry.yarnpkg.com/@vscode/webview-ui-toolkit/-/webview-ui-toolkit-0.8.5.tgz#533970f908b171e0f77e43fed5af5c1350f6af74"
+  integrity sha512-je//PVn/sK1TyJSHiCEvCmKlWMBEhcJQaU4XWFDbCxzJaei6kfb0SSM3wgZrwRqkMY1daOcIDo4KdBKvQLF2Kw==
+  dependencies:
+    "@microsoft/fast-element" "^1.6.0"
+    "@microsoft/fast-foundation" "^2.21.0"
 
 "@webassemblyjs/ast@1.11.1":
   version "1.11.1"
@@ -3099,6 +3137,11 @@ execa@^5.0.0:
     onetime "^5.1.2"
     signal-exit "^3.0.3"
     strip-final-newline "^2.0.0"
+
+exenv-es6@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/exenv-es6/-/exenv-es6-1.0.0.tgz#bd459136369af17cf33f959b5af58803d4068c80"
+  integrity sha512-fcG/TX8Ruv9Ma6PBaiNsUrHRJzVzuFMP6LtPn/9iqR+nr9mcLeEOGzXQGLC5CVQSXGE98HtzW2mTZkrCA3XrDg==
 
 exit@^0.1.2:
   version "0.1.2"
@@ -6543,6 +6586,11 @@ symbol-tree@^3.2.4:
   resolved "https://registry.yarnpkg.com/symbol-tree/-/symbol-tree-3.2.4.tgz#430637d248ba77e078883951fb9aa0eed7c63fa2"
   integrity sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==
 
+tabbable@^5.2.0:
+  version "5.2.1"
+  resolved "https://registry.yarnpkg.com/tabbable/-/tabbable-5.2.1.tgz#e3fda7367ddbb172dcda9f871c0fdb36d1c4cd9c"
+  integrity sha512-40pEZ2mhjaZzK0BnI+QGNjJO8UYx9pP5v7BGe17SORTO0OEuuaAwQTkAp8whcZvqon44wKFOikD+Al11K3JICQ==
+
 table@^6.0.9:
   version "6.7.1"
   resolved "https://registry.yarnpkg.com/table/-/table-6.7.1.tgz#ee05592b7143831a8c94f3cee6aae4c1ccef33e2"
@@ -6765,7 +6813,7 @@ ts-node@^9.1.1:
     source-map-support "^0.5.17"
     yn "3.1.1"
 
-tslib@^1.8.1, tslib@^1.9.0:
+tslib@^1.13.0, tslib@^1.8.1, tslib@^1.9.0:
   version "1.14.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.14.1.tgz#cf2d38bdc34a134bcaf1091c41f6619e2f672d00"
   integrity sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==

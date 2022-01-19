@@ -1,17 +1,14 @@
 /*
  * Copyright 2021 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 import React from "react";
@@ -21,7 +18,18 @@ import {
   ConnectionConfig,
 } from "../../../../common/connection_manager_types";
 import { ConnectionMessageTest } from "../../../webview_message_manager";
+import { Dropdown } from "../../components";
+import {
+  VSCodeButton,
+  VSCodeDivider,
+  VSCodeDropdown,
+  VSCodeOption,
+  VSCodeTag,
+} from "../../components/fast";
+import { ButtonGroup } from "../ButtonGroup";
 import { BigQueryConnectionEditor } from "./BigQueryConnectionEditor";
+import { Label } from "./Label";
+import { LabelCell } from "./LabelCell";
 import { PostgresConnectionEditor } from "./PostgresConnectionEditor";
 
 interface ConnectionEditorProps {
@@ -43,24 +51,30 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
 }) => {
   return (
     <ConnectionEditorBox>
-      Type:
-      <select
-        value={config.backend}
-        onChange={(event) =>
-          setConfig({
-            name: config.name,
-            backend: event.target.value as ConnectionBackend,
-            id: config.id,
-          })
-        }
-      >
-        <option value={ConnectionBackend.BigQuery} key="bq">
-          BigQuery
-        </option>
-        <option value={ConnectionBackend.Postgres} key="pg">
-          Postgres
-        </option>
-      </select>
+      <ConnectionTitle>CONNECTION</ConnectionTitle>
+      <table>
+        <tr>
+          <LabelCell>
+            <Label>Type:</Label>
+          </LabelCell>
+          <td>
+            <Dropdown
+              value={config.backend}
+              setValue={(backend) =>
+                setConfig({
+                  name: config.name,
+                  backend: backend as ConnectionBackend,
+                  id: config.id,
+                })
+              }
+              options={[
+                { value: ConnectionBackend.BigQuery, label: "BigQuery" },
+                { value: ConnectionBackend.Postgres, label: "Postgres" },
+              ]}
+            />
+          </td>
+        </tr>
+      </table>
       {config.backend === ConnectionBackend.BigQuery ? (
         <BigQueryConnectionEditor
           config={config}
@@ -72,16 +86,34 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
       ) : (
         <PostgresConnectionEditor config={config} setConfig={setConfig} />
       )}
-      <button onClick={deleteConfig}>Delete</button>
-      <button onClick={testConfig}>Test</button>
-      Test Status: {testStatus?.status}
-      {testStatus?.status === "error" && testStatus.error}
+      <VSCodeDivider />
+      <table>
+        <tr>
+          <LabelCell></LabelCell>
+          <td>
+            <ButtonGroup style={{ marginTop: "5px" }}>
+              <VSCodeButton onClick={deleteConfig} appearance="secondary">
+                Delete
+              </VSCodeButton>
+              <VSCodeButton onClick={testConfig}>Test</VSCodeButton>
+              {testStatus && <VSCodeTag>{testStatus?.status}</VSCodeTag>}
+              {testStatus?.status === "error" && testStatus.error}
+            </ButtonGroup>
+          </td>
+        </tr>
+      </table>
     </ConnectionEditorBox>
   );
 };
 
 const ConnectionEditorBox = styled.div`
   margin: 10px;
-  background-color: #e6e6e6;
+  background-color: var(--vscode-list-hoverBackground);
   padding: 10px;
+  border: 1px solid var(--vscode-contrastBorder);
+`;
+
+const ConnectionTitle = styled.b`
+  color: var(--foreground);
+  font-family: var(--font-family);
 `;
