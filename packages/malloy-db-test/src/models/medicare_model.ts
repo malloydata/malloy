@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "@malloy-lang/malloy";
+import { StructDef } from "@malloydata/malloy";
 
 // will it build?
 

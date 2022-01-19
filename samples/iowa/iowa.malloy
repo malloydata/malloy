@@ -125,16 +125,10 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
   }
 }
 
-query: vodka_dashboard is iowa->vendor_dashboard {? category_class: 'VODKAS'}
+query: vodka_dashboard is iowa->vendor_dashboard {where: category_class: 'VODKAS'}
 
-query: tequila_dashboard is iowa->vendor_dashboard {? category_class: 'TEQUILAS'}
+query: tequila_dashboard is iowa->vendor_dashboard {where: category_class: 'TEQUILAS'}
 
-query: luxco_dashboard is iowa->vendor_dashboard {? vendor_name: ~ r'Luxco'}
+query: luxco_dashboard is iowa->vendor_dashboard {where: vendor_name: ~ r'Luxco'}
 
-query: jim_beam_dashboard is iowa->vendor_dashboard {? vendor_name: ~ r'Jim Beam'}
-
-explore: airports is table('postgres2:malloytest.airports') {
-  primary_key: code
-  dimension: name is concat(code, ' - ', full_name)
-  measure: airport_count is count()
-}
+query: jim_beam_dashboard is iowa->vendor_dashboard {where: vendor_name: ~ r'Jim Beam'}

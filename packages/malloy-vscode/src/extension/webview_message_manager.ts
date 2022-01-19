@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import { ResultJSON } from "@malloy-lang/malloy";
-import { DataStyles } from "@malloy-lang/render";
+import { ResultJSON } from "@malloydata/malloy";
+import { DataStyles } from "@malloydata/render";
 import { WebviewPanel } from "vscode";
 import { ConnectionConfig } from "../common";
 

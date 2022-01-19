@@ -12,7 +12,7 @@
  */
 
 import * as lite from "vega-lite";
-import { DataArray, DataColumn, Field } from "@malloy-lang/malloy";
+import { DataArray, DataColumn, Field } from "@malloydata/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
 import { getColorScale } from "./utils";

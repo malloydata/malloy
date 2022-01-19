@@ -474,8 +474,9 @@ export class MalloyToAST
       if (ast.isFieldCollectionMember(el)) {
         fields.push(el);
       } else {
-        throw new Error(
-          `internal error: ${el.elementType} is not a query field`
+        throw this.internalError(
+          elCx,
+          `${el.elementType} is not a query field`
         );
       }
     }
@@ -686,7 +687,7 @@ export class MalloyToAST
     if (ast.isComparison(op)) {
       return new ast.PartialCompare(op, this.getFieldExpr(pcx.fieldExpr()));
     }
-    throw new Error(`partial comparison '${op}' not recognized`);
+    throw this.internalError(pcx, `partial comparison '${op}' not recognized`);
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
@@ -756,7 +757,7 @@ export class MalloyToAST
         this.getFieldExpr(pcx.fieldExpr(1))
       );
     }
-    throw new Error(`untranslatable comparison operator '${op}'`);
+    throw this.internalError(pcx, `untranslatable comparison operator '${op}'`);
   }
 
   visitExprCountDisinct(
@@ -967,5 +968,9 @@ export class MalloyToAST
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.stripQuotes(pcx.importURL().text);
     return this.astAt(new ast.ImportStatement(url, this.parse.sourceURL), pcx);
+  }
+
+  visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
+    return this.getFieldExpr(pcx.fieldExpr());
   }
 }

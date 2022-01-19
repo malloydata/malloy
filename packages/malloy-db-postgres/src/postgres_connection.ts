@@ -21,7 +21,7 @@ import {
   QueryData,
   PooledConnection,
   parseTableURL,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {

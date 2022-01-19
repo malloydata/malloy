@@ -32,9 +32,9 @@ import {
   FieldTypeDef,
   NamedStructDefs,
   Connection,
-} from "@malloy-lang/malloy";
-import { parseTableURL } from "@malloy-lang/malloy";
-import { PooledConnection } from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
+import { parseTableURL } from "@malloydata/malloy";
+import { PooledConnection } from "@malloydata/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {

@@ -14,7 +14,7 @@
 import { TextDocument, WebviewPanel } from "vscode";
 import * as vscode from "vscode";
 import { ConnectionConfig, ConnectionManager } from "../common";
-import { Result } from "@malloy-lang/malloy";
+import { Result } from "@malloydata/malloy";
 import {
   QueryPanelMessage,
   WebviewMessageManager,

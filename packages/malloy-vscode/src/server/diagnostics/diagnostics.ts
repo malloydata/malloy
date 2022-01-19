@@ -16,7 +16,7 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { LogMessage, MalloyError, Runtime, URL } from "@malloy-lang/malloy";
+import { LogMessage, MalloyError, Runtime, URL } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import { CONNECTION_MANAGER } from "../connections";
