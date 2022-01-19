@@ -11,22 +11,17 @@
  * GNU General Public License for more details.
  */
 
-import * as _webviewAPI from "vscode-webview";
-import ReactDOM from "react-dom";
-import React from "react";
-import { App } from "./App";
-import {
-  getVSCodeAPI,
-  ConnectionsVSCodeContext,
-} from "./connections_vscode_context";
 import { ConnectionPanelMessage } from "../../webview_message_manager";
+import { makeVSCodeContext } from "../vscode_context";
+import { makeUseVSCodeContext } from "../vscode_context";
 
-(() => {
-  const vscode = getVSCodeAPI<void, ConnectionPanelMessage>();
-  const el = React.createElement(
-    ConnectionsVSCodeContext.Provider,
-    { value: vscode },
-    [React.createElement(App, { key: "app" }, null)]
-  );
-  ReactDOM.render(el, document.getElementById("app"));
-})();
+export const ConnectionsVSCodeContext = makeVSCodeContext<
+  void,
+  ConnectionPanelMessage
+>();
+
+export const useConnectionsVSCodeContext = makeUseVSCodeContext(
+  ConnectionsVSCodeContext
+);
+
+export { getVSCodeAPI } from "../vscode_context";

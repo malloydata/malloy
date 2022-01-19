@@ -16,13 +16,13 @@
  *
  * @template StateType Type of the persisted state stored for the webview.
  */
-export interface WebviewApi<StateType> {
+export interface WebviewApi<StateType, MessageType> {
   /**
    * Post a message to the owner of the webview.
    *
    * @param message Data to post. Must be JSON serializable.
    */
-  postMessage(message: unknown): void;
+  postMessage(message: MessageType): void;
 
   /**
    * Get the persistent state stored for this webview.
@@ -50,6 +50,9 @@ export interface WebviewApi<StateType> {
  *
  * @template StateType Type of the persisted state stored for the webview.
  */
-export function getVSCodeAPI<StateType = unknown>(): WebviewApi<StateType> {
+export function getVSCodeAPI<
+  StateType = unknown,
+  MessageType = unknown
+>(): WebviewApi<StateType, MessageType> {
   return acquireVsCodeApi();
 }

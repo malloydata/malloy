@@ -19,15 +19,14 @@ import {
   ConnectionMessageTest,
   ConnectionTestStatus,
   ConnectionServiceAccountKeyRequestStatus,
-  QueryPanelMessage,
 } from "../../webview_message_manager";
-import { useVSCodeContext } from "../vscode_context";
+import { useConnectionsVSCodeContext } from "./connections_vscode_context";
 import { ConnectionEditorList } from "./ConnectionEditorList";
 
 export const App: React.FC = () => {
-  const vscode = useVSCodeContext();
+  const vscode = useConnectionsVSCodeContext();
   useEffect(() => {
-    vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
+    vscode.postMessage({ type: ConnectionMessageType.AppReady });
   });
 
   const [connections, setConnections] = useState<
@@ -36,7 +35,10 @@ export const App: React.FC = () => {
   const [testStatuses, setTestStatuses] = useState<ConnectionMessageTest[]>([]);
 
   const postConnections = () => {
-    vscode.postMessage({ type: "set-connections", connections });
+    vscode.postMessage({
+      type: ConnectionMessageType.SetConnections,
+      connections: connections || [],
+    });
   };
 
   const testConnection = (connection: ConnectionConfig) => {
