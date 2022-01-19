@@ -286,20 +286,46 @@ describe("explore properties", () => {
       }
     `)
   );
-  test("simple join", modelOK("explore: nab is a { join: b on astr }"));
-  test("inverse join", modelOK("explore: nab is a { join: b on b.astr }"));
-  test("is join", modelOK("explore: nab is a { join: nb is b on astr }"));
-  test(
-    "multiple joins",
-    modelOK(`
-      explore: nab is a {
-        join: [
-          b on astr,
-          br is b on b.astr
-        ]
-      }
-    `)
-  );
+  describe("joins", () => {
+    test("simple join", modelOK("explore: nab is a { join: b on astr }"));
+    test("inverse join", modelOK("explore: nab is a { join: b on b.astr }"));
+    test("is join", modelOK("explore: nab is a { join: nb is b on astr }"));
+    test(
+      "many name on",
+      modelOK("explore: nab is a { join: many b on astr = nb.astr }")
+    );
+    test(
+      "many name is name on",
+      modelOK("explore: nab is a { join: nb is many b on astr = nb.astr }")
+    );
+    test(
+      "one name on",
+      modelOK("explore: nab is a { join: one b on astr = nb.astr }")
+    );
+    test(
+      "one name is name on",
+      modelOK("explore: nab is a { join: nb is one b on astr = nb.astr }")
+    );
+    test(
+      "cross name on",
+      modelOK("explore: nab is a { join: cross b on astr = nb.astr }")
+    );
+    test(
+      "cross name is name on",
+      modelOK("explore: nab is a { join: nb is cross b on astr = nb.astr }")
+    );
+    test(
+      "multiple joins",
+      modelOK(`
+        explore: nab is a {
+          join: [
+            b on astr,
+            br is b on b.astr
+          ]
+        }
+      `)
+    );
+  });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: anint is ai }"));
   test("accept single", modelOK("explore: c is a { accept: astr }"));

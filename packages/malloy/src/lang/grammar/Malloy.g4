@@ -143,9 +143,19 @@ joinList
   ;
 
 joinDef
-  : joinNameDef IS explore ON fieldPath
-  | joinNameDef ON fieldPath
+  : joinNameDef IS explore ON fieldPath                # joinNameIsOn
+  | joinNameDef ON fieldPath                           # joinOn
+  | joinType joinNameDef ON joinExpression             # joinTypeNameOn
+  | joinType joinNameDef IS explore ON joinExpression  # joinTypeNameIsOn
   ;
+
+joinType
+  : CROSS
+  | MANY
+  | ONE
+  ;
+
+joinExpression: fieldExpr;
 
 filterStatement
   : whereStatement
@@ -473,6 +483,7 @@ IMPORT: I M P O R T;
 IS: I S ;
 JSON: J S O N;
 LAST: L A S T ;
+MANY: M A N Y;
 MAX: M A X;
 MIN: M I N;
 MINUTE: M I N U T E S?;
@@ -482,6 +493,7 @@ NOW: N O W;
 NULL: N U L L ;
 NUMBER: N U M B E R;
 ON: O N ;
+ONE: O N E;
 OR: O R ;
 PICK: P I C K ;
 QMARK: '?';

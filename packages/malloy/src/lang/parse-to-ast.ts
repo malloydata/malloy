@@ -93,6 +93,18 @@ export class MalloyToAST
     return eps;
   }
 
+  protected onlyJoins(els: ast.MalloyElement[]): ast.Join[] {
+    const eps: ast.Join[] = [];
+    for (const el of els) {
+      if (el instanceof ast.Join) {
+        eps.push(el);
+      } else {
+        this.astError(el, `Expected explore property, not '${el.elementType}'`);
+      }
+    }
+    return eps;
+  }
+
   protected onlyDocStatements(els: ast.MalloyElement[]): ast.DocStatement[] {
     const eps: ast.DocStatement[] = [];
     for (const el of els) {
@@ -285,18 +297,45 @@ export class MalloyToAST
   }
 
   visitJoinList(pcx: parse.JoinListContext): ast.Joins {
-    const astJoins = pcx.joinDef().map((jcx) => this.visitJoinDef(jcx));
-    return new ast.Joins(astJoins);
+    const astJoins = pcx.joinDef().map((jcx) => this.visit(jcx));
+    return new ast.Joins(this.onlyJoins(astJoins));
   }
 
-  visitJoinDef(pcx: parse.JoinDefContext): ast.Join {
+  visitJoinNameIsOn(pcx: parse.JoinNameIsOnContext): ast.Join {
     const joinAs = this.getIdText(pcx.joinNameDef());
     const fromExploreCx = pcx.explore();
-    const joinFrom = fromExploreCx
-      ? this.visitExplore(fromExploreCx)
-      : new ast.NamedSource(joinAs);
+    const joinFrom = this.visitExplore(fromExploreCx);
     const joinOn = this.getFieldPath(pcx.fieldPath());
-    const join = new ast.Join(joinAs, joinFrom, joinOn);
+    const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
+    return this.astAt(join, pcx);
+  }
+
+  visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
+    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinFrom = new ast.NamedSource(joinAs);
+    const joinOn = this.getFieldPath(pcx.fieldPath());
+    const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
+    return this.astAt(join, pcx);
+  }
+
+  visitJoinTypeNameOn(pcx: parse.JoinTypeNameOnContext): ast.Join {
+    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinExpr = this.getFieldExpr(pcx.joinExpression());
+    const joinFrom = new ast.NamedSource(joinAs);
+    const typeCx = pcx.joinType();
+    const joinType = typeCx.CROSS() ? "cross" : typeCx.MANY() ? "many" : "one";
+    const join = new ast.ExpressionJoin(joinType, joinAs, joinFrom, joinExpr);
+    return this.astAt(join, pcx);
+  }
+
+  visitJoinTypeNameIsOn(pcx: parse.JoinTypeNameIsOnContext): ast.Join {
+    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinExpr = this.getFieldExpr(pcx.joinExpression());
+    const fromExploreCx = pcx.explore();
+    const joinFrom = this.visitExplore(fromExploreCx);
+    const typeCx = pcx.joinType();
+    const joinType = typeCx.CROSS() ? "cross" : typeCx.MANY() ? "many" : "one";
+    const join = new ast.ExpressionJoin(joinType, joinAs, joinFrom, joinExpr);
     return this.astAt(join, pcx);
   }
 

@@ -628,8 +628,13 @@ export class QuerySource extends Mallobj {
   }
 }
 
-export class Join extends MalloyElement {
-  elementType = "join";
+export abstract class Join extends MalloyElement {
+  abstract name: string;
+  abstract structDef(): model.StructDef;
+}
+
+export class KeyJoin extends Join {
+  elementType = "joinOnKey";
   constructor(
     readonly name: string,
     readonly source: Mallobj,
@@ -645,6 +650,52 @@ export class Join extends MalloyElement {
       structRelationship: {
         type: "foreignKey",
         foreignKey: this.key,
+      },
+    };
+    if (sourceDef.structSource.type === "query") {
+      // the name from query does not need to be preserved
+      joinStruct.name = this.name;
+    } else {
+      joinStruct.as = this.name;
+    }
+
+    return joinStruct;
+  }
+}
+
+type LangJoinType = "cross" | "many" | "one";
+export class ExpressionJoin extends Join {
+  elementType = "joinOnExpr";
+  constructor(
+    readonly joinType: LangJoinType,
+    readonly name: string,
+    readonly source: Mallobj,
+    readonly expr: ExpressionDef
+  ) {
+    super({ source, expr });
+  }
+
+  structDef(): model.StructDef {
+    const sourceDef = this.source.structDef();
+    let joinRel: model.JoinRelationship = "many_to_one";
+    switch (this.joinType) {
+      case "cross":
+        this.log("CROSS joins not supported");
+        break;
+      case "one":
+        joinRel = "many_to_one";
+        break;
+      case "many":
+        joinRel = "one_to_many";
+        break;
+    }
+
+    const joinStruct: model.StructDef = {
+      ...sourceDef,
+      structRelationship: {
+        type: "condition",
+        onExpression: this.expr.getExpression(new StructSpace(sourceDef)),
+        joinRelationship: joinRel,
       },
     };
     if (sourceDef.structSource.type === "query") {
