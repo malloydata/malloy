@@ -11,9 +11,9 @@
  * GNU General Public License for more details.
  */
 
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-import { PostgresConnection } from "@malloy-lang/db-postgres";
-import { Connection, FixedConnectionMap } from "@malloy-lang/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { PostgresConnection } from "@malloydata/db-postgres";
+import { Connection, FixedConnectionMap } from "@malloydata/malloy";
 import { getPassword } from "keytar";
 import {
   ConnectionBackend,
