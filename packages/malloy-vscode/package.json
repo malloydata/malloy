@@ -136,6 +136,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "malloyConnections",
+        "contents": "No configured connections.\n[Edit Connections](command:malloy.editConnections)"
+      }
+    ],
     "configuration": {
       "title": "Malloy",
       "properties": {

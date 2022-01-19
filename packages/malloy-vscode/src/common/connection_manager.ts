@@ -39,17 +39,23 @@ export class ConnectionManager {
     connectionsConfig: ConnectionConfig[]
   ): Promise<FixedConnectionMap> {
     const map = new Map<string, Connection>();
-    for (const connectionConfig of connectionsConfig) {
-      map.set(
-        connectionConfig.name,
-        await this.connectionForConfig(connectionConfig)
-      );
+    let defaultName: string | undefined;
+    if (connectionsConfig.length === 0) {
+      map.set("bigquery", new BigQueryConnection("bigquery", { pageSize: 20 }));
+      defaultName = "bigquery";
+    } else {
+      for (const connectionConfig of connectionsConfig) {
+        map.set(
+          connectionConfig.name,
+          await this.connectionForConfig(connectionConfig)
+        );
+      }
+      const defaultIndex = getDefaultIndex(connectionsConfig);
+      defaultName =
+        defaultIndex !== undefined
+          ? connectionsConfig[defaultIndex].name
+          : undefined;
     }
-    const defaultIndex = getDefaultIndex(connectionsConfig);
-    const defaultName =
-      defaultIndex !== undefined
-        ? connectionsConfig[defaultIndex].name
-        : undefined;
     return new FixedConnectionMap(map, defaultName);
   }
 
