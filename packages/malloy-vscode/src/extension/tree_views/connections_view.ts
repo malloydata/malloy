@@ -15,6 +15,8 @@ import * as vscode from "vscode";
 import { ConnectionBackend } from "../../common";
 import { getDefaultIndex } from "../../common/connection_manager_types";
 import { getConnectionsConfig } from "../state";
+import connectionIcon from "../../media/database.svg";
+import * as path from "path";
 
 export class ConnectionsProvider
   implements vscode.TreeDataProvider<ConnectionItem>
@@ -63,9 +65,9 @@ class ConnectionItem extends vscode.TreeItem {
       backend === ConnectionBackend.BigQuery ? "BigQuery" : "Postgres";
     this.description = `(${backendName}${isDefault ? ", default" : ""})`;
 
-    // this.iconPath = {
-    //   light: getIconPath(`struct_${subtype}`, false),
-    //   dark: getIconPath(`struct_${subtype}`, false),
-    // };
+    this.iconPath = {
+      light: path.join(__filename, "..", connectionIcon),
+      dark: path.join(__filename, "..", connectionIcon),
+    };
   }
 }

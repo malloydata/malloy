@@ -90,6 +90,10 @@ const config = [
             to: "src/media/logo.png",
           },
           {
+            from: "src/media/database.png",
+            to: "src/media/database.png",
+          },
+          {
             from: "../../README.md",
             to: "README.md",
           },
