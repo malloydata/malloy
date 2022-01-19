@@ -120,7 +120,6 @@
     "webpack": "webpack --mode development",
     "webpack-dev": "webpack --mode development --watch",
     "build": "yarn tsc --build && yarn package",
-    "pretest": "yarn run package",
     "test": "echo 'no tests for vscode yet'",
     "package": "yarn vsce package --yarn --githubBranch=main"
   },
