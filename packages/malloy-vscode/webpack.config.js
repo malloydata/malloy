@@ -86,8 +86,8 @@ const config = [
             to: "src/media/play.svg",
           },
           {
-            from: "src/media/struct.svg",
-            to: "src/media/struct.svg",
+            from: "src/media/logo.png",
+            to: "src/media/logo.png",
           },
           {
             from: "../../README.md",
