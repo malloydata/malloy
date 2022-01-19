@@ -181,6 +181,23 @@
           "link": "/examples/iowa/step6.md"
         }
       ]
+    },
+    {
+      "title": "Wordle - A Perfect Solver",
+      "items": [
+        {
+          "title": "Overview",
+          "link": "/examples/wordle/wordle.md"
+        },
+        {
+          "title": "Source and Transformation",
+          "link": "/examples/wordle/wordle2.md"
+        },
+        {
+          "title": "Wordle3",
+          "link": "/examples/wordle/wordle3.md"
+        }
+      ]
     }
   ]
 }

@@ -72,7 +72,15 @@ class Renderer {
             if (options.isRunnable) {
               result = await runCode(code, this.path, options, this.models);
             } else if (options.isModel) {
-              this.setModel(options.modelPath, code);
+              let modelCode = code;
+              if (options.source) {
+                const prefix = this.models.get(options.source);
+                if (prefix === undefined) {
+                  throw new Error(`can't find source ${options.source}`);
+                }
+                modelCode = prefix + "\n" + code;
+              }
+              this.setModel(options.modelPath, modelCode);
             }
           } catch (error) {
             log(`  !! Error: ${error.toString()}`);
