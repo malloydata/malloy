@@ -6,7 +6,7 @@ Ok, let's solve some puzzles.  Ignore words with double letters (we don't accoun
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
 
 -- Make a table of 5 letter words
-explore: words is table('malloy-data.wordle.words'){
+explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]....$'
     project: word is UPPER(word)

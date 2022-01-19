@@ -11,7 +11,7 @@ into BigQuery.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore: words is table('malloy-data.wordle.words'){}
+explore: words is table('malloy-data.malloytest.words'){}
 
 query: words->{project: *}
 ```
@@ -22,7 +22,7 @@ limit the results to 5 letter words.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore: words is table('malloy-data.wordle.words'){
+explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
     where: length(word) = 5  // add a filter
     project: word
@@ -38,7 +38,7 @@ and Uppercase words in the output of our query.
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy"}
 
-explore: words is table('malloy-data.wordle.words'){
+explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]....$'
     project: word is UPPER(word)

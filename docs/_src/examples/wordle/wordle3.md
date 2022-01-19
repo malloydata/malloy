@@ -2,7 +2,7 @@
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
 
-explore: words is table('malloy-data.wordle.words'){
+explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]....$'
     project: word is UPPER(word)
