@@ -12,7 +12,7 @@ explore:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_se
     t2 is totals.pageviews.sum()
     total_productRevenue is hits.product.productRevenue.sum()
     hits_count is hits.count()
-    sold_count is hits.count() {? hits.product.productQuantity >0 }
+    sold_count is hits.count() {where: hits.product.productQuantity >0 }
   ]
 
   query: by_source is {

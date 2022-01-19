@@ -183,9 +183,8 @@ export class NewFieldSpace extends StructSpace {
     const edited = new NewFieldSpace(from);
     if (choose) {
       const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      const stars = choose.refs.list.filter((f) => f instanceof Wildcard);
-      if (stars.length > 0) {
-        throw new Error("Wildcards not allowed in accept/except");
+      for (const s of choose.refs.list.filter((f) => f instanceof Wildcard)) {
+        s.log("Wildcards not allowed in accept/except");
       }
       const oldMap = edited.entries();
       edited.dropEntries();
@@ -245,7 +244,7 @@ export class NewFieldSpace extends StructSpace {
           this.setEntry(def.newName, oldValue);
           this.dropEntry(def.oldName);
         } else {
-          throw new Error(`Can't rename '${def.oldName}', no such field`);
+          def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
         const joining = def.structDef();
@@ -328,7 +327,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * StructDef, and it is a mistake to ever call this. Feels wrong.
    */
   structDef(): model.StructDef {
-    throw new Error("Can't get StructDef for pipe member");
+    throw new Error("INTERNAL ERROR: StructDef for pipe member requested");
   }
 
   addQueryItems(...qiList: QueryItem[]): void {
@@ -348,7 +347,6 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        // TODO should not allow measures ????
         this.addReference(member.name);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));

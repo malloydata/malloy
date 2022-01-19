@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { Result } from "@malloy-lang/malloy";
-import { HTMLView, JSONView } from "@malloy-lang/render";
+import { Result } from "@malloydata/malloy";
+import { HTMLView, JSONView } from "@malloydata/render";
 import React, { useEffect, useState } from "react";
 import {
   QueryMessageType,

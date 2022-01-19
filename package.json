@@ -16,8 +16,8 @@
     "samples"
   ],
   "scripts": {
-    "clean": "yarn workspace @malloy-lang/malloy clean && yarn tsc --build --clean",
-    "build": "yarn workspace @malloy-lang/malloy build-parser && yarn tsc --build",
+    "clean": "yarn workspace @malloydata/malloy clean && yarn tsc --build --clean",
+    "build": "yarn workspace @malloydata/malloy build-parser && yarn tsc --build",
     "build-extension": "yarn build && yarn workspace malloy-vscode package",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn lint && yarn build && yarn workspaces run test",
@@ -34,9 +34,9 @@
   "resolutions": {},
   "devDependencies": {
     "@jest/globals": "^26.6.2",
-    "@malloy-lang/db-bigquery": "*",
-    "@malloy-lang/malloy": "*",
-    "@malloy-lang/render": "*",
+    "@malloydata/db-bigquery": "*",
+    "@malloydata/malloy": "*",
+    "@malloydata/render": "*",
     "@types/jest-expect-message": "^1.0.3",
     "@types/md5": "^2.3.1",
     "@types/prismjs": "^1.16.6",

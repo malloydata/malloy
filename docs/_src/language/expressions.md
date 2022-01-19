@@ -107,8 +107,8 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
 query: flights->{
-  aggregate: distance_2003 is sum(distance){? dep_time: @2003}
-  aggregate: ca_flights is count(){? origin.state: 'CA'}
+  aggregate: distance_2003 is sum(distance){where: dep_time: @2003}
+  aggregate: ca_flights is count(){where: origin.state: 'CA'}
 }
 ```
 

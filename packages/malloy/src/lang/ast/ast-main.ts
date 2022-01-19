@@ -63,6 +63,18 @@ class ErrorFactory {
       pipeline: [],
     };
   }
+
+  static get reduceSegment(): model.ReduceSegment {
+    return { type: "reduce", fields: [] };
+  }
+
+  static get projectSegment(): model.ProjectSegment {
+    return { type: "project", fields: [] };
+  }
+
+  static get indexSegment(): model.IndexSegment {
+    return { type: "index", fields: [] };
+  }
 }
 
 function opOutputStruct(
@@ -135,6 +147,7 @@ export abstract class MalloyElement {
     } else if (this.parent) {
       return this.parent.namespace();
     }
+    throw new Error("INTERNAL ERROR: Translation without document scope");
   }
 
   modelEntry(str: string): ModelEntry | undefined {
@@ -336,6 +349,7 @@ class QueryHeadStruct extends Mallobj {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef);
+    this.has({ exploreReference: ns });
     return ns.structDef();
   }
 }
@@ -995,7 +1009,8 @@ class ReduceExecutor implements QueryExecutor {
       if (fromSeg.type == "reduce") {
         from = fromSeg;
       } else {
-        throw new Error(`Refining a reduce with a ${fromSeg.type}`);
+        this.outputFS.log(`Can't refine reduce with ${fromSeg.type}`);
+        return ErrorFactory.reduceSegment;
       }
     }
     const reduceSegment: model.ReduceSegment = {
@@ -1043,7 +1058,8 @@ class ProjectExecutor extends ReduceExecutor {
       if (fromSeg.type == "project") {
         from = fromSeg;
       } else {
-        throw new Error(`Refining a project with a ${fromSeg.type}`);
+        this.outputFS.log(`Can't refine project with ${fromSeg.type}`);
+        return ErrorFactory.projectSegment;
       }
     }
     const projectSegment: model.ProjectSegment = {
@@ -1092,7 +1108,8 @@ class IndexExecutor implements QueryExecutor {
 
   finalize(from: model.PipeSegment | undefined): model.PipeSegment {
     if (from && from.type !== "index") {
-      throw new Error("refinement type mismatch");
+      this.outputFS.log(`Can't refine index with ${from.type}`);
+      return ErrorFactory.indexSegment;
     }
 
     const indexSegment = this.outputFS.indexSegment(from?.fields);
@@ -1412,10 +1429,6 @@ export class PipelineDesc extends MalloyElement {
     pipeline.push(...modelPipe.pipeline);
     const firstSeg = pipeline[0];
     if (firstSeg) {
-      if (firstSeg.type === "index") {
-        // TODO delete index segments from the world, and then this error
-        throw new Error("Index segments no longer supported");
-      }
       this.headRefinement.refineFrom(firstSeg);
     }
     pipeline[0] = this.headRefinement.getOp(fs).segment;

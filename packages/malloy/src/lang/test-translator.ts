@@ -13,58 +13,14 @@
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { inspect } from "util";
-import { cloneDeep } from "lodash";
-import {
-  Expr,
-  FieldDef,
-  StructRef,
-  FilterExpression,
-  StructDef,
-  Query,
-  AtomicFieldType,
-  NamedModelObject,
-  ModelDef,
-} from "../model/malloy_types";
-import * as ast from "./ast";
-import { compressExpr, MalloyElement, ModelEntry, NameSpace } from "./ast";
-import { StructSpace } from "./field-space";
+import { StructDef, NamedModelObject, ModelDef } from "../model/malloy_types";
+import { MalloyElement, ModelEntry, NameSpace } from "./ast";
 import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
   return inspect(thing, { breakLength: 72, depth: Infinity });
 }
-
-export function mkFieldRefs(...names: string[]): ast.FieldReferences {
-  return new ast.FieldReferences(names.map((str) => new ast.FieldName(str)));
-}
-
-export function mkFieldName(s: string) {
-  return new ast.FieldName(s);
-}
-export function mkExprIdRef(s: string) {
-  return new ast.ExprIdReference(s);
-}
-export function mkFieldDef(expr: string) {
-  return new ast.ExprFieldDecl(mkExprIdRef(expr), "test");
-}
-export const aExpr = mkExprIdRef("a");
-export function mkExprStringDef(str: string) {
-  return new ast.ExprFieldDecl(new ast.ExprString(str), "test");
-}
-export const caFilter = new ast.Filter([
-  new ast.FilterElement(
-    new ast.Apply(mkExprIdRef("state"), new ast.ExprString("'ca'")),
-    "state:'ca'"
-  ),
-]);
-
-// export function mkExploreOf(
-//   name: string,
-//   init: ast.ExploreInterface = {}
-// ): ast.Explore {
-//   return testAST(new ast.Explore(new ast.NamedSource(name), init));
-// }
 
 export const aTableDef: StructDef = {
   type: "struct",
@@ -73,92 +29,14 @@ export const aTableDef: StructDef = {
   structSource: { type: "table" },
   structRelationship: { type: "basetable", connectionName: "test" },
   fields: [
-    { type: "string", name: "astring" },
-    { type: "number", name: "afloat", numberType: "float" },
-    { type: "number", name: "aninteger", numberType: "integer" },
-    { type: "date", name: "adate" },
-    { type: "timestamp", name: "atimestamp" },
+    { type: "string", name: "astr" },
+    { type: "number", name: "af", numberType: "float" },
+    { type: "number", name: "ai", numberType: "integer" },
+    { type: "date", name: "ad" },
+    { type: "boolean", name: "abool" },
+    { type: "timestamp", name: "ats" },
   ],
 };
-
-export function mkStruct(name: string, primaryKey = "astring"): StructDef {
-  return {
-    ...cloneDeep(aTableDef),
-    primaryKey: primaryKey,
-    as: name,
-  };
-}
-
-export function mkQuery(struct: StructRef): Query {
-  return {
-    type: "query",
-    structRef: cloneDeep(struct),
-    pipeline: [],
-    filterList: [],
-  };
-}
-
-export function mkFilters(...pairs: string[]): FilterExpression[] {
-  const filters: FilterExpression[] = [];
-  let i = 0;
-  while (i <= pairs.length - 2) {
-    const thing = pairs[i];
-    const thingIs = `'${pairs[i + 1]}'`;
-    const exprSrc = `${thing}:${thingIs}`;
-    const expr = new ast.Apply(mkExprIdRef(thing), new ast.ExprString(thingIs));
-    const fs = new StructSpace(aTableDef);
-    filters.push({
-      expression: compressExpr(expr.getExpression(fs).value),
-      source: exprSrc,
-    });
-    i += 2;
-  }
-  return filters;
-}
-
-export function mkJoin(
-  struct: StructDef,
-  joinName: string,
-  on: string
-): StructDef {
-  return {
-    ...cloneDeep(struct),
-    as: joinName,
-    structRelationship: { type: "foreignKey", foreignKey: on },
-  };
-}
-
-export function mkCountDef(name: string, source?: string): FieldDef {
-  const f: FieldDef = {
-    name: name,
-    type: "number",
-    aggregate: true,
-    e: [{ type: "aggregate", function: "count", e: [] }],
-  };
-  if (source) {
-    f.source = source;
-  }
-  return f;
-}
-
-export function mkAgg(
-  func: string,
-  name: string,
-  e: Expr,
-  t: AtomicFieldType = "number"
-): FieldDef {
-  const ret: FieldDef = {
-    name: name,
-    type: t,
-    aggregate: true,
-    e: [{ type: "aggregate", function: func, e: e }],
-  };
-  return ret;
-}
-
-export function testAST<T extends MalloyElement>(astNode: T): T {
-  return astNode;
-}
 
 /**
  * When translating partial trees, there will not be a document node
@@ -200,18 +78,18 @@ export class TestTranslator extends MalloyTranslator {
     name: testURI,
     exports: [],
     contents: {
-      a: { ...aTableDef, primaryKey: "astring", as: "a" },
-      b: { ...aTableDef, primaryKey: "astring", as: "b" },
+      a: { ...aTableDef, primaryKey: "astr", as: "a" },
+      b: { ...aTableDef, primaryKey: "astr", as: "b" },
       ab: {
         ...aTableDef,
         as: "ab",
-        primaryKey: "astring",
+        primaryKey: "astr",
         fields: [
           ...aTableDef.fields,
           {
             ...aTableDef,
             as: "b",
-            structRelationship: { type: "foreignKey", foreignKey: "astring" },
+            structRelationship: { type: "foreignKey", foreignKey: "astr" },
           },
           {
             type: "number",
@@ -227,7 +105,7 @@ export class TestTranslator extends MalloyTranslator {
             pipeline: [
               {
                 type: "reduce",
-                fields: ["astring", "acount"],
+                fields: ["astr", "acount"],
               },
             ],
           },
@@ -297,9 +175,5 @@ export class TestTranslator extends MalloyTranslator {
       return explore;
     }
     throw new Error(`Expected model to contain explore '${exploreName}'`);
-  }
-
-  prettyErrors(): string {
-    return super.prettyErrors();
   }
 }

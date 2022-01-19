@@ -14,7 +14,7 @@ explore: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_se
     total_hits is totals.hits.sum()
     total_page_views is totals.pageviews.sum()
     total_productRevenue is hits.product.productRevenue.sum()
-    sold_count is hits.count() {? hits.product.productQuantity : >0}
+    sold_count is hits.count() {where: hits.product.productQuantity : >0}
   ]
 }
 ```
@@ -48,7 +48,7 @@ We can then add a few named queries to the model to easily access or reference e
 
 ```malloy
 --! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large"}
-query: sessions_dashboard is ga_sessions -> {
+query: ga_sessions -> {
   nest: [
     by_region
     , by_device

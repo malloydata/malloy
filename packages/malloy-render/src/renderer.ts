@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DataColumn } from "@malloy-lang/malloy";
+import { DataColumn } from "@malloydata/malloy";
 
 export type ChildRenderers = { [fieldName: string]: Renderer };
 

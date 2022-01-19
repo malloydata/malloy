@@ -1,84 +1,97 @@
 # Malloy Quickstart
 
-This guide will introduce the basics of querying and modeling with Malloy.
+This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render [results as tables, charts or dashboards](../visualizations/dashboards.md), but fundementally the Malloy just returns data.
 
 _Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there._
 
 ## Leading with the Source
 
-In Malloy, the source of a query is always first, and can be either a raw table, a [modeled explore](explore.md), or even another query.
+Queries are of the form "_source_ `->` _operation_"
 
-To the table function references a table (or view) in the database.  We are explicit about which fields are grouped and which files are aggregated.
+In Malloy, the source of a query is either a raw table, a [modeled explore](explore.md), or another query.
+
+In this example the `table()` function provides the query _source_ from a table (or view) in the database.
+They query _operation_ is explicit about which fields are grouped, aggregated or projected.
+
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   group_by: state
   aggregate: airport_count is count()
 }
 ```
 
-To the right of the source, data is piped from one command to the next.
 
-## Projecting and Reducing
+## Query Operators
 
-In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, this kind of command is called a `reduce`.
+In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, the query operator for this is `group_by:`.  Calculation about data in the group are made using `aggregate:`.
 
-The second type of <code>SELECT</code> in SQL does not perform any aggregation; In Malloy, this command is called `project`.
+The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called `project:`.
 
-When using `reduce`, Malloy knows which fields to group by and which to use as aggregate calculations.
+In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count` and `average_elevation`.  `group_by:`. The `aggregate:` list can contain refernces to existing aggregate fields or add new aggregate computations.
 
-In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count`.
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
-  group_by: state
-  aggregate: airport_count is count(*)
+  group_by: [
+    state
+    county
+  ]
+  aggregate:[
+    airport_count is count(*)
+    average_elevation is avg(elevation)
+  ]
 }
 ```
 
-Multiple aggregations can be computed within the same `reduce` command.
+### Multiple Field Operations
+
+Multiple `group_by:` and `aggregate:` statements can appear in the same query operation.  This can be helful in rendering when the order of fields in the query output is significant.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   group_by: fac_type
   aggregate: airport_count is count()
+  group_by: county
   aggregate: max_elevation is max(elevation)
 }
 ```
 
-Groups and aggregates can contain lists of fields
+### Project
+`project` produces a list of fields.  For every row in the input table, there is a row in the output table.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
-  group_by: [state, county]
-  aggregate: [
-    airport_count is count()
-    max_elevation is max(elevation)
-  ]
+  project: [code, full_name, city, county]
+  where: county='SANTA CRUZ'
 }
 ```
 
 ## Everything has a Name
 
-In Malloy, all output fields have names. This means that any time a query includes a
-calculation or agregation, it must be aliased.
+In Malloy, all output fields have names. This means that any time a query
+introduces a new aggregate computation, it must be named. _(unlike SQL,
+which allows un-named expressions)_
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   aggregate: max_elevation is max(elevation)
 }
 ```
 
-Malloy uses `name is value` instead of SQL's `value as name`, so the object being named comes first. Having the output column name written first makes reading code and imagining the structure of the output table easier.
+Notice that Malloy uses the form "_name_ `is` _value_" instead of SQL's "_value_ `as` _name_".
+Having the output column name written first makes it easier for someone reading
+the code to visualize the resulting query structure.
 
-Columns from a table and fields defined in an explore already have names, and can be referenced directly.
+Named objects, like columns from a table, and fields defined in an explore, can be included
+in field lists without an `is`
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   project: [
     full_name
@@ -89,10 +102,10 @@ query: table('malloy-data.faa.airports')->{
 
 ## Expressions
 
-Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand given a knowledge of SQL.
+Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand, given a knowledge of SQL.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
 query: table('malloy-data.faa.airports')->{
   group_by: county_and_state is concat(county, ', ', state)
   aggregate: [
@@ -109,7 +122,7 @@ The basic types of Malloy expressions are `string`, `number`, `boolean`, `date`,
 ## Modeling and Reuse
 
 One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create an *explore* object named `airports` and
-add calculations for `county_and_state` and `airport_count`.
+add a `dimension:` calculation for `county_and_state` and `measure:` calculation for `airport_count`.  Dimensions can be used in `group_by:`, `project:` and `where:`.  Measures can be used in `aggregate:` and `having:`.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
@@ -121,7 +134,7 @@ explore: airports is table('malloy-data.faa.airports'){
 ```
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
 query: airports->{
   group_by:county_and_state
   aggregate: airport_count
@@ -132,10 +145,10 @@ query: airports->{
 
 In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some [reasonable defaults](order_by.md).
 
-The `top` statement limits the number of rows returned, sorted by default by the first measure decending—in this case, `airport_count`.
+The `top:` and `limit:` statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure decending—in this case, `airport_count`.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   top: 2
   group_by: state
@@ -143,10 +156,10 @@ query: table('malloy-data.faa.airports')->{
 }
 ```
 
-Default ordering can be overridden with `order by`, as in the following query, which shows the states in alphabetical order.
+Default ordering can be overridden with `order_by:`, as in the following query, which shows the states in alphabetical order.  `order_by:` can take a field index nuber or the name of a field.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   order_by: state
   group_by: state
@@ -160,12 +173,12 @@ When working with data, filtering is something you do in almost every query. Mal
 
 ### Filtering Tables
 
-A filter on a table narrows down which data is included from that table. This translates
+A filter on a data source table narrows down which data is included to be passed to the Query Operation. This translates
 to a <code>WHERE</code> clause in SQL.
 In this case, the data from the table is filtered to just airports in California.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports'){where: state = 'CA'}->{
   top: 2
   group_by: county
@@ -178,12 +191,12 @@ query: table('malloy-data.faa.airports'){where: state = 'CA'}->{
 A filter on an aggregate calculation (a _measure_) narrows down the data used in that specific calculation. In the example below, the calculations for `airports` and `heliports` are filtered separately.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')->{
   group_by: state
   aggregate: [
     airports is count() {where: fac_type = 'AIRPORT'}
-    heliports is count() {? fac_type = 'HELIPORT'} -- ? is shorthad for 'where:'
+    heliports is count() {where: fac_type = 'HELIPORT'}
     total is count()
   ]
 }
@@ -191,18 +204,18 @@ query: table('malloy-data.faa.airports')->{
 
 ### Filtering in Query Stages
 
-Filters can also be applied to `reduce` and `project` commands. When using a filter in this way, it only applies to
-the data for that command alone. This will become more important later when we have more than one `reduce` in a query.
+Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to
+the data for that opeation alone. (More on this later, in the section on `nest:` operations in queries.)
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports')-> {
   where: state: 'AL' | 'KY'
   top: 5
   group_by: state
   aggregate: [
-    airports  is count() {? fac_type: 'AIRPORT'}
-    heliports is count() {? fac_type: 'HELIPORT'}
+    airports  is count() {where: fac_type: 'AIRPORT'}
+    heliports is count() {where: fac_type: 'HELIPORT'}
     total     is count()
   ]
 }
@@ -220,8 +233,8 @@ Time literals can be used as values, but are more often useful in filters. For e
 shows the number of flights in 2003.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto"}
-query: table('malloy-data.faa.flights') {? dep_time: @2003}->{
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
+query: table('malloy-data.faa.flights') {where: dep_time: @2003}->{
   aggregate: flight_count is count()
 }
 ```
@@ -229,7 +242,7 @@ query: table('malloy-data.faa.flights') {? dep_time: @2003}->{
 There is a special time literal `now`, referring to the current timestamp, which allows for relative time filters.
 
 ```malloy
-query: table('malloy-data.faa.flights'){? dep_time > now - 6 hours}->{
+query: table('malloy-data.faa.flights'){where: dep_time > now - 6 hours}->{
   aggregate: flights_last_6_hours is count()
 }
 ```
@@ -239,7 +252,7 @@ query: table('malloy-data.faa.flights'){? dep_time > now - 6 hours}->{
 Time values can be truncated to a given timeframe, which can be `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, or `year`.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
 query: table('malloy-data.faa.flights')->{
   group_by: [
     flight_year is dep_time.year
@@ -254,7 +267,7 @@ query: table('malloy-data.faa.flights')->{
 Numeric values can be extracted from time values, e.g. `day_of_year(some_date)` or `minute(some_time)`. See the full list of extraction functions [here](time-ranges.md#extraction).
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "pageSize": 7, "size": "large"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "pageSize": 7, "size": "large"}
 query: table('malloy-data.faa.flights') ->{
   order_by: 1
   group_by: day_of_week is day(dep_time)
@@ -272,8 +285,8 @@ And likewise for any other data type that has interesting output metadata. -->
 Two kinds of time ranges are given special syntax: the range between two times and the range starting at some time for some duration. These are represented like `@2003 to @2005` and `@2004-Q1 for 6 quarters` respectively. These ranges can be used in filters just like time literals.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto"}
-query: table('malloy-data.faa.flights'){? dep_time: @2003 to @2005}->{
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
+query: table('malloy-data.faa.flights'){where: dep_time: @2003 to @2005}->{
   aggregate:flight_count is count()
 }
 ```
@@ -284,8 +297,8 @@ timeframe from the truncation, e.g. `now.month` means the entirety of the curren
 When a time range is used in a comparison, `=` checks for "is in the range", `>` "is after", and `<` "is before." So `some_time > @2003` filters dates starting on January 1, 2004, while `some_time = @2003` filters to dates in the year 2003.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto"}
-query: table('malloy-data.faa.flights'){? dep_time > @2003}->{
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
+query: table('malloy-data.faa.flights'){where: dep_time > @2003}->{
   top: 3; order_by: 1 asc
   group_by:departure_date is dep_time.day
   aggregate: flight_count is count()
@@ -307,7 +320,7 @@ explore: airports is table('malloy-data.faa.airports'){
 In Malloy, queries can be [nested](nesting.md) to produce subtables on each output row. Such nested queries are called _aggregating subqueries_, or simply "nested queries." When a query is nested inside another query, each output row of the outer query will have a nested table for the inner query which only includes data limited to that row.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy"}
 
 query: airports->{
   group_by: state
@@ -324,7 +337,7 @@ Here we can see that the `by_facility` column of the output table contains neste
 Queries can be nested infinitely, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
 query: airports->{
   group_by: state
   aggregate: airport_count
@@ -345,7 +358,7 @@ query: airports->{
 Filters can be isolated to any level of nesting. In the following example, we limit the `major_facilities` query to only airports where `major` is `'Y'`. This particular filter applies _only_ to `major_facilities`, and not to other parts of the outer query.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
 query: airports->{
   where: state = 'CA'
   group_by: county
@@ -366,7 +379,7 @@ query: airports->{
 The output from one stage of a query can be "piped" into another stage using `|`. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "small"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "small"}
 query: airports->{
   where: state = 'CA' | 'NY'
   group_by: state
@@ -382,7 +395,7 @@ Next, we'll use the output of that query as the input to another, where we deter
 percentage of airports compared to the whole state, taking advantage of the nested structure of the data to to so.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy", "size": "large", "dataStyles": { "percent_in_county": { "renderer": "percent" }}}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large", "dataStyles": { "percent_in_county": { "renderer": "percent" }}}
 query: airports->{
   where: state = 'CA' | 'NY'
   group_by: state
@@ -408,7 +421,7 @@ query: airports->{
 Joins are declared as part of an explore, and link primary and foreign keys.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 explore: airports is table('malloy-data.faa.airports'){
   primary_key: code
 }
@@ -434,7 +447,7 @@ an expression identifies the corresponding field as a [measure](fields.md#measur
 Aggregates may be computed with respect to any joined explore, allowing for a wider variety of measurements to be calculated than is possible in SQL. See the [Aggregate Locality](aggregates.md#aggregate-locality) section for more information.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy"}
 query: aircraft-> {
   aggregate: [
     -- The average number of seats on models of registered aircraft

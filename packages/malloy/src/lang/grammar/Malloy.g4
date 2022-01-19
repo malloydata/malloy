@@ -47,7 +47,7 @@ topLevelQueryDef
   ;
 
 query
-  : explore ARROW pipelineFromName              # exploreArrowQuery
+  : explore ARROW pipelineFromName                  # exploreArrowQuery
   | ARROW queryName queryProperties? pipeElement*   # arrowQuery
   ;
 
@@ -112,7 +112,6 @@ exploreStatement
   | MEASURE measureDefList             # defExploreMeasure
   | JOIN joinList                      # defExploreJoin
   | whereStatement                     # defExploreWhere
-  | havingStatement                    # defExploreHaving
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME fieldName IS fieldName      # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
@@ -172,7 +171,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : OCURLY (exploreQueryDef COMMA?)* CCURLY
+  : OBRACK (exploreQueryDef COMMA?)* CBRACK
   | exploreQueryDef
   ;
 
@@ -383,17 +382,11 @@ joinPath
   : joinName (DOT joinName)*
   ;
 
-joinField
-  : id
-  ;
+joinField: id;
+joinName: id;
+fieldName: id;
 
-joinName:
-  id
-  ;
-
-fieldName
-  : id
-  ;
+justExpr: fieldExpr EOF;
 
 json
   : jsonValue
