@@ -23,11 +23,15 @@ If you don't already have it, download [Visual Studio Code](https://code.visuals
 
 Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
-## 3. Connect to your database
+## 3. Open the Malloy extension and connect to your database
+
+Click on the Malloy icon on the left side of VS Code. This opens the Malloy view - a view that allows you to view schemas as you work with Malloy models and edit database connections.
+
+In the "CONNECTIONS" panel, click "Edit Connections". This opens the connection manager page. Click "Add Connection".
 
 ### Postgres
 
-Connecting to Postgres is hard!
+Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.
 
 ### BigQuery
 
@@ -46,11 +50,15 @@ _Replace `{my_project_id}` with the **ID** of the bigquery project you want to u
 
 #### **Using Service Account Key**
 
-We don't support this but we should
+Add the relevant account information to the new connection, and include the path to the service account key.
 
-## 4. Run a quick test
+## 4. Test the connection
 
-Create a file called "test.malloy". Pick a table. Do a thing.
+Press "test" on the connection to confirm that you have successfully connected to the database.
+
+## 5. Write some Malloy!
+
+Create a new file (File -> New File) and call it "test.malloy". Do some more stuff.
 
 # Join the Community
 
