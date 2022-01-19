@@ -43,6 +43,14 @@ export type ConnectionConfig =
   | BigQueryConnectionConfig
   | PostgresConnectionConfig;
 
+/**
+ * Return the index of the connection that should be treated as
+ * the default.
+ *
+ * @param connections
+ * @returns The index of the first connection with `isDefault === true`,
+ *          or else 0 (if there is any connection), or else `undefined`.
+ */
 export function getDefaultIndex(
   connections: ConnectionConfig[]
 ): number | undefined {

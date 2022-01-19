@@ -108,6 +108,16 @@ export function editConnectionsCommand(): void {
   });
 }
 
+/**
+ * Perform cleanup on the connections object received from the webview,
+ * and prepare to save the config.
+ *
+ * @param connections The connection configs received from the webview.
+ * @returns An updated list of connections
+ *
+ * - Fixes up `isDefault` issues.
+ * - Handles scrubbing passwords and putting them in the keychain.
+ */
 async function handleConnectionsPreSave(
   connections: ConnectionConfig[]
 ): Promise<ConnectionConfig[]> {
