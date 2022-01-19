@@ -159,6 +159,9 @@
                   "host": {
                     "type": "string"
                   },
+                  "port": {
+                    "type": "number"
+                  },
                   "username": {
                     "type": "string"
                   },
@@ -166,6 +169,15 @@
                     "type": "string"
                   },
                   "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "databaseName": {
                     "type": "string"
                   }
                 }
@@ -178,6 +190,21 @@
                     "const": "bigquery"
                   },
                   "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "projectName": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "serviceAccountKeyPath": {
                     "type": "string"
                   }
                 }
