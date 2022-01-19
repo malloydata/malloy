@@ -38,18 +38,19 @@ export const MALLOY_GRAMMAR = {
     lookbehind: true,
   },
   identifier: /`[A-z_][A-z_0-9]*`/,
-  function:
-    /\b(?:AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE)(?=\s*\()/i, // Should we highlight user defined functions too?
+  timeframe:
+    /\b((year|quarter|month|week|day|hour|minute|second|day_of_year|day_of_month)s?)\b/i,
   keyword:
-    /\b(?:IMPORT|JOIN|RENAMES|TURTLE|PICK|WHEN|ELSE|TO|FOR|TOP|EXPORT|ACCEPT|AND|AS|ASC|BY|COUNT|CROSS|DESC|DEFINE|DISTINCT|ENHANCE|EXCEPT|EXPLORE|FOREIGN|FROM|IS|INDEX|JOINS|KEY|LIMIT|NOT|NULL|ORDER|ON|OR|PROJECT|PRIMARY|REDUCE|RENAME|SUM)\b/i,
+    /\b(?:IMPORT|PICK|WHEN|ELSE|TO|FOR|EXPORT|AND|AS|ASC|BY|CROSS|DESC|DEFINE|ENHANCE|FOREIGN|FROM|IS|JOINS|KEY|NOT|NULL|ORDER|ON|OR|REDUCE|ACCEPT|AGGREGATE|DIMENSION|EXCEPT|EXPLORE|GROUP_BY|HAVING|INDEX|JOIN|LIMIT|MEASURE|NEST|ORDER_BY|PRIMARY_KEY|PROJECT|QUERY|RENAME|TOP|WHERE)\b/i,
+  function_keyword: /\b(?:DISTINCT)\b/i,
+  function:
+    /\b(?:AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|[a-zA-Z]*)(?=\s*\()/i, // Should we highlight user defined functions too?
   boolean: /\b(?:TRUE|FALSE|NULL)\b/i,
-  date: /@[0-9A-z-]*(\s[0-9A-z-][0-9A-z-](:[0-9A-z-][0-9A-z-])?(:[0-9A-z-][0-9A-z-])?)?/,
-  number: /\b0x[\da-f]+\b|\b\d+(?:\.\d*)?|\B\.\d+\b/i,
+  date: /@[0-9A-Z-]*(\s[0-9A-Z-][0-9A-Z-](:[0-9A-Z-][0-9A-Z-])?(:[0-9A-Z-][0-9A-Z-])?)?/,
+  number: /\b\d+(?:\.\d*)?\b/i,
   operator:
     /[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?|\b(?:AND|BETWEEN|IN|LIKE|NOT|OR|IS|DIV|REGEXP|RLIKE|SOUNDS LIKE|XOR)\b/i,
   punctuation: /[;[\]()`,.]/,
-  timeframe:
-    /\b((year|quarter|month|week|day|hour|minute|second|day_of_year|day_of_month|day_of_week|week_of_year)s?)\b/i,
-  type: /\b((string|number|date|timestamp)s?)\b/i,
+  type: /\b((string|number|date|timestamp|boolean)s?)\b/i,
   variable: [],
 };

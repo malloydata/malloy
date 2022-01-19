@@ -25,6 +25,7 @@ export abstract class Dialect {
   abstract udfPrefix: string;
   abstract hasFinalStage: boolean;
   abstract stringTypeName: string;
+  abstract divisionIsInteger: boolean;
 
   // return a quoted string for use as a table name.
   abstract quoteTableName(tableName: string): string;
@@ -78,6 +79,7 @@ export abstract class Dialect {
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
+  abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(alias: string): string;
 

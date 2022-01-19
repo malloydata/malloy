@@ -1,61 +1,126 @@
 # Joins
 
-Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table to a foreign key in the [shape](/documentation/language/shape.html) being joined to.
+Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table and a foreign key in the [explore](explore.md) being joined to.
 
-### Join Keys
+## Join Types
 
-One of the entities being joined must have a primary key. If you specify a bare field name as a _keySpec_ then the primary key for the join will come from the entity being joined. If you specify a field in the join, `joinName.some_id` then the primary key of the shape will be used to complete the join.
+### Foreign Key to Primary Key
 
+To join a foreign key of the source explore to the `primary key` of a joined explore, reference the foreign key by name in the `on` clause.
 
-### Join Specifications
+```malloy
+explore: users is table('malloy-data.ecomm.users'){
+  primary_key: id
+}
 
-* _joinName_ `is join on` _keySpec_
-* _joinName_ `is join` _existingName_ on _keySpec_
-* _joinName_ `is join (` _query_ `)` on _keySpec_
+explore: order_items is table('malloy-data.ecomm.order_items'){
+  join: users on user_id
+}
+```
 
-Note that joins through an intermediate table are defined on the definition of that table. When referencing fields not in the source shape, the `.` operator can be used to indicate which table a field comes from; you do not scope to the source shape in Malloy (i.e. when querying the flights table, do not prepend `flights.` to `flight_count`.)
+## Naming Joined Explores
 
-Joins can be defined in a query, or in the model. The below demonstrates the definition of several different joins in a model, and their use in a query.
+To preserve the name of the explore being joined in, use `join on`.
+
+```malloy
+
+explore: carriers is table('malloy-data.faa.carriers') {
+  primary_key: code
+}
+
+explore: flights is table('malloy-data.faa.flights'){
+  join: carriers on carrier
+}
+```
+
+To give the joined explore a different name within the source explore, specify the name of the explore being joined in between `join` and `on`.
+
+```malloy
+explore: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+}
+
+explore: flights is table('malloy-data.faa.flights'){
+  join: origin_airport is airports on origin
+}
+```
+
+## Inlining Joins
+
+Explores do not need to be named before they are used in a join.
+
+```malloy
+
+explore: flights is table('malloy-data.faa.flights'){
+  join: carriers is  table('malloy-data.faa.carriers'){primary_key: code} on carrier
+}
+```
+
+## Using Fields in Joined Explores
+
+When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using `.`.
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
+query: flights->{
+  group_by: carriers.nickname
+  aggregate: flight_count is count()
+}
+```
+
+Measures and queries defined in joined explores may be used in addition to dimensions.
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
+query: flights->{
+  group_by: destination_code
+  aggregate: carriers.carrier_count
+}
+```
+
+## Join Example
+
+This example demonstrates the definition of several different joins in a model and their use in a query.
+Entire subtrees of data can be joined.  In the example below, `aircraft` joins `aircraft_models`.  `flights`
+jois aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
+retained.
+
+  `group_by: aircraft.aircraft_models.manufacturer`
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "size":"large"}
--- join 3 tables, flights, aircraft and aircraft models.
--- 'flights' is individual flights
--- 'aircraft' is the plane that made the flight
--- 'aircraft_models' is data about the kind of aircraft
+explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+  primary_key: aircraft_model_code
+  measure: aircraft_model_count is count()
+}
 
-define aircraft_models is (explore 'malloy-data.faa.aircraft_models'
-  primary key aircraft_model_code
-);
+/* Individual airplanes */
+explore: aircraft is table('malloy-data.faa.aircraft') {
+  primary_key: tail_num
+  measure: aircraft_count is count()
+  join: aircraft_models on aircraft_model_code
+}
 
-define aircraft is (explore 'malloy-data.faa.aircraft'
-  primary key tail_num
-  aircraft_models is join on aircraft_model_code
-);
+/* The airports that the aircraft fly to and from */
+explore: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+  measure: airport_count is count()
+}
 
-define airports is (explore 'malloy-data.faa.airports'
-  primary key code
-);
+explore: flights is table('malloy-data.faa.flights') {
+  join: origin_airport is airports on origin
+  join: destination_airport is airports on destination
+  join: aircraft on tail_num
+}
 
-define flights is (explore 'malloy-data.faa.flights'
-    aircraft is join on tail_num
-
-  -- need to rename origin and desination fields to avoid namespace collision
-  -- between aliased tables and fields; issue is unique to this dataset)
-    origin_code renames origin
-    destination_code renames destination
-
-  -- join and alias airports table
-    origin is join airports on origin_code
-    destination is join airports on destination_code
-  );
-
-explore flights : [dep_time : @2003-01, origin.code : 'SJC']
-| reduce
-  destination is destination.code
-  flight_count is count()
-  aircraft_count is aircraft.count()
-  aircraft_model_count is aircraft.aircraft_models.count()
+query: flights->{
+  group_by: aircraft.aircraft_models.manufacturer
+  aggregate: [
+    flight_count is count()
+    aircraft_count is aircraft.count()
+    aircraft_model_count is aircraft.aircraft_models.count()
+  ]
+}
 ```
 
-For more examples and how to reason about aggregation across joins, review [Foreign Sums](/documentation/patterns/foreign_sums.html)
+For more examples and how to reason about aggregation across joins, review the [Aggregates](aggregates.md) section.

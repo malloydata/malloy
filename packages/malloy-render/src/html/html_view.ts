@@ -11,35 +11,37 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, StructDef } from "@malloy-lang/malloy";
+import { DataArray, Field, Explore } from "@malloydata/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { Renderer } from "../renderer";
-import { HtmlBarChartRenderer } from "./bar_chart";
-import { HtmlBooleanRenderer } from "./boolean";
-import { HtmlJSONRenderer } from "./json";
-import { HtmlBytesRenderer } from "./bytes";
-import { HtmlCurrencyRenderer } from "./currency";
-import { HtmlDashboardRenderer } from "./dashboard";
-import { HtmlDateRenderer } from "./date";
-import { HtmlLineChartRenderer } from "./line_chart";
-import { HtmlLinkRenderer } from "./link";
-import { HtmlListRenderer } from "./list";
-import { HtmlListDetailRenderer } from "./list_detail";
-import { HtmlNumberRenderer } from "./number";
-import { HtmlPointMapRenderer } from "./point_map";
-import { HtmlScatterChartRenderer } from "./scatter_chart";
-import { HtmlSegmentMapRenderer } from "./segment_map";
-import { HtmlShapeMapRenderer } from "./shape_map";
-import { HtmlTableRenderer } from "./table";
-import { HtmlTextRenderer } from "./text";
-import { HtmlVegaSpecRenderer } from "./vega_spec";
-import { DataTreeRoot } from "../data_table";
+import { HTMLBarChartRenderer } from "./bar_chart";
+import { HTMLBooleanRenderer } from "./boolean";
+import { HTMLJSONRenderer } from "./json";
+import { HTMLBytesRenderer } from "./bytes";
+import { HTMLCurrencyRenderer } from "./currency";
+import { HTMLPercentRenderer } from "./percent";
+import { HTMLDashboardRenderer } from "./dashboard";
+import { HTMLImageRenderer } from "./image";
+import { HTMLDateRenderer } from "./date";
+import { HTMLLineChartRenderer } from "./line_chart";
+import { HTMLLinkRenderer } from "./link";
+import { HTMLListRenderer } from "./list";
+import { HTMLListDetailRenderer } from "./list_detail";
+import { HTMLNumberRenderer } from "./number";
+import { HTMLPointMapRenderer } from "./point_map";
+import { HTMLScatterChartRenderer } from "./scatter_chart";
+import { HTMLSegmentMapRenderer } from "./segment_map";
+import { HTMLShapeMapRenderer } from "./shape_map";
+import { HTMLTableRenderer } from "./table";
+import { HTMLTextRenderer } from "./text";
+import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
+import { AtomicFieldType } from "@malloydata/malloy/src/malloy";
 
-export class HtmlView {
-  async render(table: DataTreeRoot, dataStyles: DataStyles): Promise<string> {
-    const renderer = makeRenderer(table.structDef, dataStyles, {
+export class HTMLView {
+  async render(table: DataArray, dataStyles: DataStyles): Promise<string> {
+    const renderer = makeRenderer(table.field, dataStyles, {
       size: "large",
     });
     try {
@@ -49,7 +51,7 @@ export class HtmlView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(table, undefined);
+      return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
         return error.toString();
@@ -60,10 +62,25 @@ export class HtmlView {
   }
 }
 
-function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
+export class JSONView {
+  async render(table: DataArray): Promise<string> {
+    const renderer = new HTMLJSONRenderer();
+    try {
+      return await renderer.render(table);
+    } catch (error) {
+      if (error instanceof Error) {
+        return error.toString();
+      } else {
+        return "Internal error - Exception not an Error object.";
+      }
+    }
+  }
+}
+
+function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
   let renderer = dataStyles[field.name];
-  if (!renderer && "resultMetadata" in field && field.resultMetadata) {
-    for (const sourceClass of field.resultMetadata.sourceClasses) {
+  if (!renderer) {
+    for (const sourceClass of field.sourceClasses) {
       if (!renderer) {
         renderer = dataStyles[sourceClass];
       }
@@ -72,8 +89,8 @@ function getRendererOptions(field: FieldDef, dataStyles: DataStyles) {
   return renderer;
 }
 
-function isContainer(field: FieldDef): StructDef {
-  if (field.type === "struct") {
+function isContainer(field: Field | Explore): Explore {
+  if (field.isExplore()) {
     return field;
   } else {
     throw new Error(
@@ -83,58 +100,60 @@ function isContainer(field: FieldDef): StructDef {
 }
 
 export function makeRenderer(
-  field: FieldDef,
+  field: Explore | Field,
   dataStyles: DataStyles,
   styleDefaults: StyleDefaults
 ): Renderer {
   const renderDef = getRendererOptions(field, dataStyles) || {};
 
   if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
-    return new HtmlShapeMapRenderer(styleDefaults);
+    return new HTMLShapeMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "point_map" ||
     field.name.endsWith("_point_map")
   ) {
-    return new HtmlPointMapRenderer(styleDefaults);
+    return new HTMLPointMapRenderer(styleDefaults);
+  } else if (renderDef.renderer === "image" || field.name.endsWith("_image")) {
+    return new HTMLImageRenderer();
   } else if (
     renderDef.renderer === "segment_map" ||
     field.name.endsWith("_segment_map")
   ) {
-    return new HtmlSegmentMapRenderer(styleDefaults);
+    return new HTMLSegmentMapRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
   ) {
     return ContainerRenderer.make(
-      HtmlDashboardRenderer,
+      HTMLDashboardRenderer,
       isContainer(field),
       dataStyles
     );
   } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
-    return new HtmlJSONRenderer();
+    return new HTMLJSONRenderer();
   } else if (
     renderDef.renderer === "line_chart" ||
     field.name.endsWith("_line_chart")
   ) {
-    return new HtmlLineChartRenderer(styleDefaults);
+    return new HTMLLineChartRenderer(styleDefaults);
   } else if (
     renderDef.renderer === "scatter_chart" ||
     field.name.endsWith("_scatter_chart")
   ) {
-    return new HtmlScatterChartRenderer(styleDefaults);
+    return new HTMLScatterChartRenderer(styleDefaults);
   } else if (renderDef.renderer === "bar_chart") {
-    return new HtmlBarChartRenderer(styleDefaults, renderDef);
+    return new HTMLBarChartRenderer(styleDefaults, renderDef);
   } else if (field.name.endsWith("_bar_chart")) {
-    return new HtmlBarChartRenderer(styleDefaults, {});
+    return new HTMLBarChartRenderer(styleDefaults, {});
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
     if (spec) {
-      return new HtmlVegaSpecRenderer(styleDefaults, spec as TopLevelSpec);
+      return new HTMLVegaSpecRenderer(styleDefaults, spec as TopLevelSpec);
     } else if (renderDef.spec_name) {
       const vegaRenderer = dataStyles[renderDef.spec_name];
       if (vegaRenderer !== undefined && vegaRenderer.renderer === "vega") {
         if (vegaRenderer.spec) {
-          return new HtmlVegaSpecRenderer(
+          return new HTMLVegaSpecRenderer(
             styleDefaults,
             vegaRenderer.spec as TopLevelSpec
           );
@@ -150,40 +169,61 @@ export function makeRenderer(
   } else {
     if (
       renderDef.renderer === "time" ||
-      field.type === "date" ||
-      field.type === "timestamp"
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        (field.type === AtomicFieldType.Date ||
+          field.type === AtomicFieldType.Timestamp))
     ) {
-      return new HtmlDateRenderer();
+      return new HTMLDateRenderer();
     } else if (renderDef.renderer === "currency") {
-      return new HtmlCurrencyRenderer();
-    } else if (renderDef.renderer === "number" || field.type === "number") {
-      return new HtmlNumberRenderer();
+      return new HTMLCurrencyRenderer();
+    } else if (renderDef.renderer === "percent") {
+      return new HTMLPercentRenderer();
+    } else if (
+      renderDef.renderer === "number" ||
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        field.type === AtomicFieldType.Number)
+    ) {
+      return new HTMLNumberRenderer();
     } else if (renderDef.renderer === "bytes") {
-      return new HtmlBytesRenderer();
-    } else if (renderDef.renderer === "boolean" || field.type === "boolean") {
-      return new HtmlBooleanRenderer();
+      return new HTMLBytesRenderer();
+    } else if (
+      renderDef.renderer === "boolean" ||
+      (field.hasParentExplore() &&
+        field.isAtomicField() &&
+        field.type === AtomicFieldType.Boolean)
+    ) {
+      return new HTMLBooleanRenderer();
     } else if (renderDef.renderer === "link") {
-      return new HtmlLinkRenderer();
-    } else if (renderDef.renderer === "list") {
+      return new HTMLLinkRenderer();
+    } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
       return ContainerRenderer.make(
-        HtmlListRenderer,
+        HTMLListRenderer,
         isContainer(field),
         dataStyles
       );
-    } else if (renderDef.renderer === "list_detail") {
+    } else if (
+      renderDef.renderer === "list_detail" ||
+      field.name.endsWith("_list_detail")
+    ) {
       return ContainerRenderer.make(
-        HtmlListDetailRenderer,
+        HTMLListDetailRenderer,
         isContainer(field),
         dataStyles
       );
-    } else if (renderDef.renderer === "table" || field.type === "struct") {
+    } else if (
+      renderDef.renderer === "table" ||
+      !field.hasParentExplore() ||
+      field.isExploreField()
+    ) {
       return ContainerRenderer.make(
-        HtmlTableRenderer,
+        HTMLTableRenderer,
         isContainer(field),
         dataStyles
       );
     } else {
-      return new HtmlTextRenderer();
+      return new HTMLTextRenderer();
     }
   }
 }

@@ -1,0 +1,96 @@
+--! styles the_met.styles.json
+
+explore: met_objects is table('bigquery-public-data.the_met.objects'){
+  -- eliminate some bad data
+  where: object_begin_date < 2031 & > -8000
+
+  join: images is table('bigquery-public-data.the_met.images'){ primary_key: object_id} on object_id
+
+  measure: [
+    object_count is count()
+    image_count is images.count()
+  ]
+
+  dimension: [
+    object_era is FLOOR(object_begin_date/100)*100
+    image_thumb is REPLACE(images.original_image_url,'original', 'web-thumb')
+  ]
+
+  query: by_classification is {
+    group_by: classification
+    aggregate: object_count
+  }
+
+
+  query: by_department is {
+    group_by: department
+    aggregate: object_count
+  }
+
+  query: by_artist is {
+    group_by: artist_display_name
+    aggregate: [
+      object_count
+      image_count
+    ]
+  }
+
+  query: by_object_date is {
+    group_by: object_begin_date
+    aggregate: object_count
+  }
+
+  query: by_object_era is { order_by: 1 desc
+    group_by: object_era
+    aggregate: object_count
+  }
+
+  query: image_list is {
+    group_by: [
+      images.title
+      images.original_image_url
+      image_thumb
+    ]
+  }
+
+  query: by_country is {
+    group_by: country
+    aggregate: object_count
+  }
+
+  query: random_image_list is { 
+    limit:20 
+    where: image_thumb != null
+    group_by: [
+      image_thumb
+      x is 1
+    ]
+  }
+
+  query: over_view_dashboard is {
+    group_by: object_count
+    nest: department_dashboard is {
+      group_by: department
+      aggregate: object_count
+      aggregate: image_count
+      nest: by_country
+      nest: by_object_era
+      nest: by_classification
+      nest:random_image_list
+    }  
+  }
+
+  query: department_dashboard is { 
+    where: department= 'Photographs' and object_begin_date > 1900
+    aggregate: [
+      artist_count is count(distinct artist_display_name)
+      object_count
+     image_count
+    ]
+    nest: by_artist is { limit: 30
+      group_by: artist_display_name
+      aggregate: object_count
+      nest: random_image_list
+    }
+  }
+}

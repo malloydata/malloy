@@ -10,15 +10,16 @@ be included in the file's _public namespace_.
 
 Consider a file <code>samples/faa/flights.malloy</code>:
 ```malloy
-define airports is (explore 'malloy-data.faa.airports'
-  primary key code
-  name is concat(code, ' - ', full_name)
-  airport_count is count()
+explore: airports is table('malloy-data.faa.airports'){}
+  primary_key: code
+  dimension: name is concat(code, ' - ', full_name)
+  measure: airport_count is count()
 );
 
-export define flights is (explore 'malloy-data.faa.flights'
-  origin is join airports on origin_code
-  destination is join airports on destination_code
+explore: flights is table('malloy-data.faa.flights'){
+  ...
+  join: origin is airports on origin_code
+  join: destination is airports on destination_code
   ...
 );
 ```
@@ -35,10 +36,9 @@ For example, if you wanted to create a file <code>samples/flights_by_carrier.mal
 `flights` explore, you could write:
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 import "faa/flights.malloy"
 
-flights | reduce top 5 carrier, flight_count
+query: flights->{top: 5; group_by: carrier; aggregate: flight_count}
 ```
 
 Because `airports` is not exported, referencing it here would be invalid.

@@ -15,13 +15,13 @@ import { CommonTokenStream } from "antlr4ts";
 import { ParseTree } from "antlr4ts/tree";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
-import {
-  ExploreContext,
-  FilterElementContext,
-  FilterListContext,
-  NamedSourceContext,
-  TableSourceContext,
-} from "../lib/Malloy/MalloyParser";
+// import {
+//   ExploreContext,
+//   FilterElementContext,
+//   FilterListContext,
+//   NamedSourceContext,
+//   TableSourceContext,
+// } from "../lib/Malloy/MalloyParser";
 
 type SimpleRange = [number | undefined, number | undefined];
 
@@ -86,62 +86,68 @@ export class ExploreQueryWalker implements MalloyListener {
     });
   }
 
-  enterExplore(pcx: ExploreContext): void {
-    const exploreRef: ExploreClauseRef = {
-      exploreRef: {
-        text: "",
-        range: [undefined, undefined],
-      },
-      filterRefs: [],
-      filterLists: [],
-      range: [pcx.start.startIndex, pcx.stop?.stopIndex],
-    };
-    this.currentExploreClauseRef = exploreRef;
-    this.exploreClauseRefs.push(exploreRef);
+  // just to make this compile, no need for this
+  inDocument = false;
+  enterMalloyDocument(): void {
+    this.inDocument = true;
   }
 
-  exitExplore(): void {
-    this.currentExploreClauseRef = undefined;
-  }
+  // enterExplore(pcx: ExploreContext): void {
+  //   const exploreRef: ExploreClauseRef = {
+  //     exploreRef: {
+  //       text: "",
+  //       range: [undefined, undefined],
+  //     },
+  //     filterRefs: [],
+  //     filterLists: [],
+  //     range: [pcx.start.startIndex, pcx.stop?.stopIndex],
+  //   };
+  //   this.currentExploreClauseRef = exploreRef;
+  //   this.exploreClauseRefs.push(exploreRef);
+  // }
 
-  enterTableSource(pcx: TableSourceContext): void {
-    this.setExploreClause(pcx);
-  }
+  // exitExplore(): void {
+  //   this.currentExploreClauseRef = undefined;
+  // }
 
-  enterNamedSource(pcx: NamedSourceContext): void {
-    this.setExploreClause(pcx);
-  }
+  // enterTableSource(pcx: TableSourceContext): void {
+  //   this.setExploreClause(pcx);
+  // }
 
-  setExploreClause(pcx: NamedSourceContext | TableSourceContext): void {
-    if (this.currentExploreClauseRef) {
-      this.currentExploreClauseRef.exploreRef.text = this.tokens.getText(pcx);
-      this.currentExploreClauseRef.exploreRef.range = [
-        pcx.start.startIndex,
-        pcx.stop?.stopIndex,
-      ];
-    }
-  }
+  // enterNamedSource(pcx: NamedSourceContext): void {
+  //   this.setExploreClause(pcx);
+  // }
 
-  enterFilterElement(pcx: FilterElementContext): void {
-    const filterRef: FilterRef = {
-      text: this.tokens.getText(pcx),
-      range: [pcx.start.startIndex, pcx.stop?.stopIndex],
-    };
+  // setExploreClause(pcx: NamedSourceContext | TableSourceContext): void {
+  //   if (this.currentExploreClauseRef) {
+  //     this.currentExploreClauseRef.exploreRef.text = this.tokens.getText(pcx);
+  //     this.currentExploreClauseRef.exploreRef.range = [
+  //       pcx.start.startIndex,
+  //       pcx.stop?.stopIndex,
+  //     ];
+  //   }
+  // }
 
-    if (this.currentExploreClauseRef) {
-      this.currentExploreClauseRef.filterRefs.push(filterRef);
-    }
-  }
+  // enterFilterElement(pcx: FilterElementContext): void {
+  //   const filterRef: FilterRef = {
+  //     text: this.tokens.getText(pcx),
+  //     range: [pcx.start.startIndex, pcx.stop?.stopIndex],
+  //   };
 
-  enterFilterList(pcx: FilterListContext): void {
-    const filterList: FilterList = {
-      range: [pcx.start.startIndex, pcx.stop?.stopIndex],
-    };
+  //   if (this.currentExploreClauseRef) {
+  //     this.currentExploreClauseRef.filterRefs.push(filterRef);
+  //   }
+  // }
 
-    if (this.currentExploreClauseRef) {
-      this.currentExploreClauseRef.filterLists.push(filterList);
-    }
-  }
+  // enterFilterList(pcx: FilterListContext): void {
+  //   const filterList: FilterList = {
+  //     range: [pcx.start.startIndex, pcx.stop?.stopIndex],
+  //   };
+
+  //   if (this.currentExploreClauseRef) {
+  //     this.currentExploreClauseRef.filterLists.push(filterList);
+  //   }
+  // }
 }
 
 export function exploreQueryWalkerBuilder(

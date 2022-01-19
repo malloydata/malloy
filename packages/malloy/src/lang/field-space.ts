@@ -13,33 +13,35 @@
 
 /* eslint-disable no-useless-constructor */
 import { cloneDeep } from "lodash";
+import { Dialect, getDialect } from "../dialect";
 import * as model from "../model/malloy_types";
 import {
-  NameOnly,
-  CollectionMember,
-  FieldDefinition,
+  ExploreField,
   FieldListEdit,
-  ExpressionFieldDef,
+  ExprFieldDecl,
   RenameField,
   Wildcard,
   Join,
   FieldName,
-  FieldReferences,
-  MalloyElement,
-  Turtle,
+  TurtleDecl,
   HasParameter,
+  FieldCollectionMember,
+  QueryItem,
+  NestDefinition,
+  NestReference,
+  MalloyElement,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
   ExpressionFieldFromAst,
-  TurtleFieldAST,
-  TurtleFieldStruct,
+  QueryField,
+  QueryFieldAST,
+  QueryFieldStruct,
   ColumnSpaceField,
   FANSPaceField,
   WildSpaceField,
-  TurtleField,
   DefinedParameter,
   SpaceEntry,
   AbstractParameter,
@@ -49,12 +51,21 @@ import {
 type FieldMap = Record<string, SpaceEntry>;
 
 /**
- * The grand daddy of all FieldSpace(s) is JUST a wrapper for a StructDef
- *
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
  * are fields. A FieldSpace can lookup fields, and generate a StructDef
  */
-export class FieldSpace {
+export interface FieldSpace {
+  structDef(): model.StructDef;
+  emptyStructDef(): model.StructDef;
+  findEntry(symbol: string): SpaceEntry | undefined;
+  getDialect(): Dialect;
+}
+
+/**
+ * The father of all FieldSpaces is a wrapper for a StructDef
+ */
+
+export class StructSpace implements FieldSpace {
   private memoMap?: FieldMap;
   protected fromStruct: model.StructDef;
 
@@ -62,11 +73,15 @@ export class FieldSpace {
     this.fromStruct = sourceStructDef;
   }
 
+  getDialect(): Dialect {
+    return getDialect(this.fromStruct.dialect);
+  }
+
   fromFieldDef(from: model.FieldDef): SpaceField {
     if (from.type === "struct") {
       return new StructSpaceField(from);
     } else if (model.isTurtleDef(from)) {
-      return new TurtleFieldStruct(this, from);
+      return new QueryFieldStruct(this, from);
     }
     // TODO field has an "e" and needs to be an expression
     // TODO field has a filter and needs to be a filteredalias
@@ -122,9 +137,7 @@ export class FieldSpace {
   }
 
   emptyStructDef(): model.StructDef {
-    const copyStructDef = { ...this.fromStruct };
-    copyStructDef.fields = [];
-    return copyStructDef;
+    return { ...this.fromStruct, fields: [] };
   }
 
   outerName(): string {
@@ -146,20 +159,12 @@ export class FieldSpace {
       return undefined;
     }
   }
-
-  /**
-   * Field space is asked "what is the first field space for a pipeline". For
-   * a StructDef FieldSpace, the StructDef is the head.
-   */
-  headSpace(): FieldSpace {
-    return this;
-  }
 }
 
 /**
- * Used by an AST element to build up a struct def from fields and joins.
+ * A FieldSpace which is coming from source code
  */
-export class TranslationFieldSpace extends FieldSpace {
+export class NewFieldSpace extends StructSpace {
   final: model.StructDef | undefined;
   constructor(inputStruct: model.StructDef) {
     super(cloneDeep(inputStruct));
@@ -174,18 +179,17 @@ export class TranslationFieldSpace extends FieldSpace {
   static filteredFrom(
     from: model.StructDef,
     choose?: FieldListEdit
-  ): TranslationFieldSpace {
-    const edited = new TranslationFieldSpace(from);
+  ): NewFieldSpace {
+    const edited = new NewFieldSpace(from);
     if (choose) {
-      const names = choose.refs.members.filter((f) => f instanceof FieldName);
-      const stars = choose.refs.members.filter((f) => f instanceof Wildcard);
-      if (stars.length > 0) {
-        throw new Error("Wildcards not allowed in accept/except");
+      const names = choose.refs.list.filter((f) => f instanceof FieldName);
+      for (const s of choose.refs.list.filter((f) => f instanceof Wildcard)) {
+        s.log("Wildcards not allowed in accept/except");
       }
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {
-        const included = !!names.find((f) => f.text === symbol);
+        const included = !!names.find((f) => f.refString === symbol);
         const accepting = choose.edit === "accept";
         if (included === accepting) {
           edited.setEntry(symbol, value);
@@ -195,7 +199,7 @@ export class TranslationFieldSpace extends FieldSpace {
     return edited;
   }
 
-  private anonymousFieldIndex = 0;
+  // private anonymousFieldIndex = 0;
 
   protected setEntry(name: string, value: SpaceEntry): void {
     if (this.final) {
@@ -204,68 +208,52 @@ export class TranslationFieldSpace extends FieldSpace {
     super.setEntry(name, value);
   }
 
-  nextAnonymousField(): string {
-    // outername can be a long dotted table path
-    const namePath = this.outerName().split(".");
-    const nextName =
-      namePath.pop() + "_anon_" + this.anonymousFieldIndex.toString();
-    this.anonymousFieldIndex += 1;
-    return nextName;
-  }
+  // nextAnonymousField(): string {
+  //   // outername can be a long dotted table path
+  //   const namePath = this.outerName().split(".");
+  //   const nextName =
+  //     namePath.pop() + "_anon_" + this.anonymousFieldIndex.toString();
+  //   this.anonymousFieldIndex += 1;
+  //   return nextName;
+  // }
 
-  addFields(defs: FieldDefinition[]): TranslationFieldSpace {
-    for (const def of defs) {
-      this.addField(def);
+  addParameters(params: HasParameter[]): NewFieldSpace {
+    for (const oneP of params) {
+      this.setEntry(oneP.name, new AbstractParameter(oneP));
     }
     return this;
   }
 
-  addParameters(params: HasParameter[]): void {
-    for (const oneP of params) {
-      this.setEntry(oneP.name, new AbstractParameter(oneP));
-    }
-  }
-
-  addField(def: FieldDefinition): void {
-    // TODO express the "three fields kinds" in a typesafe way
-    // one of three kinds of fields are legal in an explore: expressions ...
-    if (def instanceof ExpressionFieldDef) {
-      const exprField = new ExpressionFieldFromAst(this, def);
-      this.setEntry(exprField.name, exprField);
-      // querry (turtle) fields
-    } else if (def instanceof Turtle) {
-      const name = def.name?.name || this.nextAnonymousField();
-      this.setEntry(name, new TurtleFieldAST(this, def, name));
-      // or a newName RENAMES oldName statement
-    } else if (def instanceof RenameField) {
-      const oldValue = this.entry(def.oldName);
-      if (oldValue instanceof SpaceField) {
-        oldValue.rename(def.newName);
-        this.setEntry(def.newName, oldValue);
-        this.dropEntry(def.oldName);
+  addField(...defs: ExploreField[]): void {
+    for (const def of defs) {
+      // TODO express the "three fields kinds" in a typesafe way
+      // one of three kinds of fields are legal in an explore: expressions ...
+      const elseLog = def.log;
+      const elseType = def.elementType;
+      if (def instanceof ExprFieldDecl) {
+        const exprField = new ExpressionFieldFromAst(this, def);
+        this.setEntry(exprField.name, exprField);
+        // querry (turtle) fields
+      } else if (def instanceof TurtleDecl) {
+        const name = def.name;
+        this.setEntry(name, new QueryFieldAST(this, def, name));
+      } else if (def instanceof RenameField) {
+        const oldValue = this.entry(def.oldName);
+        if (oldValue instanceof SpaceField) {
+          oldValue.rename(def.newName);
+          this.setEntry(def.newName, oldValue);
+          this.dropEntry(def.oldName);
+        } else {
+          def.log(`Can't rename '${def.oldName}', no such field`);
+        }
+      } else if (def instanceof Join) {
+        const joining = def.structDef();
+        this.setEntry(def.name, new StructSpaceField(joining));
       } else {
-        throw new Error(`Can't rename '${def.oldName}', no such field`);
+        elseLog(
+          `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${elseType}'`
+        );
       }
-    } else if (def instanceof NameOnly) {
-      const ref = new FANSPaceField(def.oldName.name, this, {
-        as: def.newName,
-        filterList: def.filter.getFilterList(this),
-      });
-      this.setEntry(ref.name(), ref);
-    } else if (def instanceof Join) {
-      const joining = def.structDef();
-      this.setEntry(def.name.name, new StructSpaceField(joining));
-    } else if (def instanceof MalloyElement) {
-      def.log(
-        `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${
-          def.elementType
-        }'`
-      );
-    } else {
-      throw new Error(
-        `Error translating fields for '${this.outerName()}'` +
-          `: Expected and expression, query, or rename, got something else`
-      );
     }
   }
 
@@ -283,7 +271,7 @@ export class TranslationFieldSpace extends FieldSpace {
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceField) {
           joins.push([name, spaceEntry]);
-        } else if (spaceEntry instanceof TurtleField) {
+        } else if (spaceEntry instanceof QueryField) {
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
@@ -308,82 +296,72 @@ export class TranslationFieldSpace extends FieldSpace {
   }
 }
 
+type QuerySegType = "reduce" | "project" | "index";
 /**
  * Maintains the two namespaces (computation space and output space)
- * of a stage in a query pipeline.
+ * for a query segment
  */
-export abstract class PipeFieldSpace extends TranslationFieldSpace {
-  pipeHeadSpace: FieldSpace;
+export abstract class QueryFieldSpace extends NewFieldSpace {
+  abstract segType: QuerySegType;
+  astEl?: MalloyElement | undefined;
 
   constructor(readonly inputSpace: FieldSpace) {
     super(inputSpace.emptyStructDef());
-    this.pipeHeadSpace = inputSpace.headSpace();
   }
 
   /**
-   * For a pipeline in an explore, the "headSpace" of the first
-   * segment is the headSpace of the explore space, which is the
-   * explore space.
+   * Although this QueryFieldSpace is collecting definitions for the
+   * output space, expressions are all evaluated against the input space.
    *
-   * For a pipeline in a turtle, inside an explore, the headSpace
-   * of the turtle is the headSpace of the explore, which
-   * is the explore space.
-   *
-   * For a pipeline in a turtle which is in a turtle, the headSpace
-   * ALSO bubbles up and is the headspace of the explore.
-   * @returns FieldSpace -- The space to use to start pipelines in this space
-   */
-  headSpace(): FieldSpace {
-    return this.pipeHeadSpace;
-  }
-
-  /*
-   ** TODO -- Clean this up someday
-   **
-   ** The unclarity is that a PipeFieldSpace "has a" field space as input
-   ** the input, and "is a field space" for the pipe stage being
-   ** constructed. Expressions inside the space will be evaluated
-   ** in the inputspace.
-   **
-   ** What would be ideal is that the expressions inside the space
-   ** somehow evaluated correctly without this hack to field()
-   ** and structDef() which feel like signs I don't have the right abstractions
+   * I think this is probably a mistake, some external object should
+   * hold both the input and output spaces, but I haven't been able to
+   * refold my brain to see this properly yet.
    */
   findEntry(fieldPath: string): SpaceEntry | undefined {
     return this.inputSpace.findEntry(fieldPath);
   }
 
+  /**
+   * Another seperation of concerns problem. AST object containing the
+   * QueryDesc is currently making the decicions needed to create a
+   * StructDef, and it is a mistake to ever call this. Feels wrong.
+   */
   structDef(): model.StructDef {
-    // Only really know the structdef when we are in a pipe, and then
-    // that would be computed based on the input. ast.Query knows
-    // how to do that, and PipeFieldSpace provides queryFieldDefs()
-    // to make that possible. It is always an error to ask for this,
-    throw new Error("Can't get StructDef for pipe member");
+    throw new Error("INTERNAL ERROR: StructDef for pipe member requested");
   }
 
-  addMembers(members: CollectionMember[]): void {
+  addQueryItems(...qiList: QueryItem[]): void {
+    for (const qi of qiList) {
+      if (qi instanceof FieldName || qi instanceof NestReference) {
+        this.addReference(qi.name);
+      } else if (qi instanceof ExprFieldDecl) {
+        this.addField(qi);
+      } else if (qi instanceof NestDefinition) {
+        this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
+      } else {
+        throw new Error("INTERNAL ERROR: QueryFieldSpace unknown element");
+      }
+    }
+  }
+
+  addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        this.setEntry(member.name, new FANSPaceField(member.name, this));
-      }
-      if (member instanceof Wildcard) {
-        this.setEntry(member.text, new WildSpaceField(member.text));
+        this.addReference(member.name);
+      } else if (member instanceof Wildcard) {
+        this.setEntry(member.refString, new WildSpaceField(member.refString));
+      } else {
+        this.addField(member);
       }
     }
   }
 
-  addField(def: FieldDefinition): void {
-    if (
-      def instanceof ExpressionFieldDef ||
-      def instanceof Turtle ||
-      def instanceof NameOnly
-    ) {
-      super.addField(def);
-    } else if (def instanceof FieldReferences) {
-      this.addMembers(def.members);
-    } else {
-      def.log("Field type not allowed in a pipe segment");
-    }
+  addReference(ref: string): void {
+    this.setEntry(ref, new FANSPaceField(ref, this));
+  }
+
+  conContain(_qd: model.QueryFieldDef): boolean {
+    return true;
   }
 
   queryFieldDefs(): model.QueryFieldDef[] {
@@ -392,7 +370,11 @@ export abstract class PipeFieldSpace extends TranslationFieldSpace {
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.queryFieldDef();
         if (fieldQueryDef) {
-          fields.push(fieldQueryDef);
+          if (this.conContain(fieldQueryDef)) {
+            fields.push(fieldQueryDef);
+          } else {
+            this.log(`'${name}' not legal in ${this.segType}`);
+          }
         } else {
           throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
@@ -400,16 +382,65 @@ export abstract class PipeFieldSpace extends TranslationFieldSpace {
     }
     return fields;
   }
+
+  log(s: string): void {
+    if (this.astEl) {
+      this.astEl.log(s);
+    }
+  }
 }
 
-export class ReduceFieldSpace extends PipeFieldSpace {}
+export class ReduceFieldSpace extends QueryFieldSpace {
+  segType: QuerySegType = "reduce";
+}
 
-export class ProjectFieldSpace extends PipeFieldSpace {
-  addField(def: FieldDefinition): void {
-    if (def instanceof Wildcard) {
-      this.setEntry(def.text, new WildSpaceField(def.text));
-    } else {
-      super.addField(def);
+export class ProjectFieldSpace extends QueryFieldSpace {
+  segType: QuerySegType = "project";
+  inputStruct: model.StructDef;
+  constructor(inputFS: FieldSpace) {
+    super(inputFS);
+    this.inputStruct = inputFS.structDef();
+  }
+
+  conContain(qd: model.QueryFieldDef): boolean {
+    if (typeof qd !== "string") {
+      if (model.isFilteredAliasedName(qd)) {
+        return true;
+      }
+      if (qd.type === "turtle") {
+        this.log("Cannot nest queries in project");
+        return false;
+      }
+      if (qd.aggregate) {
+        this.log("Cannot add aggregate measures to project");
+        return false;
+      }
     }
+    return true;
+  }
+}
+
+export class IndexFieldSpace extends QueryFieldSpace {
+  segType: QuerySegType = "index";
+
+  indexSegment(exisitingFields?: model.QueryFieldDef[]): model.IndexSegment {
+    const seg: model.IndexSegment = {
+      type: "index",
+      fields: [],
+    };
+    const inIndex: Record<string, boolean> = {};
+    for (const [name, _] of this.entries()) {
+      inIndex[name] = true;
+      seg.fields.push(name);
+    }
+    if (exisitingFields) {
+      for (const exists of exisitingFields) {
+        if (typeof exists === "string" && !inIndex[exists]) {
+          seg.fields.push(exists);
+          inIndex[exists] = true;
+        }
+      }
+    }
+    return seg;
   }
 }

@@ -11,11 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { DataPointer, DataValue } from "../data_table";
+import { DataColumn } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
 
-export class HtmlLinkRenderer implements Renderer {
-  async render(data: DataValue, _ref: DataPointer): Promise<string> {
+export class HTMLLinkRenderer implements Renderer {
+  async render(data: DataColumn): Promise<string> {
     if (data === null) {
       return `⌀`;
     }

@@ -11,18 +11,18 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, StructDef } from "@malloy-lang/malloy";
+import { ModelDef, StructDef } from "@malloydata/malloy";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
 import { fStringEq, fYearEq } from "../test_utils";
 
 /** Flight Model */
 export const FLIGHTS_EXPLORE: StructDef = {
   type: "struct",
-  name: "lookerdata.liquor.flights",
+  name: "malloy-data.malloytest.flights",
   as: "flights",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   primaryKey: "id2",
   fields: [
     // Fields in the flights table.
@@ -63,7 +63,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // carriers
     {
       type: "struct",
-      name: "lookerdata.liquor.carriers",
+      name: "malloy-data.malloytest.carriers",
       as: "carriers",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -79,7 +79,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // aircraft
     {
       type: "struct",
-      name: "lookerdata.liquor.aircraft",
+      name: "malloy-data.malloytest.aircraft",
       as: "aircraft",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -133,7 +133,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         // subjoin aircraft models
         {
           type: "struct",
-          name: "lookerdata.liquor.aircraft_models",
+          name: "malloy-data.malloytest.aircraft_models",
           as: "aircraft_models",
           dialect: "standardsql",
           primaryKey: "aircraft_model_code",
@@ -182,7 +182,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // origin
     {
       type: "struct",
-      name: "lookerdata.liquor.airports",
+      name: "malloy-data.malloytest.airports",
       as: "origin",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -228,7 +228,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     // destination
     {
       type: "struct",
-      name: "lookerdata.liquor.airports",
+      name: "malloy-data.malloytest.airports",
       as: "destination",
       dialect: "standardsql",
       structSource: { type: "table" },
@@ -810,11 +810,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
 
 const tableAirports: StructDef = {
   type: "struct",
-  name: "lookerdata.liquor.airports",
+  name: "malloy-data.malloytest.airports",
   as: "table_airports",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   primaryKey: "code",
   fields: [
     { type: "number", name: "id", numberType: "integer" },
@@ -863,7 +863,7 @@ export const testModel: ModelDef = {
     "medicare_state_facts",
     // "aircraft",
   ],
-  structs: {
+  contents: {
     flights: FLIGHTS_EXPLORE,
     table_airports: tableAirports,
     medicare_test: medicareModel,

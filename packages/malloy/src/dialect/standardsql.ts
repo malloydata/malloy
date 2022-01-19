@@ -20,6 +20,7 @@ export class StandardSQLDialect extends Dialect {
   udfPrefix = "__udf";
   hasFinalStage = false;
   stringTypeName = "STRING";
+  divisionIsInteger = false;
 
   quoteTableName(tableName: string): string {
     return `\`${tableName}\``;
@@ -124,6 +125,18 @@ export class StandardSQLDialect extends Dialect {
     return `CREATE TEMPORARY FUNCTION ${id}(__param ANY TYPE) AS ((\n${indent(
       funcText
     )}));\n`;
+  }
+
+  sqlCreateTableAsSelect(tableName: string, sql: string): string {
+    return `
+CREATE TABLE IF NOT EXISTS \`${tableName}\`
+OPTIONS (
+    expiration_timestamp=TIMESTAMP_ADD(current_timestamp(),  INTERVAL 1 hour)
+)
+AS (
+${indent(sql)}
+);
+`;
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {

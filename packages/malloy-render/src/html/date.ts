@@ -11,30 +11,28 @@
  * GNU General Public License for more details.
  */
 
-import { DataPointer, DataValue } from "../data_table";
+import {
+  DataColumn,
+  DateTimeframe,
+  TimestampTimeframe,
+} from "@malloydata/malloy";
 import { Renderer } from "../renderer";
 import { timeToString } from "./utils";
 
-export class HtmlDateRenderer implements Renderer {
-  async render(data: DataValue, ref: DataPointer): Promise<string> {
-    const metadata = ref.getFieldDef();
-    if (metadata.type !== "date" && metadata.type !== "timestamp") {
+export class HTMLDateRenderer implements Renderer {
+  async render(data: DataColumn): Promise<string> {
+    if (!data.isDate() && !data.isTimestamp()) {
       return "Invalid field for date renderer";
     }
 
-    if (data === null) {
+    if (data.isNull()) {
       return "∅";
     }
 
-    if (!(data instanceof Object && "value" in data)) {
-      return "Invalid data for date/timestamp field.";
-    }
-
-    const typedData = data as { value: string };
-
     const timeframe =
-      metadata.timeframe || (metadata.type === "timestamp" ? "second" : "date");
+      data.field.timeframe ||
+      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Date);
 
-    return timeToString(new Date(typedData.value), timeframe);
+    return timeToString(data.value, timeframe);
   }
 }

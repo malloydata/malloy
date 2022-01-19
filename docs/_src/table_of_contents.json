@@ -21,7 +21,7 @@
           "link": "/language/overview.md"
         },
         {
-          "title": "Basics",
+          "title": "Malloy Quickstart",
           "link": "/language/basic.md"
         },
         {
@@ -29,8 +29,20 @@
           "link": "/language/statement.md"
         },
         {
+          "title": "Explores",
+          "link": "/language/explore.md"
+        },
+        {
           "title": "Queries",
           "link": "/language/query.md"
+        },
+        {
+          "title": "Fields",
+          "link": "/language/fields.md"
+        },
+        {
+          "title": "Types",
+          "link": "/language/types.md"
         },
         {
           "title": "Expressions",
@@ -41,10 +53,6 @@
           "link": "/language/order_by.md"
         },
         {
-          "title": "Explore Definition",
-          "link": "/language/explore.md"
-        },
-        {
           "title": "Joins",
           "link": "/language/join.md"
         },
@@ -53,24 +61,16 @@
           "link": "/language/filters.md"
         },
         {
-          "title": "Filter Syntax",
-          "link": "/language/filter_expressions.md"
-        },
-        {
-          "title": "Time Ranges",
-          "link": "/language/time-ranges.md"
-        },
-        {
-          "title": "Nesting",
+          "title": "Nested Queries",
           "link": "/language/nesting.md"
+        },
+        {
+          "title": "Aggregates",
+          "link": "/language/aggregates.md"
         },
         {
           "title": "Imports and Exports",
           "link": "/language/imports.md"
-        },
-        {
-          "title": "Apply Operator",
-          "link": "/language/apply.md"
         }
       ]
     },
@@ -104,8 +104,12 @@
       ]
     },
     {
-      "title": "Visualizations",
+      "title": "Rendering Results",
       "items": [
+        {
+          "title": "Tables and Dashboards",
+          "link": "/visualizations/dashboards.md"
+        },
         {
           "title": "Bar Charts",
           "link": "/visualizations/bar_charts.md"

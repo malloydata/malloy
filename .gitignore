@@ -16,6 +16,13 @@ packages/**/tsconfig.tsbuildinfo
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr
+demo/**/build
+demo/**/dist
+demo/**/node_modules
+demo/malloy/src/lang/lib
+demo/**/tsconfig.tsbuildinfo
+demo/**/package-lock.json
+demo/**/.eslintcache
 /node_modules
 
 # misc

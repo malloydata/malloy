@@ -182,6 +182,20 @@ export interface FieldAtomicDef
   type: AtomicFieldType;
 }
 
+// this field definition represents something in the database.
+export function FieldIsIntrinsic(f: FieldDef): boolean {
+  if (isAtomicFieldType(f.type) && !hasExpression(f)) {
+    return true;
+  } else if (
+    f.type === "struct" &&
+    (f.structSource.type === "inline" || f.structSource.type === "nested")
+  ) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 /** Scalar String Field */
 export interface FieldStringDef extends FieldAtomicDef {
   type: "string";
@@ -331,7 +345,7 @@ export interface Query extends Pipeline, Filtered {
   structRef: StructRef;
 }
 
-export type NamedQuery = Query & AliasedName;
+export type NamedQuery = Query & NamedObject;
 
 export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
 
@@ -348,6 +362,11 @@ export interface ProjectSegment extends QuerySegment {
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
   return (pe as ProjectSegment).type === "project";
 }
+
+export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
+  return pe.type === "project" || pe.type === "reduce";
+}
+
 export interface IndexSegment extends Filtered {
   type: "index";
   fields: string[];
@@ -400,7 +419,7 @@ export type StructRelationship =
 
 /** where does the struct come from? */
 export type StructSource =
-  | { type: "table" }
+  | { type: "table"; tablePath?: string }
   | { type: "nested" }
   | { type: "inline" }
   | { type: "query"; query: Query }
@@ -489,25 +508,19 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedMalloyObject = StructDef;
+export type NamedModelObject = StructDef | NamedQuery;
 
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
   exports: string[];
-  structs: Record<string, NamedMalloyObject>;
+  contents: Record<string, NamedModelObject>;
 }
 
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
 
-export type QueryScalar =
-  | string
-  | boolean
-  | number
-  | { value: string }
-  | { type: "Buffer"; data: number[] }
-  | null;
+export type QueryScalar = string | boolean | number | Date | Buffer | null;
 
 /** One value in one column of returned data. */
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;

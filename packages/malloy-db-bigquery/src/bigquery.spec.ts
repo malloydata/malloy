@@ -1,17 +1,27 @@
-import { Malloy } from "@malloy-lang/malloy";
+import * as malloy from "@malloydata/malloy";
 import { BigQueryConnection } from "./bigquery_connection";
 import { BigQuery as BigQuerySDK, TableMetadata } from "@google-cloud/bigquery";
+import * as util from "util";
+import * as fs from "fs";
 
 describe("db:BigQuery", () => {
   let bq: BigQueryConnection;
+  let runtime: malloy.Runtime;
+
   beforeAll(() => {
     bq = new BigQueryConnection("test");
-    Malloy.db = bq;
+    const files = {
+      readURL: async (url: malloy.URL) => {
+        const filePath = url.toString().replace(/^file:\/\//, "");
+        return await util.promisify(fs.readFile)(filePath, "utf8");
+      },
+    };
+    runtime = new malloy.Runtime(files, bq);
   });
 
   it("runs a SQL query", async () => {
-    const res = await bq.runQuery(`SELECT 1 as t`);
-    expect(res[0]["t"]).toBe(1);
+    const res = await bq.runSQL(`SELECT 1 as t`);
+    expect(res.rows[0]["t"]).toBe(1);
   });
 
   it("costs a SQL query", async () => {
@@ -33,23 +43,23 @@ describe("db:BigQuery", () => {
   it.todo("gets table structdefs");
 
   it("runs a Malloy query", async () => {
-    const malloy = new Malloy();
-    await malloy.parseAndLoadModel(
-      "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
-    );
-    const sql = await malloy.computeSql(
-      "explore carriers | reduce carrier_count"
-    );
-    const res = await bq.runMalloyQuery(sql);
+    const sql = await runtime
+      .loadModel(
+        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+      )
+      .loadQuery("query: carriers -> { aggregate: carrier_count }")
+      .getSQL();
+    const res = await bq.runSQL(sql);
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
   it("streams a Malloy query for download", async () => {
-    const malloy = new Malloy();
-    await malloy.parseAndLoadModel(
-      "define carriers is (explore 'malloy-data.faa.carriers'\ncarrier_count is count());"
-    );
-    const sql = await malloy.computeSql("explore carriers | reduce name");
+    const sql = await runtime
+      .loadModel(
+        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+      )
+      .loadQuery("query: carriers -> { group_by: name }")
+      .getSQL();
     const res = await bq.downloadMalloyQuery(sql);
 
     return new Promise((resolve) => {

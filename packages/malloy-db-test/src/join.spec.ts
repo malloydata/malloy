@@ -12,154 +12,226 @@
  */
 /* eslint-disable no-console */
 
-import { Malloy, QueryModel } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-
-Malloy.db = new BigQueryConnection("test");
+import * as malloy from "@malloydata/malloy";
+import { RuntimeList } from "./runtimes";
 
 const joinModelText = `
-export define aircraft_models is ('lookerdata.liquor.aircraft_models'
-  primary key aircraft_model_code
-  model_count is count(*),
-  manufacturer_models is (reduce
-    manufacturer,
-    num_models is count(*)
-  ),
-  manufacturer_seats is (reduce
-    manufacturer,
-    total_seats is seats.sum()
-  )
-);
+  explore: aircraft_models is table('malloytest.aircraft_models') {
+    primary_key: aircraft_model_code
+    measure: model_count is count(*)
+    query: manufacturer_models is {
+      group_by: manufacturer
+      aggregate: num_models is count(*)
+    }
+    query: manufacturer_seats is {
+      group_by: manufacturer
+      aggregate: total_seats is seats.sum()
+    }
+  }
 
-export define funnel is (
-  (aircraft_models | manufacturer_models)
-  joins seats is (aircraft_models | manufacturer_seats)
-      on manufacturer
-);
+  explore: aircraft is table('malloytest.aircraft'){
+    primary_key: tail_num
+    measure: aircraft_count is count(*)
+  }
 
-export define pipe is (aircraft_models
-  | reduce manufacturer, f is count(*)
-  | reduce f_sum is f.sum());
-
-export define aircraft is ('lookerdata.liquor.aircraft'
-  primary key tail_num
-  aircraft_count is count(*),
-)
+  explore: funnel is from(aircraft_models->manufacturer_models) {
+    join: seats is from(aircraft_models->manufacturer_seats)
+        on manufacturer
+  }
 `;
 
-describe("expression tests", () => {
-  let model: QueryModel;
-  beforeAll(async () => {
-    model = new QueryModel(undefined);
-    await model.parseModel(joinModelText);
-  });
+const runtimes = new RuntimeList([
+  "bigquery", //
+  // "postgres", //
+]);
 
-  it("model post join", async () => {
-    const result = await model.runQuery(`
-      explore aircraft joins aircraft_models on aircraft_model_code | reduce
-        aircraft_count,
-        aircraft_models.model_count
-    `);
-    expect(result.result[0].model_count).toBe(46953);
-  });
+afterAll(async () => {
+  await runtimes.closeAll();
+});
 
-  it("model: join fact table query", async () => {
-    const result = await model.runQuery(`
-      explore aircraft_models
-        joins am_facts is (
-          aircraft_models  | reduce
-            m is manufacturer,
-            num_models is count(*)
-      )  on manufacturer | project
-        manufacturer,
-        am_facts.num_models
-        order by 2 desc
-        limit 1
-    `);
-    expect(result.result[0].num_models).toBe(1147);
-  });
+const models = new Map<string, malloy.ModelMaterializer>();
+runtimes.runtimeMap.forEach((runtime, key) => {
+  models.set(key, runtime.loadModel(joinModelText));
+});
 
-  it("model: explore based on query", async () => {
-    const result = await model.runQuery(`
-      explore (
-            aircraft_models  | reduce
-            m is manufacturer,
-            num_models is count(*)
-      )  | project
-        m,
-        num_models
-        order by 2 desc
-        limit 1
-    `);
-    expect(result.result[0].num_models).toBe(1147);
-  });
+describe("join expression tests", () => {
+  models.forEach((model, database) => {
+    it(`model explore refine join - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      explore: a2 is aircraft {
+        join: aircraft_models on aircraft_model_code
+      }
 
-  it("model: funnel - merge two queries", async () => {
-    const result = await model.runQuery(`
-      explore (
-          aircraft_models  | reduce
-            m is manufacturer,
-            num_models is count(*)
+      query: a2 -> {
+        aggregate: [
+          aircraft_count
+          aircraft_models.model_count
+        ]
+      }
+      `
         )
-        joins seats is (
-          aircraft_models  | reduce
-          m is manufacturer,
-          total_seats is seats.sum()
-        ) on m
-      | project
-        m,
-        num_models,
-        seats.total_seats,
-        order by 2 desc
-        limit 1
-    `);
-    expect(result.result[0].num_models).toBe(1147);
-    expect(result.result[0].total_seats).toBe(252771);
-  });
+        .run();
+      expect(result.data.value[0].model_count).toBe(1416);
+    });
 
-  it("model: modeled funnel", async () => {
-    const result = await model.runQuery(`
-      explore (aircraft_models | manufacturer_models)
-        joins seats is (aircraft_models | manufacturer_seats)
+    it(`model explore refine in query join - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      query: aircraft {
+        join: aircraft_models on aircraft_model_code
+      } -> {
+        aggregate: [
+          aircraft_count
+          aircraft_models.model_count
+        ]
+      }
+      `
+        )
+        .run();
+      expect(result.data.value[0].model_count).toBe(1416);
+    });
+
+    it(`model: join fact table query - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      query: aircraft_models {
+        join: am_facts is from(
+          aircraft_models->{
+            group_by: m is manufacturer
+            aggregate: num_models is count(*)
+          }) on manufacturer
+      } -> {
+        project: [
+          manufacturer
+          am_facts.num_models
+        ]
+        order_by: 2 desc
+        limit: 1
+      }
+    `
+        )
+        .run();
+      expect(result.data.value[0].num_models).toBe(1147);
+    });
+
+    it(`model: explore based on query - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      query:
+          aircraft_models-> {
+            group_by: m is manufacturer
+            aggregate: num_models is count(*)
+          }
+      -> {
+        project: [
+          m
+          num_models
+        ]
+        order_by: 2 desc
+        limit: 1
+      }
+        `
+        )
+        .run();
+      expect(result.data.value[0].num_models).toBe(1147);
+    });
+
+    it(`model: funnel - merge two queries - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+          query: from(aircraft_models->{
+            group_by: m is manufacturer
+            aggregate: num_models is count(*)
+            }){
+            join: seats is from(
+              aircraft_models->{
+                group_by: m is manufacturer
+                aggregate: total_seats is seats.sum()
+              }
+            ) on m
+          }
+          -> {
+            project: [
+              m
+              num_models
+              seats.total_seats
+            ]
+            order_by: 2 desc
+            limit: 1
+          }
+        `
+        )
+        .run();
+      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0].total_seats).toBe(252771);
+    });
+
+    it(`model: modeled funnel - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      explore: foo is from(aircraft_models-> manufacturer_models){
+        join: seats is from(aircraft_models->manufacturer_seats)
           on manufacturer
-      | project
-        manufacturer,
-        num_models,
-        seats.total_seats,
-        order by 2 desc
-        limit 1
-    `);
-    expect(result.result[0].num_models).toBe(1147);
-    expect(result.result[0].total_seats).toBe(252771);
-  });
+      }
+      query: foo-> {
+        project: [
+          manufacturer,
+          num_models,
+          seats.total_seats
+        ]
+        order_by: 2 desc
+        limit: 1
+      }
+        `
+        )
+        .run();
+      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0].total_seats).toBe(252771);
+    });
 
-  it("model: modeled funnel", async () => {
-    const result = await model.runQuery(`
-      explore funnel
-      | project
-        manufacturer,
-        num_models,
-        seats.total_seats,
-        order by 2 desc
-        limit 1
-    `);
-    expect(result.result[0].num_models).toBe(1147);
-    expect(result.result[0].total_seats).toBe(252771);
-  });
+    it(`model: modeled funnel2 - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      query: funnel->{
+        project: [
+         manufacturer
+          num_models
+          seats.total_seats
+        ]
+        order_by: 2 desc
+        limit: 1
+      }
+        `
+        )
+        .run();
+      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0].total_seats).toBe(252771);
+    });
 
-  it("model: double_pipe", async () => {
-    const result = await model.runQuery(`
-      explore
-       (aircraft_models | reduce manufacturer, f is count(*) | reduce f_sum is f.sum())
-      | project f_sum2 is f_sum+1
-    `);
-    expect(result.result[0].f_sum2).toBe(60462);
-  });
-
-  it("model: double_pipe2", async () => {
-    const result = await model.runQuery(`
-      explore pipe | project f_sum2 is f_sum+1
-    `);
-    expect(result.result[0].f_sum2).toBe(60462);
+    it(`model: double_pipe - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+      query: aircraft_models->{
+        group_by: manufacturer
+        aggregate: f is count(*)
+      }->{
+        aggregate: f_sum is f.sum()
+      }->{
+        project: f_sum2 is f_sum+1
+      }
+    `
+        )
+        .run();
+      expect(result.data.value[0].f_sum2).toBe(60462);
+    });
   });
 });

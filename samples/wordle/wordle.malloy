@@ -1,0 +1,78 @@
+explore: words is table('malloy-data.malloytest.words2'){
+
+  where: is_five_letters and ends_in_s_or_ed
+
+  dimension: is_five_letters is word ~ r'^[a-z]....$'
+  dimension: ends_in_s_or_ed is word !~ r'(s|ed)$'
+
+  measure: word_count is count()
+
+  query: five_letter_count is {
+    aggregate: five_letter_count is word_count
+  }
+
+  query: common_letters is {
+    group_by: letters.letter
+    aggregate: [
+      word_count
+      use_count is letters.count()
+    ]
+  }
+
+  query: common_letters_and_positions is {
+    group_by: letters.letter
+    aggregate: [
+      word_count
+      use_count is letters.count()
+    ]
+    nest: positition_order_bar_chart is {
+      group_by: letters.position
+      aggregate: word_count
+    }
+  }
+
+  query: letter_position is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+  }
+
+
+  query: letter_position_and_words is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+    nest: words_list is {
+      group_by: word
+    }
+  }
+
+  query: word_score is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+    nest: words is {
+      group_by: word
+    }
+  }
+  -> {
+    group_by: words.word
+    aggregate: score is word_count.sum()
+  }
+}
+
+-- Example Guess 'roast'
+--  clues  (o- green, a - yellow, rst - gray)
+query:  words->word_score{
+  where:
+    1=1
+    and word ~ r'[a]'       -- YELLOW: has these characters
+    and word ~ r'.o[^a]..'    -- GREEN/YELLOW: charaters in these spots/not spots
+    and not word ~ r'[rst]'   -- GRAY doesn't have these characters
+}

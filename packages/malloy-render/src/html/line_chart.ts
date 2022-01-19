@@ -11,46 +11,41 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, QueryValue } from "@malloy-lang/malloy";
-import { HtmlCartesianChartRenderer } from "./cartesian_chart";
+import { DataColumn, Field } from "@malloydata/malloy";
+import { HTMLCartesianChartRenderer } from "./cartesian_chart";
 
-export class HtmlLineChartRenderer extends HtmlCartesianChartRenderer {
+export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): "line" {
     return "line";
   }
 
   getDataType(
-    field: FieldDef
+    field: Field
   ): "temporal" | "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp()) {
         return "temporal";
-      case "string":
+      } else if (field.isString()) {
         return "nominal";
-      case "number":
+      } else if (field.isNumber()) {
         return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+      }
     }
+    throw new Error("Invalid field type for line chart.");
   }
 
-  getDataValue(
-    value: QueryValue,
-    field: FieldDef
-  ): Date | string | number | null {
-    switch (field.type) {
-      case "timestamp":
-      case "date":
-        return value === null
-          ? null
-          : new Date((value as { value: string }).value);
-      case "number":
-        return value as number;
-      case "string":
-        return value as string;
-      default:
-        throw new Error("Invalid field type for bar chart.");
+  getDataValue(data: DataColumn): Date | string | number | null {
+    if (data.isNull()) {
+      return null;
+    } else if (
+      data.isTimestamp() ||
+      data.isDate() ||
+      data.isNumber() ||
+      data.isString()
+    ) {
+      return data.value;
+    } else {
+      throw new Error("Invalid field type for line chart.");
     }
   }
 }

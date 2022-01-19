@@ -11,11 +11,10 @@
  * GNU General Public License for more details.
  */
 
+import * as crypto from "crypto";
 import { cloneDeep, upperCase } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
-import { MalloyTranslator } from "../lang/parse-malloy";
-import { Malloy } from "../malloy";
 import {
   FieldDateDef,
   FieldDef,
@@ -29,7 +28,6 @@ import {
   StructDef,
   StructRef,
   OrderBy,
-  QueryResult,
   ResultMetadataDef,
   FieldAtomicDef,
   Expr,
@@ -58,105 +56,96 @@ import {
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
+import { parseTableURL } from "../malloy";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-let queryNumber = 0;
-async function translatorFor(src: string): Promise<MalloyTranslator> {
-  const queryURI = `internal://query/${queryNumber}`;
-  queryNumber += 1;
-  const parse = new MalloyTranslator(queryURI, { URLs: { [queryURI]: src } });
-  const needThese = parse.unresolved();
-  if (needThese?.tables) {
-    const tables = await Malloy.db.getSchemaForMissingTables(needThese.tables);
-    parse.update({ tables });
-  }
-  return parse;
-}
-
-// // probably a dialect function at some point.
-// function quoteTableName(name: string): string {
-//   return `\`${name}\``;
-// }
-
 class StageWriter {
-  withs = new Map<string, string>();
-  udfs = new Map<string, string>();
+  withs: string[] = [];
+  udfs: string[] = [];
+  pdts: string[] = [];
+  stagePrefix = "__stage";
+  parent: StageWriter | undefined;
 
-  addStage(name: string, sql: string): string {
-    const id = `__${name}${this.withs.size}`;
-    this.withs.set(id, sql);
-    return id;
+  constructor(parent: StageWriter | undefined) {
+    this.parent = parent;
+  }
+
+  getName(id: number) {
+    return `${this.stagePrefix}${id}`;
+  }
+
+  root(): StageWriter {
+    if (this.parent === undefined) {
+      return this;
+    } else {
+      return this.parent.root();
+    }
+  }
+
+  addStage(sql: string): string {
+    this.withs.push(sql);
+    return this.getName(this.withs.length - 1);
   }
 
   addUDF(stageWriter: StageWriter, dialect: Dialect): string {
     // eslint-disable-next-line prefer-const
-    let { sql, lastStageName } = stageWriter.combineStages(undefined);
+    let { sql, lastStageName } = stageWriter.combineStages(true);
     if (lastStageName === undefined) {
       throw new Error("Internal Error: no stage to combine");
     }
     sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
 
-    const id = `${dialect.udfPrefix}${this.udfs.size}`;
+    const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
     sql = dialect.sqlCreateFunction(id, sql);
-    this.udfs.set(id, sql);
+    this.root().udfs.push(sql);
     return id;
   }
 
-  combineStages(stages: string[] | undefined): {
+  addPDT(baseName: string, dialect: Dialect): string {
+    const sql =
+      this.combineStages(false).sql + this.withs[this.withs.length - 1];
+    const tableName =
+      "scratch." +
+      baseName +
+      crypto.createHash("md5").update(sql).digest("hex");
+    this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
+    return tableName;
+  }
+
+  // combine all the stages except the last one into a WITH statement
+  //  return SQL and the last stage name
+  combineStages(includeLastStage: boolean): {
     sql: string;
     lastStageName: string | undefined;
   } {
-    let lastStageName;
-    if (!stages) {
-      stages = Array.from(this.withs.keys());
-    }
+    let lastStageName = this.getName(0);
     let prefix = `WITH `;
     let w = "";
-    for (const name of stages) {
-      const sql = this.withs.get(name);
+    for (let i = 0; i < this.withs.length - (includeLastStage ? 0 : 1); i++) {
+      const sql = this.withs[i];
+      lastStageName = this.getName(i);
       if (sql === undefined) {
-        throw new Error(`Expected sql WITH to be present for stage ${name}.`);
+        throw new Error(
+          `Expected sql WITH to be present for stage ${lastStageName}.`
+        );
       }
-      w += `${prefix}${name} AS (\n${indent(sql)})\n`;
+      w += `${prefix}${lastStageName} AS (\n${indent(sql)})\n`;
       prefix = ", ";
-      lastStageName = name;
     }
     return { sql: w, lastStageName };
   }
 
   /** emit the SQL for all the stages.  */
   generateSQLStages(): string {
-    const udfs = Array.from(this.udfs.values()).join(`\n`);
-    const stages = Array.from(this.withs.keys());
-    const lastStage = stages.pop();
-    const sql = this.combineStages(stages).sql;
-    if (lastStage) {
-      return udfs + sql + this.withs.get(lastStage);
-    } else {
+    const lastStageNum = this.withs.length - 1;
+    if (lastStageNum < 0) {
       throw new Error("No SQL generated");
     }
-  }
-
-  /** emit the SQL for all the stages.  */
-  generateSQLStagesAsUDF(): string {
-    let prefix = `WITH `;
-    let w = "";
-    const stages = Array.from(this.withs.keys());
-    const lastStage = stages.pop();
-    for (const name of stages) {
-      const sql = this.withs.get(name);
-      if (sql === undefined) {
-        throw new Error(`Expected sql WITH to be present for stage ${name}.`);
-      }
-      w += `${prefix}${name} AS (\n${indent(sql)})\n`;
-      prefix = ", ";
-    }
-    if (lastStage) {
-      return w + this.withs.get(lastStage);
-    } else {
-      throw new Error("No SQL generated");
-    }
+    const udfs = this.udfs.join(`\n`);
+    const pdts = this.pdts.join(`\n`);
+    const sql = this.combineStages(false).sql;
+    return udfs + pdts + sql + this.withs[lastStageNum];
   }
 }
 
@@ -557,6 +546,23 @@ class QueryFieldString extends QueryAtomicField {}
 class QueryFieldNumber extends QueryAtomicField {}
 class QueryFieldBoolean extends QueryAtomicField {}
 
+// in a query a struct can be referenced.  The struct will
+//  emit the primary key field in the actual result set and
+//  will include the StructDef as a foreign key join in the output
+//  StructDef.
+class QueryFieldStruct extends QueryAtomicField {
+  getName() {
+    return getIdentifier(this.fieldDef);
+  }
+
+  getAsJoinedStructDef(foreignKeyName: string): StructDef {
+    return {
+      ...this.parent.fieldDef,
+      structRelationship: { type: "foreignKey", foreignKey: foreignKeyName },
+    };
+  }
+}
+
 const timeframeBQMap = {
   hour_of_day: "HOUR",
   day_of_month: "DAY",
@@ -671,7 +677,7 @@ function sqlSumDistinct(
   const precision = 9;
   const uniqueInt = dialect.sqlSumDistinctHashedKey(sqlDistintKey);
   const multiplier = 10 ** (precision - NUMERIC_DECIMAL_PRECISION);
-  const sumSql = `
+  const sumSQL = `
   (
     SUM(DISTINCT
       (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS NUMERIC) +
@@ -680,7 +686,7 @@ function sqlSumDistinct(
     -
      SUM(DISTINCT ${uniqueInt})
   )`;
-  let ret = `(${sumSql}/(${multiplier}*1.0))`;
+  let ret = `(${sumSQL}/(${multiplier}*1.0))`;
   ret = `CAST(${ret} as ${dialect.defaultNumberType})`;
   return ret;
 }
@@ -693,14 +699,16 @@ type FieldUsage =
   | { type: "where" }
   | { type: "dependant" };
 
+type FieldInstanceType = "field" | "query";
+
 interface FieldInstance {
-  type: string;
+  type: FieldInstanceType;
   groupSet: number;
   root(): FieldInstanceResultRoot;
 }
 
 class FieldInstanceField implements FieldInstance {
-  type = "field";
+  type: FieldInstanceType = "field";
   f: QueryField;
   // the output index of this field (1 based)
   fieldUsage: FieldUsage;
@@ -727,7 +735,7 @@ class FieldInstanceField implements FieldInstance {
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
 
 class FieldInstanceResult implements FieldInstance {
-  type = "struct";
+  type: FieldInstanceType = "query";
   allFields = new Map<string, FieldInstance>();
   groupSet = 0;
   depth = 0;
@@ -747,7 +755,7 @@ class FieldInstanceResult implements FieldInstance {
   addField(as: string, field: QueryField, usage: FieldUsage) {
     let fi;
     if ((fi = this.allFields.get(as))) {
-      if (fi.type === "struct") {
+      if (fi.type === "query") {
         throw new Error(
           `Redefinition of field ${field.fieldDef.name} as struct`
         );
@@ -816,7 +824,7 @@ class FieldInstanceResult implements FieldInstance {
     let isComplex = false;
     let children: number[] = [this.groupSet];
     for (const [_name, fi] of this.allFields) {
-      if (fi.type === "struct") {
+      if (fi.type === "query") {
         const fir = fi as FieldInstanceResult;
         isComplex = true;
         if (fir.firstSegment.type === "reduce") {
@@ -1201,14 +1209,22 @@ class QueryQuery extends QueryField {
     let field: QuerySomething;
     // if it is a string
     if (typeof f === "string") {
-      field = this.parent.getFieldByName(f);
+      field = this.parent.getQueryFieldByName(f);
     } else if ("type" in f) {
       field = this.parent.makeQueryField(f);
     }
     // or FilteredAliasedName or a hacked timestamp field.
     else if ("name" in f && "as" in f) {
-      as = f.as;
-      field = this.parent.getFieldByName(f.name);
+      field = this.parent.getQueryFieldByName(f.name);
+      // QueryFieldStructs return new names...
+      as = field.fieldDef.as || f.as;
+
+      if (field instanceof QueryFieldStruct) {
+        throw new Error(
+          "Syntax currently disallowed. Semantics up for discussion"
+        );
+      }
+
       // Types of aliased fields.
       // turtles
       // Timestamps and Dates (are just fine to leave as is).
@@ -1405,7 +1421,6 @@ class QueryQuery extends QueryField {
           resultIndex,
           type: "result",
         });
-        // LTNOTE: There is no common parent for FieldScalarDef and FieldAggregateDef
         this.addDependancies(resultStruct, field);
 
         if (isAggregateField(field)) {
@@ -1415,14 +1430,25 @@ class QueryQuery extends QueryField {
             );
           }
         }
-      } else if (
-        this.firstSegment.type === "project" &&
-        field instanceof QueryStruct
-      ) {
-        // TODO lloyd refactor or comment why we do nothing here
-      } else {
-        throw new Error(`'${as}' cannot be used as in this way.`);
+        // } else if (field instanceof QueryStruct) {
+        //   // this could probably be optimized.  We are adding the primary key of the joined structure
+        //   //  instead of the foreignKey.  We have to do this in at least the INNER join case
+        //   //  so i'm just going to let the SQL database do the optimization (which is pretty rudimentary)
+        //   const pkFieldDef = field.getAsQueryField();
+        //   resultStruct.addField(as, pkFieldDef, {
+        //     resultIndex,
+        //     type: "result",
+        //   });
+        //   resultStruct.addStructToJoin(field, false);
       }
+      // else if (
+      //   this.firstSegment.type === "project" &&
+      //   field instanceof QueryStruct
+      // ) {
+      //   // TODO lloyd refactor or comment why we do nothing here
+      // } else {
+      //   throw new Error(`'${as}' cannot be used as in this way.`);
+      // }
       resultIndex++;
     }
     this.expandFilters(resultStruct);
@@ -1548,7 +1574,7 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceResult) {
         const { structDef } = this.generateTurtlePipelineSQL(
           fi,
-          new StageWriter()
+          new StageWriter(undefined)
         );
 
         // LTNOTE: This is probably broken now.  Need to look at the last stage
@@ -1563,6 +1589,9 @@ class QueryQuery extends QueryField {
         fields.push(structDef);
       } else if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
+          if (fi.f instanceof QueryFieldStruct) {
+            fields.push(fi.f.getAsJoinedStructDef(name));
+          }
           // if there is only one dimension, it is the primaryKey
           //  if there are more, primaryKey is undefined.
           if (isScalarField(fi.f)) {
@@ -1685,9 +1714,9 @@ class QueryQuery extends QueryField {
             `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
           );
         }
-        const fkSql = fkDim.generateExpression(this.rootResult);
-        const pkSql = pkDim.generateExpression(this.rootResult);
-        onCondition = `${fkSql} = ${pkSql}`;
+        const fkSQL = fkDim.generateExpression(this.rootResult);
+        const pkSQL = pkDim.generateExpression(this.rootResult);
+        onCondition = `${fkSQL} = ${pkSQL}`;
       } else {
         // type == "conditionOn"
         onCondition = new QueryFieldBoolean(
@@ -1731,13 +1760,18 @@ class QueryQuery extends QueryField {
         return s;
       }
     } else if (structRelationship.type === "nested") {
-      let prefix = "";
-      if (qs.parent) {
-        prefix = qs.parent.getIdentifier() + ".";
+      if (qs.parent === undefined || ji.parent === undefined) {
+        throw new Error("Internal Error, nested structure with no parent.");
       }
+      const fieldExpression = this.parent.dialect.sqlFieldReference(
+        qs.parent.getIdentifier(),
+        structRelationship.field as string,
+        "struct",
+        qs.parent.fieldDef.structRelationship.type === "nested"
+      );
       // we need to generate primary key.  If parent has a primary key combine
       s += `${this.parent.dialect.sqlUnnestAlias(
-        `${prefix}${structRelationship.field}`,
+        fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey
@@ -1857,7 +1891,7 @@ class QueryQuery extends QueryField {
     if (this.firstSegment.limit) {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
-    this.resultStage = stageWriter.addStage("stage", s);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -1926,7 +1960,7 @@ class QueryQuery extends QueryField {
   generateSQLWhereChildren(resultStruct: FieldInstanceResult): AndChain {
     const wheres = new AndChain();
     for (const [, field] of resultStruct.allFields) {
-      if (field.type === "struct") {
+      if (field.type === "query") {
         const fir = field as FieldInstanceResult;
         const turtleWhere = this.generateSQLFilters(fir, "where");
         if (turtleWhere.present()) {
@@ -1984,7 +2018,6 @@ class QueryQuery extends QueryField {
     }
     if (resultsWithHaving.length > 0) {
       lastStageName = stageWriter.addStage(
-        "stage",
         `SELECT\n  *,\n  ${fields.join(",\n  ")} \nFROM ${lastStageName}`
       );
       const havings = new AndChain();
@@ -1996,7 +2029,6 @@ class QueryQuery extends QueryField {
         );
       }
       lastStageName = stageWriter.addStage(
-        "stage",
         `SELECT *\nFROM ${lastStageName}\nWHERE NOT (${havings.sqlOr()})`
       );
     }
@@ -2027,7 +2059,7 @@ class QueryQuery extends QueryField {
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
 
     // generate the stage
-    const resultStage = stageWriter.addStage("stage", s);
+    const resultStage = stageWriter.addStage(s);
 
     // generate stages for havings and limits
     this.resultStage = this.generateSQLHavingLimit(stageWriter, resultStage);
@@ -2105,7 +2137,7 @@ class QueryQuery extends QueryField {
     if (f.dimensionIndexes.length > 0) {
       s += `GROUP BY ${f.dimensionIndexes.join(",")}\n`;
     }
-    this.resultStage = stageWriter.addStage("stage", s);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -2162,7 +2194,7 @@ class QueryQuery extends QueryField {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
 
-    this.resultStage = stageWriter.addStage("stage", s);
+    this.resultStage = stageWriter.addStage(s);
     return this.resultStage;
   }
 
@@ -2176,7 +2208,7 @@ class QueryQuery extends QueryField {
     const limit: number | undefined = resultStruct.firstSegment.limit;
 
     // If the turtle is a pipeline, generate a UDF to compute it.
-    const newStageWriter = new StageWriter();
+    const newStageWriter = new StageWriter(stageWriter);
     const { hasPipeline } = this.generateTurtlePipelineSQL(
       resultStruct,
       newStageWriter
@@ -2187,7 +2219,7 @@ class QueryQuery extends QueryField {
     }
 
     // calculate the ordering.
-    const obSql = [];
+    const obSQL = [];
     let orderingField;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
@@ -2202,13 +2234,13 @@ class QueryQuery extends QueryField {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
       if (resultStruct.firstSegment.type === "reduce") {
-        obSql.push(
+        obSQL.push(
           ` ${orderingField.name}__${resultStruct.groupSet} ${
             ordering.dir || "ASC"
           }`
         );
       } else if (resultStruct.firstSegment.type === "project") {
-        obSql.push(
+        obSQL.push(
           ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
             ordering.dir || "ASC"
           }`
@@ -2216,8 +2248,8 @@ class QueryQuery extends QueryField {
       }
     }
 
-    if (obSql.length > 0) {
-      orderBy = ` ORDER BY ${obSql.join(",")}`;
+    if (obSQL.length > 0) {
+      orderBy = ` ORDER BY ${obSQL.join(",")}`;
     }
 
     for (const [name, field] of resultStruct.allFields) {
@@ -2502,9 +2534,8 @@ class QueryQueryIndex extends QueryQuery {
       s += `LIMIT ${this.firstSegment.limit}\n`;
     }
     // console.log(s);
-    const resultStage = stageWriter.addStage("stage", s);
+    const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
-      "stage",
       `SELECT
   field_name,
   field_type,
@@ -2649,6 +2680,34 @@ class QueryStruct extends QueryNode {
     } else {
       return ret;
     }
+  }
+
+  // when structs are referenced in queries, incorporate the
+  //  primary key of struct and add the struct as a join to the result.
+  getAsQueryField(): QueryFieldStruct {
+    if (this.fieldDef.primaryKey === undefined) {
+      throw new Error(
+        `Joined explores can only be included in queries if a primary key is defined: '${this.getFullOutputName()}' has no primary key`
+      );
+    }
+
+    const pkField = this.getPrimaryKeyField(this.fieldDef);
+    const pkType = pkField.fieldDef.type;
+    if (pkType !== "string" && pkType !== "number") {
+      throw new Error(`Unknown Primary key data type for ${name}`);
+    }
+    const fieldDef: FieldDef = {
+      type: pkType,
+      name: `${getIdentifier(this.fieldDef)}_id`,
+      e: [
+        {
+          type: "field",
+          // path: pkField.getFullOutputName(),
+          path: pkField.getIdentifier(),
+        },
+      ],
+    };
+    return new QueryFieldStruct(fieldDef, this);
   }
 
   // return the name of the field in SQL
@@ -2825,10 +2884,12 @@ class QueryStruct extends QueryNode {
 
   structSourceSQL(stageWriter: StageWriter): string {
     switch (this.fieldDef.structSource.type) {
-      case "table":
-        // 'name' is always the source table, even if it has been renamed
-        // through 'as'
-        return this.model.dialect.quoteTableName(this.fieldDef.name);
+      case "table": {
+        const { tablePath } = parseTableURL(
+          this.fieldDef.structSource.tablePath || this.fieldDef.name
+        );
+        return this.dialect.quoteTableName(tablePath);
+      }
       case "sql":
         return this.fieldDef.name;
       case "nested":
@@ -2837,11 +2898,23 @@ class QueryStruct extends QueryNode {
         return `UNNEST(this.fieldDef.name)`;
       case "inline":
         return "";
-      case "query":
-        return this.model.loadQuery(
-          this.fieldDef.structSource.query,
-          stageWriter
-        ).lastStageName;
+      case "query": {
+        // cache derived table.
+        const name = getIdentifier(this.fieldDef);
+        // this is a hack for now.  Need some way to denote this table
+        //  should be cached.
+        if (name.includes("cache")) {
+          const dtStageWriter = new StageWriter(stageWriter);
+          this.model.loadQuery(this.fieldDef.structSource.query, dtStageWriter);
+          return dtStageWriter.addPDT(name, this.dialect);
+        } else {
+          // returns the stage name.
+          return this.model.loadQuery(
+            this.fieldDef.structSource.query,
+            stageWriter
+          ).lastStageName;
+        }
+      }
       default:
         throw new Error(`unknown structSource ${this.fieldDef}`);
     }
@@ -2884,6 +2957,15 @@ class QueryStruct extends QueryNode {
       ret = r;
     }
     return ret;
+  }
+
+  // structs referenced in queries are converted to fields.
+  getQueryFieldByName(name: string): QuerySomething {
+    let field = this.getFieldByName(name);
+    if (field instanceof QueryStruct) {
+      field = field.getAsQueryField();
+    }
+    return field;
   }
 
   getDimensionOrMeasureByName(name: string): QueryAtomicField {
@@ -2942,14 +3024,12 @@ class QueryStruct extends QueryNode {
       }
     }
 
-    const addedFilters = (turtleDef as TurtleDefPlus).filterList;
-    if (addedFilters) {
-      pipeline = cloneDeep(pipeline);
-      pipeline[0].filterList = addedFilters.concat(
-        pipeline[0].filterList || [],
-        this.fieldDef.filterList || []
-      );
-    }
+    const addedFilters = (turtleDef as TurtleDefPlus).filterList || [];
+    pipeline = cloneDeep(pipeline);
+    pipeline[0].filterList = addedFilters.concat(
+      pipeline[0].filterList || [],
+      this.fieldDef.filterList || []
+    );
 
     const flatTurtleDef: TurtleDef = {
       type: "turtle",
@@ -3025,30 +3105,18 @@ export class QueryModel {
 
   loadModelFromDef(modelDef: ModelDef): void {
     this.modelDef = modelDef;
-    for (const s of Object.values(this.modelDef.structs)) {
+    for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (s.type === "struct") {
         qs = new QueryStruct(s, { model: this });
+        this.structs.set(getIdentifier(s), qs);
+        qs.resolveQueryFields();
+      } else if (s.type === "query") {
+        /* TODO */
       } else {
         throw new Error("Internal Error: Unknown structure type");
       }
-      this.structs.set(getIdentifier(s), qs);
-      qs.resolveQueryFields();
     }
-  }
-
-  async parseModel(srcText: string): Promise<void> {
-    const myDocumentParse = await translatorFor(srcText);
-    const getDoc = myDocumentParse.translate();
-    if (getDoc.translated) {
-      const newModel = getDoc.translated.modelDef;
-      this.loadModelFromDef({
-        ...newModel,
-        name: "parseModel Document",
-      });
-      return;
-    }
-    throw new Error(`parseDocument failed\n${myDocumentParse.prettyErrors()}`);
   }
 
   parseQueryPath(name: string): { struct: QueryStruct; queryName: string } {
@@ -3093,36 +3161,15 @@ export class QueryModel {
     }
   }
 
-  // getQueryByName(name: string, stageWriter: StageWriter): QueryQuery {
-  //   const { struct, queryName } = this.parseQueryPath(name);
-  //   const query = struct.getQueryByName(queryName, stageWriter);
-  //   /** finds a named query in a and runs it */
-  //   const d = { ...query.fieldDef, from: getIdentifier(struct.fieldDef) };
-  //   // console.log(`\n-- == runQueryByName ==('${name}') `);
-  //   return this.getQueryFromDef(d, struct);
-  // }
-
-  // getQueryFromDef(
-  //   queryDef: AnonymousQueryDef,
-  //   struct: QueryStruct
-  // ): QueryQuery {
-  //   // copy the object and add the required name property.
-  //   const d = { ...queryDef, name: "ignoreme" };
-
-  //   return QueryQuery.makeQuery(d, struct);
-  // }
-
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
     emitFinalStage = false
   ): QueryResults {
-    // const structs = [];
-    // const malloy = ToMalloy.query(query);
     const malloy = "";
 
     if (!stageWriter) {
-      stageWriter = new StageWriter();
+      stageWriter = new StageWriter(undefined);
     }
 
     const turtleDef: TurtleDefPlus = {
@@ -3139,7 +3186,6 @@ export class QueryModel {
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && struct.dialect.hasFinalStage) {
       ret.lastStageName = stageWriter.addStage(
-        "__stage",
         struct.dialect.sqlFinalStage(ret.lastStageName)
       );
     }
@@ -3152,46 +3198,8 @@ export class QueryModel {
     };
   }
 
-  async malloyToQuery(queryString: string): Promise<Query> {
-    const parse = await translatorFor(queryString);
-    const gotQuery = parse.translate();
-    if (gotQuery.translated) {
-      return gotQuery.translated.queryList[0];
-    }
-    if (gotQuery.errors) {
-      throw new Error(
-        `Can't parse query: '${queryString}'\n${parse.prettyErrors()}`
-      );
-    }
-    throw new Error(`Query '${queryString}' -- not complete`);
-  }
-
-  async compileQuery(query: Query | string): Promise<CompiledQuery> {
+  compileQuery(query: Query): CompiledQuery {
     let newModel: QueryModel | undefined;
-    if (typeof query === "string") {
-      const parse = await translatorFor(query);
-
-      let modelsBefore = 0;
-      if (this.modelDef) {
-        modelsBefore = Object.keys(this.modelDef?.structs).length;
-      }
-
-      const getQuery = parse.translate(this.modelDef);
-      if (getQuery.translated) {
-        const newStructs = getQuery.translated.modelDef.structs;
-        if (Object.keys(newStructs).length > modelsBefore) {
-          newModel = new QueryModel({
-            ...getQuery.translated.modelDef,
-            name: query,
-          });
-        }
-        query = getQuery.translated.queryList[0];
-      } else {
-        throw new Error(
-          `Query string '${query}' did not compile\n${parse.prettyErrors()}`
-        );
-      }
-    }
     const m = newModel || this;
     const ret = m.loadQuery(query, undefined, true);
     const sourceExplore =
@@ -3204,7 +3212,6 @@ export class QueryModel {
         : "(need to figure this out)";
     if (this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
-        "__stage",
         this.dialect.sqlFinalStage(ret.lastStageName)
       );
     }
@@ -3221,36 +3228,6 @@ export class QueryModel {
           : undefined,
       connectionName: ret.connectionName,
     };
-  }
-
-  /**
-   * Run a Malloy query in the context of this model.
-   *
-   * @param query The query to run, as a {@link Query} or plaintext string.
-   * @param pageSize Top-level row limit.
-   * @param rowIndex Offset into results.
-   */
-  async runQuery(
-    query: Query | string,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<QueryResult> {
-    const ret = await this.compileQuery(query);
-    return this.runCompiledQuery(ret, pageSize, rowIndex);
-  }
-
-  async runCompiledQuery(
-    query: CompiledQuery,
-    pageSize?: number,
-    rowIndex?: number
-  ): Promise<QueryResult> {
-    const result = await Malloy.db.runMalloyQuery(
-      query.sql,
-      pageSize,
-      rowIndex
-    );
-
-    return { ...query, result: result.rows, totalRows: result.totalRows };
   }
 
   // async searchIndex(explore: string, searchValue: string): Promise<QueryData> {

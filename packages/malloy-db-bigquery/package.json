@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/db-bigquery",
+  "name": "@malloydata/db-bigquery",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -14,6 +14,6 @@
     "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/common": "^3.6.0",
     "gaxios": "^4.2.0",
-    "@malloy-lang/malloy": "*"
+    "@malloydata/malloy": "*"
   }
 }

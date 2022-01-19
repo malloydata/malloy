@@ -21,8 +21,8 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { runCode } from "./run_code";
 import { log } from "./log";
-import { Malloy } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { Malloy } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
 
 Malloy.db = new BigQueryConnection("docs");
 
@@ -33,9 +33,15 @@ Malloy.db = new BigQueryConnection("docs");
 class Renderer {
   // The path where the document being rendered exists.
   private readonly path: string;
+  private models: Map<string, string>;
 
   constructor(path: string) {
     this.path = path;
+    this.models = new Map();
+  }
+
+  private setModel(modelPath: string, source: string) {
+    this.models.set(modelPath, source);
   }
 
   protected async code(
@@ -50,7 +56,7 @@ class Renderer {
         ? MALLOY_GRAMMAR
         : Prism.languages[lang] || Prism.languages.text;
 
-    let hidden;
+    let hidden = false;
     if (grammar) {
       let result = "";
       if (lang === "malloy") {
@@ -59,12 +65,14 @@ class Renderer {
             const options = JSON.parse(
               code.split("\n")[0].substring("--! ".length).trim()
             );
+            code = code.split("\n").slice(1).join("\n");
+            if (options.isHidden) {
+              hidden = true;
+            }
             if (options.isRunnable) {
-              code = code.split("\n").slice(1).join("\n");
-              result = await runCode(code, this.path, options);
-              if (options.isHidden) {
-                hidden = true;
-              }
+              result = await runCode(code, this.path, options, this.models);
+            } else if (options.isModel) {
+              this.setModel(options.modelPath, code);
             }
           } catch (error) {
             log(`  !! Error: ${error.toString()}`);

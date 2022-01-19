@@ -12,6 +12,7 @@
   "include": [],
   "exclude": ["**/node_modules"],
   "compilerOptions": {
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "downlevelIteration": true
   }
 }

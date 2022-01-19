@@ -1,19 +1,74 @@
-# Model
+# Models
 
-# define
+Malloy recognizes modeling as a key aspect of data analyitics and
+provides tools that allow for modularity and reusability of definitions.
+Whereas in SQL, queries generally define all metrics inline,
+requiring useful snippets to be saved and managed separately, in Malloy,
+_dimensions_, _measures_, and _queries_ can be saved and attached to a
+modeled _explore_.
 
-When building a complex transformation from smaller pieces, there is
-a way to create a name for a query.
+## Explores
 
-* `define` _query_ _name_ `is` `(` _query_ `);`
+A Malloy model file can contain several _explores_, which define fields that can be
+used in queries.
 
-# export
+```malloy
+--! {"isModel": true, "modelPath": "/inline/e.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  dimension: distance_km is distance / 1.609344
 
-When building a model, it is sometimes usefult to have "internal"
-queries which are not useful to a user of the model. Malloy
-copies the notion of "modules" and "export" from other
-programming languages, requiring an explicit declaration
-for symbols which would be visibel outside of a model.
+  measure: flight_count is count()
+
+  query: by_carrier is  {
+    group_by: carrier
+    aggregate: flight_count
+  }
+}
+```
+See [here](explore.md) for more information on explores.
+
+## Queries
+
+### Using modeled in query.
+```malloy
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+query: flights->by_carrier
+```
+
+### Using modeled with a filter.
+```malloy
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+query: flights{where: origin: 'SFO'}->by_carrier
+```
+### Setting a limit on the Query
+```malloy
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+query: flights{where: origin: 'SFO'}->by_carrier{limit: 2}
+```
 
 
-* `export` `define` _query_ _name_ `is` `(` _query_ `);`
+### Creating a brand new Query.
+```malloy
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+query: flights->{
+  group_by: destination
+  aggregate: [
+    flight_count
+    average_distance_in_km is distance_km.avg()
+  ]
+}
+```
+
+### Putting it all together.
+```malloy
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
+query: flights->{
+  group_by: destination
+  aggregate: [
+    flight_count
+    average_distance_in_km is distance_km.avg()
+  ]
+  nest: top_carriers is by_carrier{limit: 2}
+}
+```
+See [here](query.md) for more information on queries.

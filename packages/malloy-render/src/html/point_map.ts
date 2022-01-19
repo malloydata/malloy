@@ -13,54 +13,51 @@
 
 import * as lite from "vega-lite";
 import {
-  FieldDef,
-  QueryData,
-  QueryValue,
-  StructDef,
-} from "@malloy-lang/malloy";
+  DataArray,
+  DataColumn,
+  Field,
+  TimestampTimeframe,
+} from "@malloydata/malloy";
 import usAtlas from "us-atlas/states-10m.json";
-import { HtmlChartRenderer } from "./chart";
-import { getColorScale } from "./utils";
+import { HTMLChartRenderer } from "./chart";
+import { getColorScale, timeToString } from "./utils";
 
-export class HtmlPointMapRenderer extends HtmlChartRenderer {
-  getDataValue(value: QueryValue, field: FieldDef): string | number {
-    switch (field.type) {
-      case "number":
-        return value as number;
-      case "timestamp":
-      case "date":
-      case "string":
-        return value as string;
-      default:
-        throw new Error("Invalid field type for bar chart.");
+export class HTMLPointMapRenderer extends HTMLChartRenderer {
+  getDataValue(data: DataColumn): string | number {
+    if (data.isNumber() || data.isString()) {
+      return data.value;
+    } else if (data.isTimestamp() || data.isDate()) {
+      return timeToString(
+        data.value,
+        data.field.timeframe || TimestampTimeframe.Second
+      );
     }
+    throw new Error("Invalid field type for point map chart.");
   }
 
-  getDataType(field: FieldDef): "ordinal" | "quantitative" | "nominal" {
-    switch (field.type) {
-      case "date":
-      case "timestamp":
-      case "string":
+  getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp() || field.isString()) {
         return "nominal";
-      case "number":
+      } else if (field.isNumber()) {
         return "quantitative";
-      default:
-        throw new Error("Invalid field type for bar chart.");
+      }
     }
+    throw new Error("Invalid field type for point map.");
   }
 
-  getVegaLiteSpec(data: QueryValue, metadata: StructDef): lite.TopLevelSpec {
-    if (data === null) {
+  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+    if (data.isNull()) {
       throw new Error("Expected struct value not to be null.");
     }
 
-    const typedData = data as QueryData;
+    const fields = data.field.intrinsicFields;
 
-    const latField = metadata.fields[0];
-    const lonField = metadata.fields[1];
-    const colorField = metadata.fields[2];
-    const sizeField = metadata.fields[3];
-    const shapeField = metadata.fields[4];
+    const latField = fields[0];
+    const lonField = fields[1];
+    const colorField = fields[2];
+    const sizeField = fields[3];
+    const shapeField = fields[4];
 
     const colorType = colorField ? this.getDataType(colorField) : undefined;
     const sizeType = sizeField ? this.getDataType(sizeField) : undefined;
@@ -96,11 +93,7 @@ export class HtmlPointMapRenderer extends HtmlChartRenderer {
       width: 250,
       height: 200,
       data: {
-        values: this.mapData(
-          typedData,
-          [latField, lonField, colorField, shapeField, sizeField],
-          metadata
-        ),
+        values: this.mapData(data),
       },
       projection: {
         type: "albersUsa",

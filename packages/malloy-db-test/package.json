@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/db-test",
+  "name": "@malloydata/db-test",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -11,7 +11,7 @@
     "build": "yarn tsc --build"
   },
   "dependencies": {
-    "@malloy-lang/malloy": "*",
-    "@malloy-lang/db-bigquery": "*"
+    "@malloydata/malloy": "*",
+    "@malloydata/db-bigquery": "*"
   }
 }

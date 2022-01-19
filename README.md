@@ -2,9 +2,9 @@
 
 Malloy is an experimental language for describing data relationships and transformations. Malloy is not an officially supported Google product.
 
-* Malloy presents some new abstractions for data computation which provide astonishing power with a few simple concepts.
-* Malloy computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms.
-* Malloy sees data as a network of relationships, and generates network graphs with results, so it can ensure correctness of aggregate computations through multiple levels of transformation.
+- Malloy presents some new abstractions for data computation which provide astonishing power with a few simple concepts.
+- Malloy computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms.
+- Malloy sees data as a network of relationships, and generates network graphs with results, so it can ensure correctness of aggregate computations through multiple levels of transformation.
 
 Malloy also includes a VS Code IDE for writing and running models, queries, and transformations.
 
@@ -81,7 +81,7 @@ The following will install dependencies for the entire set of packages and compi
 
 ```bash
 yarn install
-yarn build
+yarn build-extension
 ```
 
 ## Malloy VSCode Extension
@@ -93,8 +93,7 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
-yarn install
-yarn build
+yarn build-extension
 ```
 
 Next, in VSCode _EITHER_:
@@ -111,7 +110,7 @@ If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpfu
 
 # Documentation
 
-[Full documentation for Malloy]( https://looker-open-source.github.io/malloy/)
+[Full documentation for Malloy](https://looker-open-source.github.io/malloy/)
 
 - [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of basics on an ecommerce dataset
 - [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - docs introduction to the language
@@ -128,7 +127,7 @@ https://user-images.githubusercontent.com/7178946/130858354-d92d9ac2-583f-4169-8
 
 ## Getting Started Video Series
 
- These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin. _You can also watch this as a single video on Youtube,_ [here](https://www.youtube.com/watch?v=0Ck8CBa4qRo&t=3s).
+These videos are intended to be viewed in order, but split up to easily navigate (and also because GitHub only allows 100MB video uploads). If you prefer a written format, the [eCommerce Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) covers similar concepts around Malloy and using the VSCode plugin. _You can also watch this as a single video on Youtube,_ [here](https://www.youtube.com/watch?v=0Ck8CBa4qRo&t=3s).
 
 **You will need to un-mute the audio.**
 

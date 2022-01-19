@@ -1,0 +1,23 @@
+{
+  "name": "malloy-demo-bq-cli",
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "main": "dist/entry.js",
+  "bin": {
+    "malloy-demo-bq-cli": "dist/entry.js"
+  },
+  "types": "dist/entry.d.ts",
+  "scripts": {
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "jest",
+    "install-local": "yarn build && npm i -g",
+    "local": "yarn install-local && malloy-demo-bq-cli",
+    "build": "yarn tsc --build",
+    "run": "ts-node src/entry.ts"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "*",
+    "@malloydata/db-bigquery": "*"
+  }
+}

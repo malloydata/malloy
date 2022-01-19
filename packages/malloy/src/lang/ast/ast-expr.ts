@@ -17,6 +17,7 @@
  */
 
 import {
+  By,
   AggregateFragment,
   AtomicFieldType,
   FieldTypeDef,
@@ -28,7 +29,6 @@ import {
 import { FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
-  FieldName,
   Filter,
   MalloyElement,
   compose,
@@ -44,6 +44,7 @@ import {
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam } from "../space-field";
+import { Dialect } from "../../dialect";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -131,44 +132,31 @@ class DollarReference extends ExpressionDef {
   }
 }
 
-const constantContext: StructDef = {
-  type: "struct",
-  name: "constant expr eval context",
-  dialect: "invalid dialect",
-  structSource: { type: "table" },
-  structRelationship: {
-    type: "basetable",
-    connectionName: "unknown connection",
-  },
-  fields: [],
-};
-
-/**
- * Used as a namespace for evaluating expressions which are supposed to contain
- * only constants. Will obviously return "notfound" if any variable name is
- * referenced.
- */
-class ConstantFieldSpace extends FieldSpace {
-  constructor() {
-    super(constantContext);
-  }
-
+class ConstantFieldSpace implements FieldSpace {
   structDef(): StructDef {
-    throw new Error(
-      "Internal Compiler Error, can't make structdef from constant context"
-    );
+    return {
+      type: "struct",
+      name: "empty structdef",
+      structSource: { type: "table" },
+      structRelationship: {
+        type: "basetable",
+        connectionName: "noConnection",
+      },
+      fields: [],
+      dialect: "noDialect",
+    };
   }
-
   emptyStructDef(): StructDef {
-    throw new Error(
-      "Internal Compiler Error, can't make structdef from constant context"
-    );
+    return { ...this.structDef(), fields: [] };
   }
-
-  outerName(): string {
-    throw new Error(
-      "Internal Compiler Error, can't make structdef from constant context"
-    );
+  findEntry(_name: string): undefined {
+    return undefined;
+  }
+  getDialect(): Dialect {
+    // well dialects totally make this wrong and broken and stupid and useless
+    // but since this is only used for parameters which are also wrong and
+    // broken and stupid and useless, this will do for now
+    throw new Error("I just put this line of code here to make things compile");
   }
 }
 
@@ -213,15 +201,16 @@ export class ConstantSubExpression extends ExpressionDef {
   }
 }
 
-export class ExpressionFieldDef extends MalloyElement {
-  elementType = "expressionField";
+export class ExprFieldDecl extends MalloyElement {
+  elementType = "exprFieldDecl";
+  isMeasure?: boolean;
+
   constructor(
     readonly expr: ExpressionDef,
-    readonly fieldName: FieldName,
+    readonly defineName: string,
     readonly exprSrc?: string
   ) {
     super({ expr });
-    this.has({ fieldName });
   }
 
   fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
@@ -393,7 +382,7 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
 }
 
 export class ExprIdReference extends ExpressionDef {
-  elementType = "id reference";
+  elementType = "ExpressionIdReference";
   constructor(readonly refString: string) {
     super();
   }
@@ -850,13 +839,24 @@ export class ExprCast extends ExpressionDef {
   }
 }
 
-export class By extends MalloyElement {
+export class TopBy extends MalloyElement {
   elementType = "topBy";
   constructor(readonly by: string | ExpressionDef) {
     super();
     if (by instanceof ExpressionDef) {
       this.has({ by });
     }
+  }
+
+  getBy(fs: FieldSpace): By {
+    if (this.by instanceof ExpressionDef) {
+      const byExpr = this.by.getExpression(fs);
+      if (!byExpr.aggregate) {
+        this.log("top by expression must be an aggregate");
+      }
+      return { by: "expression", e: compressExpr(byExpr.value) };
+    }
+    return { by: "name", name: this.by };
   }
 }
 

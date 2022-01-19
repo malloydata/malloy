@@ -19,13 +19,19 @@ import {
   NamedStructDefs,
   AtomicFieldType,
   QueryData,
-} from "@malloy-lang/malloy";
-import { Client } from "pg";
+  PooledConnection,
+  parseTableURL,
+} from "@malloydata/malloy";
+import { Client, Pool } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "character varying": "string",
   name: "string",
+  text: "string",
   integer: "number",
+  bigint: "number",
+  "double precision": "number",
+  "timestamp without time zone": "timestamp", // maybe not right
 };
 
 export class PostgresConnection extends Connection {
@@ -40,7 +46,11 @@ export class PostgresConnection extends Connection {
     return "postgres";
   }
 
-  public async getSchemaForMissingTables(
+  public isPool(): this is PooledConnection {
+    return false;
+  }
+
+  public async fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
@@ -55,11 +65,11 @@ export class PostgresConnection extends Connection {
     return tableStructDefs;
   }
 
-  private async runPostgresQuery(
+  protected async runPostgresQuery(
     sqlCommand: string,
     _pageSize: number,
     _rowIndex: number,
-    deJson: boolean
+    deJSON: boolean
   ): Promise<MalloyQueryData> {
     const client = new Client();
     await client.connect();
@@ -68,7 +78,7 @@ export class PostgresConnection extends Connection {
     if (result instanceof Array) {
       result = result.pop();
     }
-    if (deJson) {
+    if (deJSON) {
       for (let i = 0; i < result.rows.length; i++) {
         result.rows[i] = result.rows[i].row;
       }
@@ -77,20 +87,21 @@ export class PostgresConnection extends Connection {
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 
-  private async getTableSchema(tablePath: string): Promise<StructDef> {
+  private async getTableSchema(tableURL: string): Promise<StructDef> {
     const structDef: StructDef = {
       type: "struct",
-      name: tablePath,
+      name: tableURL,
       dialect: "postgres",
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
-        connectionName: "postgres",
+        connectionName: this.name,
       },
       fields: [],
     };
 
-    const [schema, table] = tablePath.split(".");
+    const { tablePath: tableName } = parseTableURL(tableURL);
+    const [schema, table] = tableName.split(".");
     if (table === undefined) {
       throw new Error("Default schema not supported Yet in Postgres");
     }
@@ -105,23 +116,26 @@ export class PostgresConnection extends Connection {
       false
     );
     for (const row of result.rows) {
-      const malloyType = postgresToMalloyTypes[row["data_type"] as string];
+      const postgresDataType = row["data_type"] as string;
+      const malloyType = postgresToMalloyTypes[postgresDataType];
       if (malloyType !== undefined) {
         structDef.fields.push({
           type: malloyType,
           name: row["column_name"] as string,
         });
+      } else {
+        throw new Error(`unknown postgres type ${postgresDataType}`);
       }
     }
     return structDef;
   }
 
-  public async runQuery(query: string): Promise<QueryData> {
+  public async executeSQLRaw(query: string): Promise<QueryData> {
     const queryData = await this.runPostgresQuery(query, 1000, 0, false);
     return queryData.rows;
   }
 
-  public async runMalloyQuery(
+  public async runSQL(
     sqlCommand: string,
     pageSize = 1000,
     rowIndex = 0
@@ -140,5 +154,43 @@ export class PostgresConnection extends Connection {
 
     this.resultCache.set(hash, result);
     return result;
+  }
+}
+
+export class PooledPostgresConnection
+  extends PostgresConnection
+  implements PooledConnection
+{
+  private pool: Pool;
+
+  constructor(name: string) {
+    super(name);
+    this.pool = new Pool();
+  }
+
+  public isPool(): true {
+    return true;
+  }
+
+  public async drain(): Promise<void> {
+    await this.pool.end();
+  }
+
+  protected async runPostgresQuery(
+    sqlCommand: string,
+    _pageSize: number,
+    _rowIndex: number,
+    deJSON: boolean
+  ): Promise<MalloyQueryData> {
+    let result = await this.pool.query(sqlCommand);
+    if (result instanceof Array) {
+      result = result.pop();
+    }
+    if (deJSON) {
+      for (let i = 0; i < result.rows.length; i++) {
+        result.rows[i] = result.rows[i].row;
+      }
+    }
+    return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 }

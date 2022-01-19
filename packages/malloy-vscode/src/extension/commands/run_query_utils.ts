@@ -14,21 +14,20 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { Malloy, MalloyTranslator, ModelDef } from "@malloy-lang/malloy";
-import { DataStyles, HtmlView, DataTreeRoot } from "@malloy-lang/render";
-import { loadingIndicator, renderErrorHtml, wrapHTMLSnippet } from "../html";
-import { MALLOY_EXTENSION_STATE, RunState } from "../state";
+import { URL, Runtime, URLReader } from "@malloydata/malloy";
+import { DataStyles } from "@malloydata/render";
+import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
+import { fetchFile, VSCodeURLReader } from "../utils";
+import { getWebviewHtml } from "../webviews";
+import {
+  QueryMessageType,
+  QueryRenderMode,
+  QueryRunStatus,
+  WebviewMessageManager,
+} from "../webview_message_manager";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
-
-const css = `<style>
-body {
-	background-color: transparent;
-  font-size: 11px;
-}
-</style>
-`;
 
 // TODO replace this with actual JSON metadata import functionality, when it exists
 export async function dataStylesForFile(
@@ -83,43 +82,42 @@ interface QueryFileSpec {
 
 type QuerySpec = NamedQuerySpec | QueryStringSpec | QueryFileSpec;
 
-async function compile(uri: string, malloy: string, model?: ModelDef) {
-  let dataStyles = await dataStylesForFile(uri, malloy);
-  const translator = new MalloyTranslator(uri, { URLs: { [uri]: malloy } });
-  translator.translate(model);
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const result = translator.translate();
-    if (result.final) {
-      return { result, dataStyles };
-    } else if (result.URLs) {
-      for (const neededUri of result.URLs) {
-        const neededText = await fetchFile(neededUri);
-        const URLs = { [neededUri]: neededText };
-        translator.update({ URLs });
-        dataStyles = {
-          ...dataStyles,
-          ...(await dataStylesForFile(neededUri, neededText)),
-        };
-      }
-    } else if (result.tables) {
-      const tables = await Malloy.db.getSchemaForMissingTables(result.tables);
-      translator.update({ tables });
-    }
-  }
-}
+// TODO Come up with a better way to handle data styles. Perhaps this is
+//      an in-language understanding of model "metadata". For now,
+//      we abuse the `URLReader` API to keep track of requested URLs
+//      and accummulate data styles for those files.
+class HackyDataStylesAccumulator implements URLReader {
+  private uriReader: URLReader;
+  private dataStyles: DataStyles = {};
 
-async function fetchFile(uri: string): Promise<string> {
-  return (
-    await vscode.workspace.openTextDocument(uri.replace(/^file:\/\//, ""))
-  ).getText();
+  constructor(uriReader: URLReader) {
+    this.uriReader = uriReader;
+  }
+
+  async readURL(uri: URL): Promise<string> {
+    const contents = await this.uriReader.readURL(uri);
+    this.dataStyles = {
+      ...this.dataStyles,
+      ...(await dataStylesForFile(uri.toString(), contents)),
+    };
+
+    return contents;
+  }
+
+  getHackyAccumulatedDataStyles() {
+    return this.dataStyles;
+  }
 }
 
 export function runMalloyQuery(
   query: QuerySpec,
   panelId: string,
-  name: string
+  name: string,
+  renderMode: QueryRenderMode = QueryRenderMode.HTML
 ): void {
+  if (renderMode === QueryRenderMode.JSON) {
+    panelId += " Data";
+  }
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -153,19 +151,22 @@ export function runMalloyQuery(
           cancel,
           panelId,
           panel: previous.panel,
+          messages: previous.messages,
           document: previous.document,
         };
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
         previous.cancel();
         previous.panel.reveal();
       } else {
+        const panel = vscode.window.createWebviewPanel(
+          "malloyQuery",
+          name,
+          vscode.ViewColumn.Two,
+          { enableScripts: true, retainContextWhenHidden: true }
+        );
         current = {
-          panel: vscode.window.createWebviewPanel(
-            "malloyQuery",
-            name,
-            vscode.ViewColumn.Two,
-            { enableScripts: true }
-          ),
+          panel,
+          messages: new WebviewMessageManager(panel),
           panelId,
           cancel,
           document: query.file,
@@ -176,6 +177,14 @@ export function runMalloyQuery(
         current.panel.title = name;
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
       }
+
+      const onDiskPath = vscode.Uri.file(
+        path.join(__filename, "..", "query_webview.js")
+      );
+
+      const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
+
+      current.panel.webview.html = getWebviewHtml(entrySrc.toString());
 
       current.panel.onDidDispose(() => {
         current.cancel();
@@ -189,173 +198,89 @@ export function runMalloyQuery(
         }
       });
 
+      const vscodeFiles = new VSCodeURLReader();
+      const files = new HackyDataStylesAccumulator(vscodeFiles);
+      const runtime = new Runtime(files, CONNECTION_MAP);
+
       return (async () => {
         try {
           malloyLog.appendLine("");
           const allBegin = performance.now();
           const compileBegin = allBegin;
-          const malloy = new Malloy();
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Compiling")
-          );
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Compiling,
+          });
           progress.report({ increment: 20, message: "Compiling" });
 
-          let compiledQuery;
-          let error;
+          let queryMaterializer;
           let styles: DataStyles = {};
           if (query.type === "string") {
-            let model;
-            {
-              const { result, dataStyles } = await compile(
-                query.file.uri.toString(),
-                query.file.getText()
-              );
-              if (result.translated) {
-                model = result.translated.modelDef;
-                styles = dataStyles;
-              } else if (result?.errors) {
-                error = result.errors[0].message;
-              }
-            }
-            if (model) {
-              const fakeUri = path.join(
-                query.file.uri.toString(),
-                "..",
-                "__QUERY__.malloy"
-              );
-              const { result, dataStyles } = await compile(
-                fakeUri,
-                query.text,
-                model
-              );
-              if (result.translated) {
-                const q =
-                  result.translated.queryList[
-                    result.translated.queryList.length - 1
-                  ];
-                malloy.model = result.translated.modelDef;
-                compiledQuery = await malloy.compileQuery(q);
-                styles = { ...styles, ...dataStyles };
-              } else if (result?.errors) {
-                error = result.errors[0].message;
-              }
-            }
+            queryMaterializer = runtime
+              .loadModel(URL.fromString("file://" + query.file.uri.fsPath))
+              .loadQuery(query.text);
           } else if (query.type === "named") {
-            const { result, dataStyles } = await compile(
-              query.file.uri.toString(),
-              query.file.getText()
+            queryMaterializer = runtime.loadQueryByName(
+              URL.fromString("file://" + query.file.uri.fsPath),
+              query.name
             );
-            if (result.translated) {
-              const struct = result.translated.modelDef.structs[query.name];
-              if (struct.type === "struct") {
-                const source = struct.structSource;
-                if (source.type === "query") {
-                  malloy.model = result.translated.modelDef;
-                  compiledQuery = await malloy.compileQuery(source.query);
-                  styles = dataStyles;
-                }
-              }
-
-              if (compiledQuery === undefined) {
-                current.panel.webview.html = renderErrorHtml(
-                  new Error(`${query.name} is not a named query.`)
-                );
-                return;
-              }
-            } else if (result.errors) {
-              error = result.errors[0].message;
-            }
           } else {
-            const { result, dataStyles } = await compile(
-              query.file.uri.toString(),
-              query.file.getText()
+            queryMaterializer = runtime.loadQueryByIndex(
+              URL.fromString("file://" + query.file.uri.fsPath),
+              query.index
             );
-            if (result?.translated) {
-              const index =
-                query.index === -1
-                  ? result.translated.queryList.length - 1
-                  : query.index;
-              const q = result.translated.queryList[index];
-              malloy.model = result.translated.modelDef;
-              compiledQuery = await malloy.compileQuery(q);
-              styles = dataStyles;
-            } else if (result?.errors) {
-              error = result.errors[0]?.message;
-            }
           }
 
-          if (!compiledQuery) {
-            current.panel.webview.html = renderErrorHtml(
-              new Error(error || "Something went wrong.")
-            );
+          try {
+            const sql = await queryMaterializer.getSQL();
+            styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
+
+            if (canceled) return;
+            malloyLog.appendLine(sql);
+          } catch (error) {
+            current.messages.postMessage({
+              type: QueryMessageType.QueryStatus,
+              status: QueryRunStatus.Error,
+              error: error.message || "Something went wrong",
+            });
             return;
           }
-
-          if (canceled) return;
-          malloyLog.appendLine(compiledQuery.sql);
 
           const compileEnd = performance.now();
           logTime("Compile", compileBegin, compileEnd);
 
           const runBegin = compileEnd;
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Running")
-          );
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Running,
+          });
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await malloy.runCompiledQuery(compiledQuery, 50);
+          const queryResult = await queryMaterializer.run();
           if (canceled) return;
 
           const runEnd = performance.now();
           logTime("Run", runBegin, runEnd);
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Rendering")
-          );
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Done,
+            result: queryResult.toJSON(),
+            styles,
+            mode: renderMode,
+          });
           current.result = queryResult;
           progress.report({ increment: 80, message: "Rendering" });
 
-          return new Promise<void>((resolve) => {
-            // This setTimeout is to allow the extension to set the HTML fully
-            // to say that we're rendering before we start doing so. This makes
-            // the message onscreen accurate to what's happening.
-            setTimeout(async () => {
-              const renderBegin = runEnd;
-
-              const data = queryResult.result;
-              const field = queryResult.structs.find(
-                (s) => s.name === queryResult.lastStageName
-              );
-
-              if (field) {
-                const namedQueryName =
-                  query.type === "named" ? query.name : undefined;
-                const namedField = {
-                  ...field,
-                  name: namedQueryName || queryResult.queryName || field.name,
-                };
-                const table = new DataTreeRoot(
-                  data,
-                  namedField,
-                  queryResult.sourceExplore,
-                  queryResult.sourceFilters || []
-                );
-                current.panel.webview.html = wrapHTMLSnippet(
-                  css + (await new HtmlView().render(table, styles))
-                );
-
-                const renderEnd = performance.now();
-                logTime("Render", renderBegin, renderEnd);
-
-                const allEnd = renderEnd;
-                logTime("Total", allBegin, allEnd);
-              }
-              resolve();
-            }, 0);
-          });
+          const allEnd = performance.now();
+          logTime("Total", allBegin, allEnd);
         } catch (error) {
-          current.panel.webview.html = renderErrorHtml(error);
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Error,
+            error: error.message,
+          });
         }
       })();
     }

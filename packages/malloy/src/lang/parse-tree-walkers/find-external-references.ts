@@ -33,7 +33,7 @@ class FindExternalReferences implements MalloyListener {
     }
   }
 
-  enterQuotedURL(pcx: parser.QuotedURLContext) {
+  enterImportURL(pcx: parser.ImportURLContext) {
     const url = JSON.parse(pcx.JSON_STRING().text);
     if (!this.needImports[url]) {
       this.needImports[url] = rangeFromContext(pcx);
@@ -43,7 +43,7 @@ class FindExternalReferences implements MalloyListener {
 
 interface FinderFound {
   tables?: References;
-  URLs?: References;
+  urls?: References;
 }
 export function findReferences(
   tokens: CommonTokenStream,
@@ -58,7 +58,7 @@ export function findReferences(
     refs = { tables: finder.needTables };
   }
   if (Object.keys(finder.needImports).length > 0) {
-    refs = { ...refs, URLs: finder.needImports };
+    refs = { ...refs, urls: finder.needImports };
   }
   return Object.keys(refs).length > 0 ? refs : null;
 }
