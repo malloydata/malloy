@@ -20,7 +20,7 @@ import { getVSCodeAPI, VSCodeContext } from "../vscode_context";
 (() => {
   const vscode = getVSCodeAPI();
   const el = React.createElement(VSCodeContext.Provider, { value: vscode }, [
-    React.createElement(App, {}, null),
+    React.createElement(App, { key: "app" }, null),
   ]);
   ReactDOM.render(el, document.getElementById("app"));
 })();

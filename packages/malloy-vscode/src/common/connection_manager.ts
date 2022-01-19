@@ -18,6 +18,7 @@ import { getPassword } from "keytar";
 import {
   ConnectionBackend,
   ConnectionConfig,
+  getDefaultIndex,
 } from "./connection_manager_types";
 
 export class ConnectionManager {
@@ -38,21 +39,18 @@ export class ConnectionManager {
     connectionsConfig: ConnectionConfig[]
   ): Promise<FixedConnectionMap> {
     const map = new Map<string, Connection>();
-    map.set(
-      "bigquery",
-      new BigQueryConnection("bigquery", {
-        pageSize: 50,
-      })
-    );
-    map.set("postgres", new PostgresConnection("postgres"));
     for (const connectionConfig of connectionsConfig) {
       map.set(
         connectionConfig.name,
         await this.connectionForConfig(connectionConfig)
       );
     }
-    // TODO allow changing the default connection
-    return new FixedConnectionMap(map, "bigquery");
+    const defaultIndex = getDefaultIndex(connectionsConfig);
+    const defaultName =
+      defaultIndex !== undefined
+        ? connectionsConfig[defaultIndex].name
+        : undefined;
+    return new FixedConnectionMap(map, defaultName);
   }
 
   public async setConnectionsConfig(

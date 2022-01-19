@@ -15,6 +15,7 @@ import { provideReactWrapper } from "@microsoft/fast-react-wrapper";
 import {
   provideVSCodeDesignSystem,
   vsCodeButton,
+  vsCodeCheckbox,
   vsCodeDivider,
   vsCodeDropdown,
   vsCodeOption,
@@ -47,3 +48,8 @@ export const VSCodeRadio = wrap(vsCodeRadio(), {
 export const VSCodeDivider = wrap(vsCodeDivider());
 export const VSCodeTag = wrap(vsCodeTag());
 export const VSCodeProgressRing = wrap(vsCodeProgressRing());
+export const VSCodeCheckbox = wrap(vsCodeCheckbox(), {
+  events: {
+    onChange: "change",
+  },
+});

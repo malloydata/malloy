@@ -17,6 +17,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   ConnectionBackend,
   ConnectionConfig,
+  getDefaultIndex,
 } from "../../../../common/connection_manager_types";
 import { ConnectionMessageTest } from "../../../webview_message_manager";
 import { VSCodeButton } from "../../components";
@@ -41,31 +42,45 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
   requestServiceAccountKeyPath,
 }) => {
   const [dirty, setDirty] = useState(false);
+  const defaultConnectionIndex = getDefaultIndex(connections);
 
   const addConnection = () => {
     setConnections([
       ...connections,
-      { name: "", backend: ConnectionBackend.BigQuery, id: uuidv4() },
+      {
+        name: "",
+        backend: ConnectionBackend.BigQuery,
+        id: uuidv4(),
+        isDefault: connections.length === 0,
+      },
     ]);
+  };
+
+  const setConfig = (config: ConnectionConfig, index: number) => {
+    const copy = [...connections];
+    copy[index] = config;
+    setConnections(copy);
+    setDirty(true);
+  };
+
+  const makeDefault = (defaultIndex: number) => {
+    const newConnections = connections.map((connection, index) => {
+      return { ...connection, isDefault: index === defaultIndex };
+    });
+    setConnections(newConnections);
+    setDirty(true);
   };
 
   return (
     <div style={{ marginTop: "20px" }}>
       <ButtonGroup style={{ margin: "10px" }}>
-        <VSCodeButton onClick={addConnection} key="new">
-          New Connection
-        </VSCodeButton>
+        <VSCodeButton onClick={addConnection}>New Connection</VSCodeButton>
       </ButtonGroup>
       {connections.map((config, index) => (
         <ConnectionEditor
           key={index}
           config={config}
-          setConfig={(config: ConnectionConfig) => {
-            const copy = [...connections];
-            copy[index] = config;
-            setConnections(copy);
-            setDirty(true);
-          }}
+          setConfig={(newConfig) => setConfig(newConfig, index)}
           deleteConfig={() => {
             const copy = [...connections];
             copy.splice(index, 1);
@@ -79,6 +94,8 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
             .reverse()
             .find((message) => message.connection.id === config.id)}
           requestServiceAccountKeyPath={requestServiceAccountKeyPath}
+          isDefault={index === defaultConnectionIndex}
+          makeDefault={() => makeDefault(index)}
         />
       ))}
       {connections.length === 0 && (
@@ -91,7 +108,6 @@ export const ConnectionEditorList: React.FC<ConnectionEditorListProps> = ({
               setDirty(false);
               saveConnections();
             }}
-            key="save"
           >
             Save
           </VSCodeButton>

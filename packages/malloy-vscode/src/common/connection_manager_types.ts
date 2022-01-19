@@ -19,6 +19,7 @@ export enum ConnectionBackend {
 export interface BigQueryConnectionConfig {
   backend: ConnectionBackend.BigQuery;
   name: string;
+  isDefault: boolean;
   id: string;
   serviceAccountKeyPath?: string;
   projectName?: string;
@@ -28,6 +29,7 @@ export interface BigQueryConnectionConfig {
 export interface PostgresConnectionConfig {
   backend: ConnectionBackend.Postgres;
   name: string;
+  isDefault: boolean;
   id: string;
   username?: string;
   password?: string;
@@ -40,3 +42,17 @@ export interface PostgresConnectionConfig {
 export type ConnectionConfig =
   | BigQueryConnectionConfig
   | PostgresConnectionConfig;
+
+export function getDefaultIndex(
+  connections: ConnectionConfig[]
+): number | undefined {
+  const index = connections.findIndex((connection) => connection.isDefault);
+  if (index === -1) {
+    if (connections.length >= 1) {
+      return 0;
+    } else {
+      return undefined;
+    }
+  }
+  return index;
+}

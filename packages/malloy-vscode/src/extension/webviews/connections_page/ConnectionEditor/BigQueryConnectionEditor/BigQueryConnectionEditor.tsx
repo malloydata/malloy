@@ -27,69 +27,71 @@ export const BigQueryConnectionEditor: React.FC<BigQueryConnectionEditorProps> =
   ({ config, setConfig, requestServiceAccountKeyPath }) => {
     return (
       <table>
-        <tr>
-          <LabelCell>
-            <Label>Name:</Label>
-          </LabelCell>
-          <td>
-            <TextField
-              value={config.name}
-              setValue={(name) => {
-                setConfig({ ...config, name });
-              }}
-            />
-          </td>
-        </tr>
-        <tr>
-          <LabelCell>
-            <Label>Project Name:</Label>
-          </LabelCell>
-          <td>
-            <TextField
-              value={config.projectName || ""}
-              setValue={(projectName) => {
-                setConfig({ ...config, projectName });
-              }}
-              placeholder="Optional"
-            />
-          </td>
-        </tr>
-        <tr>
-          <LabelCell>
-            <Label>Location:</Label>
-          </LabelCell>
-          <td>
-            <TextField
-              value={config.location || ""}
-              setValue={(location) => {
-                setConfig({ ...config, location });
-              }}
-              placeholder="Optional (default US)"
-            />
-          </td>
-        </tr>
-        <tr>
-          <LabelCell>
-            <Label>Service Account Key File Path:</Label>
-          </LabelCell>
-          <td>
-            <TextField
-              value={config.serviceAccountKeyPath || ""}
-              setValue={(serviceAccountKeyPath) => {
-                setConfig({ ...config, serviceAccountKeyPath });
-              }}
-              placeholder="Optional"
-            />
-          </td>
-          <td>
-            <VSCodeButton
-              onClick={requestServiceAccountKeyPath}
-              style={{ height: "25px" }}
-            >
-              Pick File
-            </VSCodeButton>
-          </td>
-        </tr>
+        <tbody>
+          <tr>
+            <LabelCell>
+              <Label>Name:</Label>
+            </LabelCell>
+            <td>
+              <TextField
+                value={config.name}
+                setValue={(name) => {
+                  setConfig({ ...config, name });
+                }}
+              />
+            </td>
+          </tr>
+          <tr>
+            <LabelCell>
+              <Label>Project Name:</Label>
+            </LabelCell>
+            <td>
+              <TextField
+                value={config.projectName || ""}
+                setValue={(projectName) => {
+                  setConfig({ ...config, projectName });
+                }}
+                placeholder="Optional"
+              />
+            </td>
+          </tr>
+          <tr>
+            <LabelCell>
+              <Label>Location:</Label>
+            </LabelCell>
+            <td>
+              <TextField
+                value={config.location || ""}
+                setValue={(location) => {
+                  setConfig({ ...config, location });
+                }}
+                placeholder="Optional (default US)"
+              />
+            </td>
+          </tr>
+          <tr>
+            <LabelCell>
+              <Label>Service Account Key File Path:</Label>
+            </LabelCell>
+            <td>
+              <TextField
+                value={config.serviceAccountKeyPath || ""}
+                setValue={(serviceAccountKeyPath) => {
+                  setConfig({ ...config, serviceAccountKeyPath });
+                }}
+                placeholder="Optional"
+              />
+            </td>
+            <td>
+              <VSCodeButton
+                onClick={requestServiceAccountKeyPath}
+                style={{ height: "25px" }}
+              >
+                Pick File
+              </VSCodeButton>
+            </td>
+          </tr>
+        </tbody>
       </table>
     );
   };

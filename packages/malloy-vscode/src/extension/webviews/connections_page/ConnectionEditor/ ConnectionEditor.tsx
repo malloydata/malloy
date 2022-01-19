@@ -19,13 +19,7 @@ import {
 } from "../../../../common/connection_manager_types";
 import { ConnectionMessageTest } from "../../../webview_message_manager";
 import { Dropdown } from "../../components";
-import {
-  VSCodeButton,
-  VSCodeDivider,
-  VSCodeDropdown,
-  VSCodeOption,
-  VSCodeTag,
-} from "../../components/fast";
+import { VSCodeButton, VSCodeDivider, VSCodeTag } from "../../components/fast";
 import { ButtonGroup } from "../ButtonGroup";
 import { BigQueryConnectionEditor } from "./BigQueryConnectionEditor";
 import { Label } from "./Label";
@@ -39,6 +33,8 @@ interface ConnectionEditorProps {
   testConfig: () => void;
   testStatus: ConnectionMessageTest | undefined;
   requestServiceAccountKeyPath: (connectionId: string) => void;
+  isDefault: boolean;
+  makeDefault: () => void;
 }
 
 export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
@@ -48,32 +44,52 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
   testConfig,
   testStatus,
   requestServiceAccountKeyPath,
+  isDefault,
+  makeDefault,
 }) => {
   return (
     <ConnectionEditorBox>
-      <ConnectionTitle>CONNECTION</ConnectionTitle>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          justifyContent: "space-between",
+        }}
+      >
+        <ConnectionTitle>CONNECTION</ConnectionTitle>
+        {isDefault && <VSCodeTag>Default</VSCodeTag>}
+        {!isDefault && (
+          <VSCodeButton onClick={makeDefault} style={{ height: "25px" }}>
+            Make Default
+          </VSCodeButton>
+        )}
+      </div>
       <table>
-        <tr>
-          <LabelCell>
-            <Label>Type:</Label>
-          </LabelCell>
-          <td>
-            <Dropdown
-              value={config.backend}
-              setValue={(backend) =>
-                setConfig({
-                  name: config.name,
-                  backend: backend as ConnectionBackend,
-                  id: config.id,
-                })
-              }
-              options={[
-                { value: ConnectionBackend.BigQuery, label: "BigQuery" },
-                { value: ConnectionBackend.Postgres, label: "Postgres" },
-              ]}
-            />
-          </td>
-        </tr>
+        <tbody>
+          <tr>
+            <LabelCell>
+              <Label>Type:</Label>
+            </LabelCell>
+            <td>
+              <Dropdown
+                value={config.backend}
+                setValue={(backend) =>
+                  setConfig({
+                    name: config.name,
+                    backend: backend as ConnectionBackend,
+                    id: config.id,
+                    isDefault: config.isDefault,
+                  })
+                }
+                options={[
+                  { value: ConnectionBackend.BigQuery, label: "BigQuery" },
+                  { value: ConnectionBackend.Postgres, label: "Postgres" },
+                ]}
+              />
+            </td>
+          </tr>
+        </tbody>
       </table>
       {config.backend === ConnectionBackend.BigQuery ? (
         <BigQueryConnectionEditor
@@ -88,19 +104,21 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
       )}
       <VSCodeDivider />
       <table>
-        <tr>
-          <LabelCell></LabelCell>
-          <td>
-            <ButtonGroup style={{ marginTop: "5px" }}>
-              <VSCodeButton onClick={deleteConfig} appearance="secondary">
-                Delete
-              </VSCodeButton>
-              <VSCodeButton onClick={testConfig}>Test</VSCodeButton>
-              {testStatus && <VSCodeTag>{testStatus?.status}</VSCodeTag>}
-              {testStatus?.status === "error" && testStatus.error}
-            </ButtonGroup>
-          </td>
-        </tr>
+        <tbody>
+          <tr>
+            <LabelCell></LabelCell>
+            <td>
+              <ButtonGroup style={{ marginTop: "5px" }}>
+                <VSCodeButton onClick={deleteConfig} appearance="secondary">
+                  Delete
+                </VSCodeButton>
+                <VSCodeButton onClick={testConfig}>Test</VSCodeButton>
+                {testStatus && <VSCodeTag>{testStatus?.status}</VSCodeTag>}
+                {testStatus?.status === "error" && testStatus.error}
+              </ButtonGroup>
+            </td>
+          </tr>
+        </tbody>
       </table>
     </ConnectionEditorBox>
   );

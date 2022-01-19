@@ -13,6 +13,7 @@
 
 import * as vscode from "vscode";
 import { ConnectionBackend } from "../../common";
+import { getDefaultIndex } from "../../common/connection_manager_types";
 import { getConnectionsConfig } from "../state";
 
 export class ConnectionsProvider
@@ -36,13 +37,15 @@ export class ConnectionsProvider
   async getChildren(element?: ConnectionItem): Promise<ConnectionItem[]> {
     if (element === undefined) {
       const config = getConnectionsConfig();
-      return [
-        new ConnectionItem("bigquery", "bigquery"),
-        new ConnectionItem("postgres", "postgres"),
-        ...config.map(
-          (config) => new ConnectionItem(config.name, config.backend)
-        ),
-      ];
+      const defaultIndex = getDefaultIndex(config);
+      return config.map(
+        (config, index) =>
+          new ConnectionItem(
+            config.name,
+            config.backend,
+            index === defaultIndex
+          )
+      );
     } else {
       return [];
     }
@@ -50,10 +53,15 @@ export class ConnectionsProvider
 }
 
 class ConnectionItem extends vscode.TreeItem {
-  constructor(public name: string, public backend: string) {
+  constructor(
+    public name: string,
+    public backend: string,
+    public isDefault: boolean
+  ) {
     super(name, vscode.TreeItemCollapsibleState.None);
-    this.description =
-      backend === ConnectionBackend.BigQuery ? "(BigQuery)" : "(Postgres)";
+    const backendName =
+      backend === ConnectionBackend.BigQuery ? "BigQuery" : "Postgres";
+    this.description = `(${backendName}${isDefault ? ", default" : ""})`;
 
     // this.iconPath = {
     //   light: getIconPath(`struct_${subtype}`, false),
