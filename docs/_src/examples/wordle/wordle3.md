@@ -37,7 +37,7 @@ explore: words_and_letters is from(words->five_letter_words){
 ```
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy", "isHidden":true}
+--! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy", "isHidden":true}
 explore: wordle is from(words_and_letters->words_and_position){
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
@@ -51,7 +51,7 @@ We can see that 'E' in position 5 occurs in 397 words, 'S' in position 1  occurs
 surprisingly common.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w3.malloy", "showAs":"html"}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle->{
   group_by: [
     letters.letter
@@ -67,7 +67,7 @@ We can see that 'E' in position 5 occurs in 397 words, 'S' in position 1  occurs
 surprisingly common.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w3.malloy", "showAs":"html"}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle->{
   group_by: [
     letters.letter
@@ -83,12 +83,12 @@ query: wordle->{
 ## Add this to our Model
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy"}
+--! {"isModel": true, "modelPath": "/inline/w4.malloy", "source": "/inline/w1.malloy"}
 explore: wordle is from(words_and_letters->words_and_position){
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
-  query: find_words{
+  query: find_words is {
     group_by: [
       letters.letter
       letters.position
@@ -101,9 +101,64 @@ explore: wordle is from(words_and_letters->words_and_position){
 }
 ```
 
-## How many words with X or Y
+## How many words with have an 'O' in the second position have a 'Y' and don't have 'SLA'
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w3.malloy", "showAs":"html"}
-query: wordle->find_words{where: word ~ r'[xy]'}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}
+query: wordle->find_words{
+  where:
+    word ~ r'[Y]'
+    and word ~ r'.O...'
+    and word !~ r'[SLA]'
+}
+```
+
+## How to pick the next word?
+
+We'd like to pick a word that is going to lead to the most will reveal the most about the most words.
+We can produce a word score by taking our find word query and mapping back to words.
+
+```malloy
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}
+query: wordle->find_words->{
+  group_by: words_list.word
+  aggregate: score is word_count.sum()
+}
+```
+
+## This looks pretty useful, lets make find words return a score.
+
+```malloy
+--! {"isModel": true, "modelPath": "/inline/w5.malloy", "source": "/inline/w1.malloy"}
+explore: wordle is from(words_and_letters->words_and_position){
+  where: word !~ r'(S|ED)$'
+  measure: word_count is count()
+
+  query: find_words is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+    nest: words_list is {
+      group_by: word
+    }
+  }->{
+    group_by: words_list.word
+    aggregate: score is word_count.sum()
+  }
+}
+```
+
+## How many words with have an 'O' in the second position have a 'Y' and don't have 'SLA'
+The score should give us then best pick.
+
+```malloy
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w5.malloy", "showAs":"html"}
+query: wordle->find_words{
+  where:
+    word ~ r'[Y]'
+    and word ~ r'.O...'
+    and word !~ r'[SLA]'
+}
 ```

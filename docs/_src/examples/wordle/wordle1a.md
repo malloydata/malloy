@@ -1,5 +1,4 @@
-
-##  Numbers For Letter Positioning.
+#  Letters and Positioning.
 
 The query below produces a table with the numbers 1 to 5
 

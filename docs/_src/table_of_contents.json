@@ -186,16 +186,28 @@
       "title": "Wordle - A Perfect Solver",
       "items": [
         {
-          "title": "Overview",
+          "title": "Just Words",
           "link": "/examples/wordle/wordle.md"
         },
         {
-          "title": "Source and Transformation",
+          "title": "Letters and Positioning",
+          "link": "/examples/wordle/wordle1a.md"
+        },
+        {
+          "title": "Letter Frequency",
           "link": "/examples/wordle/wordle2.md"
         },
         {
-          "title": "Wordle3",
+          "title": "Scoring Words",
           "link": "/examples/wordle/wordle3.md"
+        },
+        {
+          "title": "Final Model",
+          "link": "/examples/wordle/wordle4.md"
+        },
+        {
+          "title": "Solving Puzzles",
+          "link": "/examples/wordle/wordle5.md"
         }
       ]
     }
