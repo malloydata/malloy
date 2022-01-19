@@ -12,6 +12,20 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
+      "outFiles": ["${workspaceFolder}/packages/**/dist/**"],
+      "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
+      "preLaunchTask": "${defaultBuildTask}",
+      "sourceMaps": true,
+      "console": "integratedTerminal",
+      "runtimeArgs": ["--preserve-symlinks"]
+    },
+    {
+      "name": "Run VSCode Extension (and Debug Webviews)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
+      ],
       "debugWebviews": true,
       "outFiles": ["${workspaceFolder}/packages/**/dist/**"],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
