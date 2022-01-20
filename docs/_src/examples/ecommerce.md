@@ -73,7 +73,7 @@ Having defined this in the model, the VSCode plugin will give us handy "Outline"
 
 Our query is now very simple:
 ```malloy
---! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
+--! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large", "queryName": "sales_by_state_2020"}
 query: sales_by_state_2020 is order_items {where: created_at: @2020} -> {
   group_by: users.state
   aggregate: total_sales

@@ -403,8 +403,8 @@ export class PreparedQuery {
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
       {
-        queryName: this.name || translatedQuery.queryName,
         ...translatedQuery,
+        queryName: this.name || translatedQuery.queryName,
       },
       this._modelDef
     );
@@ -904,7 +904,7 @@ export class Explore extends Entity {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.modelDef);
+    return new PreparedQuery(internalQuery, this.modelDef, name);
   }
 
   private get modelDef(): ModelDef {
@@ -941,7 +941,7 @@ export class Explore extends Entity {
               // field of type "date". Rather, they should be of type "number".
               if (
                 fieldDef.timeframe &&
-                ["day", "day_of_month", "day_of_week", "day_of_year"].includes(
+                ["day_of_month", "day_of_week", "day_of_year"].includes(
                   fieldDef.timeframe
                 )
               ) {
@@ -1770,7 +1770,7 @@ export class ModelMaterializer extends FluentState<Model> {
  * materializing the query (via `getPreparedQuery()`) or extending the task to load
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
-class QueryMaterializer extends FluentState<PreparedQuery> {
+export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Run this loaded `Query`.
    *
@@ -1827,7 +1827,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
  * materializing the prepared result (via `getPreparedResult()`) or extending the task run
  * the query.
  */
-class PreparedResultMaterializer extends FluentState<PreparedResult> {
+export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Run this prepared result.
    *
@@ -1863,7 +1863,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
  * materializing the explore (via `getExplore()`) or extending the task to produce
  * related queries.
  */
-class ExploreMaterializer extends FluentState<Explore> {
+export class ExploreMaterializer extends FluentState<Explore> {
   /**
    * Load a query contained within this loaded explore.
    *
