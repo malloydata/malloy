@@ -16,9 +16,9 @@ import {
   EmptyURLReader,
   Result,
   MalloyQueryData,
-} from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
-import { PooledPostgresConnection } from "@malloy-lang/db-postgres";
+} from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { PooledPostgresConnection } from "@malloydata/db-postgres";
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.

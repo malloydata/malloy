@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import { ResultJSON } from "@malloy-lang/malloy";
-import { DataStyles } from "@malloy-lang/render";
+import { ResultJSON } from "@malloydata/malloy";
+import { DataStyles } from "@malloydata/render";
 import { WebviewPanel } from "vscode";
 
 export class WebviewMessageManager<T> {

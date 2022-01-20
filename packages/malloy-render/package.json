@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/render",
+  "name": "@malloydata/render",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -11,6 +11,6 @@
     "build": "yarn tsc --build"
   },
   "dependencies": {
-    "@malloy-lang/malloy": "*"
+    "@malloydata/malloy": "*"
   }
 }

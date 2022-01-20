@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DataArrayOrRecord } from "@malloy-lang/malloy";
+import { DataArrayOrRecord } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
