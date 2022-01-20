@@ -118,7 +118,38 @@ footer: /generated/footers/examples/ecommerce.html
 <pre class="language-malloy"><span class="token keyword">query</span>: sales_by_state_2020 <span class="token keyword">is</span> order_items {<span class="token keyword">where</span>: created_at: <span class="token date">@2020</span>} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: users<span class="token punctuation">.</span>state
   <span class="token keyword">aggregate</span>: total_sales
-}</pre><div class="error">Error: TypeError: Cannot read property 'pipeHead' of undefined</div><p>To further simplify, we can add this and a couple other queries we’ll frequently use to our model. Once you define these, the VSCode plugin will supply a “Run” button next to each query:</p>
+}</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;sales</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">California</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">561,080.732</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Texas</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">330,723.271</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">New York</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">224,256.631</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Illinois</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">185,573.601</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Florida</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">137,869.361</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div><p>To further simplify, we can add this and a couple other queries we’ll frequently use to our model. Once you define these, the VSCode plugin will supply a “Run” button next to each query:</p>
 <pre class="language-malloy">  <span class="token keyword">query</span>: sales_by_state_2020 <span class="token keyword">is</span> {
     <span class="token keyword">where</span>: created_at: <span class="token date">@2020</span>
     <span class="token keyword">group_by</span>: users<span class="token punctuation">.</span>state
