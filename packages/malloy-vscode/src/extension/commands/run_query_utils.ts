@@ -156,12 +156,14 @@ export function runMalloyQuery(
         };
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
         previous.cancel();
-        previous.panel.reveal();
+        if (!previous.panel.visible) {
+          previous.panel.reveal(vscode.ViewColumn.Beside, true);
+        }
       } else {
         const panel = vscode.window.createWebviewPanel(
           "malloyQuery",
           name,
-          vscode.ViewColumn.Two,
+          { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
           { enableScripts: true, retainContextWhenHidden: true }
         );
         current = {
@@ -174,7 +176,6 @@ export function runMalloyQuery(
         current.panel.iconPath = vscode.Uri.parse(
           path.join(__filename, "..", turtleIcon)
         );
-        current.panel.title = name;
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
       }
 

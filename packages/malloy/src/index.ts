@@ -65,6 +65,9 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
+  QueryMaterializer,
+  PreparedResultMaterializer,
+  ExploreMaterializer,
 } from "./malloy";
 export type {
   URLReader,
