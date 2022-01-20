@@ -1720,9 +1720,9 @@ class QueryQuery extends QueryField {
         }
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
-        onCondition = `${fkSQL} = ${pkSQL}`;
+        onCondition = `ON ${fkSQL} = ${pkSQL}`;
       } else if (structRelationship.type == "condition") {
-        onCondition = new QueryFieldBoolean(
+        const exprStr = new QueryFieldBoolean(
           {
             type: "boolean",
             name: "ignoreme",
@@ -1730,6 +1730,7 @@ class QueryQuery extends QueryField {
           },
           qs.parent
         ).generateExpression(this.rootResult);
+        onCondition = `ON ${exprStr}`;
       }
       let filters = "";
       let conditions = undefined;
@@ -1745,7 +1746,7 @@ class QueryQuery extends QueryField {
         const joinType = upperCase(
           structRelationship.type === "crossJoin" ? "cross" : "left"
         );
-        s += `${joinType} JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
+        s += `${joinType} JOIN ${structSQL} AS ${ji.alias} ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
