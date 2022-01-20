@@ -1,0 +1,2577 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/examples/wordle/wordle1a.html
+---
+
+<div class="document">
+      <h1>
+        <a id="letters-and-positioning-" class="header-link anchor" href="#letters-and-positioning-">
+          Letters and Positioning.
+        </a>
+      </h1>
+    <p>The query below produces a table with the numbers 1 to 5</p>
+<pre class="language-malloy"><span class="token keyword">explore</span>: <span class="token type">numbers</span> <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
+
+  <span class="token comment">-- code to fake a cross join</span>
+  <span class="token keyword">primary_key</span>: a <span class="token comment">-- key to fake a cross join</span>
+  <span class="token keyword">dimension</span>: a <span class="token keyword">is</span> <span class="token string">'a'</span><span class="token punctuation">;</span>
+}
+<span class="token keyword">query</span>: <span class="token type">numbers</span><span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: num}</pre><div class="result-outer small">
+    <div class="result-middle">
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">num</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
+</tr>
+
+		</tbody>
+	</table>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="cross-join-these-two-tables-to-produce-letter-posiitioning-" class="header-link anchor" href="#cross-join-these-two-tables-to-produce-letter-posiitioning-">
+          Cross join these two tables to produce letter posiitioning.
+        </a>
+      </h2>
+    <p>The result is a table with nested data.  Each word contans a sub-table with a letter in each position.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span>: words_and_letters <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
+  <span class="token comment">-- Cross join is missing at the moment</span>
+  <span class="token keyword">join</span>: <span class="token type">numbers</span> <span class="token keyword">on</span> a
+  <span class="token keyword">dimension</span>: a <span class="token keyword">is</span> <span class="token string">'a'</span> <span class="token comment">-- key to fake a cross join</span>
+
+  <span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: word
+    <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
+      <span class="token keyword">order_by</span>: <span class="token number">2</span>
+      <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
+        letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+        position <span class="token keyword">is</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num
+
+      <span class="token punctuation">]</span>
+    }
+  }
+}
+<span class="token keyword">query</span>: words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position</pre><div class="result-outer large">
+    <div class="result-middle">
+      <div class="result-inner">
+        <pre>[
+  {
+    "word": "ABACI",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "C",
+        "position": 4
+      },
+      {
+        "letter": "I",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABACK",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "C",
+        "position": 4
+      },
+      {
+        "letter": "K",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABATE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "T",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABBEY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "B",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABBOT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "B",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABETS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "T",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABHOR",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "H",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABIDE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "D",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABLER",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABODE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "D",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABORT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABOUT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "U",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABOVE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "V",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABUSE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "U",
+        "position": 3
+      },
+      {
+        "letter": "S",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ABYSS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "B",
+        "position": 2
+      },
+      {
+        "letter": "Y",
+        "position": 3
+      },
+      {
+        "letter": "S",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACE'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACHED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "H",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACHES",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "H",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACIDS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "D",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACING",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "G",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACORN",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "N",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACRES",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "R",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACRID",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "R",
+        "position": 3
+      },
+      {
+        "letter": "I",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACT'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACTED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACTOR",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ACUTE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "C",
+        "position": 2
+      },
+      {
+        "letter": "U",
+        "position": 3
+      },
+      {
+        "letter": "T",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADAGE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "G",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADAPT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "P",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADDED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "D",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADEPT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "P",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADMIT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "M",
+        "position": 3
+      },
+      {
+        "letter": "I",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADO'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADOBE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "B",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADOPT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "P",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADORE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADORN",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "N",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ADULT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "D",
+        "position": 2
+      },
+      {
+        "letter": "U",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AEONS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "E",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AFFIX",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "F",
+        "position": 2
+      },
+      {
+        "letter": "F",
+        "position": 3
+      },
+      {
+        "letter": "I",
+        "position": 4
+      },
+      {
+        "letter": "X",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AFOOT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "F",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AFTER",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "F",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGAIN",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "I",
+        "position": 4
+      },
+      {
+        "letter": "N",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGE'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGENT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGILE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGING",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "G",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGLOW",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "W",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGONY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AGREE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "G",
+        "position": 2
+      },
+      {
+        "letter": "R",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AHEAD",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "H",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "A",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AID'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "D",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIDED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "D",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIDES",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "D",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AILED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIM'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "M",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIMED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "M",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIN'T",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "N",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIR'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "R",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AIRED",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "R",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AISLE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "I",
+        "position": 2
+      },
+      {
+        "letter": "S",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALARM",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "M",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALBUM",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "B",
+        "position": 3
+      },
+      {
+        "letter": "U",
+        "position": 4
+      },
+      {
+        "letter": "M",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALE'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALERT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALGAE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "G",
+        "position": 3
+      },
+      {
+        "letter": "A",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALIAS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "A",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALIBI",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "B",
+        "position": 4
+      },
+      {
+        "letter": "I",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALIEN",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "N",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALIGN",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "G",
+        "position": 4
+      },
+      {
+        "letter": "N",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALIKE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "K",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALINE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALIVE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "V",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALL'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALLAY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "A",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALLEY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALLOT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALLOW",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "W",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALLOY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "L",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALOFT",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "F",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALONE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALONG",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "G",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALOOF",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "F",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALOUD",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "U",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALPHA",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "P",
+        "position": 3
+      },
+      {
+        "letter": "H",
+        "position": 4
+      },
+      {
+        "letter": "A",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALTAR",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "A",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALTER",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALTHO",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "H",
+        "position": 4
+      },
+      {
+        "letter": "O",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ALTOS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "L",
+        "position": 2
+      },
+      {
+        "letter": "T",
+        "position": 3
+      },
+      {
+        "letter": "O",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMASS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "S",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMAZE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "A",
+        "position": 3
+      },
+      {
+        "letter": "Z",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMBER",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "B",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMBLE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "B",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMEBA",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "B",
+        "position": 4
+      },
+      {
+        "letter": "A",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMEER",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMEND",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "E",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "D",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMIRS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMISS",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "I",
+        "position": 3
+      },
+      {
+        "letter": "S",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMONG",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "O",
+        "position": 3
+      },
+      {
+        "letter": "N",
+        "position": 4
+      },
+      {
+        "letter": "G",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMP'S",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "P",
+        "position": 3
+      },
+      {
+        "letter": "'",
+        "position": 4
+      },
+      {
+        "letter": "S",
+        "position": 5
+      }
+    ]
+  }
+]</pre>
+      </div>
+    </div>
+  </div></div>
