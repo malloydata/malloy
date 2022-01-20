@@ -11,7 +11,9 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "@malloy-lang/malloy";
+import { StructDef } from "@malloydata/malloy";
+
+// will it build?
 
 /** Medicare Model */
 export const medicareModel: StructDef = {
@@ -175,7 +177,7 @@ export const medicareModel: StructDef = {
   ],
   name: "malloy-data.malloytest.bq_medicare_test",
   primaryKey: "id",
-  structRelationship: { type: "basetable", connectionName: "test" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   structSource: { type: "table" },
   type: "struct",
 };
@@ -184,7 +186,7 @@ export const medicareStateFacts: StructDef = {
   fields: [],
   name: "medicare_state_facts",
   dialect: "standardsql",
-  structRelationship: { type: "basetable", connectionName: "test" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   structSource: {
     query: {
       structRef: "medicare_test",

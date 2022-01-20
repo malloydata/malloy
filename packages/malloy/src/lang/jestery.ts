@@ -16,7 +16,7 @@
 import { diff as jestDiff } from "jest-diff";
 import { MalloyElement } from "./ast";
 import { MalloyTranslator } from "./parse-malloy";
-import { TestTranslator, pretty } from "./jest-factories";
+import { TestTranslator, pretty } from "./test-translator";
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace

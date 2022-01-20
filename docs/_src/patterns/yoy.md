@@ -8,14 +8,17 @@ In this Case, the X-Axis is `month_of_year`, the Y-Axis is `flight_count` and th
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"year_over_year":{"renderer":"line_chart"}}}
-explore 'malloy-data.faa.flights'
-    flight_count is count()
-| reduce
-  year_over_year is (reduce
-    month_of_year is month(dep_time)
-    flight_count
-    flight_year is dep_time.year
-  )
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
+
+query: flights->{
+  nest: year_over_year is {
+    group_by: month_of_year is month(dep_time)
+    aggregate: flight_count
+    group_by: flight_year is dep_time.year
+  }
+}
 ```
 
 ## Method 2: Filtered Aggregates
@@ -24,19 +27,21 @@ Filters make it easy to reuse aggreate calculations for trends analysis.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
 -- common calculation for flights
-define flights is ('malloy-data.faa.flights'
-  flight_count is count(*)
-);
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count(*)
+}
 
-explore flights
-| reduce top 10
-  carrier
-  flights_in_2002 is flight_count : [dep_time : @2003]
-  flights_in_2003 is flight_count : [dep_time : @2002]
-  percent_change is round(
-      (flight_count : [dep_time : @2003] - flight_count : [dep_time : @2002])
-        / NULLIF( flight_count : [dep_time : @2003],0)*100
-    ,1)
+query: flights->{
+  group_by: carrier
+  aggregate: [
+    flights_in_2002 is flight_count{where: dep_time = @2002}
+    flights_in_2003 is flight_count{where: dep_time = @2003}
+    percent_change is round(
+        (flight_count{where: dep_time = @2003} - flight_count{where: dep_time = @2002})
+          / NULLIF(flight_count{where: dep_time = @2003},0)*100
+      ,1)
+  ]
+}
 ```
 
 
@@ -46,25 +51,27 @@ current data.  Read more about it in the [filters](filter_expressions.md) sectio
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
--- common calculation for order_items
-define inventory_items is (explore 'malloy-data.ecomm.inventory_items'
-  primary key id
-);
+explore: inventory_items is table('malloy-data.ecomm.inventory_items'){
+  primary_key: id
+}
 
-define order_items is ('malloy-data.ecomm.order_items'
-  inventory_items is join on inventory_item_id
-  order_item_count is count(*)
-);
+explore: order_items is table('malloy-data.ecomm.order_items'){
+  join: inventory_items  on inventory_item_id
+  measure: order_item_count is count(*)
+}
 
-explore order_items
-| reduce top 10
-    inventory_items.product_category
-    last_year is order_item_count : [created_at : now.year-1 year]
-    prior_year is order_item_count : [created_at : now.year-2 year]
+query: order_items->{
+  top: 10
+  group_by: inventory_items.product_category
+  aggregate: [
+    last_year is order_item_count{where: created_at : now.year-1 year}
+    prior_year is order_item_count{ where: created_at : now.year-2 year}
     percent_change is round(
-      (order_item_count : [created_at : now.year-1 year] - order_item_count : [created_at : now.year-2 year])
-        / NULLIF(order_item_count : [created_at : now.year-2 year],0)*100
+      (order_item_count {where: created_at : now.year-1 year} - order_item_count {where: created_at: now.year-2 year})
+        / NULLIF(order_item_count{where: created_at : now.year-2 year},0)*100
       ,1)
+  ]
+}
 ```
 
 
@@ -74,23 +81,31 @@ We can rewrite the query so it is more reusable.  The declarations after the exp
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
 -- common calculation for order_items
-define inventory_items is (explore 'malloy-data.ecomm.inventory_items'
-  primary key id
-);
+explore: inventory_items is table('malloy-data.ecomm.inventory_items'){
+  primary_key: id
+}
 
-define order_items is ('malloy-data.ecomm.order_items'
-  inventory_items is join on inventory_item_id
-  order_item_count is count(*)
-);
+explore: order_items is table('malloy-data.ecomm.order_items'){
+  join: inventory_items  on inventory_item_id
+  measure: order_item_count is count(*)
+}
 
-explore order_items
-    last_year is order_item_count : [created_at : now.year-1 year]
-    prior_year is order_item_count : [created_at : now.year-2 year]
-    percent_change is round((last_year - prior_year)
-        / NULLIF(prior_year,0)*100,1)
-| reduce top 10
-  inventory_items.product_category
-  last_year
-  prior_year
-  percent_change
+query: order_items{
+  measure: [
+    // these caclulations can be used in multipe parts of the query
+    last_year is order_item_count{where: created_at : now.year-1 year}
+    prior_year is order_item_count{ where: created_at : now.year-2 year}
+  ]
+}->{
+  top: 10
+  group_by: inventory_items.product_category
+  aggregate: [
+    last_year
+    prior_year
+    percent_change is round(
+      (last_year - prior_year)
+        / NULLIF(last_year,0)*100
+      ,1)
+  ]
+}
 ```

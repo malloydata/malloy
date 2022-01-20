@@ -140,7 +140,7 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 
 
-  -- query: southwest_flights is carrier_dashboard {? carriers.nickname : 'Southwest'}
+  -- query: southwest_flights is carrier_dashboard {where: carriers.nickname : 'Southwest'}
   query: carrier_dashboard is {
     aggregate: destination_count is destination.airport_count
     aggregate: flight_count
@@ -175,7 +175,7 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 
 -- query that you might run for to build a flight search interface
---   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
+  -- query: flights {where: [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01]} -> kayak
   query: kayak is {
     nest: carriers is {
       group_by: carriers.nickname
@@ -244,9 +244,8 @@ query: kayak_query_sj_to_la is
     ]
   }
 
-query: flights -> carrier_dashboard {? carriers.nickname: 'Southwest' }
-query: flights -> carrier_dashboard {? carriers.nickname: 'Jetblue' }
-
-query: flights -> airport_dashboard {? origin.code: 'SJC' }
-query: flights -> airport_dashboard {?  origin.code: 'SFO' }
-query: flights -> airport_dashboard {?  origin.code: 'SFO' }
+query: flights -> carrier_dashboard {where: carriers.nickname: 'Southwest' }
+query: flights -> carrier_dashboard {where: carriers.nickname: 'Jetblue' }
+query: flights -> airport_dashboard {where: origin.code: 'SJC' }
+query: flights -> airport_dashboard {where:  origin.code: 'SFO' }
+query: flights -> airport_dashboard {where:  origin.code: 'SFO' }

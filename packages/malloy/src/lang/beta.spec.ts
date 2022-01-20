@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2021 Google LLC
  *
@@ -13,7 +14,9 @@
 
 import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
-import { TestTranslator } from "./jest-factories";
+import { TestTranslator, pretty } from "./test-translator";
+
+const inspectCompile = false;
 
 /*
  * Thinking of these tests as just "do things parse", there should maybe
@@ -22,38 +25,21 @@ import { TestTranslator } from "./jest-factories";
  * and make sure they parse to ast and the ast generates something
  */
 
-abstract class Testable {
-  xlate: TestTranslator;
-  constructor(x: TestTranslator) {
-    this.xlate = x;
-  }
-
+abstract class Testable extends TestTranslator {
   abstract compile(): void;
-
-  hasErrors(): boolean {
-    const t = this.xlate.translate();
-    if (t.final && (t.errors === undefined || t.errors.length === 0)) {
-      return false;
-    }
-    return true;
-  }
-
-  errReport(): string {
-    const t = this.xlate.translate();
-    if (t.errors) {
-      return this.xlate.prettyErrors();
-    }
-    return "no errors to report";
-  }
 }
 
 class BetaModel extends Testable {
   constructor(s: string) {
-    super(new TestTranslator(s));
+    super(s);
   }
 
   compile(): void {
-    const _compileTo = this.xlate.translate();
+    const compileTo = this.translate();
+    if (compileTo.translated && inspectCompile) {
+      console.log("MODEL: ", pretty(compileTo.translated.modelDef));
+      console.log("QUERIES: ", pretty(compileTo.translated.queryList));
+    }
     // All the stuff to ask the ast for a translation is already in TestTranslator
   }
 }
@@ -63,35 +49,52 @@ declare global {
   namespace jest {
     interface Matchers<R> {
       toCompile(): R;
+      toBeErrorless(): R;
     }
   }
+}
+
+function checkForErrors(trans: Testable) {
+  if (trans.logger === undefined) {
+    throw new Error("JESTERY BROKEN, CANT FIND ERORR LOG");
+  }
+  if (trans.logger.hasErrors()) {
+    return {
+      message: () => `Translation Errors:\n${trans.prettyErrors()}`,
+      pass: false,
+    };
+  }
+  return {
+    message: () => "Translation resulted in no errors",
+    pass: true,
+  };
 }
 
 expect.extend({
   toCompile: function (x: Testable) {
     x.compile();
-    if (x.hasErrors()) {
-      return { message: () => x.errReport(), pass: false };
-    }
-    return { message: () => "No errors", pass: true };
+    return checkForErrors(x);
+  },
+  toBeErrorless: function (trans: Testable) {
+    return checkForErrors(trans);
   },
 });
 
 class BetaExpression extends Testable {
   constructor(src: string) {
-    super(new TestTranslator(src, "fieldExpr"));
+    super(src, "justExpr");
   }
 
   compile(): void {
-    const exprAst = this.xlate.ast();
+    const exprAst = this.ast();
     if (exprAst instanceof ExpressionDef) {
-      const aStruct = this.xlate.internalModel.contents.ab;
+      const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
         const _exprDef = exprAst.getExpression(new StructSpace(aStruct));
       } else {
         throw new Error("Can't get simple namespace for expression tests");
       }
-    } else if (this.hasErrors()) {
+    } else if (this.logger.hasErrors()) {
       return;
     } else {
       const whatIsIt = exprAst?.toString() || "NO AST GENERATED";
@@ -117,52 +120,324 @@ function modelOK(s: string): TestFunc {
   };
 }
 
-describe("top level definition", () => {
-  test("explore", modelOK(`explore: testA is table('aTable')`));
+describe("model statements", () => {
+  describe("explore:", () => {
+    test("explore table", modelOK(`explore: testA is table('aTable')`));
+    test(
+      "explore shorcut fitlered table",
+      modelOK(`
+        explore: testA is table('aTable') {? astr ~ 'a%' }
+      `)
+    );
+    test(
+      "explore fitlered table",
+      modelOK(`
+        explore: testA is table('aTable') { where: astr ~ 'a%' }
+      `)
+    );
+    test("explore explore", modelOK(`explore: testA is a`));
+    test(
+      "explore query",
+      modelOK(`explore: testA is from(a->{group_by: astr})`)
+    );
+    test(
+      "refine explore",
+      modelOK(`explore: aa is a { dimension: a is astr }`)
+    );
+  });
+  describe("query:", () => {
+    test(
+      "anonymous query",
+      modelOK("query: table('aTable') -> { group_by: astr }")
+    );
+    test(
+      "query",
+      modelOK("query: name is table('aTable') -> { group_by: astr }")
+    );
+    test(
+      "query from query",
+      modelOK(
+        `
+          query: q1 is ab->{ group_by: astr limit: 10 }
+          query: q2 is ->q1
+        `
+      )
+    );
+    test(
+      "query with refinements from query",
+      modelOK(
+        `
+          query: q1 is ab->{ group_by: astr limit: 10 }
+          query: q2 is ->q1 { aggregate: acount }
+        `
+      )
+    );
+    test(
+      "chained query operations",
+      modelOK(`
+        query: ab
+          -> { group_by: astr; aggregate: acount }
+          -> { top: 5; where: astr ~ 'a%' group_by: astr }
+      `)
+    );
+    test(
+      "query from explore from query",
+      modelOK(
+        `query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }`
+      )
+    );
+    test(
+      "query with shortcut filtered turtle",
+      modelOK("query: allA is ab->aturtle {? astr ~ 'a%' }")
+    );
+    test(
+      "query with filtered turtle",
+      modelOK("query: allA is ab->aturtle { where: astr ~ 'a%' }")
+    );
+    test(
+      "nest: in group_by:",
+      modelOK(`
+        query: ab -> {
+          group_by: astr;
+          nest: nested_count is {
+            aggregate: acount
+          }
+        }
+      `)
+    );
+    test(
+      "reduce pipe project",
+      modelOK(`
+        query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+      `)
+    );
+  });
+  describe("import:", () => {
+    test("simple import", () => {
+      const docParse = new BetaModel(`import "child"`);
+      const xr = docParse.unresolved();
+      expect(docParse).toBeErrorless();
+      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      docParse.update({
+        urls: { "internal://test/child": "explore: aa is a" },
+      });
+      const yr = docParse.unresolved();
+      expect(yr).toBeNull();
+    });
+    test("missing import", () => {
+      const docParse = new BetaModel(`import "child"`);
+      const xr = docParse.unresolved();
+      expect(docParse).toBeErrorless();
+      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      const reportedError = "ENOWAY: No way to find your child";
+      docParse.update({
+        errors: { urls: { "internal://test/child": reportedError } },
+      });
+      docParse.translate();
+      expect(docParse).not.toBeErrorless();
+      expect(docParse.prettyErrors()).toContain(reportedError);
+    });
+    test("chained imports", () => {
+      const docParse = new BetaModel(`import "child"`);
+      docParse.update({
+        urls: { "internal://test/child": `import "grandChild"` },
+      });
+      const xr = docParse.unresolved();
+      expect(docParse).toBeErrorless();
+      expect(xr).toEqual({ urls: ["internal://test/grandChild"] });
+    });
+  });
+});
+
+describe("explore properties", () => {
+  test("single dimension", modelOK("explore: aa is a { dimension: x is 1 }"));
   test(
-    "anonymous query",
-    modelOK("query: table('aTable') -> { group_by: astring }")
+    "multiple dimensions",
+    modelOK(`
+      explore: aa is a {
+        dimension: [
+          x is 1
+          y is 2
+        ]
+      }
+    `)
+  );
+  test("single measure", modelOK("explore: aa is a { measure: x is count() }"));
+  test(
+    "multiple measures",
+    modelOK(`
+      explore: aa is a {
+        dimension: [
+          x is count()
+          y is x * x
+        ]
+      }
+    `)
+  );
+  test("single where", modelOK("explore: aa is a { where: ai > 10 }"));
+  test(
+    "multiple where",
+    modelOK(`
+      explore: aa is a {
+        where: [
+          ai > 10,
+          af < 1000
+        ]
+      }
+    `)
+  );
+  test("simple join", modelOK("explore: nab is a { join: b on astr }"));
+  test("inverse join", modelOK("explore: nab is a { join: b on b.astr }"));
+  test("is join", modelOK("explore: nab is a { join: nb is b on astr }"));
+  test(
+    "multiple joins",
+    modelOK(`
+      explore: nab is a {
+        join: [
+          b on astr,
+          br is b on b.astr
+        ]
+      }
+    `)
+  );
+  test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
+  test("rename", modelOK("explore: c is a { rename: anint is ai }"));
+  test("accept single", modelOK("explore: c is a { accept: astr }"));
+  test("accept multi", modelOK("explore: c is a { accept: [ astr, af ] }"));
+  test("except single", modelOK("explore: c is a { except: astr }"));
+  test("except multi", modelOK("explore: c is a { except: [ astr, af ] }"));
+  test(
+    "explore-query",
+    modelOK("explore: c is a {query: q is { group_by: astr }}")
   );
   test(
-    "query",
-    modelOK("query: name is table('aTable') -> { group_by: astring }")
-  );
-  test(
-    "query with filtered turtle",
-    modelOK("query: allA is ab->aturtle {? astring ~ 'a%' }")
-  );
-  test(
-    "refined turtle",
+    "refined explore-query",
     modelOK(`
       explore: abNew is ab {
-        query: for1 is aturtle {? aninteger = 1 }
+        query: for1 is aturtle {? ai = 1 }
       }
     `)
   );
   test(
-    "nest: in group_by:",
+    "chained explore-query",
     modelOK(`
-      query: ab -> {
-        group_by: astring;
-        nest: nested_count is {
-          aggregate: acount
+      explore: c is a {
+        query: chain is {
+          group_by: astr
+        } -> {
+          top: 10; order_by: astr
+          project: *
         }
       }
     `)
   );
   test(
-    "reduce pipe project",
+    "multiple explore-query",
     modelOK(`
-      query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+      explore: abNew is ab {
+        query: [
+          q1 is { group_by: astr },
+          q2 is { group_by: ai }
+        ]
+      }
     `)
   );
+});
+
+describe("qops", () => {
+  test("group by single", modelOK("query: a->{ group_by: astr }"));
+  test("group by multiple", modelOK("query: a->{ group_by: [astr,ai] }"));
+  test("aggregate single", modelOK("query: a->{ aggregate: num is count() }"));
+  test(
+    "aggregate multiple",
+    modelOK(`
+      query: a->{
+        aggregate: [ num is count(), total is sum(ai) ]
+      }
+    `)
+  );
+  test("project ref", modelOK("query:ab->{ project: b.astr }"));
+  test("project *", modelOK("query:ab->{ project: * }"));
+  test("project def", modelOK("query:ab->{ project: one is 1 }"));
+  test(
+    "project multiple",
+    modelOK(`
+      query: a->{
+        project: [ one is 1, astr ]
+      }
+    `)
+  );
+  test("index single", modelOK("query:a->{index: astr}"));
+  test("index multiple", modelOK("query:a->{index: [astr,af]}"));
+  test("index star", modelOK("query:a->{index: *}"));
+  test("index by", modelOK("query:a->{index: * by ai}"));
+  test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
+  test("top N by field", modelOK("query: a->{top: 5 by af; group_by: astr}"));
+  test(
+    "top N by expression",
+    modelOK("query: ab->{top: 5 by acount; group_by: astr}")
+  );
+  test("limit N", modelOK("query: a->{ limit: 5; group_by: astr }"));
+  test("order by", modelOK("query: a->{ order_by: af; group_by: astr }"));
+  test(
+    "order by asc",
+    modelOK("query: a->{ order_by: af asc; group_by: astr }")
+  );
+  test(
+    "order by desc",
+    modelOK("query: a->{ order_by: af desc; group_by: astr }")
+  );
+  test("order by N", modelOK("query: a->{ order_by: 1 asc; group_by: astr }"));
+  test(
+    "order by multiple",
+    modelOK(`
+      query: a->{
+        order_by: [1 asc, af desc]
+        group_by: [ astr, af ]
+      }
+    `)
+  );
+  test("where single", modelOK("query:a->{ group_by: astr; where: af > 10 }"));
+  test(
+    "having single",
+    modelOK(
+      "query:ab->{ aggregate: acount; group_by: astr; having: acount > 10 }"
+    )
+  );
+  test(
+    "where multiple",
+    modelOK("query:a->{ group_by: astr; where: [af > 10,astr~'a%'] }")
+  );
+  test(
+    "nest single",
+    modelOK(`
+      query: a->{
+        group_by: ai
+        nest: nestbystr is { group_by: astr; aggregate: N is count() }
+      }
+    `)
+  );
+  test(
+    "nest multiple",
+    modelOK(`
+      query: a->{
+        group_by: ai
+        nest: [
+          nestbystr is { group_by: astr; aggregate: N is count() },
+          renest is { group_by: astr; aggregate: N is count() }
+        ]
+      }
+    `)
+  );
+  test("nest ref", modelOK("query: ab->{group_by: ai; nest: aturtle}"));
 });
 
 describe("expressions", () => {
   describe("literals", () => {
     test("integer", exprOK("42"));
     test("string", exprOK(`'fortywo-two'`));
-    test("string with quotes", exprOK(`'Isn'''t this nice'`));
+    test("string with \\'", exprOK(`'Isn` + `\\` + `'t this nice'`));
+    test("string with \\\\", exprOK(`'Is ` + `\\` + `\\` + ` nice'`));
     test("year", exprOK("@1960"));
     test("quarter", exprOK("@1960-Q1"));
     test("week", exprOK("@WK1960-06-26"));
@@ -191,19 +466,19 @@ describe("expressions", () => {
 
     describe("timestamp truncation", () => {
       for (const unit of timeframes) {
-        test(`timestamp truncate ${unit}`, exprOK(`atimestamp.${unit}`));
+        test(`timestamp truncate ${unit}`, exprOK(`ats.${unit}`));
       }
     });
 
     describe("timestamp extraction", () => {
       for (const unit of timeframes) {
         // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(atimestamp)`));
+        test(`timestamp extract ${unit}`, exprOK(`${unit}(ats)`));
       }
     });
   });
 
-  test("field name", exprOK("astring"));
+  test("field name", exprOK("astr"));
   test("function call", exprOK("CURRENT_TIMESTAMP()"));
 
   describe("operators", () => {
@@ -211,7 +486,7 @@ describe("expressions", () => {
     test("subtraction", exprOK("42 - 7"));
     test("multiplication", exprOK("42 * 7"));
     test("division", exprOK("42 / 7"));
-    test("unary negation", exprOK("- aninteger"));
+    test("unary negation", exprOK("- ai"));
     test("equal", exprOK("42 = 7"));
     test("not equal", exprOK("42 != 7"));
     test("greater than", exprOK("42 > 7"));
@@ -226,16 +501,20 @@ describe("expressions", () => {
     test("or", exprOK("true or false"));
   });
 
-  test("filtered measure", exprOK("acount {? astring = 'why?' }"));
+  test("filtered measure", exprOK("acount {? astr = 'why?' }"));
   describe("aggregate forms", () => {
-    test("count distinct", exprOK("count(distinct astring)"));
     test("count", exprOK("count()"));
-    test("join.field.count()", exprOK("b.astring.count()"));
+    test("count distinct", exprOK("count(distinct astr)"));
+    test("join.count()", exprOK("b.count()"));
     for (const f of ["sum", "min", "max", "avg"]) {
-      test(`${f}(afloat)`, exprOK(`${f}(afloat)`));
-    }
-    for (const f of ["sum", "min", "max", "avg"]) {
-      test(`b.afloat.${f}()`, exprOK(`b.afloat.${f}()`));
+      const fOfT = `${f}(af)`;
+      test(fOfT, exprOK(fOfT));
+      if (f !== "min" && f !== "max") {
+        const joinDot = `b.af.${f}()`;
+        test(joinDot, exprOK(joinDot));
+        const joinAgg = `b.${f}(af)`;
+        test(joinAgg, exprOK(joinAgg));
+      }
     }
   });
 
@@ -243,29 +522,30 @@ describe("expressions", () => {
     test(
       "full",
       exprOK(`
-        pick 'the answer' when aninteger = 42
-        pick 'the questionable answer' when aninteger = 54
+        pick 'the answer' when ai = 42
+        pick 'the questionable answer' when ai = 54
         else 'random'
     `)
     );
     test(
       "applied",
       exprOK(`
-        astring: pick 'the answer' when '42'
-        pick 'the questionable answer' '54'
-        else 'random'
+        astr:
+          pick 'the answer' when = '42'
+          pick 'the questionable answer' when = '54'
+          else 'random'
     `)
     );
     test(
       "filtering",
       exprOK(`
-        astring: pick 'missing value' when NULL
+        astr: pick 'missing value' when NULL
     `)
     );
     test(
       "tiering",
       exprOK(`
-      aninteger:
+      ai:
         pick 1 when < 10
         pick 10 when < 100
         pick 100 when < 1000
@@ -275,11 +555,32 @@ describe("expressions", () => {
     test(
       "transforming",
       exprOK(`
-        aninteger:
-          pick "small" when < 10
-          pick "medium" when < 100
-          else "large"
+        ai:
+          pick 'small' when < 10
+          pick 'medium' when < 100
+          else 'large'
     `)
     );
+  });
+});
+
+describe("error handling", () => {
+  test("query reference to undefined explore", () => {
+    const m = new BetaModel("query: x->{ group_by: y }");
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Undefined data source 'x'");
+  });
+
+  test("join reference before definition", () => {
+    const m = new BetaModel(`
+    explore: newAB is a { join: newB is bb on astring }
+    explore: newB is b
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Undefined data source 'bb'");
   });
 });

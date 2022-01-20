@@ -33,15 +33,18 @@ Fields may be referenced by name, and fields in joins or nested structures can b
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-explore flights
-| reduce : [origin.county != null]
-  origin.state
-  by_county is (reduce
-    origin.county
-    flight_count
-  )
-| project limit 3
-  by_county.county
+query: flights->{
+  where: origin.county != null
+  group_by: origin.state
+  nest: by_county is {
+    group_by: origin.county
+    aggregate: flight_count
+  }
+}
+->{
+  project: by_county.county
+  limit: 3
+}
 ```
 
 Identifiers that share a name with a keyword in Malloy must be enclosed in back ticks `` ` ``, e.g. `` `year` ``.
@@ -103,10 +106,10 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-explore flights
-| reduce
-  distance_2003 is sum(distance) : [dep_time: @2003]
-  ca_flights is count() : [origin.state: 'CA']
+query: flights->{
+  aggregate: distance_2003 is sum(distance){where: dep_time: @2003}
+  aggregate: ca_flights is count(){where: origin.state: 'CA'}
+}
 ```
 
 ## Safe Type Cast
@@ -118,9 +121,9 @@ Safe type casting may be accomplished with the `::type` syntax.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-explore flights
-| reduce
-  distance_summary is concat(total_distance::string, ' miles')
+query: flights->{
+  aggregate: distance_summary is concat(total_distance::string, ' miles')
+}
 ```
 
 ## Pick Expressions

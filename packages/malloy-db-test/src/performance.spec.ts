@@ -1,4 +1,4 @@
-import * as malloy from "@malloy-lang/malloy";
+import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 // Chris, please rework.

@@ -295,7 +295,7 @@ export class MalloyToAST
     const joinFrom = fromExploreCx
       ? this.visitExplore(fromExploreCx)
       : new ast.NamedSource(joinAs);
-    const joinOn = this.getIdText(pcx.fieldName());
+    const joinOn = this.getFieldPath(pcx.fieldPath());
     const join = new ast.Join(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
@@ -474,8 +474,9 @@ export class MalloyToAST
       if (ast.isFieldCollectionMember(el)) {
         fields.push(el);
       } else {
-        throw new Error(
-          `internal error: ${el.elementType} is not a query field`
+        throw this.internalError(
+          elCx,
+          `${el.elementType} is not a query field`
         );
       }
     }
@@ -546,34 +547,6 @@ export class MalloyToAST
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
-  visitExploreRoot(pcx: parse.ExploreRootContext): ast.Mallobj {
-    let source: ast.Mallobj | undefined;
-
-    const tblCx = pcx.exploreTable();
-    if (tblCx) {
-      source = this.visitExploreTable(tblCx);
-    }
-
-    const nameCx = pcx.exploreName();
-    if (nameCx) {
-      source = this.visitExploreName(nameCx);
-    }
-
-    if (source === undefined) {
-      throw this.internalError(pcx, "unexpected explore source for query");
-    }
-
-    const refineCx = pcx.exploreProperties();
-    if (refineCx) {
-      source = this.astAt(
-        new ast.RefinedExplore(source, this.visitExploreProperties(refineCx)),
-        pcx
-      );
-    }
-
-    return source;
-  }
-
   visitFirstSegment(pcx: parse.FirstSegmentContext): ast.PipelineDesc {
     const qp = new ast.PipelineDesc();
     const nameCx = pcx.exploreQueryName();
@@ -600,7 +573,7 @@ export class MalloyToAST
   }
 
   visitExploreArrowQuery(pcx: parse.ExploreArrowQueryContext): ast.FullQuery {
-    const root = this.visitExploreRoot(pcx.exploreRoot());
+    const root = this.visitExplore(pcx.explore());
     const queryPipe = this.visitPipelineFromName(pcx.pipelineFromName());
     return this.astAt(new ast.FullQuery(root, queryPipe), pcx);
   }
@@ -714,7 +687,7 @@ export class MalloyToAST
     if (ast.isComparison(op)) {
       return new ast.PartialCompare(op, this.getFieldExpr(pcx.fieldExpr()));
     }
-    throw new Error(`partial comparison '${op}' not recognized`);
+    throw this.internalError(pcx, `partial comparison '${op}' not recognized`);
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
@@ -784,7 +757,7 @@ export class MalloyToAST
         this.getFieldExpr(pcx.fieldExpr(1))
       );
     }
-    throw new Error(`untranslatable comparison operator '${op}'`);
+    throw this.internalError(pcx, `untranslatable comparison operator '${op}'`);
   }
 
   visitExprCountDisinct(
@@ -814,28 +787,27 @@ export class MalloyToAST
 
     const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
 
-    // These require an expression ...
-    if (expr && pcx.aggregate().MIN()) {
+    if (pcx.aggregate().MIN()) {
       if (path) {
-        this.contextError(pcx, `Ignored ${path}. before min`);
+        this.contextError(pcx, `Path not legal for min()`);
+      } else if (expr) {
+        return new ast.ExprMin(expr);
+      } else {
+        this.contextError(pcx, "Missing expression for min");
       }
-      return new ast.ExprMin(expr);
-    }
-    if (expr && pcx.aggregate().MAX()) {
+    } else if (pcx.aggregate().MAX()) {
       if (path) {
-        this.contextError(pcx, `Ignored ${path}. before min`);
+        this.contextError(pcx, `Path not legal for max()`);
+      } else if (expr) {
+        return new ast.ExprMax(expr);
+      } else {
+        this.contextError(pcx, "Missing expression for max");
       }
-      return new ast.ExprMax(expr);
-    }
-
-    // The asymnetric functions have an optional expression
-    if (pcx.aggregate().AVG()) {
+    } else if (pcx.aggregate().AVG()) {
       return new ast.ExprAvg(expr, path);
-    }
-    if (pcx.aggregate().SUM()) {
+    } else if (pcx.aggregate().SUM()) {
       return new ast.ExprSum(expr, path);
     }
-    this.contextError(pcx, "Missing expression for aggregate function");
     return new ast.ExprNULL();
   }
 
@@ -996,5 +968,9 @@ export class MalloyToAST
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.stripQuotes(pcx.importURL().text);
     return this.astAt(new ast.ImportStatement(url, this.parse.sourceURL), pcx);
+  }
+
+  visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
+    return this.getFieldExpr(pcx.fieldExpr());
   }
 }

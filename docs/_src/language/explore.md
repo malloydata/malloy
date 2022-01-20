@@ -17,9 +17,10 @@ An explore's source can be any of the following:
 An explore can be created from a SQL table or view from a connected database.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
-  ...
-);
+--! {"isModel": true, "modelPath": "/inline/e1.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
 ```
 
 When defining an explore in this way, all the columns from
@@ -27,10 +28,16 @@ the source table are available for use in field definitions
 or queries.
 
 ```malloy
-flights | reduce
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e1.malloy"}
+query: flights->{
   -- Columns from the source table are available
-  distance
-  carrier
+  group_by: [
+    carrier
+    origin
+  ]
+  aggregate: flight_count
+  limit: 3
+}
 ```
 
 ### Explores from Other Explores
@@ -41,12 +48,29 @@ This is useful for performing in-depth analysis without altering
 the base explore with modifications only relevant in that specific context.
 
 ```malloy
-define sfo_flights is (explore flights : [origin = 'SFO']);
+--! {"isModel": true, "modelPath": "/inline/e1.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
+
+// new explore 'my_flights' adds total_distance and carrier_stats to flights
+explore: my_flights is flights {
+  measure: total_distance is distance.sum()
+
+  query: carrier_stats is {
+    group_by: carrier
+    aggregate: [total_distance, flight_count]
+  }
+}
+```
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e1.malloy"}
+query: my_flights->carrier_stats{limit: 3}
 ```
 
 ### Explores from Queries
 
-Lastly, a query can be used as the source for an explore.
+A Query can be used as the source for an explore.
 In Malloy, every query has a shape like that of an explore,
 so the output fields of a query can be used to define a new
 explore.
@@ -57,27 +81,53 @@ be defined inline or referenced by name.
 **Inline query as explore source**
 
 ```malloy
-define carriers is (explore (flights | reduce
-  code is carrier
-  flight_count is count()
-)
-  ...
-);
+--! {"isModel": true, "modelPath": "/inline/e2.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
+
+explore: carrier_facts is from(
+  flights->{
+    group_by: carrier
+    aggregate: lifetime_flights is flight_count
+  })
+{
+  dimension: lifetime_flights_bucketed is FLOOR(lifetime_flights/10000)*10000
+}
+
 ```
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e2.malloy"}
+query: carrier_facts->{
+  project: [carrier, lifetime_flights_bucketed, lifetime_flights]
+  limit: 3
+}
+```
+
 
 **Named query as explore source**
 
 ```malloy
-define flight_origins is (flights | reduce
-  code is origin
-  flight_count is count()
-);
+--! {"isModel": true, "modelPath": "/inline/e3.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+  query: by_carrier is {
+    group_by: carrier
+    aggregate: lifetime_flights is flight_count
+  }
+}
 
-define origins is (explore flight_origins
-  ...
-);
+explore: carrier_facts is from(flights->by_carrier){
+  dimension: lifetime_flights_bucketed is FLOOR(lifetime_flights/10000)*10000
+}
 ```
-
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e3.malloy"}
+query: carrier_facts->{
+  project: [carrier, lifetime_flights_bucketed, lifetime_flights]
+  limit: 3
+}
+```
 For more information about named queries appearing in models, see the [Models](statement.md) section.
 
 ## Explore Modifications
@@ -93,10 +143,19 @@ available.
 When an explore is defined, filters which apply to any query against the new explore may be added.
 
 ```malloy
-define long_sfo_flights is (explore flights : [
-  distance > 1000,
-  origin = 'SFO'
-]);
+--! {"isModel": true, "modelPath": "/inline/e4.malloy"}
+explore: flights is table('malloy-data.faa.flights'){
+  measure: flight_count is count()
+}
+
+explore: long_sfo_flights is flights{
+  where: origin='SFO' and distance > 1000
+}
+```
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e4.malloy"}
+query: long_sfo_flights->{group_by: destination; aggregate: flight_count; limit: 3}
 ```
 
 ### Primary Keys
@@ -105,9 +164,9 @@ To be used in joins to other explores, an explore must
 have a primary key specified.
 
 ```malloy
-define carriers is (explore 'malloy-data.faa.carriers'
-  primary key code
-);
+explore: carriers is table('malloy-data.faa.carriers'){
+  primary_key: code
+}
 ```
 
 ### Joins
@@ -115,14 +174,26 @@ define carriers is (explore 'malloy-data.faa.carriers'
 When explores are joined as part of their definition, queries can reference fields in the joined explores without having to specify the join relationship each time.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
-  carriers is join on carrier_code
-);
+--! {"isModel": true, "modelPath": "/inline/e5.malloy"}
+explore: carriers is table('malloy-data.faa.carriers'){
+  primary_key: code
+}
 
-explore flights | reduce
-  carriers.name
-  flight_count
+explore: flights is table('malloy-data.faa.flights'){
+  join: carriers on carrier
+  measure: flight_count is count()
+}
 ```
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e5.malloy"}
+query: flights->{
+  group_by: carriers.nickname
+  aggregate: flight_count
+  limit: 3
+}
+```
+
+
 
 See the [Joins](join.md) section for more information on working with joins.
 
@@ -133,19 +204,19 @@ part of an explore, allowing for them to be used in any
 query against the explore.
 
 ```malloy
-define airports is (explore 'malloy-data.faa.airports'
+explore airports is table('malloy-data.faa.airports'){
   -- A dimension
-  has_control_tower is cntl_twr = 'Y'
+  dimension: has_control_tower is cntl_twr = 'Y'
 
   -- A measure
-  average_elevation is avg(elevation)
+  measure: average_elevation is avg(elevation)
 
   -- A query
-  average_elevation_by_control_tower is (reduce
-    has_control_tower
-    average_elevation
-  )
-);
+  query: average_elevation_by_control_tower is {
+    group_by: has_control_tower
+    nest: average_elevation
+  }
+}
 ```
 
 ### Renaming Fields
@@ -154,15 +225,17 @@ Fields from an explore's source may be renamed in the context of the
 new explore. This is useful when the original name is undescriptive or has a different meaning in the new explore.
 
 ```malloy
-define flights is (explore 'malloy-data.faa.flights'
-  facility_type renames fac_type
-  origin_code renames origin
+explore flights is table('malloy-data.faa.flights'){
+  rename: facility_type is fac_type
+  rename: origin_code is origin
 
-  origin is join airports on origin_code
-);
+  join: origin is airports on origin_code
+}
 ```
 
 ### Limiting Access to Fields
+
+LTNOTE: not sure if this is still supported @mtoy?
 
 The list of fields available in an explore from its source
 can be limited. This can be done either by `accept`ing a

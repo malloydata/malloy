@@ -30,14 +30,11 @@ explore: user_order_facts is from(
 explore: order_items_base is table('malloy-data.ecomm.order_items'){
   primary_key: id
 
-  join: users on user_id
-  join: ii on inventory_item_id
-  join: user_order_facts on user_id
-  -- join: [
-  --   users on user_id
-  --   ii on inventory_item_id
-  --   user_order_facts on user_id
-  -- ]
+  join: [
+    users on user_id
+    ii on inventory_item_id
+    user_order_facts on user_id
+  ]
 
   measure: [
     order_count is count(distinct order_id)
@@ -46,65 +43,42 @@ explore: order_items_base is table('malloy-data.ecomm.order_items'){
   ]
 }
 
--- explore: brand_synergy is from(
--- -- query: brand_synergy is
---   order_items_base -> {
---     group_by: order_id
---     nest: brand1 is {group_by: ii.product.brand}
---     nest: brand2 is {group_by: ii.product.brand}
---   } -> {
---     where: brand1.brand != brand2.brand
---     project: order_id
---     project: brand1 is brand1.brand
---     project: brand2 is brand2.brand
---   } -> {
---     group_by: [
---       brand1
---       brand2
---     ]
---     aggregate: occurances is count()
---   } -> {
---     group_by: brand is brand1
---     nest: synergies is {
---       top: 5
---       order_by: occurrances
---       group_by: [
---         brand is brand_2
---         occurances
---       ]
---     }
---   }
--- )
+explore: brand_synergy is from(
+-- query: brand_synergy is
+  order_items_base
+  -> {
+    group_by: order_id
+    nest: brand1 is {group_by: ii.product.brand}
+    nest: brand2 is {group_by: ii.product.brand}
+  }
+  -> {
+    where: brand1.brand != brand2.brand
+    project: order_id
+    project: brand1 is brand1.brand
+    project: brand2 is brand2.brand
+  }
+  -> {
+    group_by: [
+      brand1
+      brand2
+    ]
+    aggregate: occurances is count()
+  }
+  -> {
+    group_by: brand is brand1
+    nest: synergies is {
+      top: 5
+      order_by: occurances
+      group_by: [
+        brand is brand2
+        occurances
+      ]
+    }
+  }
+)
 
--- --brand synergy / affinity analysis; extends base order_items
--- export define brand_synergy is (
---   order_items_base
---   | reduce
---     order_id
---     brand1 is (reduce
---       ii.product.brand
---     )
---     brand2 is (reduce
---       ii.product.brand
---     )
---   | project : [brand1.brand != brand2.brand]
---     order_id
---     brand1 is brand1.brand
---     brand2 is brand2.brand
---   | reduce
---     brand1
---     brand2
---     occurances is count()
---   | reduce
---     brand is brand1
---     synergies is (project top 5 order by occurances desc
---       brand is brand2
---       occurances
---     )
--- );
-
+-- order_items with brand_synergy as well as base definitions.
 explore: order_items is order_items_base {
-
   -- join: brand_synergy on ii.product.brand
 
   query: top_brands is {
@@ -174,16 +148,11 @@ explore: order_items is order_items_base {
       by_month
     ]
     -- nest: synergistic_brands is {
-    --   group by: brandy_synergy.synergies.brand
+    --   group_by: brand_synergy.synergies.brand
     --   aggregate: occurances is brand_synergy.synergies.occurances.sum()
     -- }
   }
 }
-
--- -- order_items with brand_synergy as well as base definitions.
--- export define order_items is (explore order_items_base
---   brand_synergy is join on ii.product.brand
-
 
 query: order_items -> {
   aggregate: average_age is users.age.avg()

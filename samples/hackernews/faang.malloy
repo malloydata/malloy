@@ -39,13 +39,13 @@ explore: faang_analysis is stories {
       aggregate: post_count
       group_by: faang
     }
-    nest: facebook is top_sites {? faang = 'Facebook'}
-    nest: apple is top_sites {? faang = 'Apple'}
-    nest: amazon is top_sites {? faang = 'Amazon'}
-    nest: netflix is top_sites {? faang = 'Netflix'}
-    nest: google is top_sites {? faang = 'Google'}
+    nest: facebook is top_sites {where: faang = 'Facebook'}
+    nest: apple is top_sites {where: faang = 'Apple'}
+    nest: amazon is top_sites {where: faang = 'Amazon'}
+    nest: netflix is top_sites {where: faang = 'Netflix'}
+    nest: google is top_sites {where: faang = 'Google'}
   }
 
-  query: poster_dashboard2 is poster_dashboard {? faang != 'OTHER'}
+  query: poster_dashboard2 is poster_dashboard {where: faang != 'OTHER'}
 
 }
