@@ -12,7 +12,7 @@ explore: product is table('malloy-data.ecomm.products'){
 explore: ii is table('malloy-data.ecomm.inventory_items'){
   primary_key: id
 
-  join: product on product_id
+  join_one: product with product_id
 
   measure: [
     item_count is count(distinct id)
@@ -79,7 +79,7 @@ explore: brand_synergy is from(
 
 -- order_items with brand_synergy as well as base definitions.
 explore: order_items is order_items_base {
-  -- join: brand_synergy on ii.product.brand
+  -- join_one: brand_synergy with ii.product.brand
 
   query: top_brands is {
     top: 5

@@ -38,7 +38,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
 
 explore: aircraft is table('malloytest.aircraft'){
   primary_key: tail_num
-  join: aircraft_models on aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count(*)
   query: by_manufacturer is {
     top: 5
@@ -468,7 +468,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     }
 
     explore: aircraft2 is table('malloytest.aircraft'){
-      join: model is a_models on aircraft_model_code
+      join_one: model is a_models with aircraft_model_code
       measure: aircraft_count is count()
     }
 
@@ -506,11 +506,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
           where: bo_models.seats > 200
           primary_key: aircraft_model_code
           measure: b_count is count()
-          join: bo_models on aircraft_model_code
+          join_one: bo_models with aircraft_model_code
         }
 
     explore: models is table('malloytest.aircraft_models') {
-      join: b_models on aircraft_model_code
+      join_one: b_models with aircraft_model_code
       measure: model_count is count()
     }
 
@@ -564,10 +564,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
       explore: f is table('malloytest.flights'){
-        join: a is table('malloytest.aircraft') {
-          primary_key: tail_num
-          join: state_facts is table('malloytest.state_facts'){primary_key: state} on state
-        } on tail_num
+        join_one: a is table('malloytest.aircraft') {
+          join_one: state_facts is table('malloytest.state_facts') on state = state_facts.state
+        } on tail_num = a.tail_num
       }
 
       query: f-> {

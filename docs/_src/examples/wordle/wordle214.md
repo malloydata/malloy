@@ -89,7 +89,7 @@ explore: numbers is table('malloy-data.malloytest.numbers'){
 -- Build a new table of word and each letter in position
 explore: words_and_letters is from(words->five_letter_words){
   -- Cross join is missing at the moment
-  join: numbers on a
+  join_one: numbers with a
   dimension: a is 'a' -- key to fake a cross join
 
   query: words_and_position is {

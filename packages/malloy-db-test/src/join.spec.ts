@@ -35,8 +35,8 @@ const joinModelText = `
   }
 
   explore: funnel is from(aircraft_models->manufacturer_models) {
-    join: seats is from(aircraft_models->manufacturer_seats)
-        on manufacturer
+    join_one: seats is from(aircraft_models->manufacturer_seats)
+        with manufacturer
   }
 `;
 
@@ -61,7 +61,7 @@ describe("join expression tests", () => {
         .loadQuery(
           `
       explore: a2 is aircraft {
-        join: aircraft_models on aircraft_model_code
+        join_one: aircraft_models with aircraft_model_code
       }
 
       query: a2 -> {
@@ -81,7 +81,7 @@ describe("join expression tests", () => {
         .loadQuery(
           `
       query: aircraft {
-        join: aircraft_models on aircraft_model_code
+        join_one: aircraft_models with aircraft_model_code
       } -> {
         aggregate: [
           aircraft_count
@@ -99,11 +99,11 @@ describe("join expression tests", () => {
         .loadQuery(
           `
       query: aircraft_models {
-        join: am_facts is from(
+        join_one: am_facts is from(
           aircraft_models->{
             group_by: m is manufacturer
             aggregate: num_models is count(*)
-          }) on manufacturer
+          }) with manufacturer
       } -> {
         project: [
           manufacturer
@@ -149,12 +149,12 @@ describe("join expression tests", () => {
             group_by: m is manufacturer
             aggregate: num_models is count(*)
             }){
-            join: seats is from(
+            join_one: seats is from(
               aircraft_models->{
                 group_by: m is manufacturer
                 aggregate: total_seats is seats.sum()
               }
-            ) on m
+            ) with m
           }
           -> {
             project: [
@@ -177,8 +177,8 @@ describe("join expression tests", () => {
         .loadQuery(
           `
       explore: foo is from(aircraft_models-> manufacturer_models){
-        join: seats is from(aircraft_models->manufacturer_seats)
-          on manufacturer
+        join_one: seats is from(aircraft_models->manufacturer_seats)
+          with manufacturer
       }
       query: foo-> {
         project: [
