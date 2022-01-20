@@ -287,40 +287,34 @@ describe("explore properties", () => {
     `)
   );
   describe("joins", () => {
-    test("simple join", modelOK("explore: nab is a { join: b on astr }"));
-    test("inverse join", modelOK("explore: nab is a { join: b on b.astr }"));
-    test("is join", modelOK("explore: nab is a { join: nb is b on astr }"));
+    test("with", modelOK("explore: x is a { join_one: b with astr }"));
+    test("with", modelOK("explore: x is a { join_one: y is b with astr }"));
+    test("one on", modelOK("explore: x is a { join_one: b on astr = b.astr }"));
     test(
-      "many name on",
-      modelOK("explore: nab is a { join: many b on astr = nb.astr }")
+      "one is on",
+      modelOK("explore: x is a { join_one: y is b on astr = y.astr }")
     );
     test(
-      "many name is name on",
-      modelOK("explore: nab is a { join: nb is many b on astr = nb.astr }")
+      "many on",
+      modelOK("explore: nab is a { join_many: b on astr = nb.astr }")
     );
     test(
-      "one name on",
-      modelOK("explore: nab is a { join: one b on astr = nb.astr }")
+      "many is on",
+      modelOK("explore: y is a { join_many: x is b on astr = nb.astr }")
     );
-    test(
-      "one name is name on",
-      modelOK("explore: nab is a { join: nb is one b on astr = nb.astr }")
-    );
-    test(
-      "cross name on",
-      modelOK("explore: nab is a { join: cross b on astr = nb.astr }")
-    );
-    test(
-      "cross name is name on",
-      modelOK("explore: nab is a { join: nb is cross b on astr = nb.astr }")
-    );
+    test("cross", modelOK("explore: nab is a { join_many: b }"));
+    test("cross is", modelOK("explore: nab is a { join_many: xb is b }"));
     test(
       "multiple joins",
       modelOK(`
         explore: nab is a {
-          join: [
-            b on astr,
-            br is b on b.astr
+          join_one: [
+            b with astr,
+            br is b with astr
+          ]
+          join_many: [
+            bm is b on bm.astr = astr,
+            bx is b
           ]
         }
       `)
@@ -601,7 +595,7 @@ describe("error handling", () => {
 
   test("join reference before definition", () => {
     const m = new BetaModel(`
-    explore: newAB is a { join: newB is bb on astring }
+    explore: newAB is a { join_one: newB is bb on astring }
     explore: newB is b
     `);
     expect(m).not.toCompile();

@@ -110,7 +110,8 @@ exploreProperties
 exploreStatement
   : DIMENSION dimensionDefList         # defExploreDimension
   | MEASURE measureDefList             # defExploreMeasure
-  | JOIN joinList                      # defExploreJoin
+  | JOIN_ONE joinList                  # defJoinOne
+  | JOIN_MANY joinList                 # defJoinMany
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME fieldName IS fieldName      # defExploreRename
@@ -143,16 +144,9 @@ joinList
   ;
 
 joinDef
-  : joinNameDef IS explore ON fieldPath                # joinNameIsOn
-  | joinNameDef ON fieldPath                           # joinOn
-  | joinType joinNameDef ON joinExpression             # joinTypeNameOn
-  | joinType joinNameDef IS explore ON joinExpression  # joinTypeNameIsOn
-  ;
-
-joinType
-  : CROSS
-  | MANY
-  | ONE
+  : joinNameDef (IS explore)?                   # joinCross
+  | joinNameDef (IS explore)? WITH fieldName    # joinWith
+  | joinNameDef (IS explore)? ON joinExpression # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -444,7 +438,8 @@ EXPLORE: E X P L O R E SPACE_CHAR* ':';
 GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
 HAVING: H A V I N G SPACE_CHAR* ':';
 INDEX: I N D E X SPACE_CHAR* ':';
-JOIN: J O I N SPACE_CHAR* ':';
+JOIN_ONE: J O I N '_' O N E SPACE_CHAR* ':';
+JOIN_MANY: J O I N '_' M A N Y SPACE_CHAR* ':';
 LIMIT: L I M I T SPACE_CHAR* ':';
 MEASURE: M E A S U R E SPACE_CHAR* ':';
 NEST: N E S T SPACE_CHAR* ':';
@@ -467,7 +462,6 @@ CASE: C A S E ;
 CAST: C A S T ;
 CONDITION: C O N D I T I O N ;
 COUNT: C O U N T ;
-CROSS: C R O S S ;
 DATE: D A T E;
 DAY: D A Y S?;
 DESC: D E S C ;
@@ -483,7 +477,6 @@ IMPORT: I M P O R T;
 IS: I S ;
 JSON: J S O N;
 LAST: L A S T ;
-MANY: M A N Y;
 MAX: M A X;
 MIN: M I N;
 MINUTE: M I N U T E S?;
@@ -493,7 +486,6 @@ NOW: N O W;
 NULL: N U L L ;
 NUMBER: N U M B E R;
 ON: O N ;
-ONE: O N E;
 OR: O R ;
 PICK: P I C K ;
 QMARK: '?';
@@ -510,6 +502,7 @@ TRUE: T R U E ;
 TURTLE: T U R T L E;
 WEEK: W E E K S?;
 WHEN: W H E N ;
+WITH: W I T H ;
 YEAR: Y E A R S?;
 
 STRING_ESCAPE

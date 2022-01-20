@@ -292,50 +292,74 @@ export class MalloyToAST
     );
   }
 
-  visitDefExploreJoin(pcx: parse.DefExploreJoinContext): ast.Joins {
-    return this.visitJoinList(pcx.joinList());
+  visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.Joins {
+    const joinList = this.getJoinList(pcx.joinList());
+    const joins: ast.Join[] = [];
+    for (const join of joinList) {
+      if (join instanceof ast.Join) {
+        if (join instanceof ast.ExpressionJoin) {
+          join.many = true;
+        } else if (join instanceof ast.KeyJoin) {
+          join.log("Foreign key join not legal in join_one:");
+          continue;
+        }
+        joins.push(join);
+      }
+    }
+    return new ast.Joins(joins);
   }
 
-  visitJoinList(pcx: parse.JoinListContext): ast.Joins {
-    const astJoins = pcx.joinDef().map((jcx) => this.visit(jcx));
-    return new ast.Joins(this.onlyJoins(astJoins));
+  visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.Joins {
+    const joinList = this.getJoinList(pcx.joinList());
+    const joins: ast.Join[] = [];
+    for (const join of joinList) {
+      if (join instanceof ast.Join) {
+        if (join instanceof ast.ExpressionJoin) {
+          join.many = false;
+        } else if (join instanceof ast.CrossJoin) {
+          join.log("Cross join not legal in join_one:");
+          continue;
+        }
+        joins.push(join);
+      }
+    }
+    return new ast.Joins(joins);
   }
 
-  visitJoinNameIsOn(pcx: parse.JoinNameIsOnContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
-    const fromExploreCx = pcx.explore();
-    const joinFrom = this.visitExplore(fromExploreCx);
-    const joinOn = this.getFieldPath(pcx.fieldPath());
-    const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
-    return this.astAt(join, pcx);
+  protected getJoinList(pcx: parse.JoinListContext): ast.MalloyElement[] {
+    return pcx.joinDef().map((jcx) => this.visit(jcx));
+  }
+
+  protected getJoinSource(
+    name: string,
+    ecx: parse.ExploreContext | undefined
+  ): ast.Mallobj {
+    if (ecx) {
+      return this.visitExplore(ecx);
+    }
+    return new ast.NamedSource(name);
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
     const joinAs = this.getIdText(pcx.joinNameDef());
-    const joinFrom = new ast.NamedSource(joinAs);
-    const joinOn = this.getFieldPath(pcx.fieldPath());
+    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const joinOn = this.getFieldExpr(pcx.joinExpression());
+    const join = new ast.ExpressionJoin(joinAs, joinFrom, joinOn);
+    return this.astAt(join, pcx);
+  }
+
+  visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
+    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const joinOn = this.getIdText(pcx.fieldName());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
 
-  visitJoinTypeNameOn(pcx: parse.JoinTypeNameOnContext): ast.Join {
+  visitJoinCross(pcx: parse.JoinCrossContext): ast.Join {
     const joinAs = this.getIdText(pcx.joinNameDef());
-    const joinExpr = this.getFieldExpr(pcx.joinExpression());
-    const joinFrom = new ast.NamedSource(joinAs);
-    const typeCx = pcx.joinType();
-    const joinType = typeCx.CROSS() ? "cross" : typeCx.MANY() ? "many" : "one";
-    const join = new ast.ExpressionJoin(joinType, joinAs, joinFrom, joinExpr);
-    return this.astAt(join, pcx);
-  }
-
-  visitJoinTypeNameIsOn(pcx: parse.JoinTypeNameIsOnContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
-    const joinExpr = this.getFieldExpr(pcx.joinExpression());
-    const fromExploreCx = pcx.explore();
-    const joinFrom = this.visitExplore(fromExploreCx);
-    const typeCx = pcx.joinType();
-    const joinType = typeCx.CROSS() ? "cross" : typeCx.MANY() ? "many" : "one";
-    const join = new ast.ExpressionJoin(joinType, joinAs, joinFrom, joinExpr);
+    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const join = new ast.CrossJoin(joinAs, joinFrom);
     return this.astAt(join, pcx);
   }
 

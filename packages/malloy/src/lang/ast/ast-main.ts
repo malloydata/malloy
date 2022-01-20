@@ -663,11 +663,10 @@ export class KeyJoin extends Join {
   }
 }
 
-type LangJoinType = "cross" | "many" | "one";
 export class ExpressionJoin extends Join {
   elementType = "joinOnExpr";
+  many = true;
   constructor(
-    readonly joinType: LangJoinType,
     readonly name: string,
     readonly source: Mallobj,
     readonly expr: ExpressionDef
@@ -677,26 +676,35 @@ export class ExpressionJoin extends Join {
 
   structDef(): model.StructDef {
     const sourceDef = this.source.structDef();
-    let joinRel: model.JoinRelationship = "many_to_one";
-    switch (this.joinType) {
-      case "cross":
-        this.log("CROSS joins not supported");
-        break;
-      case "one":
-        joinRel = "many_to_one";
-        break;
-      case "many":
-        joinRel = "one_to_many";
-        break;
-    }
-
     const joinStruct: model.StructDef = {
       ...sourceDef,
       structRelationship: {
         type: "condition",
-        onExpression: this.expr.getExpression(new StructSpace(sourceDef)),
-        joinRelationship: joinRel,
+        onExpression: [],
+        many: this.many,
       },
+    };
+    if (sourceDef.structSource.type === "query") {
+      // the name from query does not need to be preserved
+      joinStruct.name = this.name;
+    } else {
+      joinStruct.as = this.name;
+    }
+    this.log(`e: this.expr.getExpression(new StructSpace(sourceDef)).value`);
+    return joinStruct;
+  }
+}
+
+export class CrossJoin extends Join {
+  elementType = "crossJoin";
+  constructor(readonly name: string, readonly source: Mallobj) {
+    super({ source });
+  }
+  structDef(): model.StructDef {
+    const sourceDef = this.source.structDef();
+    const joinStruct: model.StructDef = {
+      ...sourceDef,
+      structRelationship: { type: "crossJoin" },
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved

@@ -1075,22 +1075,25 @@ class JoinInstance {
   parentRelationship(): "root" | JoinRelationship {
     if (this.queryStruct.parent === undefined) {
       return "root";
-    } else if (
-      this.queryStruct.fieldDef.structRelationship.type === "foreignKey"
-    ) {
-      return "many_to_one";
-    } else if (this.queryStruct.fieldDef.structRelationship.type === "nested") {
-      return "one_to_many";
-    } else if (this.queryStruct.fieldDef.structRelationship.type === "inline") {
-      return "one_to_one";
-    } else if (
-      this.queryStruct.fieldDef.structRelationship.type === "condition"
-    ) {
-      return this.queryStruct.fieldDef.structRelationship.joinRelationship;
     }
-    throw new Error(
-      `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
-    );
+    switch (this.queryStruct.fieldDef.structRelationship.type) {
+      case "foreignKey":
+        return "many_to_one";
+      case "nested":
+        return "one_to_many";
+      case "inline":
+        return "one_to_one";
+      case "condition":
+        return this.queryStruct.fieldDef.structRelationship.many
+          ? "many_to_one"
+          : "one_to_many";
+      case "crossJoin":
+        return "many_to_one";
+      default:
+        throw new Error(
+          `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
+        );
+    }
   }
 
   // postgres unnest needs to know the names of the physical fields.
@@ -1698,7 +1701,8 @@ class QueryQuery extends QueryField {
     const structSQL = qs.structSourceSQL(stageWriter);
     if (
       structRelationship.type === "foreignKey" ||
-      structRelationship.type === "condition"
+      structRelationship.type === "condition" ||
+      structRelationship.type === "crossJoin"
     ) {
       let onCondition = "";
       if (qs.parent === undefined) {
@@ -1717,13 +1721,12 @@ class QueryQuery extends QueryField {
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
         onCondition = `${fkSQL} = ${pkSQL}`;
-      } else {
-        // type == "conditionOn"
+      } else if (structRelationship.type == "condition") {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
             name: "ignoreme",
-            e: structRelationship.onExpression.e,
+            e: structRelationship.onExpression,
           },
           qs.parent
         ).generateExpression(this.rootResult);
@@ -1739,9 +1742,10 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `${upperCase(
-          structRelationship.joinType || "left"
-        )} JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
+        const joinType = upperCase(
+          structRelationship.type === "crossJoin" ? "cross" : "left"
+        );
+        s += `${joinType} JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
