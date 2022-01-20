@@ -83,6 +83,10 @@ div.sidebar div.sidebar-item a {
   gap: 5px;
   text-decoration: none;
 }
+/* hacks to get the side bar section to collapse -- looks at the first sibling element */
+div.sidebar-section-title.collapsed + div.sidebar-section-item-group {
+  display: none;
+}
 
 div.sidebar div.sidebar-item a img {
   width: 22px;
