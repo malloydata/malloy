@@ -14,9 +14,9 @@ Query for best Starting words.
 query: wordle->find_words
 ```
 
-Start with a word without duplicates to get coverage.  Today we choose 'SLATE'
+Start with a word without duplicates to get coverage.  Today we choose 'SLATE')
 
-<img src="https://user-images.githubusercontent.com/1093458/150233754-adc4c730-73ce-4430-8640-07bfc512529a.png" style="width: 200px">
+<img src="/malloy/img/wordle214a.png" style="width: 200px">
 
 Query for words that Contain 'T', don't have 'T' in the 4th spot and don't have the Letters 'SLAE'. Rank them by the number
 of possible space matches.
@@ -33,7 +33,7 @@ query: wordle->find_words{
 
 'TIGHT" has two Ts so skip it. Next best word..  'TOUCH'
 
-<img src="https://user-images.githubusercontent.com/1093458/150234599-e90ab598-84e7-434f-bcba-5279c96d7ede.png" style="width: 200px">
+<img src="/malloy/img/wordle214b.png" style="width: 200px">
 
 Query for words that Contain 'T', don't have 'T' in the 1st and 4th spot.  Has O in the second spot.  and don't have the Letters 'SLAEUCH'.
 
@@ -47,7 +47,7 @@ query: wordle->find_words{
 }
 ```
 
-<img src="https://user-images.githubusercontent.com/1093458/150234924-895245c0-0a1c-48be-a14a-7ca23465dca0.png" style="width: 200px">
+<img src="/malloy/img/wordle214c.png" style="width: 200px">
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
@@ -58,7 +58,8 @@ query: wordle->find_words{
     and word !~ r'[SLAEUCH]'
 }
 ```
-<img src="https://user-images.githubusercontent.com/1093458/150235059-6621374b-e083-472f-965c-54ca21a8c433.png" style="width: 200px">
+
+<img src="/malloy/img/wordle214d.png" style="width: 200px">
 
 
 
