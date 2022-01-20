@@ -296,11 +296,11 @@ describe("explore properties", () => {
     );
     test(
       "many on",
-      modelOK("explore: nab is a { join_many: b on astr = nb.astr }")
+      modelOK("explore: nab is a { join_many: b on astr = b.astr }")
     );
     test(
       "many is on",
-      modelOK("explore: y is a { join_many: x is b on astr = nb.astr }")
+      modelOK("explore: y is a { join_many: x is b on astr = x.astr }")
     );
     test("cross", modelOK("explore: nab is a { join_many: b }"));
     test("cross is", modelOK("explore: nab is a { join_many: xb is b }"));

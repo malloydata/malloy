@@ -631,6 +631,9 @@ export class QuerySource extends Mallobj {
 export abstract class Join extends MalloyElement {
   abstract name: string;
   abstract structDef(): model.StructDef;
+  onExpression(_outer: FieldSpace): model.Expr | undefined {
+    return undefined;
+  }
 }
 
 export class KeyJoin extends Join {
@@ -666,6 +669,7 @@ export class KeyJoin extends Join {
 export class ExpressionJoin extends Join {
   elementType = "joinOnExpr";
   many = true;
+  outer?: model.StructDef;
   constructor(
     readonly name: string,
     readonly source: Mallobj,
@@ -674,8 +678,19 @@ export class ExpressionJoin extends Join {
     super({ source, expr });
   }
 
+  onExpression(outer: FieldSpace): model.Expr | undefined {
+    const exprX = this.expr.getExpression(outer);
+    if (exprX.dataType !== "boolean") {
+      this.log("join conditions must be boolean expressions");
+      return undefined;
+    }
+    const ret = compressExpr(exprX.value);
+    return ret;
+  }
+
   structDef(): model.StructDef {
     const sourceDef = this.source.structDef();
+
     const joinStruct: model.StructDef = {
       ...sourceDef,
       structRelationship: {
@@ -690,7 +705,6 @@ export class ExpressionJoin extends Join {
     } else {
       joinStruct.as = this.name;
     }
-    this.log(`e: this.expr.getExpression(new StructSpace(sourceDef)).value`);
     return joinStruct;
   }
 }

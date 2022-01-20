@@ -35,6 +35,7 @@ import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
+  JoinSpaceField,
   ExpressionFieldFromAst,
   QueryField,
   QueryFieldAST,
@@ -247,8 +248,7 @@ export class NewFieldSpace extends StructSpace {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        const joining = def.structDef();
-        this.setEntry(def.name, new StructSpaceField(joining));
+        this.setEntry(def.name, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${elseType}'`
@@ -268,6 +268,7 @@ export class NewFieldSpace extends StructSpace {
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
+      const fixupJoins: [JoinSpaceField, model.Expr][] = [];
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceField) {
           joins.push([name, spaceEntry]);
@@ -284,12 +285,26 @@ export class NewFieldSpace extends StructSpace {
         const fieldDef = field.fieldDef();
         if (fieldDef) {
           this.final.fields.push(fieldDef);
+          if (
+            field instanceof JoinSpaceField &&
+            fieldDef.type === "struct" &&
+            fieldDef.structRelationship.type === "condition"
+          ) {
+            fixupJoins.push([field, fieldDef.structRelationship.onExpression]);
+          }
         } else {
           throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
         }
       }
       if (Object.entries(parameters).length > 0) {
         this.final.parameters = parameters;
+      }
+      // If we have join expressions, we need to now go back and fill them in
+      for (const [join, onExpr] of fixupJoins) {
+        const replaceExpr = join.join.onExpression(this);
+        if (replaceExpr) {
+          onExpr.push(...onExpr);
+        }
       }
     }
     return this.final;
