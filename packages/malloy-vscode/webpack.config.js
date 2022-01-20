@@ -90,8 +90,8 @@ const config = [
             to: "src/media/logo.png",
           },
           {
-            from: "src/media/database.png",
-            to: "src/media/database.png",
+            from: "src/media/database.svg",
+            to: "src/media/database.svg",
           },
           {
             from: "../../README.md",
