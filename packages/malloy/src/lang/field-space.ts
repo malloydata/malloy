@@ -30,6 +30,7 @@ import {
   NestDefinition,
   NestReference,
   MalloyElement,
+  ExpressionJoin,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
@@ -303,7 +304,7 @@ export class NewFieldSpace extends StructSpace {
       for (const [join, onExpr] of fixupJoins) {
         const replaceExpr = join.join.onExpression(this);
         if (replaceExpr) {
-          onExpr.push(...onExpr);
+          onExpr.push(...replaceExpr);
         }
       }
     }
