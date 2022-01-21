@@ -19,8 +19,8 @@ import { ConnectionConfig } from "../common";
 export class WebviewMessageManager<T> {
   constructor(private panel: WebviewPanel) {
     this.panel.webview.onDidReceiveMessage((message: T) => {
-      if (!this.panelCanReceiveMessages) {
-        this.onPanelCanReceiveMessages();
+      if (!this.clientCanReceiveMessages) {
+        this.onClientCanReceiveMessages();
       }
       this.callback(message);
     });
@@ -35,6 +35,7 @@ export class WebviewMessageManager<T> {
 
   private pendingMessages: T[] = [];
   private panelCanReceiveMessages = false;
+  private clientCanReceiveMessages = false;
   private callback: (message: T) => void = () => {
     /* Do nothing by default */
   };
@@ -60,7 +61,20 @@ export class WebviewMessageManager<T> {
 
   private onPanelCanReceiveMessages() {
     this.panelCanReceiveMessages = true;
-    this.flushPendingMessages();
+    if (this.canSendMessages) {
+      this.flushPendingMessages();
+    }
+  }
+
+  private onClientCanReceiveMessages() {
+    this.clientCanReceiveMessages = true;
+    if (this.canSendMessages) {
+      this.flushPendingMessages();
+    }
+  }
+
+  private get canSendMessages() {
+    return this.panelCanReceiveMessages && this.clientCanReceiveMessages;
   }
 }
 
