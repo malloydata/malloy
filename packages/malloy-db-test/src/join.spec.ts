@@ -233,5 +233,24 @@ describe("join expression tests", () => {
         .run();
       expect(result.data.value[0].f_sum2).toBe(60462);
     });
+
+    it(`model: join_many - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+        explore: a is table('malloytest.aircraft'){
+          measure: avg_year is avg(year_built)
+        }
+        explore: m is table('malloytest.aircraft'){
+          join_many: a on a.aircraft_model_code=m.aircraft_model_code
+          measure: avg_seats is avg(seats)
+        }
+        query: m->{aggregate: [avg_seats, a.avg_year]}
+        `
+        )
+        .run();
+      console.log(result.data.toObject());
+      expect(result.data.value[0].f_sum2).toBe(60462);
+    });
   });
 });
