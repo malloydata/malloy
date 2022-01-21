@@ -81,23 +81,26 @@ export class ConnectionManager {
           }
         );
       case ConnectionBackend.Postgres: {
-        let password;
-        if (connectionConfig.password !== undefined) {
-          password = connectionConfig.password;
-        } else if (connectionConfig.useKeychainPassword) {
-          password =
-            (await getPassword(
-              "com.malloy-lang.vscode-extension",
-              `connections.${connectionConfig.id}.password`
-            )) || undefined;
-        }
-        return new PostgresConnection(connectionConfig.name, {
-          username: connectionConfig.username,
-          host: connectionConfig.host,
-          password,
-          port: connectionConfig.port,
-          databaseName: connectionConfig.databaseName,
-        });
+        const configReader = async () => {
+          let password;
+          if (connectionConfig.password !== undefined) {
+            password = connectionConfig.password;
+          } else if (connectionConfig.useKeychainPassword) {
+            password =
+              (await getPassword(
+                "com.malloy-lang.vscode-extension",
+                `connections.${connectionConfig.id}.password`
+              )) || undefined;
+          }
+          return {
+            username: connectionConfig.username,
+            host: connectionConfig.host,
+            password,
+            port: connectionConfig.port,
+            databaseName: connectionConfig.databaseName,
+          };
+        };
+        return new PostgresConnection(connectionConfig.name, configReader);
       }
     }
   }

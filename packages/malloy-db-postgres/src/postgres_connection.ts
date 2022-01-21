@@ -42,14 +42,29 @@ interface PostgresConnectionConfiguration {
   databaseName?: string;
 }
 
+type PostgresConnectionConfigurationReader =
+  | PostgresConnectionConfiguration
+  | (() => Promise<PostgresConnectionConfiguration>);
+
 export class PostgresConnection extends Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
-  private config: PostgresConnectionConfiguration;
+  private configReader: PostgresConnectionConfigurationReader;
 
-  constructor(name: string, config: PostgresConnectionConfiguration = {}) {
+  constructor(
+    name: string,
+    configReader: PostgresConnectionConfigurationReader = {}
+  ) {
     super(name);
-    this.config = config;
+    this.configReader = configReader;
+  }
+
+  private async readConfig(): Promise<PostgresConnectionConfiguration> {
+    if (this.configReader instanceof Function) {
+      return this.configReader();
+    } else {
+      return this.configReader;
+    }
   }
 
   get dialectName(): string {
@@ -81,12 +96,13 @@ export class PostgresConnection extends Connection {
     _rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
+    const config = await this.readConfig();
     const client = new Client({
-      user: this.config.username,
-      password: this.config.password,
-      database: this.config.databaseName,
-      port: this.config.port,
-      host: this.config.host,
+      user: config.username,
+      password: config.password,
+      database: config.databaseName,
+      port: config.port,
+      host: config.host,
     });
     await client.connect();
 
