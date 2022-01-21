@@ -26,7 +26,7 @@ import {
   isConditionParameter,
   StructDef,
 } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
+import { CircleSpace, FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
   Filter,
@@ -213,7 +213,8 @@ export class ExprFieldDecl extends MalloyElement {
     super({ expr });
   }
 
-  fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
+  fieldDef(realFS: FieldSpace, exprName: string): FieldTypeDef {
+    const fs = new CircleSpace(realFS, this);
     const exprValue = this.expr.getExpression(fs);
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
@@ -237,9 +238,11 @@ export class ExprFieldDecl extends MalloyElement {
       }
       return template;
     }
-    this.log(
-      `Cannot define ${exprName}, unexpected type ${FT.inspect(exprValue)}`
-    );
+    if (!fs.foundCircle) {
+      this.log(
+        `Cannot define ${exprName}, unexpected type ${FT.inspect(exprValue)}`
+      );
+    }
     return {
       name: `error_defining_${exprName}`,
       type: "string",
@@ -397,7 +400,15 @@ export class ExprIdReference extends ExpressionDef {
       const value = [{ type: entry.refType, path: this.refString }];
       return { dataType, aggregate, value };
     }
-    this.log(`Reference to '${this.refString}' with no definition`);
+    if (
+      fs instanceof CircleSpace &&
+      fs.foundCircle &&
+      this.refString === fs.circular.defineName
+    ) {
+      this.log(`Circular reference to '${this.refString}' in definition`);
+    } else {
+      this.log(`Reference to '${this.refString}' with no definition`);
+    }
     return errorFor(`undefined ${this.refString}`);
   }
 

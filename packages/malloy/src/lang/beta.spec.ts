@@ -590,4 +590,17 @@ describe("error handling", () => {
     const firstError = errList[0];
     expect(firstError.message).toBe("Can't rename field to itself");
   });
+  test("reference to field in its definition", () => {
+    const m = new BetaModel(`
+      explore: na is a {
+        dimension: astr is UPPER(astr)
+      }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe(
+      "Circular reference to 'astr' in definition"
+    );
+  });
 });
