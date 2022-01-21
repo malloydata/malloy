@@ -51,6 +51,7 @@ class Renderer {
     escaped: boolean
   ) {
     const lang = (infostring || "").trim();
+    let showCode = code;
 
     const grammar =
       lang === "malloy"
@@ -66,25 +67,20 @@ class Renderer {
             const options = JSON.parse(
               code.split("\n")[0].substring("--! ".length).trim()
             );
-            const shortCode = code.split("\n").slice(1).join("\n");
+            showCode = showCode.split("\n").slice(1).join("\n");
             if (options.isHidden) {
               hidden = true;
             }
             if (options.isRunnable) {
-              result = await runCode(
-                shortCode,
-                this.path,
-                options,
-                this.models
-              );
+              result = await runCode(showCode, this.path, options, this.models);
             } else if (options.isModel) {
-              let modelCode = shortCode;
+              let modelCode = showCode;
               if (options.source) {
                 const prefix = this.models.get(options.source);
                 if (prefix === undefined) {
                   throw new Error(`can't find source ${options.source}`);
                 }
-                modelCode = prefix + "\n" + shortCode;
+                modelCode = prefix + "\n" + showCode;
               }
               this.setModel(options.modelPath, modelCode);
             }
@@ -96,16 +92,18 @@ class Renderer {
         }
       }
 
-      const highlighted = Prism.highlight(code, grammar, lang);
+      const highlighted = Prism.highlight(showCode, grammar, lang);
       const codeBlock = `<pre class="language-${lang}">${highlighted}</pre>`;
       return `${hidden ? "" : codeBlock}${result}`;
     }
 
-    code = code.replace(/\n$/, "") + "\n";
+    showCode = showCode.replace(/\n$/, "") + "\n";
 
     if (!lang) {
       return (
-        "<pre><code>" + (escaped ? code : escape(code)) + "</code></pre>\n"
+        "<pre><code>" +
+        (escaped ? showCode : escape(showCode)) +
+        "</code></pre>\n"
       );
     }
 
@@ -114,7 +112,7 @@ class Renderer {
       "language-" +
       escape(lang) +
       '">' +
-      (escaped ? code : escape(code)) +
+      (escaped ? showCode : escape(showCode)) +
       "</code></pre>\n"
     );
   }
