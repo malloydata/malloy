@@ -123,7 +123,8 @@
     "test": "echo 'no tests for vscode yet'",
     "package": "yarn vsce package --yarn --githubBranch=main",
     "publish": "yarn vsce publish minor --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 darwin-x64 darwin-arm64",
-    "publish-prerelease": "yarn vsce publish minor --pre-release --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 darwin-x64 darwin-arm64"
+    "publish-prerelease-darwin": "yarn vsce publish minor --pre-release --target darwin-x64 darwin-arm64",
+    "publish-prerelease-linux": "yarn vsce publish minor --pre-release --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 "
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
