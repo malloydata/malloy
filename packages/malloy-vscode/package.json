@@ -120,7 +120,7 @@
     "webpack": "webpack --mode development",
     "webpack-dev": "webpack --mode development --watch",
     "build": "yarn tsc --build && yarn package",
-    "test": "echo 'no tests for vscode yet'",
+    "test": "jest --config=../../jest.config.js",
     "package": "yarn vsce package --yarn --githubBranch=main"
   },
   "dependencies": {
