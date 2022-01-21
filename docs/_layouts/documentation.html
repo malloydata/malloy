@@ -4,17 +4,6 @@
     <meta charset="utf-8">
     <title>{{ page.title }}</title>
     <link rel="stylesheet" href="{{ site.baseurl }}/css/document.css">
-    <script>
-      // hacks!
-      window.toggleTab = function(tabElement) {
-        classList = tabElement.classList
-        if (classList.contains("collapsed")) {
-          classList.remove("collapsed")
-        } else {
-          classList.add("collapsed")
-        }
-      }
-    </script>
     <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
   </head>
   <body>
@@ -24,6 +13,7 @@
       </div>
       <div class="main">
         {% include /generated/toc.html %}
+        <script src="{{ site.baseurl }}/js/sidebar_state.js"></script>
         <div class="content">
           <div class="footer">
             {% if page.footer %}

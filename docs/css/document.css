@@ -83,6 +83,7 @@ div.sidebar div.sidebar-item a {
   gap: 5px;
   text-decoration: none;
 }
+
 /* hacks to get the side bar section to collapse -- looks at the first sibling element */
 div.sidebar-section-title.collapsed + div.sidebar-section-item-group {
   display: none;
@@ -107,8 +108,13 @@ div.sidebar-section-title {
   font-weight: 500;
   font-size: 14px;
   display: flex;
-  padding: 4px;
+  padding: 7px 12px;
   color: black;
+  cursor: pointer;
+}
+
+div.sidebar-section-title:hover {
+  background-color: #85b0f730;
 }
 
 div.document-outer {

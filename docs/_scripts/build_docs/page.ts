@@ -25,6 +25,7 @@ export interface SectionItem {
 
 interface EnrichedSection {
   title: string;
+  id: string;
   items: EnrichedSectionItem[];
 }
 
@@ -35,27 +36,35 @@ interface EnrichedSectionItem {
   compareLink: string;
 }
 
-function enrichTableOfContents(sections: Section[]) : EnrichedSection[] {
+function enrichTableOfContents(sections: Section[]): EnrichedSection[] {
   return sections.map((section) => {
     return {
+      id: section.title.toLowerCase().replace(" ", "_"),
       title: section.title,
       items: section.items.map((item) => {
         const htmlLink = item.link.replace(/\.md$/, ".html");
         const fullLink = path.join("/documentation", htmlLink);
-        const compareLink = htmlLink === "/index.html" ? "/documentation/" : fullLink;
+        const compareLink =
+          htmlLink === "/index.html" ? "/documentation/" : fullLink;
 
-        return {title: item.title, link: item.link, fullLink, compareLink}
-      })
-    }
-  })
+        return { title: item.title, link: item.link, fullLink, compareLink };
+      }),
+    };
+  });
 }
 
 export function renderSidebar(sections: Section[]): string {
-  return `<div class="sidebar">
+  return `<div class="sidebar" id="sidebar">
     ${enrichTableOfContents(sections)
       .map((section) => {
         return `<div>
-        <div class="sidebar-section-title {% unless ${section.items.map((item) => item.compareLink)} contains page.url)} %}collapsed{% endunless %}" onClick="toggleTab(this)">${section.title}</div>
+        <div id=${
+          section.id
+        } class="sidebar-section-title {% unless ${section.items.map(
+          (item) => item.compareLink
+        )} contains page.url)} %}collapsed{% endunless %}">${
+          section.title
+        }</div>
           <div class="sidebar-section-item-group">
           ${section.items
             .map((item) => {
