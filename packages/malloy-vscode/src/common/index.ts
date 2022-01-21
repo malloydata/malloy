@@ -11,17 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import * as _webviewAPI from "vscode-webview";
-
-import ReactDOM from "react-dom";
-import React from "react";
-import { App } from "./App";
-import { QueryPanelMessage } from "../../webview_message_manager";
-
-(() => {
-  const vscode = acquireVsCodeApi<unknown>();
-  vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
-
-  const el = React.createElement(App, {}, null);
-  ReactDOM.render(el, document.getElementById("app"));
-})();
+export { ConnectionManager } from "./connection_manager";
+export {
+  ConnectionConfig,
+  ConnectionBackend,
+} from "./connection_manager_types";

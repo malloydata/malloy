@@ -12,16 +12,21 @@
  */
 
 import * as _webviewAPI from "vscode-webview";
-
 import ReactDOM from "react-dom";
 import React from "react";
 import { App } from "./App";
-import { QueryPanelMessage } from "../../webview_message_manager";
+import {
+  getVSCodeAPI,
+  ConnectionsVSCodeContext,
+} from "./connections_vscode_context";
+import { ConnectionPanelMessage } from "../../webview_message_manager";
 
 (() => {
-  const vscode = acquireVsCodeApi<unknown>();
-  vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
-
-  const el = React.createElement(App, {}, null);
+  const vscode = getVSCodeAPI<void, ConnectionPanelMessage>();
+  const el = React.createElement(
+    ConnectionsVSCodeContext.Provider,
+    { value: vscode },
+    [React.createElement(App, { key: "app" }, null)]
+  );
   ReactDOM.render(el, document.getElementById("app"));
 })();

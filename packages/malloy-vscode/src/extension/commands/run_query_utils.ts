@@ -14,9 +14,9 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
+import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import { URL, Runtime, URLReader } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
-import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
@@ -201,7 +201,7 @@ export function runMalloyQuery(
 
       const vscodeFiles = new VSCodeURLReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
-      const runtime = new Runtime(files, CONNECTION_MAP);
+      const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
 
       return (async () => {
         try {

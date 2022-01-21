@@ -66,6 +66,7 @@ const config = [
           enforce: "pre",
           use: ["source-map-loader"],
         },
+        { test: /\.node$/, loader: "node-loader" },
       ],
     },
     plugins: [
@@ -85,6 +86,14 @@ const config = [
             to: "src/media/play.svg",
           },
           {
+            from: "src/media/logo.png",
+            to: "src/media/logo.png",
+          },
+          {
+            from: "src/media/database.svg",
+            to: "src/media/database.svg",
+          },
+          {
             from: "../../README.md",
             to: "README.md",
           },
@@ -96,6 +105,7 @@ const config = [
     target: "web",
     entry: {
       query_webview: "./src/extension/webviews/query_page/entry.ts",
+      connections_webview: "./src/extension/webviews/connections_page/entry.ts",
     },
     output: {
       path: path.resolve(__dirname, "dist"),
@@ -161,6 +171,7 @@ const config = [
             },
           ],
         },
+        { test: /\.node$/, loader: "node-loader" },
       ],
     },
   },

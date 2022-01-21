@@ -11,17 +11,10 @@
  * GNU General Public License for more details.
  */
 
-import * as _webviewAPI from "vscode-webview";
+import styled from "styled-components";
 
-import ReactDOM from "react-dom";
-import React from "react";
-import { App } from "./App";
-import { QueryPanelMessage } from "../../webview_message_manager";
-
-(() => {
-  const vscode = acquireVsCodeApi<unknown>();
-  vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
-
-  const el = React.createElement(App, {}, null);
-  ReactDOM.render(el, document.getElementById("app"));
-})();
+export const ButtonGroup = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+`;
