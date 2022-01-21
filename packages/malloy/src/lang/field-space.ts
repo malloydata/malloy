@@ -466,6 +466,7 @@ export class CircleSpace implements FieldSpace {
       this.foundCircle = true;
       return undefined;
     }
+    return this.realFS.findEntry(symbol);
   }
   getDialect(): Dialect {
     return this.realFS.getDialect();
