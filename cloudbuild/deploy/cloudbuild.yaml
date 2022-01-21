@@ -10,5 +10,5 @@ steps:
 timeout: "1600s"
 availableSecrets:
   secretManager:
-    - versionName: projects/malloy303216/secrets/marketplace-prerelease-CI/versions/latest
+    - versionName: projects/malloy-303216/secrets/marketplace-prerelease-CI/versions/latest
       env: "VSCE_PAT"
