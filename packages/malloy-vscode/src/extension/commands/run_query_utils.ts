@@ -272,7 +272,7 @@ export function runMalloyQuery(
             mode: renderMode,
           });
           current.result = queryResult;
-          progress.report({ increment: 80, message: "Rendering" });
+          progress.report({ increment: 100, message: "Rendering" });
 
           const allEnd = performance.now();
           logTime("Total", allBegin, allEnd);
