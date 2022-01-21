@@ -1,10 +1,11 @@
 # Meet Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy is currently available on BigQuery and Postgres. In Malloy:
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy is currently available on BigQuery and Postgres. About Malloy:
 
 - Queries compile to SQL, optimized for your database
 - Computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms
-- Data is modeled as a network of relationships; Malloy generates network graphs with results, which ensures correctness of aggregate computations over multiple levels of transformation
+- Excels at querying and producing nested data sets
+- The fan and chasm traps are solved, making it possible to aggregate anything in one query and reducing need for fact tables and overly complex SQL
 - Defaults are smart, and the language is concise (where SQL is verbose and often redundant)
 
 Malloy is a language for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient. Malloy allows you to model as you go, so there is no heavy up-front work before you can start answering complex questions, and you're never held back or restricted by the model.
@@ -58,7 +59,7 @@ Press "test" on the connection to confirm that you have successfully connected t
 
 ## 5. Write some Malloy!
 
-Create a new file (File -> New File) and call it "test.malloy". Do some more stuff.
+It may be helpful to check out one of the walkthroughs under Documentation below, or some of the [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
 
 # Join the Community
 
