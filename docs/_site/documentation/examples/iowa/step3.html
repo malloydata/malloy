@@ -329,7 +329,8 @@
         </a>
       </h2>
     <p>Using the query below, we can see that there are 68 different category names in the data set.  We can notice there is <em>80 Proof Vodka</em>, <em>Flavored Vodka</em> and more.  It would be helpful if we just could have all of these categorized together as vodkas.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
+<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: distinct_number_of_category_names <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> category_name<span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: sizes <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: category_name
@@ -604,13 +605,13 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,909</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLACKBERRY BRANDIES</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,714</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN AMARETTO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">53,417</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLACKBERRY BRANDIES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,714</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NEUTRAL GRAIN SPIRITS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
@@ -628,13 +629,13 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">286</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DELISTED / SPECIAL ORDER ITEMS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SLOE GINS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,254</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DELISTED / SPECIAL ORDER ITEMS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
@@ -676,13 +677,13 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,216</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREME DE ALMOND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,631</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOW PROOF VODKA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,565</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREME DE ALMOND</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,631</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RASPBERRY SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
@@ -716,13 +717,13 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCK & RYE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,660</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IOWA DISTILLERIES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,855</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCK & RYE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,660</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANISETTE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
@@ -740,25 +741,25 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,853</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMARETTO - IMPORTED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HIGH PROOF BEER - AMERICAN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMARETTO - IMPORTED</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPEARMINT SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,928</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED GINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA - CHERRY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED GINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN WHISKIES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
@@ -790,7 +791,8 @@
         </a>
       </h2>
     <p>Let's take a look at each category class and see how many individual items it has.  We'll also build a nested query that shows the <code class="language-malloy">category_name</code>s that map into that category class.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small", "dataStyles": { "names_list": { "renderer": "list_detail" } } }</span>
+<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: category_class
   <span class="token keyword">aggregate</span>: item_count
   <span class="token keyword">nest</span>: names_list <span class="token keyword">is</span> {
@@ -857,7 +859,8 @@
         </a>
       </h2>
     <p>With our new lens, we can now see the top sellers in each <code class="language-malloy">category_class</code>, allowing us to get an entire market summary with a single simple query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
+<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: category_class
   <span class="token keyword">aggregate</span>: total_sale_dollars
   <span class="token keyword">nest</span>: top_sellers_by_revenue
@@ -1309,7 +1312,8 @@
       </h2>
     <p>In this data set, there is a column called <code class="language-malloy">bottle_volume_ml</code>, which is the bottle size in mL. Let's take a look.</p>
 <p>A first query reveals that there are 34 distinct bottle sizes in this data set, and that 750ml, 1750ml and 1000ml are by far the most common.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
+<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: distinct_number_of_sizes <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> bottle_volume_ml<span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: sizes <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: bottle_volume_ml
@@ -1494,10 +1498,10 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">180,000</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,580</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,580</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">225,000</td>
@@ -1516,7 +1520,8 @@
       </div>
     </div>
   </div><p>Visualizing this query suggests that we might wish to create 3 distinct buckets to approximate small, medium and large bottles.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium", "dataStyles": { "sizes": { "renderer": "bar_chart" } } }</span>
+<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: distinct_number_of_sizes <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> bottle_volume_ml<span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: sizes <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: bottle_volume_ml
@@ -1553,7 +1558,8 @@
     <span class="token keyword">pick</span> <span class="token string">'jumbo (over 1000ml)'</span> <span class="token keyword">when</span> <span class="token operator">></span> <span class="token number">1001</span>
     <span class="token keyword">pick</span> <span class="token string">'liter-ish'</span> <span class="token keyword">when</span> <span class="token operator">>=</span> <span class="token number">750</span>
     <span class="token keyword">else</span> <span class="token string">'small or mini (under 750ml)'</span></pre><p>Look at the data through the new mapping.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
+<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: bottle_size
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> total_sale_dollars<span class="token punctuation">,</span> line_item_count<span class="token punctuation">,</span> item_count <span class="token punctuation">]</span>
   <span class="token keyword">order_by</span>: bottle_size
@@ -1576,7 +1582,7 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,008</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">liter-ish</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,013,383,211.851</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,013,383,211.852</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,268,959</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,867</td>
 </tr>

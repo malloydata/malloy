@@ -21,7 +21,8 @@ For example, if we were interested in the name 'Billie' as it relates to locatio
 could filter on 'Billie' and look a states as it relates to total population.</p>
 <p>We can see that in the population of the the people named 'Billie', the cohort of the Billies born in
 Texas makes up 18% of the total population of Billies.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: name <span class="token operator">=</span> <span class="token string">'Billie'</span>
   <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
@@ -144,7 +145,8 @@ Texas makes up 18% of the total population of Billies.</p>
     </div>
   </div><p>We could run this same query, but instead look by decade to see when the Billies where born.
 Using the query below we can see that 26% of all Billies were born in the 1930s.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: name <span class="token operator">=</span> <span class="token string">'Billie'</span>
   <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
@@ -230,7 +232,8 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our popuation.
 Let's limit our population to California in 1990 and look at the most cohorts (people with a given name).  We are also going
 to measure a little differently.  Instead of looking at a percentage, let's look at births per 100,000 people.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: state<span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token keyword">and</span> <span class="token identifier">`year`</span> <span class="token operator">=</span> <span class="token number">1990</span>
   <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {

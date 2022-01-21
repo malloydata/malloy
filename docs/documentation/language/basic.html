@@ -22,7 +22,8 @@ footer: /generated/footers/language/basic.html
 <p>In Malloy, the source of a query is either a raw table, a <a href="explore.html">modeled explore</a>, or another query.</p>
 <p>In this example the <code class="language-malloy"><span class="token function">table</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> function provides the query <em>source</em> from a table (or view) in the database.
 They query <em>operation</em> is explicit about which fields are grouped, aggregated or projected.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
@@ -61,7 +62,8 @@ They query <em>operation</em> is explicit about which fields are grouped, aggreg
     <p>In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, the query operator for this is <code class="language-malloy"><span class="token keyword">group_by</span>:</code>.  Calculation about data in the group are made using <code class="language-malloy"><span class="token keyword">aggregate</span>:</code>.</p>
 <p>The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called <code class="language-malloy"><span class="token keyword">project</span>:</code>.</p>
 <p>In the query below, the data will be grouped by <code class="language-malloy">state</code> and will produce an aggregate calculation for <code class="language-malloy">airport_count</code> and <code class="language-malloy">average_elevation</code>.  <code class="language-malloy"><span class="token keyword">group_by</span>:</code>. The <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> list can contain refernces to existing aggregate fields or add new aggregate computations.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     state
     county
@@ -114,7 +116,8 @@ They query <em>operation</em> is explicit about which fields are grouped, aggreg
         </a>
       </h3>
     <p>Multiple <code class="language-malloy"><span class="token keyword">group_by</span>:</code> and <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> statements can appear in the same query operation.  This can be helful in rendering when the order of fields in the query output is significant.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: fac_type
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">group_by</span>: county
@@ -163,7 +166,8 @@ They query <em>operation</em> is explicit about which fields are grouped, aggreg
         </a>
       </h3>
     <p><code class="language-malloy"><span class="token keyword">project</span></code> produces a list of fields.  For every row in the input table, there is a row in the output table.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>code<span class="token punctuation">,</span> full_name<span class="token punctuation">,</span> city<span class="token punctuation">,</span> county<span class="token punctuation">]</span>
   <span class="token keyword">where</span>: county<span class="token operator">=</span><span class="token string">'SANTA CRUZ'</span>
 }</pre><div class="result-outer small">
@@ -212,7 +216,8 @@ They query <em>operation</em> is explicit about which fields are grouped, aggreg
     <p>In Malloy, all output fields have names. This means that any time a query
 introduces a new aggregate computation, it must be named. <em>(unlike SQL,
 which allows un-named expressions)</em></p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: max_elevation <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -229,7 +234,8 @@ Having the output column name written first makes it easier for someone reading
 the code to visualize the resulting query structure.</p>
 <p>Named objects, like columns from a table, and fields defined in an explore, can be included
 in field lists without an <code class="language-malloy"><span class="token keyword">is</span></code></p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     full_name
     elevation
@@ -268,7 +274,8 @@ in field lists without an <code class="language-malloy"><span class="token keywo
         </a>
       </h2>
     <p>Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand, given a knowledge of SQL.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: county_and_state <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -327,11 +334,13 @@ in field lists without an <code class="language-malloy"><span class="token keywo
       </h2>
     <p>One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create an <em>explore</em> object named <code class="language-malloy">airports</code> and
 add a <code class="language-malloy"><span class="token keyword">dimension</span>:</code> calculation for <code class="language-malloy">county_and_state</code> and <code class="language-malloy"><span class="token keyword">measure</span>:</code> calculation for <code class="language-malloy">airport_count</code>.  Dimensions can be used in <code class="language-malloy"><span class="token keyword">group_by</span>:</code>, <code class="language-malloy"><span class="token keyword">project</span>:</code> and <code class="language-malloy"><span class="token keyword">where</span>:</code>.  Measures can be used in <code class="language-malloy"><span class="token keyword">aggregate</span>:</code> and <code class="language-malloy"><span class="token keyword">having</span>:</code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}</span>
+<span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
   <span class="token keyword">dimension</span>: county_and_state <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>county<span class="token punctuation">,</span> <span class="token string">', '</span><span class="token punctuation">,</span> state<span class="token punctuation">)</span>
   <span class="token keyword">measure</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">measure</span>: average_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
-}</pre><pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+}</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>:county_and_state
   <span class="token keyword">aggregate</span>: airport_count
 }</pre><div class="result-outer small">
@@ -369,7 +378,8 @@ add a <code class="language-malloy"><span class="token keyword">dimension</span>
       </h2>
     <p>In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some <a href="order_by.html">reasonable defaults</a>.</p>
 <p>The <code class="language-malloy"><span class="token keyword">top</span>:</code> and <code class="language-malloy"><span class="token keyword">limit</span>:</code> statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure decending—in this case, <code class="language-malloy">airport_count</code>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">top</span>: <span class="token number">2</span>
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
@@ -389,7 +399,8 @@ add a <code class="language-malloy"><span class="token keyword">dimension</span>
       </div>
     </div>
   </div><p>Default ordering can be overridden with <code class="language-malloy"><span class="token keyword">order_by</span>:</code>, as in the following query, which shows the states in alphabetical order.  <code class="language-malloy"><span class="token keyword">order_by</span>:</code> can take a field index nuber or the name of a field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">order_by</span>: state
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
@@ -436,7 +447,8 @@ add a <code class="language-malloy"><span class="token keyword">dimension</span>
     <p>A filter on a data source table narrows down which data is included to be passed to the Query Operation. This translates
 to a <code>WHERE</code> clause in SQL.
 In this case, the data from the table is filtered to just airports in California.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span>}<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span>}<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">top</span>: <span class="token number">2</span>
   <span class="token keyword">group_by</span>: county
   <span class="token keyword">aggregate</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -462,7 +474,8 @@ In this case, the data from the table is filtered to just airports in California
         </a>
       </h3>
     <p>A filter on an aggregate calculation (a <em>measure</em>) narrows down the data used in that specific calculation. In the example below, the calculations for <code class="language-malloy">airports</code> and <code class="language-malloy">heliports</code> are filtered separately.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     airports <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: fac_type <span class="token operator">=</span> <span class="token string">'AIRPORT'</span>}
@@ -514,7 +527,8 @@ In this case, the data from the table is filtered to just airports in California
       </h3>
     <p>Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to
 the data for that opeation alone. (More on this later, in the section on <code class="language-malloy"><span class="token keyword">nest</span>:</code> operations in queries.)</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: state: <span class="token string">'AL'</span> <span class="token operator">|</span> <span class="token string">'KY'</span>
   <span class="token keyword">top</span>: <span class="token number">5</span>
   <span class="token keyword">group_by</span>: state
@@ -558,7 +572,8 @@ the data for that opeation alone. (More on this later, in the section on <code c
     <p>Literals of type <code class="language-malloy"><span class="token type">date</span></code> and <code class="language-malloy"><span class="token type">timestamp</span></code> are notated with an <code class="language-malloy"><span class="token date">@</span></code>, e.g. <code class="language-malloy"><span class="token date">@2003-03-29</span></code> or <code class="language-malloy"><span class="token date">@1994-07-14 10:23:59</span></code>. Similarly, years (<code class="language-malloy"><span class="token date">@2021</span></code>), quarters (<code class="language-malloy"><span class="token date">@2020-Q1</span></code>), months (<code class="language-malloy"><span class="token date">@2019-03</span></code>), weeks (<code class="language-malloy"><span class="token date">@WK2021-08-01</span></code>), and minutes (<code class="language-malloy"><span class="token date">@2017-01-01 10:53</span></code>) can be expressed.</p>
 <p>Time literals can be used as values, but are more often useful in filters. For example, the following query
 shows the number of flights in 2003.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: dep_time: <span class="token date">@2003</span>}<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: dep_time: <span class="token date">@2003</span>}<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -580,7 +595,8 @@ shows the number of flights in 2003.</p>
         </a>
       </h3>
     <p>Time values can be truncated to a given timeframe, which can be <code class="language-malloy"><span class="token timeframe">second</span></code>, <code class="language-malloy"><span class="token timeframe">minute</span></code>, <code class="language-malloy"><span class="token timeframe">hour</span></code>, <code class="language-malloy"><span class="token timeframe">day</span></code>, <code class="language-malloy"><span class="token timeframe">week</span></code>, <code class="language-malloy"><span class="token timeframe">month</span></code>, <code class="language-malloy"><span class="token timeframe">quarter</span></code>, or <code class="language-malloy"><span class="token timeframe">year</span></code>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     flight_year <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">year</span>
     flight_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
@@ -645,7 +661,8 @@ shows the number of flights in 2003.</p>
         </a>
       </h3>
     <p>Numeric values can be extracted from time values, e.g. <code class="language-malloy"><span class="token timeframe">day_of_year</span><span class="token punctuation">(</span>some_date<span class="token punctuation">)</span></code> or <code class="language-malloy"><span class="token timeframe">minute</span><span class="token punctuation">(</span>some_time<span class="token punctuation">)</span></code>. See the full list of extraction functions <a href="time-ranges.html#extraction">here</a>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "pageSize": 7, "size": "large"}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">order_by</span>: <span class="token number">1</span>
   <span class="token keyword">group_by</span>: day_of_week <span class="token keyword">is</span> <span class="token timeframe">day</span><span class="token punctuation">(</span>dep_time<span class="token punctuation">)</span>
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -694,7 +711,8 @@ And likewise for any other data type that has interesting output metadata. -->
         </a>
       </h3>
     <p>Two kinds of time ranges are given special syntax: the range between two times and the range starting at some time for some duration. These are represented like <code class="language-malloy"><span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span></code> and <code class="language-malloy"><span class="token date">@2004-Q1</span> <span class="token keyword">for</span> <span class="token number">6</span> <span class="token timeframe">quarters</span></code> respectively. These ranges can be used in filters just like time literals.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: dep_time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span>}<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: dep_time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2005</span>}<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>:flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -709,7 +727,8 @@ And likewise for any other data type that has interesting output metadata. -->
   </div><p>Time literals and truncations can also behave like time ranges. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. <code class="language-malloy"><span class="token date">@2003</span></code> represents the whole of the year 2003, and <code class="language-malloy"><span class="token date">@2004-Q1</span></code> lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the
 timeframe from the truncation, e.g. <code class="language-malloy">now<span class="token punctuation">.</span><span class="token timeframe">month</span></code> means the entirety of the current month.</p>
 <p>When a time range is used in a comparison, <code class="language-malloy"><span class="token operator">=</span></code> checks for "is in the range", <code class="language-malloy"><span class="token operator">></span></code> "is after", and <code class="language-malloy"><span class="token operator">&lt;</span></code> "is before." So <code class="language-malloy">some_time <span class="token operator">></span> <span class="token date">@2003</span></code> filters dates starting on January 1, 2004, while <code class="language-malloy">some_time <span class="token operator">=</span> <span class="token date">@2003</span></code> filters to dates in the year 2003.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: dep_time <span class="token operator">></span> <span class="token date">@2003</span>}<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto"}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: dep_time <span class="token operator">></span> <span class="token date">@2003</span>}<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">top</span>: <span class="token number">3</span><span class="token punctuation">;</span> <span class="token keyword">order_by</span>: <span class="token number">1</span> <span class="token keyword">asc</span>
   <span class="token keyword">group_by</span>:departure_date <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">day</span>
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -754,7 +773,8 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         </a>
       </h3>
     <p>In Malloy, queries can be <a href="nesting.html">nested</a> to produce subtables on each output row. Such nested queries are called <em>aggregating subqueries</em>, or simply "nested queries." When a query is nested inside another query, each output row of the outer query will have a nested table for the inner query which only includes data limited to that row.</p>
-<pre class="language-malloy">
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy"}</span>
+
 <span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
@@ -921,7 +941,8 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
     </div>
   </div><p>Here we can see that the <code class="language-malloy">by_facility</code> column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.</p>
 <p>Queries can be nested infinitely, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
   <span class="token keyword">nest</span>: top_5_counties <span class="token keyword">is</span> {
@@ -1411,7 +1432,8 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         </a>
       </h3>
     <p>Filters can be isolated to any level of nesting. In the following example, we limit the <code class="language-malloy">major_facilities</code> query to only airports where <code class="language-malloy">major</code> is <code class="language-malloy"><span class="token string">'Y'</span></code>. This particular filter applies <em>only</em> to <code class="language-malloy">major_facilities</code>, and not to other parts of the outer query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span>
   <span class="token keyword">group_by</span>: county
   <span class="token keyword">aggregate</span>: airport_count
@@ -1553,7 +1575,8 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
         </a>
       </h2>
     <p>The output from one stage of a query can be "piped" into another stage using <code class="language-malloy"><span class="token operator">|</span></code>. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "small"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span>
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
@@ -2062,7 +2085,8 @@ timeframe from the truncation, e.g. <code class="language-malloy">now<span class
     </div>
   </div><p>Next, we'll use the output of that query as the input to another, where we determine which counties have the highest
 percentage of airports compared to the whole state, taking advantage of the nested structure of the data to to so.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large", "dataStyles": { "percent_in_county": { "renderer": "percent" }}}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span>
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
@@ -2123,7 +2147,8 @@ percentage of airports compared to the whole state, taking advantage of the nest
         </a>
       </h2>
     <p>Joins are declared as part of an explore, and link primary and foreign keys.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}</span>
+<span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: code
 }
 
@@ -2172,7 +2197,8 @@ percentage of airports compared to the whole state, taking advantage of the nest
     <p>As in SQL, aggregate functions <code class="language-malloy">sum</code>, <code class="language-malloy">count</code>, and <code class="language-malloy">avg</code> are available, and their use in
 an expression identifies the corresponding field as a <a href="fields.html#measures">measure</a>.</p>
 <p>Aggregates may be computed with respect to any joined explore, allowing for a wider variety of measurements to be calculated than is possible in SQL. See the <a href="aggregates.html#aggregate-locality">Aggregate Locality</a> section for more information.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy"}</span>
+<span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     <span class="token comment">-- The average number of seats on models of registered aircraft</span>
     models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>

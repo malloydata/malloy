@@ -342,7 +342,8 @@ section</a>.</p>
       </h2>
     <p>We start by  <a href="../../language/filters.html">filtering the data</a> to only purchase records where the category name contains <code class="language-malloy"><span class="token string">'VODKA'</span></code>.  We group the data by vendor and description, and calculate the various totals. Note that Malloy <a href="../../patterns/order_by.html">automatically orders</a> the results by the first measure descending (in this case).</p>
 <p>Notice that the greatest sales by dollar volume is <em>Hawkeye Vodka</em>, closely followed by <em>Absolut</em>.  A lot more bottles of <em>Hawkeye</em> were sold, as it is 1/3 the price by volume of <em>Absolut</em>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'VODKA'</span> } <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}</span>
+<span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'VODKA'</span> } <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">top</span>: <span class="token number">5</span>
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> vendor_name<span class="token punctuation">,</span> item_description <span class="token punctuation">]</span>
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> total_sale_dollars<span class="token punctuation">,</span> total_bottles<span class="token punctuation">,</span> avg_price_per_100ml <span class="token punctuation">]</span>
@@ -422,7 +423,8 @@ section</a>.</p>
         </a>
       </h2>
     <p>Once the query is in the model we can simply call it by name, adjusting our filtering to ask questions about Tequila instead:</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span> } <span class="token operator">-</span><span class="token operator">></span> top_sellers_by_revenue</pre><div class="result-outer medium">
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}</span>
+<span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span> } <span class="token operator">-</span><span class="token operator">></span> top_sellers_by_revenue</pre><div class="result-outer medium">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -479,7 +481,8 @@ section</a>.</p>
         </a>
       </h2>
     <p>The magic happens when we call a named query in the same way we would use any other field <a href="nesting.html">nesting</a>. In the below query, we can see our vendors (sorted automatically by amount purchased, as well as the top 5 items for each vendor.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span> } <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}</span>
+<span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span> } <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: vendor_name
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> total_sale_dollars<span class="token punctuation">,</span> avg_price_per_100ml <span class="token punctuation">]</span>
   <span class="token keyword">nest</span>: top_sellers_by_revenue <span class="token comment">-- entire query is a field</span>
@@ -2386,7 +2389,7 @@ section</a>.</p>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Amor Extra Anejo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,468</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">384</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.912</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9.913</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mara Imports</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Amor Silver</td>
@@ -4350,7 +4353,8 @@ section</a>.</p>
       </h2>
     <p>The <code class="language-malloy">price_per_100ml</code> calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket <code class="language-malloy">price_per_100ml</code> into even dollar amounts, and nest our <code class="language-malloy">top_sellers_by_revenue</code> query to create a subtable for each bucket.</p>
 <p>At the top we see our lowest cost options at under $1/mL, with the more pricey bevarages appearing as we scroll down.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span> } <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}</span>
+<span class="token keyword">query</span>: iowa { <span class="token keyword">where</span>: category_name <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span> } <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: price_per_100ml_bucket <span class="token keyword">is</span> <span class="token function">floor</span><span class="token punctuation">(</span>price_per_100ml<span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: top_sellers_by_revenue
 }</pre><div class="result-outer medium">
@@ -5954,13 +5958,13 @@ section</a>.</p>
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Casamigos Reposado Mini</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">224.1</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">89.64</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Casamigos Reposado Mini</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">224.1</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
@@ -5982,13 +5986,13 @@ section</a>.</p>
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Casamigos Anejo Mini</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246.6</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">98.64</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Casamigos Anejo Mini</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">246.6</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>

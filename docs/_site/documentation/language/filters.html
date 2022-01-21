@@ -346,7 +346,8 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>}<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
+<span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>}<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -370,7 +371,8 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>A filter can also be applied to an individual query stage.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carrier
   <span class="token keyword">aggregate</span>: flight_count
 }<span class="token operator">-</span><span class="token operator">></span>{
@@ -405,7 +407,8 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>Any measure can be filtered by adding a where clause.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     ca_flights <span class="token keyword">is</span> flight_count{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
     ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
@@ -440,7 +443,8 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy"><span class="token comment">-- add a couple of measures to the `flights` explore</span>
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
+<span class="token comment">-- add a couple of measures to the `flights` explore</span>
 <span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
   <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: dep_delay<span class="token operator">></span><span class="token number">30</span>}
   <span class="token keyword">measure</span>: percent_delayed <span class="token keyword">is</span> delayed_flights<span class="token operator">/</span>flight_count
@@ -490,7 +494,8 @@ measure and then create that as a percent of total.</p>
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy"><span class="token comment">-- add a couple of measures to the `flights` explore</span>
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
+<span class="token comment">-- add a couple of measures to the `flights` explore</span>
 <span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
   <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: dep_delay<span class="token operator">></span><span class="token number">30</span>}
   <span class="token keyword">query</span>: delay_stats <span class="token keyword">is</span> {

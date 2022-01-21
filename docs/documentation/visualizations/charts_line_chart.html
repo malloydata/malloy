@@ -19,7 +19,8 @@ footer: /generated/footers/visualizations/charts_line_chart.html
 <li><p>Thrid (optional) Pivot is dimensional field (numeric or string)</p>
 </li></ul>
 <p>Data Style is <code>'line_chart'</code></p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"departures_by_month":{"renderer":"line_chart","size":"large"}}}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">nest</span>: departures_by_month <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: departure_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
     <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -41,7 +42,8 @@ footer: /generated/footers/visualizations/charts_line_chart.html
 	</table>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+  </div><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"carriers_by_month":{"renderer":"line_chart","size":"large"}}}</span>
+<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">nest</span>: carriers_by_month <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: departure_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
     <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>

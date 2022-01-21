@@ -12,7 +12,8 @@ footer: /generated/footers/language/nesting.html
       </h1>
     <p>Nested queries, more formally known as "aggregating subqueries" are queries included in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, queries can be named and referenced in other queries. The technical term "aggregating subquery" is a bit of a mouthful, so we more often refer to it as a "nested query."</p>
 <p>When a named query is nested inside of another query, it produces an aggregating subquery and the results include a nested subtable.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
   <span class="token keyword">nest</span>: by_facility <span class="token keyword">is</span> {
@@ -183,7 +184,8 @@ footer: /generated/footers/language/nesting.html
         </a>
       </h2>
     <p>Aggregating subqueries can be nested infinitely, meaning that a nested query can contain another nested query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
   <span class="token keyword">nest</span>: top_5_counties <span class="token keyword">is</span> {
@@ -673,7 +675,8 @@ footer: /generated/footers/language/nesting.html
         </a>
       </h2>
     <p>Filters can be applied at any level within nested queries.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}</span>
+<span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: state: <span class="token string">'CA'</span><span class="token operator">|</span><span class="token string">'NY'</span><span class="token operator">|</span><span class="token string">'MN'</span>
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count

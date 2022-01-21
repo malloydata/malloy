@@ -11,7 +11,8 @@ footer: /generated/footers/examples/wordle/wordle4.html
         </a>
       </h1>
     <p>Final Data Model - Goto <a href="wordle5.html">Solve Puzzles</a></p>
-<pre class="language-malloy">
+<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/w1.malloy"}</span>
+
 <span class="token comment">-- Make a table of 5 letter words</span>
 <span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
   <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {

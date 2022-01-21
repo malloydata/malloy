@@ -24,7 +24,8 @@ modeled <em>explore</em>.</p>
       </h2>
     <p>A Malloy model file can contain several <em>explores</em>, which define fields that can be
 used in queries.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e.malloy"}</span>
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">dimension</span>: distance_km <span class="token keyword">is</span> distance <span class="token operator">/</span> <span class="token number">1.609344</span>
 
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -46,7 +47,8 @@ used in queries.</p>
           Using modeled in query.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}</span>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <pre>[
@@ -79,7 +81,8 @@ used in queries.</p>
           Using modeled with a filter.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}</span>
+<span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <pre>[
@@ -112,7 +115,8 @@ used in queries.</p>
           Setting a limit on the Query
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}</span>
+<span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <pre>[
@@ -133,7 +137,8 @@ used in queries.</p>
           Creating a brand new Query.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}</span>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: destination
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     flight_count
@@ -177,7 +182,8 @@ used in queries.</p>
           Putting it all together.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}</span>
+<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: destination
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     flight_count
