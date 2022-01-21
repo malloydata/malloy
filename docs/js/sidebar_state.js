@@ -11,7 +11,7 @@ function toggleTab(tabElement) {
 
 function getCollapseState() {
   try {
-    return JSON.parse(localStorage.getItem("collapse_state"));
+    return JSON.parse(localStorage.getItem("collapse_state")) || {};
   } catch (_error) {
     return {};
   }
@@ -30,7 +30,7 @@ function setCollapsed(id, isCollapsed) {
 function getCollapsed(id) {
   const collapseState = getCollapseState();
   const isCollapsed = collapseState[id];
-  return isCollapsed === undefined ? false : isCollapsed;
+  return isCollapsed === undefined ? true : isCollapsed;
 }
 
 Array.from(document.getElementsByClassName("sidebar-section-title")).forEach(
