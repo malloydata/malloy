@@ -1,11 +1,9 @@
 # Puzzle #214
+_January 19, 2022_
 
-Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/).
+[↩️ All Solved Puzzles](wordle5.md)   |   [➡️ Next Puzzle](wordle215.md)
 
-Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
-
-[Solved Puzzles](wordle5.md)
-
+Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
 Query for best Starting words.
 
@@ -14,7 +12,7 @@ Query for best Starting words.
 query: wordle->find_words
 ```
 
-Start with a word without duplicates to get coverage.  Today we choose 'SLATE')
+Start with a word without duplicates to get coverage.  Today we choose 'SLATE'
 
 <img src="/malloy/img/wordle214a.png" style="width: 200px">
 
@@ -65,6 +63,7 @@ query: wordle->find_words{
 
 ## Solved in 4!
 
+[↩️ All Solved Puzzles](wordle5.md)   |  [➡️ Next Puzzle](wordle215.md)
 
 ### Code For Wordlbot:
 
