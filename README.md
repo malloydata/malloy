@@ -1,15 +1,15 @@
-# Welcome to Malloy
+# Meet Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database, and is currently available on BigQuery and Postgres.
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy is currently available on BigQuery and Postgres. In Malloy:
 
-- Queries in the Malloy language compile to SQL, and Malloy writes SQL optimized for your database
-- Computations in Malloy are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms
-- Data is modeled as a network of relationships, and Malloy generates network graphs with results, which ensures correctness of aggregate computations over multiple levels of transformation
-- Defaults are smart, and Malloy is concise (where SQL is verbose and often redundant)
+- Queries compile to SQL, optimized for your database
+- Computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms
+- Data is modeled as a network of relationships; Malloy generates network graphs with results, which ensures correctness of aggregate computations over multiple levels of transformation
+- Defaults are smart, and the language is concise (where SQL is verbose and often redundant)
 
-Malloy is a language for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient. Malloy allows you to model as you go, so there is no heavy up-front work before you can start answering complex questions.
+Malloy is a language for anyone who works with SQL--whether you’re an analyst, data scientist, data engineer, or someone building a data application. If you know SQL, Malloy will feel familiar, while more powerful and efficient. Malloy allows you to model as you go, so there is no heavy up-front work before you can start answering complex questions, and you're never held back or restricted by the model.
 
-We've built a Visual Studio Code extension to help you try interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
+We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
 # Installing the Extension
 
