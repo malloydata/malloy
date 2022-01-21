@@ -3,10 +3,8 @@
 [Worldle](https://www.powerlanguage.co.uk/wordle/) is an interesting, challenging and fun word game.  If you aren't familiar with it, I suggest that you play it before reading this article
 
 ## Step 1 - Raw Materials
-
-## Five letter Words
-The first thing we need is a word list.  It turns out that on most unix systems there is a world list can be
-found at `/usr/share/dict/words`.  The file has a single word per line, so I just uploaded the entire files (as a CSV)
+The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be
+found at `/usr/share/dict/words`.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)
 into BigQuery.
 
 ```malloy
@@ -40,7 +38,7 @@ and Uppercase words in the output of our query.
 
 explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]....$'
+    where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
     project: word is UPPER(word)
   }
 }
@@ -55,23 +53,24 @@ query: words->five_letter_words
 
 ## Searching for Words
 
-Regular expressions are great for matching words.  We are going to use three patterns.
+Regular expressions are great for matching words.  We are going to use a few patterns.
 
-### Yellow - This letter exists somewhere in the word.
+### This letter exists somewhere in the word
 
-Word has an X or Y in it.
+Find words that contain X AND Y.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"five_letter_words":{"renderer":"list"}}}
 query: words->five_letter_words->{
-  where: word ~ r'[XY]'
+  where: word ~ r'[X]' & ~ r'[Y]'
   project: word
 }
 ```
 
-### Green -  The Letter is a particular position or can't be a particular letter
+### Letter position: This letter here, that letter NOT there
 
-Word has n M in the 4th position and the 5 position is not E or Z
+Find words that have M in the 4th position and the 5th position is NOT E or Z
+
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"five_letter_words":{"renderer":"list"}}}
@@ -81,9 +80,9 @@ query: words->five_letter_words->{
 }
 ```
 
-### Gray - The word does not have the letters
+### Ruling letters out
 
-We can use this explore to search for words that match patterns.
+Find words that do NOT contain S,L,O,P, or E
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"five_letter_words":{"renderer":"list"}}}

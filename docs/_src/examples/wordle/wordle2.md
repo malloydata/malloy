@@ -96,8 +96,7 @@ query: wordle->{
 ```
 
 ## Removing Plurals and words that end in 'ED'
-Looks like there are a lots of words that end in 'S' or 'ED' but they don't often appear in puzzles.  Let's change
-our wordle model to eliminate them.
+We've noticed there are a lots of words that end in 'S' or 'ED' in the dataset, but in our experience they don't often appear in puzzles.  We've eliminated them from our model for now, by filtering them out on the explore level:
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy"}

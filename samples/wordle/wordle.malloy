@@ -1,6 +1,6 @@
 explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]....$'
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is UPPER(word)
   }
 }

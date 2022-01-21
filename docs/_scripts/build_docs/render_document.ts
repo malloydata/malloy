@@ -34,6 +34,7 @@ class Renderer {
   // The path where the document being rendered exists.
   private readonly path: string;
   private models: Map<string, string>;
+  private _errors: { snippet: string; error: string }[] = [];
 
   constructor(path: string) {
     this.path = path;
@@ -65,26 +66,32 @@ class Renderer {
             const options = JSON.parse(
               code.split("\n")[0].substring("--! ".length).trim()
             );
-            code = code.split("\n").slice(1).join("\n");
+            const shortCode = code.split("\n").slice(1).join("\n");
             if (options.isHidden) {
               hidden = true;
             }
             if (options.isRunnable) {
-              result = await runCode(code, this.path, options, this.models);
+              result = await runCode(
+                shortCode,
+                this.path,
+                options,
+                this.models
+              );
             } else if (options.isModel) {
-              let modelCode = code;
+              let modelCode = shortCode;
               if (options.source) {
                 const prefix = this.models.get(options.source);
                 if (prefix === undefined) {
                   throw new Error(`can't find source ${options.source}`);
                 }
-                modelCode = prefix + "\n" + code;
+                modelCode = prefix + "\n" + shortCode;
               }
               this.setModel(options.modelPath, modelCode);
             }
           } catch (error) {
             log(`  !! Error: ${error.toString()}`);
             result = `<div class="error">Error: ${error.toString()}</div>`;
+            this._errors.push({ snippet: code, error: error.message });
           }
         }
       }
@@ -351,9 +358,24 @@ class Renderer {
         throw new Error(`Unexpected markdown node type.`);
     }
   }
+
+  get errors() {
+    return this._errors;
+  }
 }
 
-export async function renderDoc(text: string, path: string): Promise<string> {
+export async function renderDoc(
+  text: string,
+  path: string
+): Promise<{
+  renderedDocument: string;
+  errors: { snippet: string; error: string }[];
+}> {
   const ast = unified().use(remarkParse).use(remarkGfm).parse(text);
-  return new Renderer(path).render(ast as unknown as Markdown);
+  const renderer = new Renderer(path);
+  const renderedDocument = await renderer.render(ast as unknown as Markdown);
+  return {
+    renderedDocument,
+    errors: renderer.errors,
+  };
 }
