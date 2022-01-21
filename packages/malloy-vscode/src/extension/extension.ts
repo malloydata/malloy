@@ -25,6 +25,7 @@ import {
 } from "./tree_views/schema_view";
 import {
   copyFieldPathCommand,
+  editConnectionsCommand,
   runNamedQuery,
   runQueryCommand,
   runQueryFileCommand,
@@ -32,57 +33,12 @@ import {
   showLicensesCommand,
 } from "./commands";
 import { showResultJSONCommand } from "./commands/show_result_json";
+import { CONNECTION_MANAGER, getConnectionsConfig } from "./state";
+import { ConnectionsProvider } from "./tree_views/connections_view";
 
 let client: LanguageClient;
 
 export function activate(context: vscode.ExtensionContext): void {
-  registerCommands(context);
-  setupLanguageServer(context);
-  registerTreeDataProviders(context);
-}
-
-export function deactivate(): Promise<void> | undefined {
-  if (client) {
-    // TODO can this just be put into a disposable, passed to `context.subscriptions.push`
-    //      and disposed automatically?
-    return client.stop();
-  }
-}
-
-function registerTreeDataProviders(context: vscode.ExtensionContext): void {
-  const schemaTree = new SchemaProvider();
-
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider("malloySchema", schemaTree)
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand("malloy.refreshSchema", () =>
-      schemaTree.refresh()
-    )
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "malloy.runTurtleFromSchema",
-      runTurtleFromSchemaCommand
-    )
-  );
-
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(() => {
-      vscode.commands.executeCommand("malloy.refreshSchema");
-    })
-  );
-
-  context.subscriptions.push(
-    vscode.window.onDidChangeActiveTextEditor(() =>
-      vscode.commands.executeCommand("malloy.refreshSchema")
-    )
-  );
-}
-
-function registerCommands(context: vscode.ExtensionContext): void {
   // Show Licenses
   context.subscriptions.push(
     vscode.commands.registerCommand("malloy.showLicenses", showLicensesCommand)
@@ -123,6 +79,69 @@ function registerCommands(context: vscode.ExtensionContext): void {
       showResultJSONCommand
     )
   );
+
+  const schemaTree = new SchemaProvider();
+
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("malloySchema", schemaTree)
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("malloy.refreshSchema", () =>
+      schemaTree.refresh()
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "malloy.runTurtleFromSchema",
+      runTurtleFromSchemaCommand
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(() => {
+      vscode.commands.executeCommand("malloy.refreshSchema");
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(() =>
+      vscode.commands.executeCommand("malloy.refreshSchema")
+    )
+  );
+
+  const connectionsTree = new ConnectionsProvider();
+
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("malloyConnections", connectionsTree)
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "malloy.editConnections",
+      editConnectionsCommand
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration(async (e) => {
+      if (e.affectsConfiguration("malloy.connections")) {
+        await CONNECTION_MANAGER.setConnectionsConfig(getConnectionsConfig());
+        connectionsTree.refresh();
+      }
+    })
+  );
+
+  setupLanguageServer(context);
+}
+
+export function deactivate(): Promise<void> | undefined {
+  if (client) {
+    // TODO can this just be put into a disposable, passed to `context.subscriptions.push`
+    //      and disposed automatically?
+    return client.stop();
+  }
 }
 
 function setupLanguageServer(context: vscode.ExtensionContext): void {
@@ -141,6 +160,7 @@ function setupLanguageServer(context: vscode.ExtensionContext): void {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "malloy" }],
     synchronize: {
+      configurationSection: "malloy",
       fileEvents: vscode.workspace.createFileSystemWatcher("**/.clientrc"),
     },
   };

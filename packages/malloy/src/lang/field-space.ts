@@ -238,6 +238,10 @@ export class NewFieldSpace extends StructSpace {
         const name = def.name;
         this.setEntry(name, new QueryFieldAST(this, def, name));
       } else if (def instanceof RenameField) {
+        if (def.oldName === def.newName) {
+          def.log("Can't rename field to itself");
+          continue;
+        }
         const oldValue = this.entry(def.oldName);
         if (oldValue instanceof SpaceField) {
           oldValue.rename(def.newName);

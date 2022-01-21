@@ -403,8 +403,8 @@ export class PreparedQuery {
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
       {
-        queryName: this.name || translatedQuery.queryName,
         ...translatedQuery,
+        queryName: this.name || translatedQuery.queryName,
       },
       this._modelDef
     );
@@ -791,6 +791,12 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSQLRunner {
   public async lookupSQLRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
+
+  public static fromArray(connections: Connection[]): FixedConnectionMap {
+    return new FixedConnectionMap(
+      new Map(connections.map((connection) => [connection.name, connection]))
+    );
+  }
 }
 
 /**
@@ -903,7 +909,7 @@ export class Explore extends Entity {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.modelDef);
+    return new PreparedQuery(internalQuery, this.modelDef, name);
   }
 
   private get modelDef(): ModelDef {
@@ -1563,6 +1569,50 @@ export class Runtime {
   }
 }
 
+export class ConnectionRuntime extends Runtime {
+  public readonly connections: Connection[];
+
+  constructor(urls: URLReader, connections: Connection[]);
+  constructor(connections: Connection[]);
+  constructor(
+    urlsOrConnections: URLReader | Connection[],
+    maybeConnections?: Connection[]
+  ) {
+    if (maybeConnections === undefined) {
+      const connections = urlsOrConnections as Connection[];
+      super(FixedConnectionMap.fromArray(connections));
+      this.connections = connections;
+    } else {
+      const connections = maybeConnections as Connection[];
+      super(
+        urlsOrConnections as URLReader,
+        FixedConnectionMap.fromArray(connections)
+      );
+      this.connections = connections;
+    }
+  }
+}
+
+export class SingleConnectionRuntime<
+  T extends Connection = Connection
+> extends Runtime {
+  public readonly connection: T;
+
+  constructor(urls: URLReader, connection: T);
+  constructor(connection: T);
+  constructor(urlsOrConnections: URLReader | T, maybeConnections?: T) {
+    if (maybeConnections === undefined) {
+      const connection = urlsOrConnections as T;
+      super(connection);
+      this.connection = connection;
+    } else {
+      const connection = maybeConnections as T;
+      super(urlsOrConnections as URLReader, connection);
+      this.connection = connection;
+    }
+  }
+}
+
 class FluentState<T> {
   protected runtime: Runtime;
   private readonly _materialize: () => Promise<T>;
@@ -1767,7 +1817,7 @@ export class ModelMaterializer extends FluentState<Model> {
  * materializing the query (via `getPreparedQuery()`) or extending the task to load
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
-class QueryMaterializer extends FluentState<PreparedQuery> {
+export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Run this loaded `Query`.
    *
@@ -1824,7 +1874,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
  * materializing the prepared result (via `getPreparedResult()`) or extending the task run
  * the query.
  */
-class PreparedResultMaterializer extends FluentState<PreparedResult> {
+export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Run this prepared result.
    *
@@ -1860,7 +1910,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
  * materializing the explore (via `getExplore()`) or extending the task to produce
  * related queries.
  */
-class ExploreMaterializer extends FluentState<Explore> {
+export class ExploreMaterializer extends FluentState<Explore> {
   /**
    * Load a query contained within this loaded explore.
    *

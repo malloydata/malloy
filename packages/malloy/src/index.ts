@@ -38,6 +38,8 @@ export {
 export {
   Malloy,
   Runtime,
+  ConnectionRuntime,
+  SingleConnectionRuntime,
   EmptyURLReader,
   InMemoryURLReader,
   FixedConnectionMap,
@@ -65,6 +67,9 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
+  QueryMaterializer,
+  PreparedResultMaterializer,
+  ExploreMaterializer,
 } from "./malloy";
 export type {
   URLReader,

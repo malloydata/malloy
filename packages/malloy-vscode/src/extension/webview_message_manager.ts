@@ -1,28 +1,26 @@
 /*
  * Copyright 2021 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
 import { ResultJSON } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 import { WebviewPanel } from "vscode";
+import { ConnectionConfig } from "../common";
 
 export class WebviewMessageManager<T> {
   constructor(private panel: WebviewPanel) {
     this.panel.webview.onDidReceiveMessage((message: T) => {
-      if (!this.panelCanReceiveMessages) {
-        this.onPanelCanReceiveMessages();
+      if (!this.clientCanReceiveMessages) {
+        this.onClientCanReceiveMessages();
       }
       this.callback(message);
     });
@@ -37,6 +35,7 @@ export class WebviewMessageManager<T> {
 
   private pendingMessages: T[] = [];
   private panelCanReceiveMessages = false;
+  private clientCanReceiveMessages = false;
   private callback: (message: T) => void = () => {
     /* Do nothing by default */
   };
@@ -62,7 +61,20 @@ export class WebviewMessageManager<T> {
 
   private onPanelCanReceiveMessages() {
     this.panelCanReceiveMessages = true;
-    this.flushPendingMessages();
+    if (this.canSendMessages) {
+      this.flushPendingMessages();
+    }
+  }
+
+  private onClientCanReceiveMessages() {
+    this.clientCanReceiveMessages = true;
+    if (this.canSendMessages) {
+      this.flushPendingMessages();
+    }
+  }
+
+  private get canSendMessages() {
+    return this.panelCanReceiveMessages && this.clientCanReceiveMessages;
   }
 }
 
@@ -118,3 +130,77 @@ interface QueryMessageAppReady {
 }
 
 export type QueryPanelMessage = QueryMessageStatus | QueryMessageAppReady;
+
+export enum ConnectionMessageType {
+  SetConnections = "set-connections",
+  AppReady = "app-ready",
+  TestConnection = "test-connection",
+  RequestBigQueryServiceAccountKeyFile = "request-bigquery-service-account-key-file",
+}
+
+interface ConnectionMessageSetConnections {
+  type: ConnectionMessageType.SetConnections;
+  connections: ConnectionConfig[];
+}
+
+interface ConnectionMessageAppReady {
+  type: ConnectionMessageType.AppReady;
+}
+
+export enum ConnectionTestStatus {
+  Waiting = "waiting",
+  Success = "success",
+  Error = "error",
+}
+
+interface ConnectionMessageTestConnectionWaiting {
+  type: ConnectionMessageType.TestConnection;
+  status: ConnectionTestStatus.Waiting;
+  connection: ConnectionConfig;
+}
+
+interface ConnectionMessageTestConnectionSuccess {
+  type: ConnectionMessageType.TestConnection;
+  status: ConnectionTestStatus.Success;
+  connection: ConnectionConfig;
+}
+
+interface ConnectionMessageTestConnectionError {
+  type: ConnectionMessageType.TestConnection;
+  status: ConnectionTestStatus.Error;
+  error: string;
+  connection: ConnectionConfig;
+}
+
+export type ConnectionMessageTest =
+  | ConnectionMessageTestConnectionWaiting
+  | ConnectionMessageTestConnectionSuccess
+  | ConnectionMessageTestConnectionError;
+
+export enum ConnectionServiceAccountKeyRequestStatus {
+  Waiting = "waiting",
+  Success = "success",
+}
+
+interface ConnectionMessageServiceAccountKeyRequestWaiting {
+  type: ConnectionMessageType.RequestBigQueryServiceAccountKeyFile;
+  status: ConnectionServiceAccountKeyRequestStatus.Waiting;
+  connectionId: string;
+}
+
+interface ConnectionMessageServiceAccountKeyRequestSuccess {
+  type: ConnectionMessageType.RequestBigQueryServiceAccountKeyFile;
+  status: ConnectionServiceAccountKeyRequestStatus.Success;
+  connectionId: string;
+  serviceAccountKeyPath: string;
+}
+
+export type ConnectionMessageServiceAccountKeyRequest =
+  | ConnectionMessageServiceAccountKeyRequestWaiting
+  | ConnectionMessageServiceAccountKeyRequestSuccess;
+
+export type ConnectionPanelMessage =
+  | ConnectionMessageAppReady
+  | ConnectionMessageSetConnections
+  | ConnectionMessageTest
+  | ConnectionMessageServiceAccountKeyRequest;

@@ -27,6 +27,7 @@ import {
 } from "./utils";
 import { DEPENDENCIES } from "./run_code";
 import { log } from "./log";
+import { exit } from "process";
 
 const DOCS_ROOT_PATH = path.join(__dirname, "../../_src");
 const OUT_PATH = path.join(__dirname, "../../_includes/generated");
@@ -38,7 +39,9 @@ const WATCH_ENABLED = process.argv.includes("--watch");
 
 Malloy.db = new BigQueryConnection("docs");
 
-async function compileDoc(file: string) {
+async function compileDoc(
+  file: string
+): Promise<{ errors: { path: string; snippet: string; error: string }[] }> {
   const startTime = performance.now();
   const shortPath = file.substring(DOCS_ROOT_PATH.length);
   const shortOutPath = shortPath.replace(/\.md$/, ".html");
@@ -46,14 +49,14 @@ async function compileDoc(file: string) {
   const outDirPath = path.join(outPath, "..");
   fs.mkdirSync(outDirPath, { recursive: true });
   const markdown = fs.readFileSync(file, "utf8");
-  const renderedDoc = await renderDoc(markdown, shortPath);
+  const { renderedDocument, errors } = await renderDoc(markdown, shortPath);
   const headerDoc =
     `---\n` +
     `layout: documentation\n` +
     `title: Malloy Documentation\n` +
     `footer: ${path.join("/generated/footers", shortOutPath)}\n` +
     `---\n\n` +
-    renderedDoc;
+    renderedDocument;
   fs.mkdirSync(path.join(OUT_PATH2, shortOutPath, ".."), { recursive: true });
   fs.writeFileSync(path.join(OUT_PATH2, shortOutPath), headerDoc);
   log(
@@ -62,6 +65,7 @@ async function compileDoc(file: string) {
       performance.now()
     )}.`
   );
+  return { errors: errors.map((error) => ({ ...error, path: shortPath })) };
 }
 
 function rebuildSidebarAndFooters() {
@@ -100,7 +104,8 @@ function rebuildSidebarAndFooters() {
     fs.copyFileSync(file, destination);
   }
   const startTime = performance.now();
-  await Promise.all(allDocs.map(compileDoc));
+  const results = await Promise.all(allDocs.map(compileDoc));
+  const allErrors = results.map(({ errors }) => errors).flat();
   log(`All docs compiled in ${timeString(startTime, performance.now())}`);
 
   rebuildSidebarAndFooters();
@@ -133,5 +138,20 @@ function rebuildSidebarAndFooters() {
       log(`Table of contents ${type}d. Recompiling...`);
       rebuildSidebarAndFooters();
     });
+  } else {
+    if (allErrors.length > 0) {
+      log(
+        `Failure: ${allErrors.length} example snippet${
+          allErrors.length === 1 ? "" : "s"
+        } had errors`
+      );
+      allErrors.forEach((error) => {
+        log(`Error in file ${error.path}: ${error.error}`);
+        log("```");
+        log(error.snippet);
+        log("```");
+      });
+      exit(1);
+    }
   }
 })();

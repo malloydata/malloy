@@ -11,15 +11,12 @@
  * GNU General Public License for more details.
  */
 
-module.exports = {
-  moduleDirectories: ["../../node_modules"],
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  modulePathIgnorePatterns: ["<rootDir>/dist/"],
-  setupFilesAfterEnv: ["jest-expect-message"],
-  testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
-  transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
-  },
-  testTimeout: 100000,
-  verbose: true,
-};
+import styled from "styled-components";
+
+export const Label = styled.label`
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: var(--font-family);
+  margin-inline-end: calc(var(--design-unit) * 2px + 2px);
+  padding-inline-start: calc(var(--design-unit) * 2px + 2px);
+`;

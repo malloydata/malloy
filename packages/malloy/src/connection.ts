@@ -54,6 +54,8 @@ export abstract class Connection
 
   abstract runSQL(sqlCommand: string): Promise<MalloyQueryData>;
 
+  abstract test(): Promise<void>;
+
   public abstract fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs>;

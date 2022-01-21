@@ -301,7 +301,7 @@ describe("explore properties", () => {
     `)
   );
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
-  test("rename", modelOK("explore: c is a { rename: anint is ai }"));
+  test("rename", modelOK("explore: c is a { rename: nn is ai }"));
   test("accept single", modelOK("explore: c is a { accept: astr }"));
   test("accept multi", modelOK("explore: c is a { accept: [ astr, af ] }"));
   test("except single", modelOK("explore: c is a { except: astr }"));
@@ -582,5 +582,12 @@ describe("error handling", () => {
     const errList = m.errors().errors;
     const firstError = errList[0];
     expect(firstError.message).toBe("Undefined data source 'bb'");
+  });
+  test("non-rename rename", () => {
+    const m = new BetaModel("explore: na is a { rename: astr is astr }");
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Can't rename field to itself");
   });
 });

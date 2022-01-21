@@ -7,6 +7,7 @@
   "engines": {
     "vscode": "^1.63.0"
   },
+  "icon": "logo.png",
   "license": "GPL-2.0",
   "categories": [
     "Programming Languages",
@@ -30,6 +31,15 @@
     "url": "https://github.com/looker-open-source/malloy"
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "malloy",
+          "title": "Malloy",
+          "icon": "logo.png"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "malloy.showLicenses",
@@ -74,6 +84,10 @@
       {
         "command": "malloy.showResultJSON",
         "title": "Show Result JSON"
+      },
+      {
+        "command": "malloy.editConnections",
+        "title": "Edit Connections"
       }
     ],
     "menus": {
@@ -81,6 +95,11 @@
         {
           "command": "malloy.refreshSchema",
           "when": "view == malloySchema",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.editConnections",
+          "when": "view == malloyConnections",
           "group": "navigation"
         }
       ],
@@ -107,12 +126,95 @@
       }
     ],
     "views": {
-      "explorer": [
+      "malloy": [
         {
           "id": "malloySchema",
           "name": "Schema"
+        },
+        {
+          "id": "malloyConnections",
+          "name": "Connections"
         }
       ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "malloyConnections",
+        "contents": "No configured connections.\n[Edit Connections](command:malloy.editConnections)"
+      }
+    ],
+    "configuration": {
+      "title": "Malloy",
+      "properties": {
+        "malloy.connections": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "postgres"
+                  },
+                  "host": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": "number"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "databaseName": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "bigquery"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "projectName": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "serviceAccountKeyPath": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Connections for Malloy to use to access data when compiling and querying."
+        }
+      }
     }
   },
   "scripts": {
@@ -120,18 +222,20 @@
     "webpack": "webpack --mode development",
     "webpack-dev": "webpack --mode development --watch",
     "build": "yarn tsc --build && yarn package",
-    "test": "echo 'no tests for vscode yet'",
+    "test": "jest --config=../../jest.config.js",
     "package": "yarn vsce package --yarn --githubBranch=main",
-    "publish": "yarn vsce publish minor --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 darwin-x64 darwin-arm64",
-    "publish-prerelease-darwin": "yarn vsce publish minor --pre-release --target darwin-x64 darwin-arm64",
-    "publish-prerelease-linux": "yarn vsce publish minor --pre-release --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 "
+    "publish-prerelease-darwin": "yarn vsce publish --pre-release --target darwin-x64 darwin-arm64",
+    "publish-prerelease-linux": "yarn vsce publish --pre-release --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64"
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
     "@malloydata/db-postgres": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
+    "@microsoft/fast-react-wrapper": "^0.1.21",
     "@observablehq/plot": "^0.1.0",
+    "@vscode/webview-ui-toolkit": "^0.8.5",
+    "keytar": "^7.7.0",
     "react": "^17.0.2",
     "styled-components": "^5.3.3",
     "us-atlas": "^3.0.0",
@@ -150,15 +254,18 @@
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "@types/styled-components": "^5.1.19",
+    "@types/uuid": "^8.3.4",
     "@types/vscode": "1.56.0",
     "@types/vscode-webview": "^1.57.0",
     "copy-webpack-plugin": "^9.0.1",
     "file-loader": "^6.2.0",
     "glob": "^7.1.7",
     "mocha": "^9.0.0",
+    "node-loader": "^2.0.0",
     "react-dom": "^17.0.2",
     "source-map-loader": "^3.0.0",
     "ts-loader": "^9.2.3",
+    "uuid": "^8.3.2",
     "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
     "vscode-webview": "^1.0.1-beta.1",
