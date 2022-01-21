@@ -85,4 +85,24 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
     expect(error.toString()).not.toContain("Unknown Dialect");
   });
+
+  it(`join_many - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.aircraft'){
+        measure: avg_year is avg(year_built)
+      }
+      explore: m is table('malloytest.aircraft_models'){
+        join_many: a on a.aircraft_model_code=aircraft_model_code
+        measure: avg_seats is avg(seats)
+      }
+      query: m->{aggregate: [avg_seats, a.avg_year]}
+      `
+      )
+      .run();
+    console.log(result.data.toObject());
+
+    expect(result.data.value[0].f_sum2).toBe(60462);
+  });
 });

@@ -1088,7 +1088,7 @@ class JoinInstance {
           ? "many_to_one"
           : "one_to_many";
       case "crossJoin":
-        return "many_to_one";
+        return "one_to_many";
       default:
         throw new Error(
           `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
@@ -1731,6 +1731,8 @@ class QueryQuery extends QueryField {
           qs.parent
         ).generateExpression(this.rootResult);
         onCondition = `ON ${exprStr}`;
+      } else if (structRelationship.type === "crossJoin") {
+        onCondition = "ON 1=1";
       }
       let filters = "";
       let conditions = undefined;
@@ -1743,10 +1745,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        const joinType = upperCase(
-          structRelationship.type === "crossJoin" ? "cross" : "left"
-        );
-        s += `${joinType} JOIN ${structSQL} AS ${ji.alias} ${onCondition}${filters}\n`;
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
