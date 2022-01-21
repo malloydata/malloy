@@ -328,10 +328,11 @@ export class MalloyToAST
   visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.RenameField {
     const newName = pcx.fieldName(0).id();
     const oldName = pcx.fieldName(1).id();
-    return new ast.RenameField(
+    const rename = new ast.RenameField(
       this.getIdText(newName),
       this.getIdText(oldName)
     );
+    return this.astAt(rename, pcx);
   }
 
   visitFilterClauseList(pcx: parse.FilterClauseListContext): ast.Filter {
