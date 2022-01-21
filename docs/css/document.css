@@ -108,9 +108,23 @@ div.sidebar-section-title {
   font-weight: 500;
   font-size: 14px;
   display: flex;
-  padding: 7px 12px;
-  color: black;
+  padding: 3px 12px;
+  color: #48494c;
   cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+}
+
+div.sidebar-section-title img.chevron-open {
+  display: none;
+}
+
+div.sidebar-section-title.collapsed img.chevron-closed {
+  display: none;
+}
+
+div.sidebar-section-title.collapsed img.chevron-open {
+  display: block;
 }
 
 div.sidebar-section-title:hover {

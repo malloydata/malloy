@@ -64,13 +64,14 @@ export function renderSidebar(sections: Section[]): string {
           (item) => item.compareLink
         )} contains page.url)} %}collapsed{% endunless %}">${
           section.title
-        }</div>
+        }<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           ${section.items
             .map((item) => {
               return `<div class='sidebar-item {% if page.url == "${item.compareLink}" %}active{% endif %}'>
               <a href="{{ site.baseurl }}${item.fullLink}">
-                <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
                 ${item.title}
               </a>
             </div>`;
