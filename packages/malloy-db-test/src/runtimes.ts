@@ -12,10 +12,10 @@
  */
 
 import {
-  Runtime,
   EmptyURLReader,
   Result,
   MalloyQueryData,
+  SingleConnectionRuntime,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
@@ -59,8 +59,7 @@ type RuntimeDatabaseNames = typeof allDatabases[number];
 export class RuntimeList {
   bqConnection = new BigQueryTestConnection("bigquery", {}, "malloy-data");
   postgresConnection = new PostgresTestConnection("postgres");
-  runtimeMap = new Map<string, Runtime>();
-  closeFunctions: (() => void)[] = [];
+  runtimeMap = new Map<string, SingleConnectionRuntime>();
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
     for (const dbName of databaseList || allDatabases) {
@@ -68,7 +67,7 @@ export class RuntimeList {
         case "bigquery":
           this.runtimeMap.set(
             "bigquery",
-            new Runtime(
+            new SingleConnectionRuntime(
               files,
               new BigQueryTestConnection("bigquery", {}, "malloy-data")
             )
@@ -76,18 +75,18 @@ export class RuntimeList {
           break;
         case "postgres": {
           const pg = new PostgresTestConnection("postgres");
-          this.runtimeMap.set("postgres", new Runtime(files, pg));
-          this.closeFunctions.push(async () => {
-            await pg.drain();
-          });
+          this.runtimeMap.set(
+            "postgres",
+            new SingleConnectionRuntime(files, pg)
+          );
         }
       }
     }
   }
 
   async closeAll(): Promise<void> {
-    for (const fn of this.closeFunctions) {
-      await fn();
+    for (const [_key, runtime] of this.runtimeMap) {
+      if (runtime.connection.isPool()) runtime.connection.drain();
     }
   }
 }
