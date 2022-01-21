@@ -331,8 +331,7 @@ flight performed by a particular carrier.</p>
           Query for all flights ever made
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <pre>[
@@ -348,8 +347,7 @@ flight performed by a particular carrier.</p>
           Query for Flights By Carrier
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count
 }</pre><div class="result-outer medium">
@@ -454,8 +452,7 @@ flight performed by a particular carrier.</p>
         </a>
       </h2>
     <p>The results are returned as a single row in a table with two columns, <code class="language-malloy">flight_count</code> and <code class="language-malloy">main_query</code>.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
@@ -569,8 +566,7 @@ flight performed by a particular carrier.</p>
       </h2>
     <p>Using a pipeline with a <code class="language-malloy"><span class="token keyword">project</span></code> calculation to combine (essentially cross joining) the queries back into a single table.
 We also add an additional column, the percentage of total calculation.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
@@ -707,8 +703,7 @@ We also add an additional column, the percentage of total calculation.</p>
         </a>
       </h2>
     <p>We can use a wildcard against the nested query to to make this pattern easier to write.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"medium"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname

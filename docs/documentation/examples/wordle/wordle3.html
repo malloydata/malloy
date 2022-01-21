@@ -12,8 +12,7 @@ footer: /generated/footers/examples/wordle/wordle3.html
       </h1>
     <p>We can see that 'E' in position 5 occurs in 397 words, 'S' in position 1  occurs in 343 words.  Words ending in 'Y' are
 surprisingly common.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     letters<span class="token punctuation">.</span>letter
     letters<span class="token punctuation">.</span>position
@@ -444,8 +443,7 @@ surprisingly common.</p>
       </h2>
     <p>We can see that 'E' in position 5 occurs in 397 words, 'S' in position 1  occurs in 343 words.  Words ending in 'Y' are
 surprisingly common.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     letters<span class="token punctuation">.</span>letter
     letters<span class="token punctuation">.</span>position
@@ -978,8 +976,7 @@ surprisingly common.</p>
           Add this to our Model
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/w4.malloy", "source": "/inline/w1.malloy"}</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+    <pre class="language-malloy"><span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
   <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
@@ -999,8 +996,7 @@ surprisingly common.</p>
           How many words with have an 'O' in the second position have a 'Y' and don't have 'SLA'
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words{
+    <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words{
   <span class="token keyword">where</span>:
     word <span class="token operator">~</span> <span class="token regular_expression">r'[Y]'</span>
     <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'.O...'</span>
@@ -1236,8 +1232,7 @@ surprisingly common.</p>
       </h2>
     <p>We'd like to pick a word that is going to lead to the most will reveal the most about the most words.
 We can produce a word score by taking our find word query and mapping back to words.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: words_list<span class="token punctuation">.</span>word
   <span class="token keyword">aggregate</span>: score <span class="token keyword">is</span> word_count<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
@@ -1335,16 +1330,16 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLIME</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,233</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STARE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,232</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHINY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,232</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPINE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,230</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STARE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,232</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLEET</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,230</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPINE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,230</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPACE</td>
@@ -1356,10 +1351,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHAME</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,223</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPARE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STONE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,218</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STONE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPARE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,218</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STATE</td>
@@ -1386,10 +1381,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHAVE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,206</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEIZE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SORRY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,205</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SORRY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEIZE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,205</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SENSE</td>
@@ -1404,10 +1399,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPATE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,201</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCARE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SINCE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,197</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SINCE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCARE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,197</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CEASE</td>
@@ -1431,10 +1426,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHEET</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,183</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPIRE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAVER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,181</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAVER</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPIRE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,181</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SURER</td>
@@ -1446,10 +1441,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SALLY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,177</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABER</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GOOEY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,176</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GOOEY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,176</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLE</td>
@@ -1470,26 +1465,20 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPITE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,164</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POISE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHEER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,160</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHEER</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POISE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,160</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STAGE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,158</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLARE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,157</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SALVE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,157</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GRACE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,156</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,156</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BLARE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,157</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SIEGE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,156</td>
@@ -1497,13 +1486,19 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAFER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,156</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GRACE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,156</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,156</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPORE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,155</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SKATE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SALTY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,154</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SALTY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SKATE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,154</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RAISE</td>
@@ -1515,10 +1510,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TEASE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,151</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PRICE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLIMY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,150</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLIMY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PRICE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,150</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALINE</td>
@@ -1548,7 +1543,7 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ARISE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,142</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PLACE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SASSY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,142</td>
 </tr>
 
@@ -1562,8 +1557,7 @@ We can produce a word score by taking our find word query and mapping back to wo
           This looks pretty useful, lets make find words return a score.
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/w5.malloy", "source": "/inline/w1.malloy"}</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+    <pre class="language-malloy"><span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
   <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
@@ -1587,8 +1581,7 @@ We can produce a word score by taking our find word query and mapping back to wo
         </a>
       </h2>
     <p>The score should give us then best pick.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w5.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words{
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words{
   <span class="token keyword">where</span>:
     word <span class="token operator">~</span> <span class="token regular_expression">r'[Y]'</span>
     <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'.O...'</span>
@@ -1655,10 +1648,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POKEY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">79</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORNY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HORNY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">79</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HORNY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORNY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">79</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROOMY</td>
@@ -1685,10 +1678,10 @@ We can produce a word score by taking our find word query and mapping back to wo
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROCKY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">74</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FOGGY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOBBY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">73</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOBBY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FOGGY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">73</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POPPY</td>

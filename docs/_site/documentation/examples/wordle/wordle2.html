@@ -322,8 +322,7 @@
       </h1>
     <p>Starting with the query we built in step one, we built a query that produces a table of words with subtable where
 each row is the letter and position in that row.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"medium","source": "/inline/w1.malloy","showAs":"html","dataStyles":{"letters":{"renderer":"list_detailx"}}}</span>
-<span class="token keyword">query</span>: words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position</pre><div class="result-outer medium">
+<pre class="language-malloy"><span class="token keyword">query</span>: words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position</pre><div class="result-outer medium">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -3145,8 +3144,7 @@ each row is the letter and position in that row.</p>
           Create a new expore <code class="language-malloy">wordle</code> to query the data in this form.
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy"}</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+    <pre class="language-malloy"><span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre>
       <h2>
@@ -3154,8 +3152,7 @@ each row is the letter and position in that row.</p>
           How many 5 letter words are there?
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: word_count}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: word_count}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -3180,8 +3177,7 @@ each row is the letter and position in that row.</p>
       </h2>
     <p>We can count both the number of words that contain the letter and the number of uses.  Many words have the same
 letter more than once.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: letters<span class="token punctuation">.</span>letter
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
   word_count
@@ -3326,8 +3322,7 @@ letter more than once.</p>
           Common Letters and Positions
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w2.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: letters<span class="token punctuation">.</span>letter
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     word_count
@@ -3507,8 +3502,7 @@ letter more than once.</p>
         </a>
       </h2>
     <p>We've noticed there are a lots of words that end in 'S' or 'ED' in the dataset, but in our experience they don't often appear in puzzles.  We've eliminated them from our model for now, by filtering them out on the explore level:</p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy"}</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
   <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre>
@@ -3517,8 +3511,7 @@ letter more than once.</p>
           Now how many 5 letter words are there?
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w3.malloy", "showAs":"html"}</span>
-<span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: word_count}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: word_count}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">

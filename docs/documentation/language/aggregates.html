@@ -24,8 +24,7 @@ footer: /generated/footers/language/aggregates.html
         </a>
       </h3>
     <p>The <code class="language-malloy">count</code> aggregate function may be used to count the number of records appearing in an explore.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -51,8 +50,7 @@ footer: /generated/footers/language/aggregates.html
         </a>
       </h3>
     <p>Distinct counts may be used to count the number of distinct values of a particular field within an explore.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}</span>
-<span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -78,8 +76,7 @@ footer: /generated/footers/language/aggregates.html
         </a>
       </h3>
     <p>The <code class="language-malloy">sum</code> function may be used to compute the sum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: total_distance <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -105,8 +102,7 @@ footer: /generated/footers/language/aggregates.html
         </a>
       </h3>
     <p>The <code class="language-malloy">avg</code> function may be used to compute the average of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -132,8 +128,7 @@ footer: /generated/footers/language/aggregates.html
         </a>
       </h3>
     <p>The <code class="language-malloy">min</code> function may be used to compute the minimum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}</span>
-<span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: cheapest_price <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>sale_price<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -159,8 +154,7 @@ footer: /generated/footers/language/aggregates.html
         </a>
       </h3>
     <p>The <code class="language-malloy">max</code> function may be used to compute the maximum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: longest_distance <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -203,8 +197,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
     <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 <span class="token keyword">FROM</span> aircraft
 <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> aircraft_models
-    <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+    <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -226,8 +219,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
   </div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
 <p>To do this, you might decide to start with the <code class="language-malloy">aircraft_models</code> table instead.</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span> <span class="token function">AVG</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
-<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -256,8 +248,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
       </h3>
     <p>Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class="language-malloy">average_seats</code> is computed with respect to <code class="language-malloy">aircraft_models</code>,
 yielding the the average number of seats on aircraft models of aircraft listed in the <code class="language-malloy">aircraft</code> table.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -284,8 +275,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
         </a>
       </h3>
     <p>The following queries show six ways of calculating the average number of seats.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     aircraft_models_avg_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     aircraft_avg_models_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
@@ -312,8 +302,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 	</table>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     avg_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
@@ -337,8 +326,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 	</table>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-middle">
@@ -417,8 +405,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
         </a>
       </h3>
     <p>Aggregating "on a field," e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy">avg</code> and <code class="language-malloy">sum</code>.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}</span>
-<span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     avg_on_explore <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
     avg_on_field <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>

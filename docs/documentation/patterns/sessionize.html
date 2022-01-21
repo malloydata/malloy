@@ -13,8 +13,7 @@ footer: /generated/footers/patterns/sessionize.html
     <p>Flight data contains time, carrier, origin, destination and the plane that made the flight (<code class="language-malloy">tail_num</code>).  Take the
 flight data and sessionize it by carrier and date.  Compute statistics and the session, plane and flight level.
 Retain the original flight events.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "showAs": "json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}</span>
-<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">where</span>: carrier<span class="token operator">=</span><span class="token string">'WN'</span> <span class="token keyword">and</span> dep_time: <span class="token date">@2002-03-03</span>
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }<span class="token operator">-</span><span class="token operator">></span>{

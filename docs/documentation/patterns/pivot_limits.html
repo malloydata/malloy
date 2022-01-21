@@ -18,8 +18,7 @@ footer: /generated/footers/patterns/pivot_limits.html
           Carriers by destination produces 1958 rows
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     carriers<span class="token punctuation">.</span>nickname
     destination_code
@@ -449,8 +448,7 @@ footer: /generated/footers/patterns/pivot_limits.html
         </a>
       </h2>
     <p>Query to find the most interesting carriers.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">top</span>: <span class="token number">5</span>
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count
@@ -491,8 +489,7 @@ footer: /generated/footers/patterns/pivot_limits.html
           Top 5 Destinstinations
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">top</span>: <span class="token number">5</span>
   <span class="token keyword">group_by</span>: destination_code
   <span class="token keyword">aggregate</span>: flight_count
@@ -534,8 +531,7 @@ footer: /generated/footers/patterns/pivot_limits.html
         </a>
       </h2>
     <p>Produces a table with a single row and three columns.  Each column essentially contains a table</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
       carriers<span class="token punctuation">.</span>nickname
@@ -8475,8 +8471,7 @@ footer: /generated/footers/patterns/pivot_limits.html
       </h2>
     <p>Project produces a cross join of the tables.  The filter essentially does an inner join, limiting the main queries results to
 dimensional values that are produce in the filtering queries.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
       carriers<span class="token punctuation">.</span>nickname
@@ -8610,8 +8605,7 @@ dimensional values that are produce in the filtering queries.</p>
           Render the results as a pivot table
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
       carriers<span class="token punctuation">.</span>nickname

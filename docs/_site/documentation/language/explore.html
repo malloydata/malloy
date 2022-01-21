@@ -344,14 +344,12 @@ everything from the original source and all its extensions can be referenced.</p
         </a>
       </h3>
     <p>An explore can be created from a SQL table or view from a connected database.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e1.malloy"}</span>
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><p>When defining an explore in this way, all the columns from
 the source table are available for use in field definitions
 or queries.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e1.malloy"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token comment">-- Columns from the source table are available</span>
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
     carrier
@@ -398,8 +396,7 @@ or queries.</p>
 to add fields, impose filters, or restrict available fields.
 This is useful for performing in-depth analysis without altering
 the base explore with modifications only relevant in that specific context.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e1.malloy"}</span>
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }
 
@@ -411,8 +408,7 @@ the base explore with modifications only relevant in that specific context.</p>
     <span class="token keyword">group_by</span>: carrier
     <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>total_distance<span class="token punctuation">,</span> flight_count<span class="token punctuation">]</span>
   }
-}</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e1.malloy"}</span>
-<span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>carrier_stats{<span class="token keyword">limit</span>: <span class="token number">3</span>}</pre><div class="result-outer small">
+}</pre><pre class="language-malloy"><span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>carrier_stats{<span class="token keyword">limit</span>: <span class="token number">3</span>}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -454,8 +450,7 @@ explore.</p>
 <p>When defining an explore from a query, the query can either
 be defined inline or referenced by name.</p>
 <p><strong>Inline query as explore source</strong></p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e2.malloy"}</span>
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }
 
@@ -467,8 +462,7 @@ be defined inline or referenced by name.</p>
 {
   <span class="token keyword">dimension</span>: lifetime_flights_bucketed <span class="token keyword">is</span> <span class="token function">FLOOR</span><span class="token punctuation">(</span>lifetime_flights<span class="token operator">/</span><span class="token number">10000</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10000</span>
 }
-</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e2.malloy"}</span>
-<span class="token keyword">query</span>: carrier_facts<span class="token operator">-</span><span class="token operator">></span>{
+</pre><pre class="language-malloy"><span class="token keyword">query</span>: carrier_facts<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> lifetime_flights_bucketed<span class="token punctuation">,</span> lifetime_flights<span class="token punctuation">]</span>
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer small">
@@ -501,8 +495,7 @@ be defined inline or referenced by name.</p>
       </div>
     </div>
   </div><p><strong>Named query as explore source</strong></p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e3.malloy"}</span>
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">query</span>: by_carrier <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carrier
@@ -512,8 +505,7 @@ be defined inline or referenced by name.</p>
 
 <span class="token keyword">explore</span>: carrier_facts <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>flights<span class="token operator">-</span><span class="token operator">></span>by_carrier<span class="token punctuation">)</span>{
   <span class="token keyword">dimension</span>: lifetime_flights_bucketed <span class="token keyword">is</span> <span class="token function">FLOOR</span><span class="token punctuation">(</span>lifetime_flights<span class="token operator">/</span><span class="token number">10000</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10000</span>
-}</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e3.malloy"}</span>
-<span class="token keyword">query</span>: carrier_facts<span class="token operator">-</span><span class="token operator">></span>{
+}</pre><pre class="language-malloy"><span class="token keyword">query</span>: carrier_facts<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> lifetime_flights_bucketed<span class="token punctuation">,</span> lifetime_flights<span class="token punctuation">]</span>
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer small">
@@ -564,15 +556,13 @@ available.</p>
         </a>
       </h3>
     <p>When an explore is defined, filters which apply to any query against the new explore may be added.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e4.malloy"}</span>
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }
 
 <span class="token keyword">explore</span>: long_sfo_flights <span class="token keyword">is</span> flights{
   <span class="token keyword">where</span>: origin<span class="token operator">=</span><span class="token string">'SFO'</span> <span class="token keyword">and</span> distance <span class="token operator">></span> <span class="token number">1000</span>
-}</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e4.malloy"}</span>
-<span class="token keyword">query</span>: long_sfo_flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">group_by</span>: destination<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">3</span>}</pre><div class="result-outer small">
+}</pre><pre class="language-malloy"><span class="token keyword">query</span>: long_sfo_flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">group_by</span>: destination<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">3</span>}</pre><div class="result-outer small">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -614,16 +604,14 @@ have a primary key specified.</p>
         </a>
       </h3>
     <p>When explores are joined as part of their definition, queries can reference fields in the joined explores without having to specify the join relationship each time.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/e5.malloy"}</span>
-<span class="token keyword">explore</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: code
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">join</span>: carriers <span class="token keyword">on</span> carrier
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}</pre><pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e5.malloy"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+}</pre><pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">limit</span>: <span class="token number">3</span>

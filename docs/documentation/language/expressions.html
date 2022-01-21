@@ -129,8 +129,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
         </a>
       </h2>
     <!-- * `distance` --><!-- * `origin.city` --><!-- * `` `year` `` --><p>Fields may be referenced by name, and fields in joins or nested structures can be described using <code class="language-malloy"><span class="token punctuation">.</span></code>s.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>county <span class="token operator">!=</span> <span class="token keyword">null</span>
   <span class="token keyword">group_by</span>: origin<span class="token punctuation">.</span>state
   <span class="token keyword">nest</span>: by_county <span class="token keyword">is</span> {
@@ -216,8 +215,7 @@ typecast to work around the errors in typing.</p>
         </a>
       </h2>
     <!-- * `avg(age) : [state: 'CA']` --><!-- * `flight_count : [origin.county != null]` --><p>Aggregate expressions may be filtered, using the <a href="filters.html">usual filter syntax</a>.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: distance_2003 <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>{<span class="token keyword">where</span>: dep_time: <span class="token date">@2003</span>}
   <span class="token keyword">aggregate</span>: ca_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
 }</pre><div class="result-outer large">
@@ -246,8 +244,7 @@ typecast to work around the errors in typing.</p>
         </a>
       </h2>
     <!-- * `total_distance::string` --><!-- * `some_date::timestamp` --><p>Safe type casting may be accomplished with the <code class="language-malloy">::type</code> syntax.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: distance_summary <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>total_distance::<span class="token type">string</span><span class="token punctuation">,</span> <span class="token string">' miles'</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer large">
     <div class="result-middle">

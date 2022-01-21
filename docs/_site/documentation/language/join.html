@@ -378,8 +378,7 @@
         </a>
       </h2>
     <p>When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class="language-malloy"><span class="token punctuation">.</span></code>.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer large">
@@ -414,8 +413,7 @@
       </div>
     </div>
   </div><p>Measures and queries defined in joined explores may be used in addition to dimensions.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}</span>
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: destination_code
   <span class="token keyword">aggregate</span>: carriers<span class="token punctuation">.</span>carrier_count
 }</pre><div class="result-outer large">
@@ -460,8 +458,7 @@ Entire subtrees of data can be joined.  In the example below, <code class="langu
 jois aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
 retained.</p>
 <p><code class="language-malloy"><span class="token keyword">group_by</span>: aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>manufacturer</code></p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "size":"large"}</span>
-<span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span> {
+<pre class="language-malloy"><span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: aircraft_model_code
   <span class="token keyword">measure</span>: aircraft_model_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }

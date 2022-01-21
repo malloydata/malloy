@@ -20,8 +20,7 @@ footer: /generated/footers/examples/wordle/wordle.html
     <p>The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be
 found at <code class="language-malloy"><span class="token operator">/</span>usr<span class="token operator">/</span>share<span class="token operator">/</span>dict<span class="token operator">/</span>words</code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)
 into BigQuery.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}</span>
-<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{}
+<pre class="language-malloy"><span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{}
 
 <span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: <span class="token operator">*</span>}</pre><div class="result-outer small">
     <div class="result-middle">
@@ -240,8 +239,7 @@ into BigQuery.</p>
     </div>
   </div><p>We are only interested in 5 letter words so create a query for that and
 limit the results to 5 letter words.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}</span>
-<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
   <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {
     <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span>  <span class="token comment">// add a filter</span>
     <span class="token keyword">project</span>: word
@@ -465,16 +463,14 @@ limit the results to 5 letter words.</p>
     </div>
   </div><p>Notice that there are a bunch of proper names?  Let's look for only lowercase words as input
 and Uppercase words in the output of our query.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isModel": true, "modelPath": "/inline/w1.malloy"}</span>
-
+<pre class="language-malloy">
 <span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
   <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {
     <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span>  word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
     <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">UPPER</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
   }
 }</pre><p>and the query:</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"letters":{"renderer":"list_detail"}}}</span>
-<span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words</pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -703,8 +699,7 @@ and Uppercase words in the output of our query.</p>
         </a>
       </h3>
     <p>Find words that contain X AND Y.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"five_letter_words":{"renderer":"list"}}}</span>
-<span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: word <span class="token operator">~</span> <span class="token regular_expression">r'[X]'</span> <span class="token operator">&amp;</span> <span class="token operator">~</span> <span class="token regular_expression">r'[Y]'</span>
   <span class="token keyword">project</span>: word
 }</pre><div class="result-outer large">
@@ -733,8 +728,7 @@ and Uppercase words in the output of our query.</p>
         </a>
       </h3>
     <p>Find words that have M in the 4th position and the 5th position is NOT E or Z</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"five_letter_words":{"renderer":"list"}}}</span>
-<span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: word <span class="token operator">~</span> <span class="token regular_expression">r'...M[^EZ]'</span>
   <span class="token keyword">project</span>: word
 }</pre><div class="result-outer large">
@@ -947,8 +941,7 @@ and Uppercase words in the output of our query.</p>
         </a>
       </h3>
     <p>Find words that do NOT contain S,L,O,P, or E</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"html","dataStyles":{"five_letter_words":{"renderer":"list"}}}</span>
-<span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'[SLOPE]'</span>
   <span class="token keyword">project</span>: word
 }</pre><div class="result-outer large">

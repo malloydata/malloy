@@ -482,8 +482,7 @@
           First 100 Rows of the data set.
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}</span>
-<span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.iowa_liquor_sales.sales'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
+    <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.iowa_liquor_sales.sales'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token operator">*</span>
   <span class="token keyword">top</span>: <span class="token number">100</span>
 }</pre><div class="result-outer large">

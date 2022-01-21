@@ -330,8 +330,7 @@
       </h2>
     <p>The calculation <code class="language-malloy">total_sale_dollars</code> will show us the total amount, in dollars, that Iowa State stores sold.</p>
 <pre class="language-malloy">total_sale_dollars <span class="token keyword">is</span> sale_dollars<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><p>Having added this to the model, we can now reference <code class="language-malloy">total_sale_dollars</code> to see the top items purchased by Liquor stores.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
-<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> vendor_name<span class="token punctuation">,</span> item_description <span class="token punctuation">]</span>
   <span class="token keyword">aggregate</span>: total_sale_dollars
 }</pre><div class="result-outer small">
@@ -759,8 +758,7 @@
       </h2>
     <p>This lets us understand whether a vendor sells one item, or many different kinds of items.</p>
 <pre class="language-malloy">item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> item_number<span class="token punctuation">)</span></pre><p>We can see which Vendors have the greatest breadth of products as it relates to sales volume.</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
-<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> vendor_name <span class="token punctuation">]</span>
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> item_count<span class="token punctuation">,</span> total_sale_dollars <span class="token punctuation">]</span>
 }</pre><div class="result-outer small">
@@ -1191,8 +1189,7 @@
 <pre class="language-malloy">gross_margin <span class="token keyword">is</span>
   <span class="token number">100</span> <span class="token operator">*</span> <span class="token punctuation">(</span>state_bottle_retail <span class="token operator">-</span> state_bottle_cost<span class="token punctuation">)</span> <span class="token operator">/</span>
     <span class="token function">nullif</span><span class="token punctuation">(</span>state_bottle_retail<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span></pre><p>Looking at gross margin across top selling items, we see that the gross margin is a <em>consistent 33.3 percent</em>.  A quick google search reveals that Iowa state law dictates the state can mark up liquor by up to 50% of the price from the vendor, so this makes sense!</p>
-<pre class="language-malloy"><span class="token comment">--! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}</span>
-<span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
+<pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: <span class="token punctuation">[</span> item_description<span class="token punctuation">,</span> state_bottle_retail<span class="token punctuation">,</span> state_bottle_cost<span class="token punctuation">,</span> gross_margin <span class="token punctuation">]</span>
   <span class="token keyword">aggregate</span>: total_sale_dollars
 }</pre><div class="result-outer small">
