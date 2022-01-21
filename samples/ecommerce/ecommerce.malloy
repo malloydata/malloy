@@ -30,10 +30,10 @@ explore: user_order_facts is from(
 explore: order_items_base is table('malloy-data.ecomm.order_items'){
   primary_key: id
 
-  join: [
-    users on user_id
-    ii on inventory_item_id
-    user_order_facts on user_id
+  join_one: [
+    users with user_id
+    ii with inventory_item_id
+    user_order_facts with user_id
   ]
 
   measure: [
