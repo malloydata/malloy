@@ -165,18 +165,6 @@ The "_exploreSpec `->` _queryOperationSpec_" describes a query. An explore spec 
 
 Like the pipelines of alpha Malloy, a query can be a chain of operations.
 
-```
-// TODO THIS NEVER WORKED, you can't add a join to a query ..
-flights -> by_carrier -> {
-    // put the carrier code
-    join: carriers { primary_key: nickname } on nickname
-    project {
-        *,
-        code is carrier.code
-    }
-}
-```
-
 To summarize, here are some sample beta statements.
 
 All queries start with either

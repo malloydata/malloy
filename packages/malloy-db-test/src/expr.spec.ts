@@ -437,20 +437,19 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-  define a is('malloytest.aircraft'
-    primary key tail_num
-    aircraft_count is count()
-  );
-  export define am is ('malloytest.aircraft_models'
-    primary key aircraft_model_code
-    a is join on a.aircraft_model_code
+  explore: a is table('malloytest.aircraft') {
+    primary_key: tail_num
+    measure: aircraft_count is count()
+  }
+  query: table('malloytest.aircraft_models') {
+    primary_key: aircraft_model_code
+    join_many: a on a.aircraft_model_code
 
-    some_measures is (reduce
-      am_count is count()
-      a.aircraft_count
-    )
-  );
-  am | some_measures
+    some_measures is {
+      aggregate: am_count is count()
+      aggregate: a.aircraft_count
+    }
+  } -> some_measure
     `
       )
       .run();
