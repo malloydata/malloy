@@ -7,6 +7,8 @@ nix-shell --pure --command "$(cat <<NIXCMD
   export PGUSER=673673622326@cloudbuild
   cd /workspace
   yarn install
+  yarn lint
+  yarn build
   yarn test
 NIXCMD
 )"

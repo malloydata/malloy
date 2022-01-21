@@ -15,7 +15,6 @@ import { test } from "@jest/globals";
 import { testModel } from "./models/faa_model";
 import { fStringEq } from "./test_utils";
 
-import "@malloydata/malloy/src/lang/jestery";
 import * as malloy from "@malloydata/malloy";
 
 import { Query } from "@malloydata/malloy";

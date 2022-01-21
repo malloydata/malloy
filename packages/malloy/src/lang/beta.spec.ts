@@ -301,7 +301,7 @@ describe("explore properties", () => {
     `)
   );
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
-  test("rename", modelOK("explore: c is a { rename: anint is ai }"));
+  test("rename", modelOK("explore: c is a { rename: nn is ai }"));
   test("accept single", modelOK("explore: c is a { accept: astr }"));
   test("accept multi", modelOK("explore: c is a { accept: [ astr, af ] }"));
   test("except single", modelOK("explore: c is a { except: astr }"));
