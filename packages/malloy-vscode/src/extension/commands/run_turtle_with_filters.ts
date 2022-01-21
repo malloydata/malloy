@@ -26,7 +26,7 @@ export function runQueryWithEdit(
       const query = await vscode.window.showInputBox({
         title: "Run Malloy Query",
         prompt: "Enter your Malloy query...",
-        value: `explore ${exploreName} | ${turtleName || ""}`,
+        value: `query: ${exploreName}-> ${turtleName || ""}`,
         valueSelection: [cursorPosition, cursorPosition],
       });
       if (query) {

@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DateTimeframe, TimestampTimeframe } from "@malloy-lang/malloy";
+import { DateTimeframe, TimestampTimeframe } from "@malloydata/malloy";
 
 export function getColorScale(
   type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,
@@ -127,4 +127,19 @@ export function timeToString(
     default:
       throw new Error("Unknown timeframe.");
   }
+}
+
+/**
+ * Use this function to break up expensive computation over multiple tasks.
+ *
+ * @returns A promise, which when awaited, puts subsequent code in a separate task.
+ *
+ * This is useful for cases when expensive code needs to run "concurrently" with a
+ * rendering / UI task. Sprinkling in `yieldTask`s into a long task allows other
+ * tasks to run periodically.
+ */
+export async function yieldTask(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
 }

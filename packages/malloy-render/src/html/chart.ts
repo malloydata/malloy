@@ -13,7 +13,7 @@
 
 import * as lite from "vega-lite";
 import * as vega from "vega";
-import { DataArray, DataColumn, Field } from "@malloy-lang/malloy";
+import { DataArray, DataColumn, Field } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
 import { StyleDefaults } from "../data_styles";
 

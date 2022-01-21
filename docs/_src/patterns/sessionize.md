@@ -5,23 +5,31 @@ flight data and sessionize it by carrier and date.  Compute statistics and the s
 Retain the original flight events.
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
-explore ('malloy-data.faa.flights'
-    flight_count is count())
-| reduce:  [carrier : 'WN', dep_time : '2002-03-03']
-  flight_date is dep_time.`date`
-  carrier
-  daily_flight_count is flight_count
-  per_plane_data is (reduce top 20
-    tail_num
-    plane_flight_count is flight_count
-    flight_legs is (reduce order by 2
-      tail_num
-      dep_minute is dep_time.minute
-      origin
-      destination
-      dep_delay
-      arr_delay
-    )
-  )
+--! {"isRunnable": true, "showAs": "json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
+query: table('malloy-data.faa.flights'){
+  where: carrier='WN' and dep_time: @2002-03-03
+  measure: flight_count is count()
+}->{
+  group_by: [
+    flight_date is dep_time.day
+    carrier
+  ]
+  aggregate: daily_flight_count is flight_count
+  nest: per_plane_data is {
+    top: 20
+    group_by: tail_num
+    aggregate: plane_flight_count is flight_count
+    nest: flight_legs is {
+      order_by: 2
+      group_by: [
+        tail_num
+        dep_minute is dep_time.minute
+        origin
+        destination
+        dep_delay
+        arr_delay
+      ]
+    }
+  }
+}
 ```

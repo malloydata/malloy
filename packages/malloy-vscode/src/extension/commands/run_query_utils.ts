@@ -14,22 +14,20 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
-import { DataStyles, HTMLView, JSONView } from "@malloy-lang/render";
-import { loadingIndicator, renderErrorHTML, wrapHTMLSnippet } from "../html";
+import { URL, Runtime, URLReader } from "@malloydata/malloy";
+import { DataStyles } from "@malloydata/render";
 import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
+import { getWebviewHtml } from "../webviews";
+import {
+  QueryMessageType,
+  QueryRenderMode,
+  QueryRunStatus,
+  WebviewMessageManager,
+} from "../webview_message_manager";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
-
-const css = `<style>
-body {
-	background-color: transparent;
-  font-size: 11px;
-}
-</style>
-`;
 
 // TODO replace this with actual JSON metadata import functionality, when it exists
 export async function dataStylesForFile(
@@ -111,15 +109,13 @@ class HackyDataStylesAccumulator implements URLReader {
   }
 }
 
-export type RunRenderStyle = "html" | "json";
-
 export function runMalloyQuery(
   query: QuerySpec,
   panelId: string,
   name: string,
-  renderStyle: RunRenderStyle = "html"
+  renderMode: QueryRenderMode = QueryRenderMode.HTML
 ): void {
-  if (renderStyle === "json") {
+  if (renderMode === QueryRenderMode.JSON) {
     panelId += " Data";
   }
   vscode.window.withProgress(
@@ -155,19 +151,24 @@ export function runMalloyQuery(
           cancel,
           panelId,
           panel: previous.panel,
+          messages: previous.messages,
           document: previous.document,
         };
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
         previous.cancel();
-        previous.panel.reveal();
+        if (!previous.panel.visible) {
+          previous.panel.reveal(vscode.ViewColumn.Beside, true);
+        }
       } else {
+        const panel = vscode.window.createWebviewPanel(
+          "malloyQuery",
+          name,
+          { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+          { enableScripts: true, retainContextWhenHidden: true }
+        );
         current = {
-          panel: vscode.window.createWebviewPanel(
-            "malloyQuery",
-            name,
-            vscode.ViewColumn.Two,
-            { enableScripts: true }
-          ),
+          panel,
+          messages: new WebviewMessageManager(panel),
           panelId,
           cancel,
           document: query.file,
@@ -175,9 +176,16 @@ export function runMalloyQuery(
         current.panel.iconPath = vscode.Uri.parse(
           path.join(__filename, "..", turtleIcon)
         );
-        current.panel.title = name;
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
       }
+
+      const onDiskPath = vscode.Uri.file(
+        path.join(__filename, "..", "query_webview.js")
+      );
+
+      const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
+
+      current.panel.webview.html = getWebviewHtml(entrySrc.toString());
 
       current.panel.onDidDispose(() => {
         current.cancel();
@@ -201,9 +209,10 @@ export function runMalloyQuery(
           const allBegin = performance.now();
           const compileBegin = allBegin;
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Compiling")
-          );
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Compiling,
+          });
           progress.report({ increment: 20, message: "Compiling" });
 
           let queryMaterializer;
@@ -231,9 +240,11 @@ export function runMalloyQuery(
             if (canceled) return;
             malloyLog.appendLine(sql);
           } catch (error) {
-            current.panel.webview.html = renderErrorHTML(
-              new Error(error.message || "Something went wrong.")
-            );
+            current.messages.postMessage({
+              type: QueryMessageType.QueryStatus,
+              status: QueryRunStatus.Error,
+              error: error.message || "Something went wrong",
+            });
             return;
           }
 
@@ -242,9 +253,10 @@ export function runMalloyQuery(
 
           const runBegin = compileEnd;
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Running")
-          );
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Running,
+          });
           progress.report({ increment: 40, message: "Running" });
           const queryResult = await queryMaterializer.run();
           if (canceled) return;
@@ -252,45 +264,24 @@ export function runMalloyQuery(
           const runEnd = performance.now();
           logTime("Run", runBegin, runEnd);
 
-          current.panel.webview.html = wrapHTMLSnippet(
-            loadingIndicator("Rendering")
-          );
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Done,
+            result: queryResult.toJSON(),
+            styles,
+            mode: renderMode,
+          });
           current.result = queryResult;
           progress.report({ increment: 80, message: "Rendering" });
 
-          return new Promise<void>((resolve) => {
-            // This setTimeout is to allow the extension to set the HTML fully
-            // to say that we're rendering before we start doing so. This makes
-            // the message onscreen accurate to what's happening.
-            setTimeout(async () => {
-              const renderBegin = runEnd;
-
-              const data = queryResult.data;
-              const resultExplore = queryResult.resultExplore;
-
-              if (resultExplore) {
-                if (renderStyle === "html") {
-                  // TODO replace the DataTree with DataArray
-                  current.panel.webview.html = wrapHTMLSnippet(
-                    css + (await new HTMLView().render(data, styles))
-                  );
-                } else if (renderStyle === "json") {
-                  current.panel.webview.html = wrapHTMLSnippet(
-                    css + (await new JSONView().render(data))
-                  );
-                }
-
-                const renderEnd = performance.now();
-                logTime("Render", renderBegin, renderEnd);
-
-                const allEnd = renderEnd;
-                logTime("Total", allBegin, allEnd);
-              }
-              resolve();
-            }, 0);
-          });
+          const allEnd = performance.now();
+          logTime("Total", allBegin, allEnd);
         } catch (error) {
-          current.panel.webview.html = renderErrorHTML(error);
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Error,
+            error: error.message,
+          });
         }
       })();
     }

@@ -12,15 +12,8 @@
  */
 
 import * as model from "../model/malloy_types";
-import { Segment } from "../model/malloy_query";
-import { FieldSpace, TranslationFieldSpace } from "./field-space";
-import {
-  MalloyElement,
-  FieldValueType,
-  ExpressionFieldDef,
-  Turtle,
-  HasParameter,
-} from "./ast";
+import { FieldSpace, StructSpace, NewFieldSpace } from "./field-space";
+import { FieldValueType, ExprFieldDecl, TurtleDecl, HasParameter } from "./ast";
 
 // "Space Fields" are a field in a field space
 
@@ -116,7 +109,7 @@ export class StructSpaceField extends SpaceField {
 
   get fieldSpace(): FieldSpace {
     if (!this.space) {
-      this.space = new FieldSpace(this.sourceDef);
+      this.space = new StructSpace(this.sourceDef);
     }
     return this.space;
   }
@@ -159,49 +152,9 @@ export class ColumnSpaceField extends SpaceField {
   }
 }
 
-interface ResultPipeline {
-  segments: model.PipeSegment[];
-  lastSpace: FieldSpace;
-}
-function isResultPipeline(wr: WalkResult): wr is ResultPipeline {
-  const rp = wr as ResultPipeline;
-  return rp.segments !== undefined && rp.lastSpace !== undefined;
-}
-interface WalkError {
-  error: true;
-  message?: string;
-}
-type WalkResult = ResultPipeline | WalkError;
-
-export abstract class TurtleField extends SpaceField {
+export abstract class QueryField extends SpaceField {
   constructor(protected inSpace: FieldSpace) {
     super();
-  }
-
-  abstract walkSegments(_ignore: MalloyElement, fs: FieldSpace): WalkResult;
-
-  static getTailSpace(
-    logEl: MalloyElement,
-    fs: FieldSpace,
-    turtleName: string | undefined
-  ): FieldSpace | undefined {
-    if (turtleName === undefined) {
-      return fs;
-    }
-    const turtle = fs.findEntry(turtleName);
-    if (turtle === undefined) {
-      logEl.log(`Reference to undefined turtle '${turtleName}'`);
-      return undefined;
-    }
-    if (!(turtle instanceof TurtleField)) {
-      logEl.log(`Expected '${turtleName} to reference a turtle`);
-      return undefined;
-    }
-    const turtleWalk = turtle.walkSegments(logEl, fs);
-    if (!isResultPipeline(turtleWalk)) {
-      return undefined;
-    }
-    return turtleWalk.lastSpace;
   }
 
   queryFieldDef(): model.QueryFieldDef | undefined {
@@ -213,56 +166,32 @@ export abstract class TurtleField extends SpaceField {
   }
 }
 
-export class TurtleFieldAST extends TurtleField {
-  constructor(fs: FieldSpace, readonly turtle: Turtle, protected name: string) {
+export class QueryFieldAST extends QueryField {
+  renameAs?: string;
+  constructor(
+    fs: FieldSpace,
+    readonly turtle: TurtleDecl,
+    protected name: string
+  ) {
     super(fs);
-  }
-
-  walkSegments(_logEl: MalloyElement, fs: FieldSpace): WalkResult {
-    const [lastFs, segs] = this.turtle.pipe.translateSegments(fs);
-    return {
-      segments: segs,
-      lastSpace: lastFs,
-    };
   }
 
   rename(newName: string): void {
-    this.name = newName;
+    this.renameAs = newName;
   }
 
   fieldDef(): model.TurtleDef {
-    const [_, modelPipe] = this.turtle.pipe.getPipeline(this.inSpace);
-    return { type: "turtle", name: this.name, ...modelPipe };
+    const def = this.turtle.getFieldDef(this.inSpace);
+    if (this.renameAs) {
+      def.as = this.renameAs;
+    }
+    return def;
   }
 }
 
-export class TurtleFieldStruct extends TurtleField {
+export class QueryFieldStruct extends QueryField {
   constructor(fs: FieldSpace, protected turtleDef: model.TurtleDef) {
     super(fs);
-  }
-
-  walkSegments(logEl: MalloyElement, fs: FieldSpace): WalkResult {
-    const walked: WalkResult = {
-      lastSpace: fs,
-      segments: [],
-    };
-    const turtleName = this.turtleDef.pipeHead?.name;
-    if (turtleName) {
-      const nfs = TurtleField.getTailSpace(logEl, fs, turtleName);
-      if (nfs === undefined) {
-        return { error: true };
-      }
-      walked.lastSpace = nfs;
-    }
-    const pipe = this.turtleDef.pipeline;
-    if (pipe.length > 0) {
-      let inputStruct = walked.lastSpace.structDef();
-      for (const seg of this.turtleDef.pipeline) {
-        inputStruct = Segment.nextStructDef(inputStruct, seg);
-      }
-      walked.lastSpace = new FieldSpace(inputStruct);
-    }
-    return walked;
   }
 
   rename(name: string): void {
@@ -272,7 +201,7 @@ export class TurtleFieldStruct extends TurtleField {
     };
   }
 
-  fieldDef(): model.FieldDef {
+  fieldDef(): model.TurtleDef {
     return this.turtleDef;
   }
 }
@@ -365,27 +294,23 @@ export class FANSPaceField extends SpaceField {
   }
 }
 
-// we do not know the type of an expression as we add it to the list,
-// as it may need symbols we have not yet added to the symbol table.
-//
-// later when the output field def is request, then we can evaluate
-// the expression and determine the return type
-//
-// TODO smart logic about naming this field based on the expression
-export class ExpressionFieldFromAST extends SpaceField {
+export class ExpressionFieldFromAst extends SpaceField {
   fieldName: string;
-  constructor(
-    readonly space: TranslationFieldSpace,
-    readonly exprDef: ExpressionFieldDef
-  ) {
+  constructor(readonly space: NewFieldSpace, readonly exprDef: ExprFieldDecl) {
     super();
-    const defName = exprDef.fieldName?.name;
-    if (defName) {
-      this.fieldName = defName;
-    } else {
-      const fieldProvided = exprDef.expr.defaultFieldName();
-      this.fieldName = fieldProvided || space.nextAnonymousField();
-    }
+    this.fieldName = exprDef.defineName;
+    // left over from anonymous expression days
+    // we may not know the type of an expression as we add it to the list,
+    //
+    // TODO smart logic about naming this field based on the expression
+    // const defName = exprDef.defineName;
+    // if (defName) {
+    //   this.fieldName = defName;
+    // }
+    // else {
+    //   const fieldProvided = exprDef.expr.defaultFieldName();
+    //   this.fieldName = fieldProvided || space.nextAnonymousField();
+    // }
   }
 
   get name(): string {

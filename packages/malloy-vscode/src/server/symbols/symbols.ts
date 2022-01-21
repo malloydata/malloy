@@ -15,7 +15,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   DocumentSymbol as MalloyDocumentSymbol,
   Malloy,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import { DocumentSymbol, SymbolKind } from "vscode-languageserver/node";
 
 function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
@@ -27,7 +27,7 @@ function mapSymbol(symbol: MalloyDocumentSymbol): DocumentSymbol {
     kind:
       type === "explore"
         ? SymbolKind.Namespace
-        : type === "turtle"
+        : type === "query"
         ? SymbolKind.Class
         : type === "join"
         ? SymbolKind.Interface

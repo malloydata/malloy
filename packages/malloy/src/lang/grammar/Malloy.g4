@@ -10,209 +10,266 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-
 grammar Malloy;
 
-malloyDocument
-  : malloyStatement* EOF
-  ;
+malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
-  : defineStatement
+  : defineExploreStatement
+  | defineQuery
   | importStatement
-  | namelessQuery
-  | SEMI
   ;
 
-defineStatement
-  : EXPORT? DEFINE? id (OPAREN has+ CPAREN)? IS defineValue
+defineExploreStatement
+  : EXPLORE exploreDefinitionList
   ;
 
-has
-  : HAS id COLON malloyType            # requiredConditionParam
-  | HAS id COLON malloyType OR hasCond # optionalConditionParam
-  | HAS id malloyType                  # requiredValueParam
-  | HAS id malloyType OR hasExpr       # optionalValueParam
-  | HAS id hasExpr                     # constantParam
+defineQuery
+  : QUERY topLevelQueryDefs  # namedQueries_stub
+  | QUERY query              # anonymousQuery
   ;
 
-hasCond
-  : partialAllowedFieldExpr
+importStatement
+  : IMPORT importURL
   ;
 
-hasExpr
-  : fieldExpr
-  ;
-
-defineValue
-  : OPAREN explore CPAREN  # defFromExplore
-  | JSON json              # defFromJSON
-  ;
-
- importStatement
-  : IMPORT quotedURL
-  ;
-
-quotedURL
+importURL
   : JSON_STRING
   ;
 
- namelessQuery
-  : explore
+topLevelQueryDefs
+  : topLevelQueryDef
+  | OBRACK (topLevelQueryDef COMMA?)* CBRACK
+  ;
+
+topLevelQueryDef
+  : queryName IS query
+  ;
+
+query
+  : explore ARROW pipelineFromName                  # exploreArrowQuery
+  | ARROW queryName queryProperties? pipeElement*   # arrowQuery
+  ;
+
+pipelineFromName
+  : firstSegment pipeElement*
+  ;
+
+firstSegment
+  : queryProperties
+  | exploreQueryName queryProperties?
+  ;
+
+pipeElement
+  : ARROW queryProperties
+  ;
+
+exploreTable
+  : TABLE OPAREN tableName CPAREN
+  ;
+
+queryProperties
+  : filterShortcut
+  | OCURLY (queryStatement | SEMI)* CCURLY
+  ;
+
+filterShortcut
+  : OCURLY QMARK fieldExpr CCURLY
+  ;
+
+exploreQueryName : id;
+queryName : id;
+
+exploreDefinitionList
+  : OBRACK (exploreDefinition COMMA?)* CBRACK   # defineManyExplores
+  | exploreDefinition                           # defineOneExplore
+  ;
+
+exploreDefinition
+  : exploreNameDef IS explore
   ;
 
 explore
-  : EXPLORE? exploreSource filterList?
-      primaryKey? fieldListEdit? (FIELDS? fieldDefList)? joinList?
-      (BAR pipeline)?
+  : exploreSource exploreProperties?
   ;
 
 exploreSource
-  : id (OPAREN isParam+ CPAREN)*   # namedSource
-  | tableName                      # tableSource
-  | OPAREN explore CPAREN          # anonymousSource
+  : exploreName                                   # NamedSource
+  | exploreTable                                  # TableSource
+  | FROM OPAREN query CPAREN                      # QuerySource
   ;
 
-isParam
-  : id IS isExpr
+exploreNameDef: id;
+exploreName: id;
+
+exploreProperties
+  : OCURLY (exploreStatement | SEMI)* CCURLY
+  | filterShortcut
   ;
 
-isExpr
-  : partialAllowedFieldExpr
+exploreStatement
+  : DIMENSION dimensionDefList         # defExploreDimension
+  | MEASURE measureDefList             # defExploreMeasure
+  | JOIN joinList                      # defExploreJoin
+  | whereStatement                     # defExploreWhere
+  | PRIMARY_KEY fieldName              # defExplorePrimaryKey
+  | RENAME fieldName IS fieldName      # defExploreRename
+  | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
+  | QUERY subQueryDefList              # defExploreQuery
   ;
 
-primaryKey
-  : PRIMARY KEY id
+dimensionDefList
+  : OBRACK (dimensionDef COMMA?)* CBRACK
+  | dimensionDef
   ;
 
-fieldListEdit
-  : ( ACCEPT | EXCEPT ) fieldNameCollection
-  ;
-
-joinList
-  : JOINS join (COMMA join)* COMMA?
-  ;
-
-joinDef
-  : id IS JOIN COLON? exploreSource? ON fieldName
-  ;
-
-join
-  : id ON fieldName                     # joinOn
-  | id IS exploreSource ON fieldName    # joinSource
-  ;
-
-pipeline
-  : fieldName filterList? (BAR pipeStages)?
-  | pipeStages
-  ;
-
-pipeStages
-  : queryStage (BAR queryStage)*
-  ;
-orderLimit
-  : orderBy? limit?
-  ;
-
-queryStage
-  : REDUCE stageStmt* fieldDefList orderLimit                     # reduceStage
-  | PROJECT stageStmt* fieldDefList orderLimit                    # projectStage
-  | INDEX filterList? fieldNameCollection* (ON fieldName)? limit? # indexStage
-  ;
-
-bySpec
-  : BY id         # byName
-  | BY fieldExpr  # byExpression
-  ;
-
-topSpec
-  : TOP INTEGER_LITERAL bySpec?
-  ;
-
-stageStmt
-  : orderBy
-  | limit
-  | topSpec
-  | filterList
-  ;
-
-topStmt
-  : bySpec
-  | orderBy
-  | filterList
-  ;
-
-orderBy
-  : ORDER BY orderBySpec (COMMA orderBySpec)* COMMA?
-  ;
-
-orderBySpec
-  : (INTEGER_LITERAL|id) ( ASC | DESC ) ?
-  ;
-
-limit
-  : LIMIT INTEGER_LITERAL
-  ;
-
-filterList
-  : COLON OBRACK boolFilter CBRACK
-  ;
-
-boolFilter
-  : filterElement ( COMMA filterElement )* COMMA?
-  ;
-
-// for the filter parse walker .. TODO not sure we need this
-filterElement: fieldExpr ;
-
-fieldDefList
-  : fieldDef ( COMMA? fieldDef )* COMMA?
+measureDefList
+  : OBRACK (measureDef COMMA?)* CBRACK
+  | measureDef
   ;
 
 fieldDef
-  : id RENAMES id                               # renameFieldDef
-  | fieldNameCollection                         # fieldReflist
-  | defineName fieldName filterList?            # nameOnlyDef
-  | defineName fieldExpr                        # expressionFieldDef
-  | defineName TURTLE? OPAREN pipeline CPAREN   # turtleFieldDef
-  | joinDef                                     # joinFieldDef
+  : fieldNameDef IS fieldExpr
   ;
 
-defineName
-  : DEFINE? id IS
+fieldNameDef: id;
+joinNameDef: id;
+
+measureDef: fieldDef;
+
+joinList
+  : OBRACK (joinDef COMMA?)* CBRACK
+  | joinDef
   ;
 
-fieldExpr
-  : idReference                                            # exprIdReference
-  | fieldExpr filterList                                   # exprFilter
-  | literal                                                # exprLiteral
-  | MINUS fieldExpr                                        # exprMinus
-  | fieldExpr timeframe                                    # exprDuration
-  | fieldExpr DOT timeframe                                # exprTimeTrunc
-  | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
-  | fieldExpr ( STAR | SLASH ) fieldExpr                   # exprMulDiv
-  | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
-  | fieldExpr TO fieldExpr                                 # exprRange
-  | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
-  | fieldExpr (AMPER | BAR) partialAllowedFieldExpr        # exprLogicalTree
-  | fieldExpr compareOp fieldExpr                          # exprCompare
-  | fieldExpr COLON partialAllowedFieldExpr                # exprApply
-  | NOT fieldExpr                                          # exprNot
-  | fieldExpr (AND | OR) fieldExpr                         # exprLogical
-  | CAST OPAREN fieldExpr AS malloyType CPAREN             # exprCast
-  | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
-  | (fieldName DOT)?
-      aggregate
-      OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
-  | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
-  | (id | timeframe) OPAREN ( fieldExprList? ) CPAREN      # exprFunc
-  | CASE caseSpec END                                      # exprCase
-  | pickStatement                                          # exprPick
+joinDef
+  : joinNameDef IS explore ON fieldPath
+  | joinNameDef ON fieldPath
   ;
 
-partialAllowedFieldExpr
-  : compareOp fieldExpr                                    # exprPartialCompare
-  | fieldExpr                                              # exprNotPartial
+filterStatement
+  : whereStatement
+  | havingStatement
+  ;
+
+filteredBy
+  : QMARK fieldExpr                   # filterByShortcut
+  | whereStatement                    # filterByWhere
+  ;
+
+filterClauseList
+  : fieldExpr
+  | OBRACK fieldExprList CBRACK
+  ;
+
+whereStatement
+  : WHERE filterClauseList
+  ;
+
+havingStatement
+  : HAVING filterClauseList
+  ;
+
+subQueryDefList
+  : OBRACK (exploreQueryDef COMMA?)* CBRACK
+  | exploreQueryDef
+  ;
+
+exploreQueryNameDef: id;
+
+exploreQueryDef
+  : exploreQueryNameDef IS pipelineFromName
+  ;
+
+groupByStatement
+  : GROUP_BY groupByList
+  ;
+
+groupByList
+  : OBRACK (groupByEntry COMMA?)* CBRACK
+  | groupByEntry
+  ;
+
+dimensionDef: fieldDef;
+
+groupByEntry
+  : fieldPath
+  | dimensionDef
+  ;
+
+queryStatement
+  : groupByStatement
+  | projectStatement
+  | indexStatement
+  | aggregateStatement
+  | topStatement
+  | limitStatement
+  | orderByStatement
+  | whereStatement
+  | havingStatement
+  | nestStatement
+  ;
+
+nestStatement
+  : NEST nestedQueryList
+  ;
+
+nestedQueryList
+  : nestEntry
+  | OBRACK (nestEntry COMMA?)* CBRACK
+  ;
+
+nestEntry
+  : queryName                       # nestExisting
+  | queryName IS pipelineFromName   # nestDef
+  ;
+
+aggregateStatement
+  : AGGREGATE aggregateList
+  ;
+
+aggregateEntry
+  : fieldPath
+  | measureDef
+  ;
+
+aggregateList
+  : OBRACK (aggregateEntry COMMA?)* CBRACK
+  | aggregateEntry
+  ;
+
+projectStatement
+  : PROJECT fieldCollection
+  ;
+
+orderByStatement
+  : ORDER_BY ordering
+  ;
+
+ordering
+  : orderBySpec
+  | OBRACK orderBySpec (COMMA orderBySpec)* COMMA? CBRACK
+  ;
+
+orderBySpec
+  : (INTEGER_LITERAL | fieldName) ( ASC | DESC ) ?
+  ;
+
+limitStatement
+  : LIMIT INTEGER_LITERAL
+  ;
+
+bySpec
+  : BY fieldName
+  | BY fieldExpr
+  ;
+
+topStatement
+  : TOP INTEGER_LITERAL bySpec?
+  ;
+
+indexStatement
+  : INDEX fieldNameList (BY fieldName)?
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
@@ -238,8 +295,48 @@ dateLiteral
   | LITERAL_YEAR           # literalYear
   ;
 
-caseSpec
-  : (WHEN fieldExpr THEN fieldExpr)+ (ELSE fieldExpr)?
+tableName
+  : STRING_LITERAL;
+
+id
+  : IDENTIFIER
+  | OBJECT_NAME_LITERAL
+  ;
+
+timeframe
+  : SECOND | MINUTE | HOUR | DAY | WEEK | MONTH | QUARTER | YEAR
+  ;
+
+fieldExpr
+  : fieldPath                                              # exprFieldPath
+  | fieldExpr OCURLY filteredBy CCURLY                     # exprFilter
+  | literal                                                # exprLiteral
+  | MINUS fieldExpr                                        # exprMinus
+  | fieldExpr timeframe                                    # exprDuration
+  | fieldExpr DOT timeframe                                # exprTimeTrunc
+  | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
+  | fieldExpr ( STAR | SLASH ) fieldExpr                   # exprMulDiv
+  | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
+  | fieldExpr TO fieldExpr                                 # exprRange
+  | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
+  | fieldExpr (AMPER | BAR) partialAllowedFieldExpr        # exprLogicalTree
+  | fieldExpr compareOp fieldExpr                          # exprCompare
+  | fieldExpr COLON partialAllowedFieldExpr                # exprApply
+  | NOT fieldExpr                                          # exprNot
+  | fieldExpr (AND | OR) fieldExpr                         # exprLogical
+  | CAST OPAREN fieldExpr AS malloyType CPAREN             # exprCast
+  | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
+  | (fieldPath DOT)?
+      aggregate
+      OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
+  | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
+  | (id | timeframe) OPAREN ( fieldExprList? ) CPAREN      # exprFunc
+  | pickStatement                                          # exprPick
+  ;
+
+partialAllowedFieldExpr
+  : compareOp fieldExpr                                    # exprPartialCompare
+  | fieldExpr                                              # exprNotPartial
   ;
 
 pickStatement
@@ -254,35 +351,42 @@ fieldExprList
   : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
-fieldNameCollection
-  : collectionMember (COMMA collectionMember)* COMMA?
+fieldNameList
+  : fieldOrStar
+  | OBRACK fieldOrStar ( COMMA fieldOrStar)* COMMA? CBRACK
+  ;
+
+fieldOrStar
+  : STAR
+  | fieldName
+  ;
+
+fieldCollection
+  : collectionMember
+  | OBRACK (collectionMember COMMA?)* COMMA? CBRACK
   ;
 
 collectionMember
-  : fieldName                         # nameMember
-  | (fieldName DOT)? (STAR|STARSTAR)  # wildMember
+  : fieldPath                         # nameMember
+  | (fieldPath DOT)? (STAR|STARSTAR)  # wildMember
+  | fieldDef                          # newMember
   ;
 
-fieldName
-  : idReference
+// Possibly wasted work adding semantics to "id" references
+fieldPath
+  : fieldName
+  | joinPath DOT joinField
   ;
 
-// Syntactically same as a field name, but semantically, might be a parameter
-idReference
-  : id ( DOT id )*
+joinPath
+  : joinName (DOT joinName)*
   ;
 
-tableName
-  : STRING_LITERAL;
+joinField: id;
+joinName: id;
+fieldName: id;
 
-id
-  : IDENTIFIER
-  | OBJECT_NAME_LITERAL
-  ;
-
-timeframe
-  : SECOND | MINUTE | HOUR | DAY | WEEK | MONTH | QUARTER | YEAR
-  ;
+justExpr: fieldExpr EOF;
 
 json
   : jsonValue
@@ -319,8 +423,30 @@ fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
 fragment UNICODE: 'u' HEX HEX HEX HEX;
 fragment HEX: [0-9a-fA-F];
 fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
+fragment SPACE_CHAR: [ \u000B\t\r\n];
 
-ACCEPT: A C C E P T ;
+// colon keywords ...
+ACCEPT: A C C E P T SPACE_CHAR* ':';
+AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
+DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
+EXCEPT: E X C E P T SPACE_CHAR* ':';
+EXPLORE: E X P L O R E SPACE_CHAR* ':';
+GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
+HAVING: H A V I N G SPACE_CHAR* ':';
+INDEX: I N D E X SPACE_CHAR* ':';
+JOIN: J O I N SPACE_CHAR* ':';
+LIMIT: L I M I T SPACE_CHAR* ':';
+MEASURE: M E A S U R E SPACE_CHAR* ':';
+NEST: N E S T SPACE_CHAR* ':';
+ORDER_BY: O R D E R '_' B Y SPACE_CHAR* ':';
+PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
+PROJECT: P R O J E C T SPACE_CHAR* ':';
+QUERY: Q U E R Y SPACE_CHAR* ':';
+RENAME: R E N A M E SPACE_CHAR* ':';
+TOP: T O P SPACE_CHAR* ':';
+WHERE: W H E R E SPACE_CHAR* ':';
+
+// bare keywords
 AND: A N D ;
 AS: A S ;
 ASC: A S C ;
@@ -334,30 +460,19 @@ COUNT: C O U N T ;
 CROSS: C R O S S ;
 DATE: D A T E;
 DAY: D A Y S?;
-DEFINE: D E F I N E ;
 DESC: D E S C ;
 DISTINCT: D I S T I N C T ;
 ELSE: E L S E ;
 END: E N D ;
-EXCEPT: E X C E P T ;
-EXPLORE: E X P L O R E ;
-EXPORT: E X P O R T ;
 FALSE: F A L S E;
-FIELDS: F I E L D S;
-FOREIGN: F O R E I G N ;
 FOR: F O R;
 FROM: F R O M ;
 HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;
-INDEX: I N D E X ;
 IS: I S ;
-JOIN: J O I N (E D)?;
-JOINS: J O I N S;
 JSON: J S O N;
-KEY: K E Y ;
 LAST: L A S T ;
-LIMIT: L I M I T;
 MAX: M A X;
 MIN: M I N;
 MINUTE: M I N U T E S?;
@@ -368,22 +483,17 @@ NULL: N U L L ;
 NUMBER: N U M B E R;
 ON: O N ;
 OR: O R ;
-ORDER: O R D E R ;
 PICK: P I C K ;
-PIVOT: P I V O T ;
-PRIMARY: P R I M A R Y ;
-PROJECT: P R O J E C T ;
+QMARK: '?';
 QUARTER: Q U A R T E R S?;
-REDUCE: R E D U C E ;
-RENAMES: R E N A M E S ;
 SECOND: S E C O N D S?;
 STRING: S T R I N G;
 SUM: S U M ;
+TABLE: T A B L E;
 THEN: T H E N ;
 THIS: T H I S;
 TIMESTAMP: T I M E S T A M P;
 TO: T O;
-TOP: T O P;
 TRUE: T R U E ;
 TURTLE: T U R T L E;
 WEEK: W E E K S?;
@@ -397,9 +507,9 @@ STRING_ESCAPE
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 
-fragment SPACE_CHAR: [ \u000B\t\r\n];
-
 AMPER: '&';
+ARROW: '->';
+FAT_ARROW: '=>';
 OPAREN: '(' ;
 CPAREN: ')' ;
 OBRACK: '[' ;
@@ -461,7 +571,7 @@ fragment U: [uU] ; fragment V: [vV] ; fragment W: [wW] ; fragment X: [xX] ;
 fragment Y: [yY] ; fragment Z: [zZ] ;
 
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
-DOUBLE_DASH_COMMENT: '--' ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
+COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 // Matching any of these is a parse error

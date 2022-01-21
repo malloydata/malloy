@@ -7,9 +7,15 @@
   },
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "editor.tabSize": 2,
+  "[antlr]": {
+    "editor.insertSpaces": true,
+  },
   "[markdown]": {
     "editor.insertSpaces": true,
     "editor.tabSize": 4
   },
+  "cSpell.words": [
+    "antlr"
+  ],
   "typescript.tsdk": "node_modules/typescript/lib"
 }

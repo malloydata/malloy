@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, StructDef } from "@malloy-lang/malloy";
+import { ModelDef, StructDef } from "@malloydata/malloy";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
 import { fStringEq, fYearEq } from "../test_utils";
 
@@ -22,7 +22,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
   as: "flights",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   primaryKey: "id2",
   fields: [
     // Fields in the flights table.
@@ -814,7 +814,7 @@ const tableAirports: StructDef = {
   as: "table_airports",
   dialect: "standardsql",
   structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
+  structRelationship: { type: "basetable", connectionName: "bigquery" },
   primaryKey: "code",
   fields: [
     { type: "number", name: "id", numberType: "integer" },
@@ -863,7 +863,7 @@ export const testModel: ModelDef = {
     "medicare_state_facts",
     // "aircraft",
   ],
-  structs: {
+  contents: {
     flights: FLIGHTS_EXPLORE,
     table_airports: tableAirports,
     medicare_test: medicareModel,

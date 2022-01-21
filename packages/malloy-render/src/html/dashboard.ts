@@ -11,10 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { DataArrayOrRecord } from "@malloy-lang/malloy";
+import { DataArrayOrRecord } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
+import { yieldTask } from "./utils";
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -45,6 +46,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       let renderedMeasures = "";
       for (const field of measures) {
         const childRenderer = this.childRenderers[field.name];
+        await yieldTask();
         const rendered = await childRenderer.render(row.cell(field));
         if (childRenderer instanceof HTMLDashboardRenderer) {
           renderedMeasures += rendered;

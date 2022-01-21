@@ -1,4 +1,5 @@
 {
+  "extends": "./tsconfig.packages.json",
   "references": [
     { "path": "packages/malloy" },
     { "path": "packages/malloy-db-bigquery" },

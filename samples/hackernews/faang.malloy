@@ -2,36 +2,50 @@
 
 import "hackernews.malloy"
 
-
 -- analysis about FAANG (Facebook Apple Amazon Netflix and Google)
 -- a resonable threshold for interesting stories is about 10
-define faang_analysis is (explore stories
 
-  faang is title :
-    pick 'Facebook' when ~ r'(Facebook|Instagram|Whatsapp)'
-    pick 'Apple' when ~ r'(Apple|iPhone|IOS|Macbook)'
-    pick 'Amazon' when ~ r'(Amazon|AWS)'
-    pick 'Netflix' when ~ r'Netflix'
-    pick 'Google' when ~ r'(Google|GOOG|Alphabet|GCloud|Chrome)'
-    else 'OTHER'
+explore: faang_analysis is stories {
 
-  apple_dashboard is (reduce : [faang : 'Apple', score >= threshold] term_dashboard)
-  google_dashboard is (reduce : [faang: 'Google', score >= threshold] term_dashboard)
+  dimension: [
+    faang is title :
+      pick 'Facebook' when ~ r'(Facebook|Instagram|Whatsapp)'
+      pick 'Apple' when ~ r'(Apple|iPhone|IOS|Macbook)'
+      pick 'Amazon' when ~ r'(Amazon|AWS)'
+      pick 'Netflix' when ~ r'Netflix'
+      pick 'Google' when ~ r'(Google|GOOG|Alphabet|GCloud|Chrome)'
+      else 'OTHER'
+  ]
 
-  faang_stories is (reduce : [faang: != 'OTHER', score >= threshold] stories)
+  query: apple_dashboard is term_dashboard {
+    where: [faang = 'Apple', score >= threshold]
+  }
 
-  faang_dashboard is (reduce : [faang != 'OTHER', score >= threshold, post_type: 'story']
-    faang_story_chart is (reduce 
-      posted_at is post_time.month
-      post_count
-      faang
-    )
-    facebook is top_sites : [faang: 'Facebook']
-    apple is top_sites : [faang: 'Apple']
-    amazon is top_sites : [faang: 'Amazon']
-    netflix is top_sites : [faang: 'Netflix']
-    google is top_sites : [faang: 'Google']
-  )
+  query: google_dashboard is term_dashboard {
+    where: [faang = 'Google', score >= threshold]
+  }
 
-  poster_dashboard2 is (reduce : [faang != 'OTHER'] poster_dashboard)
-);
+  query: faang_stories is stories {
+    where: [faang != 'OTHER', score >= threshold]
+  }
+
+  query: faang_dashboard is {
+    where: [faang != 'OTHER',
+      score >= threshold,
+      post_type = 'story'
+    ]
+    nest: faang_story_chart is {
+      group_by: posted_month is post_time.month
+      aggregate: post_count
+      group_by: faang
+    }
+    nest: facebook is top_sites {where: faang = 'Facebook'}
+    nest: apple is top_sites {where: faang = 'Apple'}
+    nest: amazon is top_sites {where: faang = 'Amazon'}
+    nest: netflix is top_sites {where: faang = 'Netflix'}
+    nest: google is top_sites {where: faang = 'Google'}
+  }
+
+  query: poster_dashboard2 is poster_dashboard {where: faang != 'OTHER'}
+
+}

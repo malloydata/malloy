@@ -21,7 +21,7 @@ import {
   Field,
   QueryField,
   AtomicField,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
@@ -248,8 +248,8 @@ function getIconPath(fieldType: string, isAggregate: boolean) {
 export function runTurtleFromSchemaCommand(fieldItem: FieldItem): void {
   vscode.commands.executeCommand(
     "malloy.runQuery",
-    `explore ${fieldItem.topLevelExplore} | ${fieldItem.accessPath.join(".")}`,
-    `${fieldItem.topLevelExplore} | ${fieldItem.accessPath.join(".")}`
+    `query: ${fieldItem.topLevelExplore}->${fieldItem.accessPath.join(".")}`,
+    `${fieldItem.topLevelExplore}->${fieldItem.accessPath.join(".")}`
   );
 }
 

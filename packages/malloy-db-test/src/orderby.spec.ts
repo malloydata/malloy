@@ -11,17 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes, testConnections } from "./runtimes";
+import * as malloy from "@malloydata/malloy";
+import { RuntimeList } from "./runtimes";
 
-const runtimes = getRuntimes();
+const runtimes = new RuntimeList([
+  "bigquery", //
+  "postgres", //
+]);
 
 afterAll(async () => {
-  testConnections.forEach(async (connection) => {
-    if (connection.isPool()) {
-      await connection.drain();
-    }
-  });
+  await runtimes.closeAll();
 });
 
 async function validateCompilation(
@@ -29,7 +28,7 @@ async function validateCompilation(
   sql: string
 ): Promise<boolean> {
   try {
-    const runtime = runtimes.get(databaseName);
+    const runtime = runtimes.runtimeMap.get(databaseName);
     if (runtime === undefined) {
       throw new Error(`Unknown database ${databaseName}`);
     }
@@ -44,13 +43,14 @@ async function validateCompilation(
 }
 
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
-runtimes.forEach((runtime, databaseName) =>
+runtimes.runtimeMap.forEach((runtime, databaseName) =>
   expressionModels.set(
     databaseName,
     runtime.loadModel(`
-    export define models is ('malloytest.aircraft_models'
-    model_count is count()
-  )`)
+    explore: models is table('malloytest.aircraft_models'){
+      measure: model_count is count()
+    }
+  `)
   )
 );
 
@@ -59,9 +59,10 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        explore models | reduce
-          big is seats >=20
-          model_count is count()
+        query: models-> {
+          group_by: big is seats >=20
+          aggregate: model_count is count()
+        }
         `
       )
       .run();
@@ -73,13 +74,16 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        explore models | reduce
-          manufacturer
-          big is seats >=21
-          model_count is count()
-        | reduce
-          big
-          model_count is model_count.sum()
+        query: models->{
+          group_by: [
+            manufacturer,
+            big is seats >=21
+          ]
+          aggregate: model_count is count()
+        }->{
+          group_by: big
+          aggregate: model_count is model_count.sum()
+        }
         `
       )
       .run();
@@ -91,10 +95,12 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        explore models
-          j_names is model_count : [manufacturer ~ 'J%']
-        | reduce
-          j_names
+        query: models->{
+          aggregate: j_names is model_count {where: manufacturer ~ 'J%'}
+        }
+        -> {
+          group_by: j_names
+        }
         `
       )
       .run();
@@ -105,10 +111,11 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      explore models | reduce
-        fetch is count()
-      | project
-        fetch
+      query: models->{
+        aggregate: fetch is count()
+      }->{
+        group_by: fetch
+      }
       `
       )
       .getSQL();
@@ -119,14 +126,17 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      explore models | reduce
-        withx is (reduce
-          select is UPPER(manufacturer)
-          fetch is count()
-        )
-      | project
-        withx is lower(withx.select)
-        fetch is withx.fetch
+      query: models->{
+        nest: withx is {
+          group_by: select is UPPER(manufacturer)
+          aggregate: fetch is count()
+        }
+      } -> {
+        project: [
+          withxz is lower(withx.select)
+          fetch is withx.fetch
+        ]
+      }
       `
       )
       .getSQL();
@@ -137,14 +147,15 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      explore models | reduce
-        with is (reduce
-          select is UPPER(manufacturer)
-          fetch is count()
-        )
-      | project
-        withxis lower(withx.select)
-        fetch is with.fetch
+      query: models->{
+        nest: withx is {
+          group_by: is select is UPPER(manufacturer)
+          aggregate: fetch is count()
+        }
+      } -> {
+        project: withxis lower(withx.select)
+        project: fetch is with.fetch
+      }
       `
       )
       .getSQL();
@@ -155,26 +166,30 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      explore models | reduce
-        model_count is count() : [manufacturer: ~'A%']
+      query: models->{
+        aggregate: model_count is count(){? manufacturer: ~'A%' }
+      }
       `
       )
       .getSQL();
     await validateCompilation(databaseName, sql);
   });
 
+  // I'm not sure I have the syntax right here...
   it(`modeled having simple - ${databaseName}`, async () => {
     const result = await orderByModel
       .loadQuery(
         `
-        define popular_names is (models
-          | reduce : [model_count > 100]
-            manufacturer
-            model_count
-        );
-        popular_names | project order by 2
-         manufacturer
-         model_count
+        explore: popular_names is from(models->{
+          where: model_count > 100
+          group_by: manufacturer
+          aggregate: model_count
+        })
+
+        query: popular_names->{
+          order_by: 2
+          project: [manufacturer, model_count]
+        }
         `
       )
       .run();
@@ -185,18 +200,21 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        define popular_names is (models
-          | reduce : [model_count > 100]
-            manufacturer
-            model_count
-            l is (reduce top 5
-              manufacturer
-              model_count
-            )
-        );
-        popular_names | project order by 2
-         manufacturer
-         model_count
+        explore: popular_names is from(models->{
+          where: model_count > 100
+          group_by: manufacturer
+          aggregate: model_count
+          nest: l is {
+            top: 5
+            group_by: manufacturer
+            aggregate: model_count
+          }
+        })
+
+        query: popular_names->{
+         order_by: 2
+         project: [manufacturer, model_count]
+        }
         `
       )
       .run();
@@ -207,23 +225,23 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-    define a is ('malloytest.aircraft'
-      primary key tail_num
-      aircraft_count is count(*)
-    );
+    explore: a is table('malloytest.aircraft'){
+      primary_key: tail_num
+      measure: aircraft_count is count(*)
+    }
 
-    define f is ('malloytest.flights'
-      primary key id2
-      flight_count is count()
-      foo is (reduce
-        carrier
-        flight_count
-        a.aircraft_count
-      )
-      joins
-        a on tail_num
-    );
-    explore f | foo
+    explore: f is table('malloytest.flights'){
+      primary_key: id2
+      join: a on tail_num
+
+      measure: flight_count is count()
+      query: foo is {
+        group_by: carrier
+        aggregate: flight_count
+        aggregate: a.aircraft_count
+      }
+    }
+    query: f->foo
   `
       )
       .getSQL();

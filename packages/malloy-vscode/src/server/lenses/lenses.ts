@@ -12,28 +12,28 @@
  */
 
 import { CodeLens } from "vscode-languageserver/node";
-import { Malloy } from "@malloy-lang/malloy";
+import { Malloy } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-const explain = `
-  index
-  | reduce  : [
-      field_value: != null,
-    ]
-    strings is (reduce order by 2 : [field_type: 'string']
-      field_name
-      cardinality is count(distinct field_value)
-      top_values_list is (reduce order by 2 desc top 20
-        field_value
-        occurrences is weight
-      )
-    )
-    other_types is (reduce : [field_type: != 'string']
-      field_name
-      field_type
-      field_value
-    )
-`;
+// const explain = `
+//   index
+//   | reduce  : [
+//       field_value: != null,
+//     ]
+//     strings is (reduce order by 2 : [field_type: 'string']
+//       field_name
+//       cardinality is count(distinct field_value)
+//       top_values_list is (reduce order by 2 desc top 20
+//         field_value
+//         occurrences is weight
+//       )
+//     )
+//     other_types is (reduce : [field_type: != 'string']
+//       field_name
+//       field_type
+//       field_value
+//     )
+// `;
 
 export function getMalloyLenses(document: TextDocument): CodeLens[] {
   const lenses: CodeLens[] = [];
@@ -64,7 +64,15 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         command: {
           title: "Run",
           command: "malloy.runQueryFile",
-          arguments: [currentUnnamedQueryIndex],
+          arguments: [currentUnnamedQueryIndex, "json"],
+        },
+      });
+      lenses.push({
+        range: symbol.range.toJSON(),
+        command: {
+          title: "Render",
+          command: "malloy.runQueryFile",
+          arguments: [currentUnnamedQueryIndex, "html"],
         },
       });
       currentUnnamedQueryIndex++;
@@ -85,33 +93,33 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
           title: "Preview",
           command: "malloy.runQuery",
           arguments: [
-            `explore ${exploreName} | project limit 20 *`,
+            `query: ${exploreName}->{ project: *; limit: 20 }`,
             `preview ${exploreName}`,
           ],
         },
       });
-      lenses.push({
-        range: symbol.range.toJSON(),
-        command: {
-          title: "Explain",
-          command: "malloy.runQuery",
-          arguments: [
-            `explore ${exploreName} | ${explain}`,
-            `explain ${exploreName}`,
-          ],
-        },
-      });
+      // lenses.push({
+      //   range: symbol.range.toJSON(),
+      //   command: {
+      //     title: "Explain",
+      //     command: "malloy.runQuery",
+      //     arguments: [
+      //       `query: ${exploreName}->${explain}`,
+      //       `explain ${exploreName}`,
+      //     ],
+      //   },
+      // });
       children.forEach((child) => {
-        if (child.type === "turtle") {
-          const turtleName = child.name;
+        if (child.type === "query") {
+          const queryName = child.name;
           lenses.push({
             range: child.range.toJSON(),
             command: {
               title: "Run",
               command: "malloy.runQuery",
               arguments: [
-                `explore ${exploreName} | ${turtleName}`,
-                `${exploreName} | ${turtleName}`,
+                `query: ${exploreName}->${queryName}`,
+                `${exploreName}->${queryName}`,
                 "json",
               ],
             },
@@ -122,19 +130,11 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
               title: "Render",
               command: "malloy.runQuery",
               arguments: [
-                `explore ${exploreName} | ${turtleName}`,
-                `${exploreName} | ${turtleName}`,
+                `query: ${exploreName}->${queryName}`,
+                `${exploreName}->${queryName}`,
               ],
             },
           });
-          // lenses.push({
-          //   range: child.range.toJSON(),
-          //   command: {
-          //     title: "Run With Filters",
-          //     command: "malloy.runQueryWithEdit",
-          //     arguments: [exploreName, turtleName],
-          //   },
-          // });
         }
       });
     }

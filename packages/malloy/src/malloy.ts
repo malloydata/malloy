@@ -168,8 +168,9 @@ export class Malloy {
           );
         } else {
           const errors = result.errors || [];
+          const errText = translator.prettyErrors();
           throw new MalloyError(
-            `Error(s) compiling model: ${errors[0]?.message}.`,
+            `Error(s) compiling model:\n${errText}`,
             errors
           );
         }
@@ -305,12 +306,9 @@ export class Model {
    * @returns A prepared query.
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
-    const struct = this.modelDef.structs[queryName];
-    if (struct.type === "struct") {
-      const source = struct.structSource;
-      if (source.type === "query") {
-        return new PreparedQuery(source.query, this.modelDef, queryName);
-      }
+    const query = this.modelDef.contents[queryName];
+    if (query.type === "query") {
+      return new PreparedQuery(query, this.modelDef, queryName);
     }
 
     throw new Error("Given query name does not refer to a named query.");
@@ -353,7 +351,11 @@ export class Model {
    * @returns An `Explore`.
    */
   public getExploreByName(name: string): Explore {
-    return new Explore(this.modelDef.structs[name]);
+    const struct = this.modelDef.contents[name];
+    if (struct.type === "struct") {
+      return new Explore(struct);
+    }
+    throw new Error(`'name' is not an explore`);
   }
 
   /**
@@ -362,9 +364,14 @@ export class Model {
    * @returns An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    return Object.keys(this.modelDef.structs).map((name) =>
-      this.getExploreByName(name)
-    );
+    const explores: Explore[] = [];
+    for (const me in this.modelDef.contents) {
+      const ent = this.modelDef.contents[me];
+      if (ent.type === "struct") {
+        explores.push(new Explore(ent));
+      }
+    }
+    return explores;
   }
 
   public get _modelDef(): ModelDef {
@@ -396,8 +403,8 @@ export class PreparedQuery {
     const translatedQuery = queryModel.compileQuery(this._query);
     return new PreparedResult(
       {
-        queryName: this.name || translatedQuery.queryName,
         ...translatedQuery,
+        queryName: this.name || translatedQuery.queryName,
       },
       this._modelDef
     );
@@ -687,11 +694,14 @@ export class PreparedResult {
 
   public get sourceExplore(): Explore {
     const name = this.inner.sourceExplore;
-    const explore = this.modelDef.structs[name];
+    const explore = this.modelDef.contents[name];
     if (explore === undefined) {
       throw new Error("Malformed query result.");
     }
-    return new Explore(explore);
+    if (explore.type === "struct") {
+      return new Explore(explore);
+    }
+    throw new Error(`'${name} is not an explore`);
   }
 
   public get _sourceExploreName(): string {
@@ -899,14 +909,14 @@ export class Explore extends Entity {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.modelDef);
+    return new PreparedQuery(internalQuery, this.modelDef, name);
   }
 
   private get modelDef(): ModelDef {
     return {
       name: "generated_model",
       exports: [],
-      structs: { [this.structDef.name]: this.structDef },
+      contents: { [this.structDef.name]: this.structDef },
     };
   }
 
@@ -936,7 +946,7 @@ export class Explore extends Entity {
               // field of type "date". Rather, they should be of type "number".
               if (
                 fieldDef.timeframe &&
-                ["day", "day_of_month", "day_of_week", "day_of_year"].includes(
+                ["day_of_month", "day_of_week", "day_of_year"].includes(
                   fieldDef.timeframe
                 )
               ) {
@@ -1807,7 +1817,7 @@ export class ModelMaterializer extends FluentState<Model> {
  * materializing the query (via `getPreparedQuery()`) or extending the task to load
  * prepared results or run the query (via e.g. `loadPreparedResult()` or `run()`).
  */
-class QueryMaterializer extends FluentState<PreparedQuery> {
+export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Run this loaded `Query`.
    *
@@ -1864,7 +1874,7 @@ class QueryMaterializer extends FluentState<PreparedQuery> {
  * materializing the prepared result (via `getPreparedResult()`) or extending the task run
  * the query.
  */
-class PreparedResultMaterializer extends FluentState<PreparedResult> {
+export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Run this prepared result.
    *
@@ -1900,7 +1910,7 @@ class PreparedResultMaterializer extends FluentState<PreparedResult> {
  * materializing the explore (via `getExplore()`) or extending the task to produce
  * related queries.
  */
-class ExploreMaterializer extends FluentState<Explore> {
+export class ExploreMaterializer extends FluentState<Explore> {
   /**
    * Load a query contained within this loaded explore.
    *
@@ -1934,6 +1944,11 @@ class ExploreMaterializer extends FluentState<Explore> {
   }
 }
 
+export type ResultJSON = {
+  queryResult: QueryResult;
+  modelDef: ModelDef;
+};
+
 /**
  * The result of running a Malloy query.
  *
@@ -1956,6 +1971,14 @@ export class Result extends PreparedResult {
    */
   public get data(): DataArray {
     return new DataArray(this.inner.result, this.resultExplore);
+  }
+
+  public toJSON(): ResultJSON {
+    return { queryResult: this.inner, modelDef: this._modelDef };
+  }
+
+  public static fromJSON({ queryResult, modelDef }: ResultJSON): Result {
+    return new Result(queryResult, modelDef);
   }
 }
 

@@ -1,10 +1,11 @@
-import * as malloy from "@malloy-lang/malloy";
-import { getRuntimes } from "./runtimes";
+import * as malloy from "@malloydata/malloy";
+import { RuntimeList } from "./runtimes";
 
-it("accessors are not too expensive", async () => {
+// Chris, please rework.
+it.skip("accessors are not too expensive", async () => {
   // If this test fails, consideration should be given to how much time using
   // the accessors costs.
-  const runtime = getRuntimes(["bigquery"]).get("bigquery");
+  const runtime = new RuntimeList(["bigquery"]).runtimeMap.get("bigquery");
 
   expect(runtime).toBeDefined();
   if (runtime) {

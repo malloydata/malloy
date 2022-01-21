@@ -1,5 +1,5 @@
 {
-  "name": "@malloy-lang/db-postgres",
+  "name": "@malloydata/db-postgres",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -7,12 +7,12 @@
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "echo 'no tests for 'db-postgres' yet'",
+    "test": "jest --config=../../jest.config.js",
     "build": "yarn tsc --build"
   },
   "dependencies": {
     "@types/pg": "^8.6.1",
-    "@malloy-lang/malloy": "*",
+    "@malloydata/malloy": "*",
     "pg": "^8.7.1"
   }
 }

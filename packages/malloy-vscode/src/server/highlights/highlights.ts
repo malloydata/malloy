@@ -12,7 +12,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { HighlightType, Malloy } from "@malloy-lang/malloy";
+import { HighlightType, Malloy } from "@malloydata/malloy";
 import {
   SemanticTokens,
   SemanticTokensBuilder,
@@ -88,22 +88,12 @@ function mapTypes(type: string) {
       return "variable";
     case HighlightType.Call.Aggregate:
     case HighlightType.Keyword.AggregateModifier.Distinct:
-      return "macro";
+      return "function";
     case HighlightType.Type:
       return "type";
-    case HighlightType.Keyword.Explore:
     case HighlightType.Keyword.Is:
-    case HighlightType.Keyword.Top:
-    case HighlightType.Keyword.Order:
-    case HighlightType.Keyword.By:
-    case HighlightType.Keyword.Limit:
     case HighlightType.Keyword.Join:
     case HighlightType.Keyword.On:
-    case HighlightType.Keyword.Primary:
-    case HighlightType.Keyword.Key:
-    case HighlightType.Keyword.Renames:
-    case HighlightType.Keyword.Define:
-    case HighlightType.Keyword.Export:
     case HighlightType.Keyword.Desc:
     case HighlightType.Keyword.Asc:
     case HighlightType.Call.Cast:
@@ -111,8 +101,6 @@ function mapTypes(type: string) {
     case HighlightType.Keyword.Pick:
     case HighlightType.Keyword.When:
     case HighlightType.Keyword.Else:
-    case HighlightType.Keyword.Accept:
-    case HighlightType.Keyword.Except:
     case HighlightType.Keyword.Import:
       return "keyword";
     // These are more like meta types, so maybe they should be highlighted differently
@@ -120,7 +108,7 @@ function mapTypes(type: string) {
     case HighlightType.Keyword.Turtle:
       return "keyword";
     case HighlightType.Call.TimeFrame:
-      return "macro";
+      return "variable";
     case HighlightType.Literal.String:
       return "string";
     case HighlightType.Literal.Boolean:
@@ -133,13 +121,6 @@ function mapTypes(type: string) {
       return "regexp";
     case HighlightType.Literal.Date:
       return "number";
-    case HighlightType.Transformation.Reduce:
-    case HighlightType.Transformation.Project:
-    case HighlightType.Transformation.Index:
-      return "keyword";
-    case HighlightType.Label.Fields:
-    case HighlightType.Label.Joins:
-      return "label";
     case HighlightType.Operator.Comparison:
       return "operator";
     case HighlightType.Operator.Boolean:
@@ -149,6 +130,30 @@ function mapTypes(type: string) {
     case HighlightType.Comment.Line:
     case HighlightType.Comment.Block:
       return "comment";
+    case HighlightType.Property.Accept:
+    case HighlightType.Property.Aggregate:
+    case HighlightType.Property.Dimension:
+    case HighlightType.Property.Except:
+    case HighlightType.Property.Explore:
+    case HighlightType.Property.GroupBy:
+    case HighlightType.Property.Having:
+    case HighlightType.Property.Index:
+    case HighlightType.Property.Join:
+    case HighlightType.Property.Limit:
+    case HighlightType.Property.Measure:
+    case HighlightType.Property.Nest:
+    case HighlightType.Property.OrderBy:
+    case HighlightType.Property.PrimaryKey:
+    case HighlightType.Property.Project:
+    case HighlightType.Property.Query:
+    case HighlightType.Property.Rename:
+    case HighlightType.Property.Top:
+    case HighlightType.Property.Where:
+      return "keyword";
+    case HighlightType.Call.Table:
+    case HighlightType.Call.From:
+    case HighlightType.Call.Function:
+      return "function";
     default:
       throw new Error(`Unexpected type ${type}`);
   }

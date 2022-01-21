@@ -1,38 +1,45 @@
 --! styles airports.styles.json
 
-export define airports is (explore 'malloy-data.faa.airports'
-  airport_count is count(*)
+explore: airports is table('malloy-data.faa.airports'){
+  measure: airport_count is count(*)
 
-  by_state is (reduce : [state != null]
-    state
-    airport_count
-  )
+  query: by_state is {
+    where: state != null
+    group_by: state
+    aggregate: airport_count
+  }
 
-  by_fac_type is (reduce
-    fac_type
-    airport_count
-    avg_elevation is elevation.avg()
-  )
-
-  by_state_and_county is (reduce 
-    state
-    airport_count
-    by_fac_type
-    by_county is (reduce top 5
-      county
+  query: by_fac_type is {
+    group_by: fac_type
+    aggregate: [
       airport_count
-    )
-  )
+      avg_elevation is elevation.avg()
+    ]
+  }
 
-  major_airports is (reduce : [major:'Y']
-    name is concat(state, '-', full_name)
-  )
+  query: by_state_and_county is {
+    group_by: state
+    aggregate: airport_count
+    nest: by_fac_type
+    nest: by_county is { top: 5
+      group_by: county
+      aggregate: airport_count
+    }
+  }
 
-  airports_by_region is (reduce : [faa_region != null]
-    faa_region
-    airport_count
-    by_fac_type
-    by_state
-    major_airports
-  )
-);
+  query: major_airports is {
+    where: major: 'Y'
+    group_by: name is concat(state, '-', full_name)
+  }
+
+  query: airports_by_region is {
+    where: faa_region != null
+    group_by: faa_region
+    aggregate: airport_count
+    nest: [
+      by_fac_type
+      by_state
+      major_airports
+    ]
+  }
+}

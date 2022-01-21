@@ -15,7 +15,7 @@ import {
   DataColumn,
   DateTimeframe,
   TimestampTimeframe,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import { Renderer } from "../renderer";
 import { timeToString } from "./utils";
 
