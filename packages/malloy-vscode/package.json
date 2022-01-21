@@ -5,7 +5,7 @@
   "description": "Malloy is an experimental language for describing data relationships and transformations",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.56.0"
+    "vscode": "^1.63.0"
   },
   "license": "GPL-2.0",
   "categories": [
@@ -121,7 +121,9 @@
     "webpack-dev": "webpack --mode development --watch",
     "build": "yarn tsc --build && yarn package",
     "test": "echo 'no tests for vscode yet'",
-    "package": "yarn vsce package --yarn --githubBranch=main"
+    "package": "yarn vsce package --yarn --githubBranch=main",
+    "publish": "yarn vsce publish minor --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 darwin-x64 darwin-arm64",
+    "publish-prerelease": "yarn vsce publish minor --pre-release --target linux-x64 linux-arm64 linux-armhf alpine-x64 alpine-arm64 darwin-x64 darwin-arm64"
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
