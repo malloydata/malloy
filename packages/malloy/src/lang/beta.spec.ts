@@ -583,4 +583,11 @@ describe("error handling", () => {
     const firstError = errList[0];
     expect(firstError.message).toBe("Undefined data source 'bb'");
   });
+  test("non-rename rename", () => {
+    const m = new BetaModel("explore: na is a { rename: astr is astr }");
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Can't rename field to itself");
+  });
 });
