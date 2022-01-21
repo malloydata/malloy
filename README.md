@@ -59,7 +59,9 @@ Press "test" on the connection to confirm that you have successfully connected t
 
 ## 5. Write some Malloy!
 
-It may be helpful to check out one of the walkthroughs under Documentation below, or some of the [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
+It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started. 
+
+If you want to dive right in, create a file called `test.malloy` and try to create queries on your dataset - you can find examples [here](https://looker-open-source.github.io/malloy/documentation/language/basic.html)
 
 # Join the Community
 
