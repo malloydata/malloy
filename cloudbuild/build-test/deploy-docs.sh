@@ -7,7 +7,7 @@ nix-shell --pure --command "$(cat <<NIXCMD
   git pull
   git checkout docs-release
   git merge -m"update docs" main
-  yarn install
+  yarn install --frozen-lockfile
   bundle install
   yarn docs-build
   git status
