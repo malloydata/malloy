@@ -102,9 +102,7 @@ explore: wordle is from(words_and_letters->words_and_position){
 query:  wordle->word_score{
   where:
     1=1
-    -- and word ~ r'[A]'       -- YELLOW: has these characters
-    and word ~ r'.OI..'    -- GREEN/YELLOW: charaters in these spots/not spots
-    and not word ~ r'[SAUCEDLY]'   -- GRAY doesn't have these characters
+    and word ~ r'C'  -- YELLOW: has these characters
+    and word ~ r'...[^C]E'    -- GREEN/YELLOW: characters in these spots/not spots
+    and not word ~ r'[SLAT]'   -- GRAY doesn't have these characters
 }
-
-query: wordle->letter_position_and_words{where: letters.letter='Z'}
