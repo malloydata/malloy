@@ -323,10 +323,6 @@
     <p>The query below produces a table with the numbers 1 to 5</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: <span class="token type">numbers</span> <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
   <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
-
-  <span class="token comment">-- code to fake a cross join</span>
-  <span class="token keyword">primary_key</span>: a <span class="token comment">-- key to fake a cross join</span>
-  <span class="token keyword">dimension</span>: a <span class="token keyword">is</span> <span class="token string">'a'</span><span class="token punctuation">;</span>
 }
 <span class="token keyword">query</span>: <span class="token type">numbers</span><span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: num}</pre><div class="result-outer small">
     <div class="result-middle">
@@ -360,24 +356,24 @@
         </a>
       </h2>
     <p>The result is a table with nested data.  Each word contans a sub-table with a letter in each position.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: words_and_letters <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token comment">-- define the query</span>
+<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
   <span class="token comment">-- Cross join is missing at the moment</span>
-  <span class="token keyword">join</span>: <span class="token type">numbers</span> <span class="token keyword">on</span> a
-  <span class="token keyword">dimension</span>: a <span class="token keyword">is</span> <span class="token string">'a'</span> <span class="token comment">-- key to fake a cross join</span>
-
-  <span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: word
-    <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
-      <span class="token keyword">order_by</span>: <span class="token number">2</span>
-      <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-        letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
-        position <span class="token keyword">is</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num
-
-      <span class="token punctuation">]</span>
-    }
+  join_many: <span class="token type">numbers</span>
+  }
+<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: word
+  <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
+    <span class="token keyword">order_by</span>: <span class="token number">2</span>
+    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
+      letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+      position <span class="token keyword">is</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num
+    <span class="token punctuation">]</span>
   }
 }
-<span class="token keyword">query</span>: words_and_letters<span class="token operator">-</span><span class="token operator">></span>words_and_position</pre><div class="result-outer large">
+
+<span class="token comment">-- run it</span>
+<span class="token keyword">query</span>: <span class="token operator">-</span><span class="token operator">></span>words_and_position</pre><div class="result-outer large">
     <div class="result-middle">
       <div class="result-inner">
         <pre>[
@@ -757,31 +753,6 @@
     ]
   },
   {
-    "word": "ACE'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "C",
-        "position": 2
-      },
-      {
-        "letter": "E",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
-        "position": 5
-      }
-    ]
-  },
-  {
     "word": "ACHED",
     "letters": [
       {
@@ -952,31 +923,6 @@
       },
       {
         "letter": "D",
-        "position": 5
-      }
-    ]
-  },
-  {
-    "word": "ACT'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "C",
-        "position": 2
-      },
-      {
-        "letter": "T",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
         "position": 5
       }
     ]
@@ -1177,31 +1123,6 @@
       },
       {
         "letter": "T",
-        "position": 5
-      }
-    ]
-  },
-  {
-    "word": "ADO'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "D",
-        "position": 2
-      },
-      {
-        "letter": "O",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
         "position": 5
       }
     ]
@@ -1457,31 +1378,6 @@
     ]
   },
   {
-    "word": "AGE'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "G",
-        "position": 2
-      },
-      {
-        "letter": "E",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
-        "position": 5
-      }
-    ]
-  },
-  {
     "word": "AGENT",
     "letters": [
       {
@@ -1657,31 +1553,6 @@
     ]
   },
   {
-    "word": "AID'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "I",
-        "position": 2
-      },
-      {
-        "letter": "D",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
-        "position": 5
-      }
-    ]
-  },
-  {
     "word": "AIDED",
     "letters": [
       {
@@ -1757,31 +1628,6 @@
     ]
   },
   {
-    "word": "AIM'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "I",
-        "position": 2
-      },
-      {
-        "letter": "M",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
-        "position": 5
-      }
-    ]
-  },
-  {
     "word": "AIMED",
     "letters": [
       {
@@ -1802,56 +1648,6 @@
       },
       {
         "letter": "D",
-        "position": 5
-      }
-    ]
-  },
-  {
-    "word": "AIN'T",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "I",
-        "position": 2
-      },
-      {
-        "letter": "N",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "T",
-        "position": 5
-      }
-    ]
-  },
-  {
-    "word": "AIR'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "I",
-        "position": 2
-      },
-      {
-        "letter": "R",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
         "position": 5
       }
     ]
@@ -1952,31 +1748,6 @@
       },
       {
         "letter": "M",
-        "position": 5
-      }
-    ]
-  },
-  {
-    "word": "ALE'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "L",
-        "position": 2
-      },
-      {
-        "letter": "E",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
         "position": 5
       }
     ]
@@ -2202,31 +1973,6 @@
       },
       {
         "letter": "E",
-        "position": 5
-      }
-    ]
-  },
-  {
-    "word": "ALL'S",
-    "letters": [
-      {
-        "letter": "A",
-        "position": 1
-      },
-      {
-        "letter": "L",
-        "position": 2
-      },
-      {
-        "letter": "L",
-        "position": 3
-      },
-      {
-        "letter": "'",
-        "position": 4
-      },
-      {
-        "letter": "S",
         "position": 5
       }
     ]
@@ -2857,7 +2603,7 @@
     ]
   },
   {
-    "word": "AMP'S",
+    "word": "AMPLE",
     "letters": [
       {
         "letter": "A",
@@ -2872,11 +2618,261 @@
         "position": 3
       },
       {
-        "letter": "'",
+        "letter": "L",
         "position": 4
       },
       {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMPLY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "P",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMUCK",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "U",
+        "position": 3
+      },
+      {
+        "letter": "C",
+        "position": 4
+      },
+      {
+        "letter": "K",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "AMUSE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "M",
+        "position": 2
+      },
+      {
+        "letter": "U",
+        "position": 3
+      },
+      {
         "letter": "S",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANGEL",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "G",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "L",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANGER",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "G",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "R",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANGLE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "G",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANGRY",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "G",
+        "position": 3
+      },
+      {
+        "letter": "R",
+        "position": 4
+      },
+      {
+        "letter": "Y",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANGST",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "G",
+        "position": 3
+      },
+      {
+        "letter": "S",
+        "position": 4
+      },
+      {
+        "letter": "T",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANKLE",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "K",
+        "position": 3
+      },
+      {
+        "letter": "L",
+        "position": 4
+      },
+      {
+        "letter": "E",
+        "position": 5
+      }
+    ]
+  },
+  {
+    "word": "ANNEX",
+    "letters": [
+      {
+        "letter": "A",
+        "position": 1
+      },
+      {
+        "letter": "N",
+        "position": 2
+      },
+      {
+        "letter": "N",
+        "position": 3
+      },
+      {
+        "letter": "E",
+        "position": 4
+      },
+      {
+        "letter": "X",
         "position": 5
       }
     ]

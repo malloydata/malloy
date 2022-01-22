@@ -322,8 +322,7 @@
       </h1>
     <p><em>The following walk-through covers similar concepts to the <a href="https://github.com/looker-open-source/malloy/#quick-start-videos">Quick Start</a> videos in the README. You can find the complete source code for this model <a href="https://github.com/looker-open-source/malloy/blob/docs-release/samples/ecommerce/ecommerce.malloy">here</a>.</em></p>
 <p>Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.</p>
-<p>A couple of key concepts: Queries in Malloy start with a data source, specified either <code class="language-malloy"><span class="token keyword">explore</span> some_named_explore</code> or <code class="language-malloy"><span class="token keyword">explore</span> <span class="token string">'some_table'</span></code>, followed by piped transformations on that data. Fields used in queries may be named using the <code class="language-malloy"><span class="token keyword">is</span></code> keyword, which is similar to <code class="language-malloy"><span class="token keyword">AS</span></code> in SQL, but reversed.</p>
-<p>Let’s illustrate this by asking a straightforward question of a simple ecommerce dataset - how many order items have we sold, broken down by their current status?</p>
+<p>Let’s illustrate this by asking a straightforward question of a simple ecommerce dataset--how many order items have we sold, broken down by their current status?</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: status
   <span class="token keyword">aggregate</span>: order_item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
@@ -369,10 +368,7 @@
 <p><img src="https://user-images.githubusercontent.com/7178946/130125702-7049299a-fe0f-4f50-aaed-1c9016835da7.gif" alt="Kapture 2021-08-18 at 17 07 03"/></p>
 <p>Next question: In 2020, how much did we sell to users in each state? This requires filtering to the year 2020, excluding cancelled and returned orders, as well as joining in the users table.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">primary_key</span>: id
-  <span class="token keyword">join</span>: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span>{
-    <span class="token keyword">primary_key</span>: id
-  } <span class="token keyword">on</span> user_id
+  join_one: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span> <span class="token keyword">on</span> user_id <span class="token operator">=</span> users<span class="token punctuation">.</span>id
 }
 <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: <span class="token punctuation">[</span>
@@ -418,7 +414,7 @@
 
 <span class="token keyword">explore</span>: order_items <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: id
-  <span class="token keyword">join</span>: users <span class="token keyword">on</span> user_id
+  join_one: users with user_id
   <span class="token keyword">measure</span>: <span class="token punctuation">[</span>
     total_sales <span class="token keyword">is</span> sale_price<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span>

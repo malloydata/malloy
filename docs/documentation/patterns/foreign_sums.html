@@ -23,11 +23,11 @@ footer: /generated/footers/patterns/foreign_sums.html
 
 <span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: tail_num
-  <span class="token keyword">join</span>: aircraft_models <span class="token keyword">on</span> aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">join</span>: aircraft <span class="token keyword">on</span> tail_num
+  join_one: aircraft with tail_num
 }
 
 <span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {

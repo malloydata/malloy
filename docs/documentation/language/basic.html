@@ -2129,7 +2129,7 @@ percentage of airports compared to the whole state, taking advantage of the nest
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">join</span>: origin_airport <span class="token keyword">is</span> airports <span class="token keyword">on</span> origin
+  join_one: origin_airport <span class="token keyword">is</span> airports with origin
 }
 
 <span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{

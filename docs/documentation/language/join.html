@@ -29,7 +29,7 @@ footer: /generated/footers/language/join.html
 }
 
 <span class="token keyword">explore</span>: order_items <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">join</span>: users <span class="token keyword">on</span> user_id
+  join_one: users with user_id
 }</pre>
       <h2>
         <a id="naming-joined-explores" class="header-link anchor" href="#naming-joined-explores">
@@ -43,14 +43,14 @@ footer: /generated/footers/language/join.html
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">join</span>: carriers <span class="token keyword">on</span> carrier
+  join_one: carriers with carrier
 }</pre><p>To give the joined explore a different name within the source explore, specify the name of the explore being joined in between <code class="language-malloy"><span class="token keyword">join</span></code> and <code class="language-malloy"><span class="token keyword">on</span></code>.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: code
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">join</span>: origin_airport <span class="token keyword">is</span> airports <span class="token keyword">on</span> origin
+  join_one: origin_airport <span class="token keyword">is</span> airports with origin
 }</pre>
       <h2>
         <a id="inlining-joins" class="header-link anchor" href="#inlining-joins">
@@ -60,7 +60,7 @@ footer: /generated/footers/language/join.html
     <p>Explores do not need to be named before they are used in a join.</p>
 <pre class="language-malloy">
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">join</span>: carriers <span class="token keyword">is</span>  <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span>{<span class="token keyword">primary_key</span>: code} <span class="token keyword">on</span> carrier
+  join_one: carriers <span class="token keyword">is</span>  <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span>{<span class="token keyword">primary_key</span>: code} with carrier
 }</pre>
       <h2>
         <a id="using-fields-in-joined-explores" class="header-link anchor" href="#using-fields-in-joined-explores">
@@ -157,7 +157,7 @@ retained.</p>
 <span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: tail_num
   <span class="token keyword">measure</span>: aircraft_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">join</span>: aircraft_models <span class="token keyword">on</span> aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
 }
 
 <span class="token comment">/* The airports that the aircraft fly to and from */</span>
@@ -167,9 +167,9 @@ retained.</p>
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">join</span>: origin_airport <span class="token keyword">is</span> airports <span class="token keyword">on</span> origin
-  <span class="token keyword">join</span>: destination_airport <span class="token keyword">is</span> airports <span class="token keyword">on</span> destination
-  <span class="token keyword">join</span>: aircraft <span class="token keyword">on</span> tail_num
+  join_one: origin_airport <span class="token keyword">is</span> airports with origin
+  join_one: destination_airport <span class="token keyword">is</span> airports with destination
+  join_one: aircraft with tail_num
 }
 
 <span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{

@@ -299,7 +299,7 @@ have a primary key specified.</p>
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">join</span>: carriers <span class="token keyword">on</span> carrier
+  join_one: carriers with carrier
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
@@ -364,7 +364,7 @@ new explore. This is useful when the original name is undescriptive or has a dif
   <span class="token keyword">rename</span>: facility_type <span class="token keyword">is</span> fac_type
   <span class="token keyword">rename</span>: origin_code <span class="token keyword">is</span> origin
 
-  <span class="token keyword">join</span>: origin <span class="token keyword">is</span> airports <span class="token keyword">on</span> origin_code
+  join_one: origin <span class="token keyword">is</span> airports with origin_code
 }</pre>
       <h3>
         <a id="limiting-access-to-fields" class="header-link anchor" href="#limiting-access-to-fields">
