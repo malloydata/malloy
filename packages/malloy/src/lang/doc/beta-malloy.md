@@ -45,7 +45,7 @@ as in these statements ...
 
     explore: flights is table('malloydata.faa.flights') { primary key: id }
 
-    join: things is thing_table on thing_id
+    join_one: things is thing_table with thing_id
 
     primary_key: id
 
@@ -77,13 +77,13 @@ As an example ... this ...
 
     explore: carriers is table('malloydata.faa.carriers') { primary key: id }
     explore: flights is table('malloydata.faa.flights') {
-      join: carrier is carriers on carrier_id
+      join_one: carrier is carriers with carrier_id
     }
 
 ... can be written without having to create an explore for carriers by writing the enhancement inline in the join ...
 
     explore: flights is table('malloydata.faa.flights') {
-      join: carrier is 'malloydata.faa.carriers' { primary key: id } on carrier_id
+      join_one: carrier is table('malloydata.faa.carriers') on carrier_id = carrier.id
     }
 
 This is similar to how alpha-malloy works, except this syntax is more regular and less dependant on special case exceptions in the grammar.
@@ -165,17 +165,6 @@ The "_exploreSpec `->` _queryOperationSpec_" describes a query. An explore spec 
 
 Like the pipelines of alpha Malloy, a query can be a chain of operations.
 
-```
-flights -> by_carrier -> {
-    // put the carrier code
-    join: carriers { primary_key: nickname } on nickname
-    project {
-        *,
-        code is carrier.code
-    }
-}
-```
-
 To summarize, here are some sample beta statements.
 
 All queries start with either
@@ -254,7 +243,7 @@ would be legal, for example:
     -- given this explore ...
     explore: users is table('schema.users') {
         ...
-        join: orders on orders.user_id
+        join_one: orders with orders.user_id
         query: user_order_facts is {
             group by: user_id
             aggregate:

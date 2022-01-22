@@ -3,9 +3,7 @@ _The following walk-through covers similar concepts to the [Quick Start](https:/
 
 Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.
 
-A couple of key concepts: Queries in Malloy start with a data source, specified either `explore some_named_explore` or `explore 'some_table'`, followed by piped transformations on that data. Fields used in queries may be named using the `is` keyword, which is similar to `AS` in SQL, but reversed.
-
-Let’s illustrate this by asking a straightforward question of a simple ecommerce dataset - how many order items have we sold, broken down by their current status?
+Let’s illustrate this by asking a straightforward question of a simple ecommerce dataset--how many order items have we sold, broken down by their current status?
 
 ```malloy
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
@@ -37,10 +35,7 @@ Next question: In 2020, how much did we sell to users in each state? This requir
 ```malloy
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
 query: table('malloy-data.ecomm.order_items'){
-  primary_key: id
-  join: users is table('malloy-data.ecomm.users'){
-    primary_key: id
-  } on user_id
+  join_one: user is table('malloy-data.ecomm.users') on user_id = user.id
 }
 -> {
   where: [
@@ -59,7 +54,7 @@ explore: users is table('malloy-data.ecomm.users'){
 
 explore: order_items is table('malloy-data.ecomm.order_items'){
   primary_key: id
-  join: users on user_id
+  join_one: users with user_id
   measure: [
     total_sales is sale_price.sum()
     order_count is count(distinct order_id)
