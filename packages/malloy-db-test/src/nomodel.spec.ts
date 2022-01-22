@@ -101,8 +101,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
-
     expect(result.data.value[0].avg_seats).toBe(7);
     expect(result.data.value[0].avg_year).toBe(1969);
   });
