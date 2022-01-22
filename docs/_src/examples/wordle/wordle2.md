@@ -16,7 +16,7 @@ explore: numbers is table('malloy-data.malloytest.numbers'){
 -- Build a new table of word and each letter in position
 query: words_and_position is from(words->five_letter_words){
   -- Cross join is missing at the moment
-  join_many: numbers
+  join_cross: numbers
   }
 ->{
   group_by: word
