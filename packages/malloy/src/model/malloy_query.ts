@@ -12,7 +12,7 @@
  */
 
 import * as crypto from "crypto";
-import { cloneDeep, upperCase } from "lodash";
+import { cloneDeep } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import {
@@ -1075,22 +1075,25 @@ class JoinInstance {
   parentRelationship(): "root" | JoinRelationship {
     if (this.queryStruct.parent === undefined) {
       return "root";
-    } else if (
-      this.queryStruct.fieldDef.structRelationship.type === "foreignKey"
-    ) {
-      return "many_to_one";
-    } else if (this.queryStruct.fieldDef.structRelationship.type === "nested") {
-      return "one_to_many";
-    } else if (this.queryStruct.fieldDef.structRelationship.type === "inline") {
-      return "one_to_one";
-    } else if (
-      this.queryStruct.fieldDef.structRelationship.type === "condition"
-    ) {
-      return this.queryStruct.fieldDef.structRelationship.joinRelationship;
     }
-    throw new Error(
-      `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
-    );
+    switch (this.queryStruct.fieldDef.structRelationship.type) {
+      case "foreignKey":
+        return "many_to_one";
+      case "nested":
+        return "one_to_many";
+      case "inline":
+        return "one_to_one";
+      case "condition":
+        return this.queryStruct.fieldDef.structRelationship.many
+          ? "one_to_many"
+          : "many_to_one";
+      case "crossJoin":
+        return "one_to_many";
+      default:
+        throw new Error(
+          `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
+        );
+    }
   }
 
   // postgres unnest needs to know the names of the physical fields.
@@ -1381,12 +1384,14 @@ class QueryQuery extends QueryField {
         for (const filterCond of expr.filterList) {
           this.addDependantExpr(resultStruct, context, filterCond.expression);
         }
-      } else if (isAsymmetricFragment(expr)) {
-        if (expr.structPath) {
-          this.addDependantPath(resultStruct, context, expr.structPath, true);
-        } else {
-          // we are doing a sum in the root.  It may need symetric aggregates
-          resultStruct.addStructToJoin(context, true);
+      } else if (isAggregateFragment(expr)) {
+        if (isAsymmetricFragment(expr)) {
+          if (expr.structPath) {
+            this.addDependantPath(resultStruct, context, expr.structPath, true);
+          } else {
+            // we are doing a sum in the root.  It may need symetric aggregates
+            resultStruct.addStructToJoin(context, true);
+          }
         }
         this.addDependantExpr(resultStruct, context, expr.e);
       }
@@ -1695,11 +1700,15 @@ class QueryQuery extends QueryField {
     let s = "";
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
-    const structSQL = qs.structSourceSQL(stageWriter);
+    let structSQL = qs.structSourceSQL(stageWriter);
     if (
       structRelationship.type === "foreignKey" ||
-      structRelationship.type === "condition"
+      structRelationship.type === "condition" ||
+      structRelationship.type === "crossJoin"
     ) {
+      if (ji.makeUniqueKey) {
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+      }
       let onCondition = "";
       if (qs.parent === undefined) {
         throw new Error("Expected joined struct to have a parent.");
@@ -1717,16 +1726,17 @@ class QueryQuery extends QueryField {
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
         onCondition = `${fkSQL} = ${pkSQL}`;
-      } else {
-        // type == "conditionOn"
+      } else if (structRelationship.type == "condition") {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
             name: "ignoreme",
-            e: structRelationship.onExpression.e,
+            e: structRelationship.onExpression,
           },
           qs.parent
         ).generateExpression(this.rootResult);
+      } else if (structRelationship.type === "crossJoin") {
+        onCondition = "1=1";
       }
       let filters = "";
       let conditions = undefined;
@@ -1739,9 +1749,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `${upperCase(
-          structRelationship.joinType || "left"
-        )} JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
@@ -1803,7 +1811,6 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
-        // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;

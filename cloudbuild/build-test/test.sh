@@ -6,7 +6,9 @@ nix-shell --pure --command "$(cat <<NIXCMD
   export PGDATABASE=postgres
   export PGUSER=673673622326@cloudbuild
   cd /workspace
-  yarn install
+  yarn install --frozen-lockfile
+  yarn lint
+  yarn build
   yarn test
 NIXCMD
 )"

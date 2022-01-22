@@ -14,7 +14,7 @@ explore: users is table('malloy-data.ecomm.users'){
 }
 
 explore: order_items is table('malloy-data.ecomm.order_items'){
-  join: users on user_id
+  join_one: users with user_id
 }
 ```
 
@@ -29,7 +29,7 @@ explore: carriers is table('malloy-data.faa.carriers') {
 }
 
 explore: flights is table('malloy-data.faa.flights'){
-  join: carriers on carrier
+  join_one: carriers with carrier
 }
 ```
 
@@ -41,7 +41,7 @@ explore: airports is table('malloy-data.faa.airports') {
 }
 
 explore: flights is table('malloy-data.faa.flights'){
-  join: origin_airport is airports on origin
+  join_one: origin_airport is airports with origin
 }
 ```
 
@@ -52,7 +52,7 @@ Explores do not need to be named before they are used in a join.
 ```malloy
 
 explore: flights is table('malloy-data.faa.flights'){
-  join: carriers is  table('malloy-data.faa.carriers'){primary_key: code} on carrier
+  join_one: carriers is  table('malloy-data.faa.carriers'){primary_key: code} with carrier
 }
 ```
 
@@ -98,7 +98,7 @@ explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
 explore: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
-  join: aircraft_models on aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
 }
 
 /* The airports that the aircraft fly to and from */
@@ -108,9 +108,9 @@ explore: airports is table('malloy-data.faa.airports') {
 }
 
 explore: flights is table('malloy-data.faa.flights') {
-  join: origin_airport is airports on origin
-  join: destination_airport is airports on destination
-  join: aircraft on tail_num
+  join_one: origin_airport is airports with origin
+  join_one: destination_airport is airports with destination
+  join_one: aircraft with tail_num
 }
 
 query: flights->{

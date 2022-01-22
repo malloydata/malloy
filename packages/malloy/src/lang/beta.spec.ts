@@ -286,20 +286,40 @@ describe("explore properties", () => {
       }
     `)
   );
-  test("simple join", modelOK("explore: nab is a { join: b on astr }"));
-  test("inverse join", modelOK("explore: nab is a { join: b on b.astr }"));
-  test("is join", modelOK("explore: nab is a { join: nb is b on astr }"));
-  test(
-    "multiple joins",
-    modelOK(`
-      explore: nab is a {
-        join: [
-          b on astr,
-          br is b on b.astr
-        ]
-      }
-    `)
-  );
+  describe("joins", () => {
+    test("with", modelOK("explore: x is a { join_one: b with astr }"));
+    test("with", modelOK("explore: x is a { join_one: y is b with astr }"));
+    test("one on", modelOK("explore: x is a { join_one: b on astr = b.astr }"));
+    test(
+      "one is on",
+      modelOK("explore: x is a { join_one: y is b on astr = y.astr }")
+    );
+    test(
+      "many on",
+      modelOK("explore: nab is a { join_many: b on astr = b.astr }")
+    );
+    test(
+      "many is on",
+      modelOK("explore: y is a { join_many: x is b on astr = x.astr }")
+    );
+    test("cross", modelOK("explore: nab is a { join_many: b }"));
+    test("cross is", modelOK("explore: nab is a { join_many: xb is b }"));
+    test(
+      "multiple joins",
+      modelOK(`
+        explore: nab is a {
+          join_one: [
+            b with astr,
+            br is b with astr
+          ]
+          join_many: [
+            bm is b on bm.astr = astr,
+            bx is b
+          ]
+        }
+      `)
+    );
+  });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
   test("accept single", modelOK("explore: c is a { accept: astr }"));
@@ -575,12 +595,19 @@ describe("error handling", () => {
 
   test("join reference before definition", () => {
     const m = new BetaModel(`
-    explore: newAB is a { join: newB is bb on astring }
+    explore: newAB is a { join_one: newB is bb on astring }
     explore: newB is b
     `);
     expect(m).not.toCompile();
     const errList = m.errors().errors;
     const firstError = errList[0];
     expect(firstError.message).toBe("Undefined data source 'bb'");
+  });
+  test("non-rename rename", () => {
+    const m = new BetaModel("explore: na is a { rename: astr is astr }");
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("Can't rename field to itself");
   });
 });
