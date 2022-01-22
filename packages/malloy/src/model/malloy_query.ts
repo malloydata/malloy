@@ -12,7 +12,7 @@
  */
 
 import * as crypto from "crypto";
-import { cloneDeep, upperCase } from "lodash";
+import { cloneDeep } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import {
@@ -1085,8 +1085,8 @@ class JoinInstance {
         return "one_to_one";
       case "condition":
         return this.queryStruct.fieldDef.structRelationship.many
-          ? "many_to_one"
-          : "one_to_many";
+          ? "one_to_many"
+          : "many_to_one";
       case "crossJoin":
         return "one_to_many";
       default:
@@ -1698,12 +1698,15 @@ class QueryQuery extends QueryField {
     let s = "";
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
-    const structSQL = qs.structSourceSQL(stageWriter);
+    let structSQL = qs.structSourceSQL(stageWriter);
     if (
       structRelationship.type === "foreignKey" ||
       structRelationship.type === "condition" ||
       structRelationship.type === "crossJoin"
     ) {
+      if (ji.makeUniqueKey) {
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+      }
       let onCondition = "";
       if (qs.parent === undefined) {
         throw new Error("Expected joined struct to have a parent.");
@@ -1720,9 +1723,9 @@ class QueryQuery extends QueryField {
         }
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
-        onCondition = `ON ${fkSQL} = ${pkSQL}`;
+        onCondition = `${fkSQL} = ${pkSQL}`;
       } else if (structRelationship.type == "condition") {
-        const exprStr = new QueryFieldBoolean(
+        onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
             name: "ignoreme",
@@ -1730,9 +1733,8 @@ class QueryQuery extends QueryField {
           },
           qs.parent
         ).generateExpression(this.rootResult);
-        onCondition = `ON ${exprStr}`;
       } else if (structRelationship.type === "crossJoin") {
-        onCondition = "ON 1=1";
+        onCondition = "1=1";
       }
       let filters = "";
       let conditions = undefined;
@@ -1745,7 +1747,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ${onCondition}${filters}\n`;
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
@@ -1807,7 +1809,6 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
-        // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;

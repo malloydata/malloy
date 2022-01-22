@@ -105,4 +105,34 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
     expect(result.data.value[0].f_sum2).toBe(60462);
   });
+  it(`join_many condition no primary key - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.airports'){}
+      explore: b is table('malloytest.state_facts') {
+        join_many: a on state=a.state
+      }
+      query: b->{aggregate: c is airport_count.sum()}
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(19701);
+  });
+
+  it(`join_one condition no primary key - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.state_facts'){}
+      explore: b is table('malloytest.airports') {
+        join_one: a on state=a.state
+      }
+      query: b->{aggregate: c is a.airport_count.sum()}
+
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(19701);
+  });
 });

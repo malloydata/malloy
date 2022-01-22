@@ -564,7 +564,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       explore: f is table('malloytest.flights'){
         join_one: a is table('malloytest.aircraft') {
-          join_one: state_facts is table('malloytest.state_facts') on state = state_facts.state
+          join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state 
         } on tail_num = a.tail_num
       }
 
