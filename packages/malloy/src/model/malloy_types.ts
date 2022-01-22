@@ -408,6 +408,7 @@ export interface JoinLeft {
 
 export interface JoinCross {
   type: "crossJoin";
+  onExpression?: Expr;
 }
 
 /** types of joins. */
