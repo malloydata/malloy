@@ -46,7 +46,7 @@ query: wordle->find_words {
 }
 ```
 
-Another tie, another chance to guess whether or not the creators are into cooking. We can use our same letter commonality tie-breaker here; maybe today we'll look at it for first position.
+Another tie, today with a chance to guess just how into cooking the Wordle creators are. We can use our same letter commonality tie-breaker here; maybe this time we'll look at letter commonality for first position.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
@@ -80,7 +80,7 @@ query: wordle->find_words {
 
 <img src="/malloy/img/wordle217d.png" style="width: 200px">
 
-And there it is! We'll go ahead and call this one 3.5 again based on the coin toss round.
+There it is, and our solution also happens to describe our reaction after missing that coin-toss! We'll go ahead and call this one 3.5 again based on the last round.
 
 [⬅️ Previous Puzzle](wordle216.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
