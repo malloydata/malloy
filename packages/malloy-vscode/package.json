@@ -7,6 +7,14 @@
   "engines": {
     "vscode": "^1.56.0"
   },
+  "scripts": {
+    "vscode:prepublish": "yarn licenses generate-disclaimer --prod > third_party_notices.txt && webpack --mode production",
+    "webpack": "webpack --mode development",
+    "webpack-dev": "webpack --mode development --watch",
+    "build": "yarn tsc --build && yarn package",
+    "test": "jest --config=../../jest.config.js",
+    "package": "yarn vsce package --yarn --githubBranch=main --no-git-tag-version --no-update-package-json"
+  },
   "icon": "logo.png",
   "license": "GPL-2.0",
   "categories": [
@@ -216,14 +224,6 @@
         }
       }
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "yarn licenses generate-disclaimer --prod > third_party_notices.txt && webpack --mode production",
-    "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch",
-    "build": "yarn tsc --build && yarn package",
-    "test": "jest --config=../../jest.config.js",
-    "package": "yarn vsce package --yarn --githubBranch=main"
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
