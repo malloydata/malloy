@@ -15,6 +15,9 @@
       "path": "../malloy-db-bigquery"
     },
     {
+      "path": "../malloy-db-postgres"
+    },
+    {
       "path": "../malloy-render"
     }
   ]
