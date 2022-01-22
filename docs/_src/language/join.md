@@ -1,12 +1,40 @@
 # Joins
 
-Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table and a foreign key in the [explore](explore.md) being joined to.
+Joins in malloy are different than SQL joins.  Malloy retains the graph nature of the the data relationships
+while SQL flattens them all into a single table space.
+
+Malloy's [aggregate calculateions](aggregates.md) locality of computation meaning calculations always work regardless of join pattern.
+
+Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).
+
+In Malloy syntaxes for join are:
+
+```
+    join_one: <explore-name> [is <explore-exp>] with <foreign_key>
+    join_one: <explore-name> [is <explore-exp>] on <boolean expression>
+    join_many: <explore-name> [is <explore-exp>] on <boolean expression>
+    join_cross: <explore-name> [is <explore-exp>] [on <boolean expression>]
+```
+
+`join_one:` - the table we are joining has one row for each row in the source table.
+
+`join_many:` - the table we are joining has many rows for each row in the source table
+
+`join_cross:` - the join is a cross product and there will be many rows in each side of the join.
+
+
+
+Malloy's jons are left outer joins by default.
 
 ## Join Types
 
 ### Foreign Key to Primary Key
 
-To join a foreign key of the source explore to the `primary key` of a joined explore, reference the foreign key by name in the `on` clause.
+The easiest, most error proof way to perform a joins is with `join_one:/with`.  The basic syntax is:
+
+`join_one: <explore> with <foreign_key>`
+
+To join a foreign key of the source explore to the `primary key` of a joined explore, reference the foreign key by name in the `with` clause.
 
 ```malloy
 explore: users is table('malloy-data.ecomm.users'){
@@ -124,3 +152,13 @@ query: flights->{
 ```
 
 For more examples and how to reason about aggregation across joins, review the [Aggregates](aggregates.md) section.
+
+## SQL Joins
+
+Inner join are joins where the the joind table has rows.  The example below, suppose we only want users that have at least one row in the orders table.  The following is the equivalent of a SQL  INNER JOIN.
+
+```malloy
+explore users is table('users') {
+  join_many: orders is table('orders') on id=orders.user_id and orders.user_id != null
+}
+```
