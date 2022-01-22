@@ -1384,12 +1384,14 @@ class QueryQuery extends QueryField {
         for (const filterCond of expr.filterList) {
           this.addDependantExpr(resultStruct, context, filterCond.expression);
         }
-      } else if (isAsymmetricFragment(expr)) {
-        if (expr.structPath) {
-          this.addDependantPath(resultStruct, context, expr.structPath, true);
-        } else {
-          // we are doing a sum in the root.  It may need symetric aggregates
-          resultStruct.addStructToJoin(context, true);
+      } else if (isAggregateFragment(expr)) {
+        if (isAsymmetricFragment(expr)) {
+          if (expr.structPath) {
+            this.addDependantPath(resultStruct, context, expr.structPath, true);
+          } else {
+            // we are doing a sum in the root.  It may need symetric aggregates
+            resultStruct.addStructToJoin(context, true);
+          }
         }
         this.addDependantExpr(resultStruct, context, expr.e);
       }

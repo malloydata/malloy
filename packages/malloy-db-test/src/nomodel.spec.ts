@@ -91,19 +91,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
       explore: a is table('malloytest.aircraft'){
-        measure: avg_year is avg(year_built)
+        measure: avg_year is floor(avg(year_built))
       }
       explore: m is table('malloytest.aircraft_models'){
         join_many: a on a.aircraft_model_code=aircraft_model_code
-        measure: avg_seats is avg(seats)
+        measure: avg_seats is floor(avg(seats))
       }
       query: m->{aggregate: [avg_seats, a.avg_year]}
       `
       )
       .run();
-    console.log(result.data.toObject());
+    console.log(result.sql);
 
-    expect(result.data.value[0].f_sum2).toBe(60462);
+    expect(result.data.value[0].avg_seats).toBe(7);
+    expect(result.data.value[0].avg_year).toBe(1969);
   });
   it(`join_many condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
@@ -134,5 +135,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.data.value[0].c).toBe(19701);
+  });
+  it(`join_many cross from  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.state_facts')
+      explore: f is a{
+        join_many: a
+      }
+      query: f->{aggregate:[c is count(distinct concat(state,a.state))]}
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(51 * 51);
   });
 });

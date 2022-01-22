@@ -271,20 +271,5 @@ describe("join expression tests", () => {
       console.log(result.data.toObject());
       expect(result.data.value[0].f_sum2).toBe(60462);
     });
-
-    it(`model: join_many cross - ${database}`, async () => {
-      const result = await model
-        .loadQuery(
-          `
-        explore: a is table('malloytest.state_facts'){}
-        explore: b is a {
-          join_many: a
-        }
-        query: b->{aggregate: c is count(distinct concat(state,a.state))}
-        `
-        )
-        .run();
-      expect(result.data.value[0].c).toBe(51 * 51);
-    });
   });
 });
