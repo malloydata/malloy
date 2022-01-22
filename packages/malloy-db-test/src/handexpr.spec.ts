@@ -548,7 +548,7 @@ export const joinModelAircraftHandStructDef: StructDef = {
       ...aircraftHandBase,
       structRelationship: {
         type: "condition",
-        many: false,
+        many: true,
         onExpression: [
           { type: "field", path: "aircraft_model_code" },
           "=",
@@ -633,7 +633,7 @@ it(`hand join symmetric agg - ${databaseName}`, async () => {
     })
     .run();
   // await bqCompile(databaseName, result.sql);
-  // console.log(result.sql);
+  console.log(result.sql);
   // console.log(result.data.value);
   expect(result.data.value[0].total_seats).toBe(452415);
   expect(result.data.value[0].aircraft_count).toBe(62644);
