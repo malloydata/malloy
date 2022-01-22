@@ -40,7 +40,7 @@ The result is a table with nested data.  Each word contans a sub-table with a le
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"json","dataStyles":{"letters":{"renderer":"list_detail"}}}
 explore: words_and_letters is from(words->five_letter_words){
   -- Cross join is missing at the moment
-  join: numbers on a
+  join_one: numbers with a
   dimension: a is 'a' -- key to fake a cross join
 
   query: words_and_position is {

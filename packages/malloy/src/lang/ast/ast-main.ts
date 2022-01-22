@@ -628,8 +628,16 @@ export class QuerySource extends Mallobj {
   }
 }
 
-export class Join extends MalloyElement {
-  elementType = "join";
+export abstract class Join extends MalloyElement {
+  abstract name: string;
+  abstract structDef(): model.StructDef;
+  onExpression(_outer: FieldSpace): model.Expr | undefined {
+    return undefined;
+  }
+}
+
+export class KeyJoin extends Join {
+  elementType = "joinOnKey";
   constructor(
     readonly name: string,
     readonly source: Mallobj,
@@ -646,6 +654,71 @@ export class Join extends MalloyElement {
         type: "foreignKey",
         foreignKey: this.key,
       },
+    };
+    if (sourceDef.structSource.type === "query") {
+      // the name from query does not need to be preserved
+      joinStruct.name = this.name;
+    } else {
+      joinStruct.as = this.name;
+    }
+
+    return joinStruct;
+  }
+}
+
+export class ExpressionJoin extends Join {
+  elementType = "joinOnExpr";
+  many = true;
+  outer?: model.StructDef;
+  constructor(
+    readonly name: string,
+    readonly source: Mallobj,
+    readonly expr: ExpressionDef
+  ) {
+    super({ source, expr });
+  }
+
+  onExpression(outer: FieldSpace): model.Expr | undefined {
+    const exprX = this.expr.getExpression(outer);
+    if (exprX.dataType !== "boolean") {
+      this.log("join conditions must be boolean expressions");
+      return undefined;
+    }
+    const ret = compressExpr(exprX.value);
+    return ret;
+  }
+
+  structDef(): model.StructDef {
+    const sourceDef = this.source.structDef();
+
+    const joinStruct: model.StructDef = {
+      ...sourceDef,
+      structRelationship: {
+        type: "condition",
+        onExpression: [],
+        many: this.many,
+      },
+    };
+    if (sourceDef.structSource.type === "query") {
+      // the name from query does not need to be preserved
+      joinStruct.name = this.name;
+    } else {
+      joinStruct.as = this.name;
+    }
+    return joinStruct;
+  }
+}
+
+export class CrossJoin extends Join {
+  elementType = "crossJoin";
+  constructor(readonly name: string, readonly source: Mallobj) {
+    super({ source });
+  }
+  structDef(): model.StructDef {
+    const sourceDef = this.source.structDef();
+    const joinStruct: model.StructDef = {
+      ...sourceDef,
+      structRelationship: { type: "crossJoin" },
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved

@@ -808,8 +808,9 @@ export enum SourceRelationship {
    */
   Nested = "nested",
 
-  // TODO document this
+  // TODO document these
   Condition = "condition",
+  Cross = "cross",
 
   /**
    * The `Explore` is the base table.
@@ -1000,6 +1001,8 @@ export class Explore extends Entity {
     switch (this.structDef.structRelationship.type) {
       case "condition":
         return SourceRelationship.Condition;
+      case "crossJoin":
+        return SourceRelationship.Cross;
       case "foreignKey":
         return SourceRelationship.ForeignKey;
       case "inline":

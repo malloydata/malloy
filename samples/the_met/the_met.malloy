@@ -4,7 +4,7 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
   -- eliminate some bad data
   where: object_begin_date < 2031 & > -8000
 
-  join: images is table('bigquery-public-data.the_met.images'){ primary_key: object_id} on object_id
+  join_one: images is table('bigquery-public-data.the_met.images'){ primary_key: object_id} with object_id
 
   measure: [
     object_count is count()
@@ -58,8 +58,8 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
     aggregate: object_count
   }
 
-  query: random_image_list is { 
-    limit:20 
+  query: random_image_list is {
+    limit:20
     where: image_thumb != null
     group_by: [
       image_thumb
@@ -77,10 +77,10 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
       nest: by_object_era
       nest: by_classification
       nest:random_image_list
-    }  
+    }
   }
 
-  query: department_dashboard is { 
+  query: department_dashboard is {
     where: department= 'Photographs' and object_begin_date > 1900
     aggregate: [
       artist_count is count(distinct artist_display_name)

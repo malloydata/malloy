@@ -35,10 +35,7 @@ Next question: In 2020, how much did we sell to users in each state? This requir
 ```malloy
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
 query: table('malloy-data.ecomm.order_items'){
-  primary_key: id
-  join: users is table('malloy-data.ecomm.users'){
-    primary_key: id
-  } on user_id
+  join_one: user is table('malloy-data.ecomm.users') on user_id = user.id
 }
 -> {
   where: [
@@ -57,7 +54,7 @@ explore: users is table('malloy-data.ecomm.users'){
 
 explore: order_items is table('malloy-data.ecomm.order_items'){
   primary_key: id
-  join: users on user_id
+  join_one: users with user_id
   measure: [
     total_sales is sale_price.sum()
     order_count is count(distinct order_id)
