@@ -234,7 +234,6 @@ describe("join expression tests", () => {
       expect(result.data.value[0].f_sum2).toBe(60462);
     });
 
-
     it(`model: join_many - ${database}`, async () => {
       const result = await model
         .loadQuery(
