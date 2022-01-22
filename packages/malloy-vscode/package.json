@@ -3,9 +3,9 @@
   "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "engines": {
-    "vscode": "^1.56.0"
+    "vscode": "^1.63.0"
   },
   "scripts": {
     "vscode:prepublish": "yarn licenses generate-disclaimer --prod > third_party_notices.txt && webpack --mode production",
