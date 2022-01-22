@@ -18,8 +18,8 @@ explore: airports is table('malloy-data.faa.airports'){}
 
 explore: flights is table('malloy-data.faa.flights'){
   ...
-  join: origin is airports on origin_code
-  join: destination is airports on destination_code
+  join_one: origin is airports with origin_code
+  join_one: destination is airports with destination_code
   ...
 );
 ```

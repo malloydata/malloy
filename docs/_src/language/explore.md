@@ -180,7 +180,7 @@ explore: carriers is table('malloy-data.faa.carriers'){
 }
 
 explore: flights is table('malloy-data.faa.flights'){
-  join: carriers on carrier
+  join_one: carriers with carrier
   measure: flight_count is count()
 }
 ```
@@ -229,7 +229,7 @@ explore flights is table('malloy-data.faa.flights'){
   rename: facility_type is fac_type
   rename: origin_code is origin
 
-  join: origin is airports on origin_code
+  join_one: origin is airports with origin_code
 }
 ```
 

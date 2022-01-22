@@ -389,7 +389,6 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: "turtle";
 }
 
-type JoinType = "left" | "right" | "inner" | "outer";
 export type JoinRelationship =
   | "one_to_one"
   | "one_to_many"
@@ -399,21 +398,24 @@ export type JoinRelationship =
 export interface JoinForeignKey {
   type: "foreignKey";
   foreignKey: FieldRef;
-  joinType?: JoinType;
 }
 
-export interface JoinCondition {
+export interface JoinLeft {
   type: "condition";
-  onExpression: Expression; // must be a boolean expression
-  joinType?: JoinType;
-  joinRelationship: JoinRelationship;
+  onExpression: Expr; // must be a boolean expression
+  many: boolean;
+}
+
+export interface JoinCross {
+  type: "crossJoin";
 }
 
 /** types of joins. */
 export type StructRelationship =
   | { type: "basetable"; connectionName: string }
   | JoinForeignKey
-  | JoinCondition
+  | JoinLeft
+  | JoinCross
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
 

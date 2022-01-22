@@ -15,8 +15,8 @@ explore: flights is table('malloy-data.faa.flights') {
   rename: origin_code is origin
   rename: destination_code is destination
 
-  join: origin is airports on origin_code
-  join: destination is airports on destination_code
+  join_one: origin is airports with origin_code
+  join_one: destination is airports with destination_code
 
   measure: flight_count is count()
 
@@ -74,7 +74,7 @@ query: flights->{
   nest: [
     ord_segment_map is routes_map {where: origin.code: 'ORD'}
     sfo_segment_map is routes_map {where: origin.code: 'SFO'}
-    jfk_segment_map is routes_map {where: origin.code: 'JFK'} 
+    jfk_segment_map is routes_map {where: origin.code: 'JFK'}
   ]
 }
 

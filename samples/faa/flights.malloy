@@ -19,7 +19,7 @@ explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
 explore: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
-  join: aircraft_models on aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
 }
 
 explore: aircraft_facts is from(
@@ -40,11 +40,11 @@ explore: flights is table('malloy-data.faa.flights') {
   rename: origin_code is origin
   rename: destination_code is destination
 
-  join: carriers on carrier
-  join: origin is airports on origin_code
-  join: destination is airports on destination_code
-  join: aircraft on tail_num
-  join: aircraft_facts on tail_num
+  join_one: carriers with carrier
+  join_one: origin is airports with origin_code
+  join_one: destination is airports with destination_code
+  join_one: aircraft with tail_num
+  join_one: aircraft_facts with tail_num
 
   measure: [
     flight_count is count()
