@@ -3,7 +3,7 @@
 Joins in malloy are different than SQL joins.  Malloy retains the graph nature of the the data relationships
 while SQL flattens them all into a single table space.
 
-Malloy's [aggregate calculateions](aggregates.md) locality of computation meaning calculations always work regardless of join pattern.
+[Aggregate calculations](aggregates.md) locality of computation meaning calculations always work regardless of join pattern.
 
 Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).
 
@@ -23,14 +23,13 @@ In Malloy syntaxes for join are:
 `join_cross:` - the join is a cross product and there will be many rows in each side of the join.
 
 
-
-Malloy's jons are left outer joins by default.
+Malloy's joins are left outer joins by default.
 
 ## Join Types
 
 ### Foreign Key to Primary Key
 
-The easiest, most error proof way to perform a joins is with `join_one:/with`.  The basic syntax is:
+The easiest, most error proof way to perform a join is with `join_one:/with`.  The basic syntax is:
 
 `join_one: <explore> with <foreign_key>`
 
@@ -48,7 +47,8 @@ explore: order_items is table('malloy-data.ecomm.order_items'){
 
 ## Naming Joined Explores
 
-To preserve the name of the explore being joined in, use `join on`.
+If no name is specified with `is`, the name of the join will be the name of the
+explore being joined.
 
 ```malloy
 
@@ -61,7 +61,7 @@ explore: flights is table('malloy-data.faa.flights'){
 }
 ```
 
-To give the joined explore a different name within the source explore, specify the name of the explore being joined in between `join` and `on`.
+To give the joined explore a different name within the source explore, use `is` to specify the name of the explore.
 
 ```malloy
 explore: airports is table('malloy-data.faa.airports') {
@@ -75,7 +75,8 @@ explore: flights is table('malloy-data.faa.flights'){
 
 ## Inlining Joins
 
-Explores do not need to be named before they are used in a join.
+Explores do not need to be named before they are used in a join. if the join
+uses `is` to give the join a name.
 
 ```malloy
 
