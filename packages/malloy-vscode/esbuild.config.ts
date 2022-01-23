@@ -45,7 +45,6 @@ export async function doBuild(): Promise<void> {
     bundle: true,
     outdir: outDir,
     platform: "browser",
-    target: "chrome58",
     loader: { [".svg"]: "file" },
     define: {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
