@@ -145,8 +145,8 @@ joinList
   ;
 
 joinDef
-  : joinNameDef (IS explore)? WITH fieldName       # joinWith
-  | joinNameDef (IS explore)? (ON joinExpression)? # joinOn
+  : joinNameDef (IS explore)? WITH fieldName        # joinWith
+  | joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
