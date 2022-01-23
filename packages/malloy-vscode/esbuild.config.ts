@@ -45,9 +45,11 @@ export async function doBuild(): Promise<void> {
     bundle: true,
     outdir: outDir,
     platform: "browser",
-    format: "iife",
+    target: "chrome58",
     loader: { [".svg"]: "file" },
-    external: ["crypto"], // TODO this needs a look - locally referenced packages should be only incuding their built code
+    define: {
+      "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
+    },
   }).catch((e: Error) => {
     console.log(e);
     process.exit(1);
