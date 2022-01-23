@@ -140,7 +140,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
       explore: a is table('malloytest.state_facts')
       explore: f is a{
-        join_many: a
+        join_cross: a
       }
       query: f->{aggregate:[c is count(distinct concat(state,a.state))]}
       `

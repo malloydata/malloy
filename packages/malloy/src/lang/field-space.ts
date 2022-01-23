@@ -30,7 +30,6 @@ import {
   NestDefinition,
   NestReference,
   MalloyElement,
-  ExpressionJoin,
 } from "./ast";
 import * as FieldPath from "./field-path";
 import {
@@ -273,7 +272,7 @@ export class NewFieldSpace extends StructSpace {
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
-      const fixupJoins: [JoinSpaceField, model.Expr][] = [];
+      const fixupJoins: [Join, model.StructDef][] = [];
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceField) {
           joins.push([name, spaceEntry]);
@@ -287,29 +286,25 @@ export class NewFieldSpace extends StructSpace {
       }
       const reorderFields = [...fields, ...joins, ...turtles];
       for (const [fieldName, field] of reorderFields) {
-        const fieldDef = field.fieldDef();
-        if (fieldDef) {
-          this.final.fields.push(fieldDef);
-          if (
-            field instanceof JoinSpaceField &&
-            fieldDef.type === "struct" &&
-            fieldDef.structRelationship.type === "condition"
-          ) {
-            fixupJoins.push([field, fieldDef.structRelationship.onExpression]);
-          }
+        if (field instanceof JoinSpaceField && field.join.needsFixup()) {
+          const joinStruct = field.join.structDef();
+          this.final.fields.push(joinStruct);
+          fixupJoins.push([field.join, joinStruct]);
         } else {
-          throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+          const fieldDef = field.fieldDef();
+          if (fieldDef) {
+            this.final.fields.push(fieldDef);
+          } else {
+            throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+          }
         }
       }
       if (Object.entries(parameters).length > 0) {
         this.final.parameters = parameters;
       }
       // If we have join expressions, we need to now go back and fill them in
-      for (const [join, onExpr] of fixupJoins) {
-        const replaceExpr = join.join.onExpression(this);
-        if (replaceExpr) {
-          onExpr.push(...replaceExpr);
-        }
+      for (const [join, missingOn] of fixupJoins) {
+        join.fixupJoinOn(this, missingOn);
       }
     }
     return this.final;

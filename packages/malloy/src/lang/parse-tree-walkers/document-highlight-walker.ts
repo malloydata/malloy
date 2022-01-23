@@ -159,6 +159,9 @@ export function passForHighlights(
       case MalloyParser.INDEX:
         register(token, HighlightType.Property.Index, true);
         break;
+      case MalloyParser.JOIN_CROSS:
+        register(token, HighlightType.Property.Join, true);
+        break;
       case MalloyParser.JOIN_ONE:
         register(token, HighlightType.Property.Join, true);
         break;

@@ -33,7 +33,7 @@ The result is a table with nested data.  Each word contans a sub-table with a le
 -- define the query
 query: words_and_position is from(words->five_letter_words){
   -- Cross join is missing at the moment
-  join_many: numbers
+  join_cross: numbers
   }
 ->{
   group_by: word
