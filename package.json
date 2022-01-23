@@ -27,7 +27,7 @@
     "docs-preprocess": "ts-node --project tsconfig.packages.json docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
-    "vscode-webpack-dev": "yarn workspace malloy-vscode webpack-dev",
+    "vscode-esbuild-dev": "yarn workspace malloy-vscode esbuild-dev",
     "third-party-licenses": "ts-node scripts/third_party_licenses"
   },
   "resolutions": {},

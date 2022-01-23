@@ -21,7 +21,6 @@
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^1.26.4",
     "antlr4ts-cli": "^0.5.0-alpha.4",
-    "md5": "^2.3.0",
     "path": "^0.12.7"
   }
 }

@@ -3,5 +3,6 @@ node_modules
 out/
 src/
 tsconfig.json
-webpack.config.js
 tsconfig.tsbuildinfo
+third-party/
+esbuild.config.ts
