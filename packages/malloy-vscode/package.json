@@ -9,8 +9,8 @@
   },
   "scripts": {
     "esbuild": "yarn ts-node esbuild.config.ts",
-    "esbuild-dev": "yarn ts-node esbuild.config.ts",
-    "build": "yarn tsc --build && yarn package",
+    "esbuild-dev": "NODE_ENV=development yarn ts-node esbuild.config.ts",
+    "build": "yarn tsc --build && yarn esbuild",
     "test": "jest --config=../../jest.config.js",
     "package": "yarn vsce package --yarn --githubBranch=main --no-git-tag-version --no-update-package-json"
   },

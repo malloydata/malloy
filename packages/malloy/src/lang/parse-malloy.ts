@@ -19,7 +19,7 @@ import {
   CharStreams,
   CommonTokenStream,
 } from "antlr4ts";
-import { ParseTree } from "antlr4ts/tree";
+import type { ParseTree } from "antlr4ts/tree";
 import {
   Query,
   NamedStructDefs,

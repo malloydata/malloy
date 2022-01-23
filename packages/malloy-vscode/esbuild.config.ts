@@ -13,11 +13,12 @@
 
 /* eslint-disable no-console */
 import { build } from "esbuild";
-import { nativeNodeModulesPlugin } from "./third-party/esbuild/native-modules-plugin";
+import { nativeNodeModulesPlugin } from "../../third_party/https:/github.com/evanw/esbuild/native-modules-plugin";
 import * as fs from "fs";
 import * as path from "path";
 
 const outDir = "dist";
+const development = process.env.NODE_ENV == "development";
 
 export async function doBuild(): Promise<void> {
   fs.rmdirSync(outDir, { recursive: true });
@@ -26,11 +27,21 @@ export async function doBuild(): Promise<void> {
     entryPoints: ["./src/extension/extension.ts", "./src/server/server.ts"],
     entryNames: "[name]",
     bundle: true,
+    minify: !development,
+    sourcemap: development,
     outdir: outDir,
     platform: "node",
     external: ["vscode", "pg-native"],
     loader: { [".png"]: "file", [".svg"]: "file" },
     plugins: [nativeNodeModulesPlugin],
+    // watch: development
+    //   ? {
+    //       onRebuild(error, result) {
+    //         if (error) console.error("Extension server build failed:", error);
+    //         else console.log("Extension server build succeeded:", result);
+    //       },
+    //     }
+    //   : false,
   }).catch((e: Error) => {
     console.log(e);
     process.exit(1);
@@ -43,12 +54,22 @@ export async function doBuild(): Promise<void> {
     ],
     entryNames: "[dir]",
     bundle: true,
+    minify: !development,
+    sourcemap: development,
     outdir: outDir,
     platform: "browser",
     loader: { [".svg"]: "file" },
     define: {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
     },
+    // watch: development
+    //   ? {
+    //       onRebuild(error, result) {
+    //         if (error) console.error("Webview build failed:", error);
+    //         else console.log("Webview build succeeded:", result);
+    //       },
+    //     }
+    //   : false,
   }).catch((e: Error) => {
     console.log(e);
     process.exit(1);
@@ -75,3 +96,4 @@ export async function doBuild(): Promise<void> {
 }
 
 doBuild();
+if (development) console.log("built successfully");

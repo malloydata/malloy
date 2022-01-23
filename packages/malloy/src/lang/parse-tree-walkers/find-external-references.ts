@@ -13,7 +13,7 @@
 
 import { CommonTokenStream } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { ParseTree } from "antlr4ts/tree";
+import type { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
 import { Range, rangeFromContext } from "../source-reference";
