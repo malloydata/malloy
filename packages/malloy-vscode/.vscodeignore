@@ -4,3 +4,4 @@ out/
 src/
 tsconfig.json
 webpack.config.js
+tsconfig.tsbuildinfo
