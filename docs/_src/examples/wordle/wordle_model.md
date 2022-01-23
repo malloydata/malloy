@@ -1,20 +1,22 @@
+### Code For Wordlbot:
+
+```malloy
 -- Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words_bigger'){
+explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
     project: word is UPPER(word)
   }
 }
 
--- Cross join numbers
+-- table with numbers 1 to 5
 explore: numbers is table('malloy-data.malloytest.numbers'){
   where: num <= 5
 }
 
 -- Build a new table of word and each letter in position
 query: words_and_position is from(words->five_letter_words){
-  -- Cross join is missing at the moment
-  join_many: numbers
+  join_many: numbers -- cross join numbers
   }
 ->{
   group_by: word
@@ -49,18 +51,4 @@ explore: wordle is from(->words_and_position){
   }
 }
 
--- SAUCE
-query: wordle->find_words {
-  where:
-    word ~ r'C'
-    and word ~ r'...[^C].'
-    and word !~ r'[SAUE]'
-}
-
--- CHOIR
-query: wordle->find_words {
-  where:
-    word ~ r'C' and word ~r'I' and word ~r'R'
-    and word ~ r'C..[^CI][^R]'
-    and word !~ r'[SAUEHO]'
-}
+```
