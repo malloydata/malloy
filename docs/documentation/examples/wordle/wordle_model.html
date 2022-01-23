@@ -1,0 +1,62 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/examples/wordle/wordle_model.html
+---
+
+<div class="document">
+      <h3>
+        <a id="code-for-wordlbot-" class="header-link anchor" href="#code-for-wordlbot-">
+          Code For Wordlbot:
+        </a>
+      </h3>
+    <pre class="language-malloy"><span class="token comment">-- Make a table of 5 letter words</span>
+<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {
+    <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span>  word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
+    <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">UPPER</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
+  }
+}
+
+<span class="token comment">-- table with numbers 1 to 5</span>
+<span class="token keyword">explore</span>: <span class="token type">numbers</span> <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
+  <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
+}
+
+<span class="token comment">-- Build a new table of word and each letter in position</span>
+<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
+  join_many: <span class="token type">numbers</span> <span class="token comment">-- cross join numbers</span>
+  }
+<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">group_by</span>: word
+  <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
+    <span class="token keyword">order_by</span>: <span class="token number">2</span>
+    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
+      letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+      position <span class="token keyword">is</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num
+    <span class="token punctuation">]</span>
+  }
+}
+
+
+<span class="token comment">-- build a word finder that can generate a score best available guess.</span>
+<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+  <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
+  <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+  <span class="token keyword">query</span>: find_words <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
+      letters<span class="token punctuation">.</span>letter
+      letters<span class="token punctuation">.</span>position
+    <span class="token punctuation">]</span>
+    <span class="token keyword">aggregate</span>: word_count
+    <span class="token keyword">nest</span>: words_list <span class="token keyword">is</span> {
+      <span class="token keyword">group_by</span>: word
+    }
+  }
+  <span class="token operator">-</span><span class="token operator">></span>{
+    <span class="token keyword">group_by</span>: words_list<span class="token punctuation">.</span>word
+    <span class="token keyword">aggregate</span>: score <span class="token keyword">is</span> word_count<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  }
+}
+</pre></div>
