@@ -34,14 +34,14 @@ export async function doBuild(): Promise<void> {
     external: ["vscode", "pg-native"],
     loader: { [".png"]: "file", [".svg"]: "file" },
     plugins: [nativeNodeModulesPlugin],
-    // watch: development
-    //   ? {
-    //       onRebuild(error, result) {
-    //         if (error) console.error("Extension server build failed:", error);
-    //         else console.log("Extension server build succeeded:", result);
-    //       },
-    //     }
-    //   : false,
+    watch: development
+      ? {
+          onRebuild(error, result) {
+            if (error) console.error("Extension server build failed:", error);
+            else console.log("Extension server build succeeded:", result);
+          },
+        }
+      : false,
   }).catch((e: Error) => {
     console.log(e);
     process.exit(1);
@@ -62,14 +62,14 @@ export async function doBuild(): Promise<void> {
     define: {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
     },
-    // watch: development
-    //   ? {
-    //       onRebuild(error, result) {
-    //         if (error) console.error("Webview build failed:", error);
-    //         else console.log("Webview build succeeded:", result);
-    //       },
-    //     }
-    //   : false,
+    watch: development
+      ? {
+          onRebuild(error, result) {
+            if (error) console.error("Webview build failed:", error);
+            else console.log("Webview build succeeded:", result);
+          },
+        }
+      : false,
   }).catch((e: Error) => {
     console.log(e);
     process.exit(1);
@@ -96,4 +96,4 @@ export async function doBuild(): Promise<void> {
 }
 
 doBuild();
-if (development) console.log("built successfully");
+if (development) console.log("Compiled successfully");
