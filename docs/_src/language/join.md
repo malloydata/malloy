@@ -1,12 +1,39 @@
 # Joins
 
-Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table and a foreign key in the [explore](explore.md) being joined to.
+Joins in malloy are different than SQL joins.  Malloy retains the graph nature of the the data relationships
+while SQL flattens them all into a single table space.
+
+[Aggregate calculations](aggregates.md) locality of computation meaning calculations always work regardless of join pattern.
+
+Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).
+
+In Malloy syntaxes for join are:
+
+```
+    join_one: <explore-name> [is <explore-exp>] with <foreign_key>
+    join_one: <explore-name> [is <explore-exp>] on <boolean expression>
+    join_many: <explore-name> [is <explore-exp>] on <boolean expression>
+    join_cross: <explore-name> [is <explore-exp>] [on <boolean expression>]
+```
+
+`join_one:` - the table we are joining has one row for each row in the source table.
+
+`join_many:` - the table we are joining has many rows for each row in the source table
+
+`join_cross:` - the join is a cross product and there will be many rows in each side of the join.
+
+
+Malloy's joins are left outer joins by default.
 
 ## Join Types
 
 ### Foreign Key to Primary Key
 
-To join a foreign key of the source explore to the `primary key` of a joined explore, reference the foreign key by name in the `on` clause.
+The easiest, most error proof way to perform a join is with `join_one:/with`.  The basic syntax is:
+
+`join_one: <explore> with <foreign_key>`
+
+To join a foreign key of the source explore to the `primary key` of a joined explore, reference the foreign key by name in the `with` clause.
 
 ```malloy
 explore: users is table('malloy-data.ecomm.users'){
@@ -20,7 +47,8 @@ explore: order_items is table('malloy-data.ecomm.order_items'){
 
 ## Naming Joined Explores
 
-To preserve the name of the explore being joined in, use `join on`.
+If no name is specified with `is`, the name of the join will be the name of the
+explore being joined.
 
 ```malloy
 
@@ -33,7 +61,7 @@ explore: flights is table('malloy-data.faa.flights'){
 }
 ```
 
-To give the joined explore a different name within the source explore, specify the name of the explore being joined in between `join` and `on`.
+To give the joined explore a different name within the source explore, use `is` to specify the name of the explore.
 
 ```malloy
 explore: airports is table('malloy-data.faa.airports') {
@@ -47,7 +75,8 @@ explore: flights is table('malloy-data.faa.flights'){
 
 ## Inlining Joins
 
-Explores do not need to be named before they are used in a join.
+Explores do not need to be named before they are used in a join. if the join
+uses `is` to give the join a name.
 
 ```malloy
 
@@ -124,3 +153,13 @@ query: flights->{
 ```
 
 For more examples and how to reason about aggregation across joins, review the [Aggregates](aggregates.md) section.
+
+## SQL Joins
+
+Inner join are joins where the the joind table has rows.  The example below, suppose we only want users that have at least one row in the orders table.  The following is the equivalent of a SQL  INNER JOIN.
+
+```malloy
+explore users is table('users') {
+  join_many: orders is table('orders') on id=orders.user_id and orders.user_id != null
+}
+```
