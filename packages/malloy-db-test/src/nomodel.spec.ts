@@ -134,7 +134,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.data.value[0].c).toBe(19701);
   });
+
   it(`join_many cross from  - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
     const result = await runtime
       .loadQuery(
         `
@@ -142,10 +146,74 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       explore: f is a{
         join_cross: a
       }
-      query: f->{aggregate:[c is count(distinct concat(state,a.state))]}
+      query: f->{
+        aggregate:[
+          row_count is count(distinct concat(state,a.state))
+          left_sum is airport_count.sum()
+          right_sum is a.airport_count.sum()
+        ]
+      }
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(51 * 51);
+    expect(result.data.value[0].row_count).toBe(51 * 51);
+    expect(result.data.value[0].left_sum).toBe(19701);
+    expect(result.data.value[0].right_sum).toBe(19701);
+  });
+
+  it(`join_one only  - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const result = await runtime
+      .loadQuery(
+        `
+      query: q is table('malloytest.state_facts')->{
+        aggregate: r is airport_count.sum()
+      }
+      explore: f is table('malloytest.state_facts'){
+        join_one: a is from(->q)
+      }
+      query: f->{
+        aggregate:[
+          row_count is count(distinct concat(state,a.r))
+          left_sum is airport_count.sum()
+          right_sum is a.r.sum()
+          sum_sum is sum(airport_count + a.r)
+        ]
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].row_count).toBe(51);
+    expect(result.data.value[0].left_sum).toBe(19701);
+    expect(result.data.value[0].right_sum).toBe(19701);
+    expect(result.data.value[0].sum_sum).toBe(19701 + 51 * 19701);
+  });
+
+  it(`join_many cross ON  - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.state_facts')
+      explore: f is a{
+        join_cross: a on a.state = 'CA' | 'NY'
+      }
+      query: f->{
+        aggregate:[
+          row_count is count(distinct concat(state,a.state))
+          left_sum is airport_count.sum()
+          right_sum is a.airport_count.sum()
+        ]
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].row_count).toBe(51 * 2);
+    expect(result.data.value[0].left_sum).toBe(19701);
+    expect(result.data.value[0].right_sum).toBe(1560);
   });
 });
