@@ -494,3 +494,9 @@ td {
 .result-inner td {
   line-height: 16px;
 }
+
+div.document .result-inner pre {
+  border: none;
+  background-color: transparent;
+  padding: 0 10px;
+}
