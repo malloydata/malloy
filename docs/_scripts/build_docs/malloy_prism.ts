@@ -51,6 +51,6 @@ export const MALLOY_GRAMMAR = {
   operator:
     /[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?|\b(?:AND|BETWEEN|IN|LIKE|NOT|OR|IS|DIV|REGEXP|RLIKE|SOUNDS LIKE|XOR)\b/i,
   punctuation: /[;[\]()`,.]/,
-  type: /\b((string|number|date|timestamp|boolean)s?)\b/i,
+  type: /\b((string|number|date|timestamp|boolean))\b/i,
   variable: [],
 };
