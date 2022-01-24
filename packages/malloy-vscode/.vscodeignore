@@ -4,5 +4,4 @@ out/
 src/
 tsconfig.json
 tsconfig.tsbuildinfo
-third-party/
 esbuild.config.ts
