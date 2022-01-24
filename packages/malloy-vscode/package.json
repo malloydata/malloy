@@ -24,9 +24,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:malloy.runQueryFile",
-    "onCommand:malloy.showLicenses",
-    "onLanguage:malloy"
+    "*"
   ],
   "main": "./dist/extension",
   "configurationDefaults": {
