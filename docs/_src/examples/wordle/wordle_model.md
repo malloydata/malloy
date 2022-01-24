@@ -1,9 +1,6 @@
-# Final Model
-
-Final Data Model - Goto [Solve Puzzles](wordle5.md)
+### Code For Wordlbot:
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/w1.malloy"}
 -- Make a table of 5 letter words
 explore: words is table('malloy-data.malloytest.words'){
   query: five_letter_words is {
@@ -12,15 +9,14 @@ explore: words is table('malloy-data.malloytest.words'){
   }
 }
 
--- Cross join numbers
+-- table with numbers 1 to 5
 explore: numbers is table('malloy-data.malloytest.numbers'){
   where: num <= 5
 }
 
 -- Build a new table of word and each letter in position
 query: words_and_position is from(words->five_letter_words){
-  -- Cross join is missing at the moment
-  join_cross: numbers
+  join_many: numbers -- cross join numbers
   }
 ->{
   group_by: word

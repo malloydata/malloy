@@ -298,7 +298,13 @@ export class MalloyToAST
     for (const join of joinList) {
       if (join instanceof ast.Join) {
         if (join instanceof ast.ExpressionJoin) {
-          join.many = true;
+          if (!join.joinOn) {
+            join.log(
+              "join_many: ON clause required. Did you mean join_cross:?"
+            );
+            join.joinOn = new ast.Boolean("false");
+          }
+          join.joinType = "many";
         } else if (join instanceof ast.KeyJoin) {
           join.log("Foreign key join not legal in join_one:");
           continue;
@@ -313,13 +319,29 @@ export class MalloyToAST
     const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
     for (const join of joinList) {
-      if (join instanceof ast.Join) {
-        if (join instanceof ast.ExpressionJoin) {
-          join.many = false;
-        } else if (join instanceof ast.CrossJoin) {
-          join.log("Cross join not legal in join_one:");
-          continue;
+      if (join instanceof ast.ExpressionJoin) {
+        if (!join.joinOn) {
+          join.log("join_one: ON clause required. Did you mean join_cross:?");
+          join.joinOn = new ast.Boolean("false");
         }
+        join.joinType = "one";
+      }
+      if (join instanceof ast.Join) {
+        joins.push(join);
+      }
+    }
+    return new ast.Joins(joins);
+  }
+
+  visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.Joins {
+    const joinList = this.getJoinList(pcx.joinList());
+    const joins: ast.Join[] = [];
+    for (const join of joinList) {
+      if (join instanceof ast.KeyJoin) {
+        join.log("Foreign key join not legal in join_cross:");
+      }
+      if (join instanceof ast.ExpressionJoin) {
+        join.joinType = "cross";
         joins.push(join);
       }
     }
@@ -343,8 +365,11 @@ export class MalloyToAST
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
     const joinAs = this.getIdText(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const joinOn = this.getFieldExpr(pcx.joinExpression());
-    const join = new ast.ExpressionJoin(joinAs, joinFrom, joinOn);
+    const join = new ast.ExpressionJoin(joinAs, joinFrom);
+    const onExpr = pcx.joinExpression();
+    if (onExpr) {
+      join.joinOn = this.getFieldExpr(onExpr);
+    }
     return this.astAt(join, pcx);
   }
 
@@ -353,13 +378,6 @@ export class MalloyToAST
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const joinOn = this.getIdText(pcx.fieldName());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
-    return this.astAt(join, pcx);
-  }
-
-  visitJoinCross(pcx: parse.JoinCrossContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
-    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const join = new ast.CrossJoin(joinAs, joinFrom);
     return this.astAt(join, pcx);
   }
 

@@ -112,6 +112,7 @@ exploreStatement
   | MEASURE measureDefList             # defExploreMeasure
   | JOIN_ONE joinList                  # defJoinOne
   | JOIN_MANY joinList                 # defJoinMany
+  | JOIN_CROSS joinList                # defJoinCross
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME fieldName IS fieldName      # defExploreRename
@@ -144,9 +145,8 @@ joinList
   ;
 
 joinDef
-  : joinNameDef (IS explore)?                   # joinCross
-  | joinNameDef (IS explore)? WITH fieldName    # joinWith
-  | joinNameDef (IS explore)? ON joinExpression # joinOn
+  : joinNameDef (IS explore)? WITH fieldName       # joinWith
+  | joinNameDef (IS explore)? (ON joinExpression)? # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -438,6 +438,7 @@ EXPLORE: E X P L O R E SPACE_CHAR* ':';
 GROUP_BY: G R O U P '_' B Y SPACE_CHAR* ':';
 HAVING: H A V I N G SPACE_CHAR* ':';
 INDEX: I N D E X SPACE_CHAR* ':';
+JOIN_CROSS: J O I N '_' C R O S S ':';
 JOIN_ONE: J O I N '_' O N E SPACE_CHAR* ':';
 JOIN_MANY: J O I N '_' M A N Y SPACE_CHAR* ':';
 LIMIT: L I M I T SPACE_CHAR* ':';
