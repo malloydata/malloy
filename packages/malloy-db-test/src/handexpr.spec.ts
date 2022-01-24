@@ -547,8 +547,7 @@ export const joinModelAircraftHandStructDef: StructDef = {
     {
       ...aircraftHandBase,
       structRelationship: {
-        type: "condition",
-        many: true,
+        type: "many",
         onExpression: [
           { type: "field", path: "aircraft_model_code" },
           "=",
@@ -581,8 +580,7 @@ export const modelAircraftHandStructDef: StructDef = {
     {
       ...aircraftHandBase,
       structRelationship: {
-        type: "condition",
-        many: false,
+        type: "one",
         onExpression: [
           { type: "field", path: "aircraft_model_code" },
           "=",

@@ -302,8 +302,9 @@ describe("explore properties", () => {
       "many is on",
       modelOK("explore: y is a { join_many: x is b on astr = x.astr }")
     );
-    test("cross", modelOK("explore: nab is a { join_many: b }"));
-    test("cross is", modelOK("explore: nab is a { join_many: xb is b }"));
+    test("cross", modelOK("explore: nab is a { join_cross: b }"));
+    test("cross is", modelOK("explore: nab is a { join_cross: xb is b }"));
+    test("cross on", modelOK("explore: nab is a { join_cross: b on true}"));
     test(
       "multiple joins",
       modelOK(`
@@ -311,10 +312,6 @@ describe("explore properties", () => {
           join_one: [
             b with astr,
             br is b with astr
-          ]
-          join_many: [
-            bm is b on bm.astr = astr,
-            bx is b
           ]
         }
       `)

@@ -53,6 +53,7 @@ import {
   isValueParameter,
   JoinRelationship,
   isPhysical,
+  isAnyJoin,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1078,17 +1079,15 @@ class JoinInstance {
     }
     switch (this.queryStruct.fieldDef.structRelationship.type) {
       case "foreignKey":
+      case "one":
         return "many_to_one";
+      case "cross":
+      case "many":
+        return "one_to_many";
       case "nested":
         return "one_to_many";
       case "inline":
         return "one_to_one";
-      case "condition":
-        return this.queryStruct.fieldDef.structRelationship.many
-          ? "one_to_many"
-          : "many_to_one";
-      case "crossJoin":
-        return "one_to_many";
       default:
         throw new Error(
           `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
@@ -1701,11 +1700,7 @@ class QueryQuery extends QueryField {
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
-    if (
-      structRelationship.type === "foreignKey" ||
-      structRelationship.type === "condition" ||
-      structRelationship.type === "crossJoin"
-    ) {
+    if (isAnyJoin(structRelationship)) {
       if (ji.makeUniqueKey) {
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
@@ -1726,7 +1721,7 @@ class QueryQuery extends QueryField {
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
         onCondition = `${fkSQL} = ${pkSQL}`;
-      } else if (structRelationship.type == "condition") {
+      } else if (structRelationship.onExpression) {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
@@ -1735,7 +1730,7 @@ class QueryQuery extends QueryField {
           },
           qs.parent
         ).generateExpression(this.rootResult);
-      } else if (structRelationship.type === "crossJoin") {
+      } else {
         onCondition = "1=1";
       }
       let filters = "";

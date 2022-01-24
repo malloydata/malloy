@@ -1,95 +1,77 @@
-# Puzzle #217
-_January 22, 2022_
+# Puzzle #219
+_January 24, 2022_
 
-[⬅️ Previous Puzzle](wordle216.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle218.md)
+[⬅️ Previous Puzzle](wordle218.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
 Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
 
-## Query for the best starting words.
+## Query for the best starting words
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
 query: wordle->find_words
 ```
 
-Skipping 'SAREE' to avoid duplicates this early in the game, let's go with 'SLATE' again.
+We'll open up with 'SAUCE' again today (skipping those double-letter words this early on).
 
-<img src="/malloy/img/wordle217a.png" style="width: 200px">
+<img src="/malloy/img/wordle219a.png" style="width: 200px">
 
 ## The Second Guess
-One green match--not a bad start. Let's find more words ending in E.
-
-```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query:  wordle->find_words {
-  where:
-    word ~ r'....E'    -- GREEN: E at the end
-    and not word ~ r'[SLAT]'   -- GRAY doesn't have these characters
-}
-```
-
-The 'PRICE' is right, or something...
-
-<img src="/malloy/img/wordle217b.png" style="width: 200px">
-
-## Round 3: Tie Breaking
-That worked nicely for us, we have two green matches and now we need to figure out where 'I' belong(s).
+Nothing on 'SAUCE'--let's look for our top scoring words excluding these characters.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
 query: wordle->find_words {
   where:
-    word ~ r'I'
-    and word ~ r'..[^I]CE'
-    and word !~ r'[SLATPR]'
+    word !~ r'[SAUCE]'
 }
 ```
 
-Another tie, today with a chance to guess just how into cooking the Wordle creators are. We can use our same letter commonality tie-breaker here; maybe this time we'll look at letter commonality for first position.
+Still feels a bit early for double letters, so we're running with 'DOILY'
 
-```malloy
+<img src="/malloy/img/wordle219b.png" style="width: 200px">
+
+## Round 3/4: More Creative Tiebreaking
+ With one green and one yellow match we're down to two possible words.
+
+ ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-  query: wordle ->{
-    where: letters.position = 1
-    group_by: letters.letter
-    aggregate: [
-      word_count
-      use_count is letters.count()
-    ]
-  }
-  ```
+query: wordle->find_words {
+  where:
+    word ~ r'O'
+    and word ~ r'.[^O].L.'
+    and word !~ r'[SAUCEDIY]'
+}
+```
 
-'M' appears to be a little more common as a first letter than 'W' so we went with that.
-
-<img src="/malloy/img/wordle217c.png" style="width: 200px">
-
-
-## Solved in 3.5 again
-
-
+ Today, why don't we see whether 'KN' or 'TR' appear more commonly as starts for words in our dataset.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
 query: wordle->find_words {
   where:
-    word ~ r'.INCE'
-    and word !~ r'[SLATPRM]'
+    word ~ r'^KN'
+    OR word ~ r'^TR'
+}
+->{
+  group_by: start_leters is SUBSTR(word,0,2)
+  aggregate: word_score is sum(score)
 }
 ```
 
-<img src="/malloy/img/wordle217d.png" style="width: 200px">
+<img src="/malloy/img/wordle219c.png" style="width: 200px">
 
-There it is, and our solution also happens to describe our reaction after missing that coin-toss! We'll go ahead and call this one 3.5 again based on the last round.
+Our luck on these tie-breakers really hasn't been so great, but all in all another 3.5 day isn't half bad!
 
-[⬅️ Previous Puzzle](wordle216.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle218.md)
+[⬅️ Previous Puzzle](wordle218.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
 
 ### Code For Wordlbot:
 
 ```malloy
 -- Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words'){
+explore: words is table('malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
     project: word is UPPER(word)
@@ -104,7 +86,7 @@ explore: numbers is table('malloy-data.malloytest.numbers'){
 -- Build a new table of word and each letter in position
 query: words_and_position is from(words->five_letter_words){
   -- Cross join is missing at the moment
-  join_cross: numbers
+  join_many: numbers
   }
 ->{
   group_by: word
