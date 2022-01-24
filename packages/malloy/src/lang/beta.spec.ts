@@ -363,6 +363,7 @@ describe("explore properties", () => {
 
 describe("qops", () => {
   test("group by single", modelOK("query: a->{ group_by: astr }"));
+  test("group_by x is x'", modelOK("query: a->{ group_by: ai is ai/2 }"));
   test("group by multiple", modelOK("query: a->{ group_by: [astr,ai] }"));
   test("aggregate single", modelOK("query: a->{ aggregate: num is count() }"));
   test(

@@ -213,9 +213,22 @@ export class ExprFieldDecl extends MalloyElement {
     super({ expr });
   }
 
-  fieldDef(realFS: FieldSpace, exprName: string): FieldTypeDef {
-    const fs = new CircleSpace(realFS, this);
-    const exprValue = this.expr.getExpression(fs);
+  fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
+    /*
+     * In an explore we cannot reference the thing we are defining, you need
+     * to use rename. In a query, the output space is a new thing, and expressions
+     * can reference the outer value in order to make a value with the new name,
+     * and it feels wrong that this is HERE and not somehow in the QueryOperation.
+     * For now, this stops the stack overflow, and passes all tests, but I think
+     * a refactor of QueryFieldSpace might someday be the place where this should
+     * happen.
+     */
+    const circleFS = new CircleSpace(fs, this);
+    return this.queryFieldDef(circleFS, exprName);
+  }
+
+  queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
+    const exprValue = this.expr.getExpression(exprFS);
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
     if (isAtomicFieldType(retType)) {
@@ -238,7 +251,8 @@ export class ExprFieldDecl extends MalloyElement {
       }
       return template;
     }
-    if (!fs.foundCircle) {
+    const complained = exprFS instanceof CircleSpace && exprFS.foundCircle;
+    if (!complained) {
       this.log(
         `Cannot define ${exprName}, unexpected type ${FT.inspect(exprValue)}`
       );
