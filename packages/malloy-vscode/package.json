@@ -8,11 +8,12 @@
     "vscode": "^1.63.0"
   },
   "scripts": {
-    "esbuild": "yarn ts-node esbuild.config.ts",
-    "esbuild-dev": "NODE_ENV=development yarn ts-node esbuild.config.ts",
     "build": "yarn tsc --build && yarn esbuild",
     "test": "jest --config=../../jest.config.js",
-    "package": "yarn vsce package --yarn --githubBranch=main --no-git-tag-version --no-update-package-json"
+    "build-extension": "yarn ts-node esbuild.config.ts",
+    "build-extension-dev": "NODE_ENV=development yarn ts-node esbuild.config.ts",
+    "vscode:prepublish": "yarn licenses generate-disclaimer --prod > third_party_notices.txt && build-extension",
+    "package-extension": "yarn vsce package --yarn --githubBranch=main --no-git-tag-version --no-update-package-json"
   },
   "icon": "logo.png",
   "license": "GPL-2.0",

@@ -5,7 +5,7 @@
   "tasks": [
     {
       "type": "npm",
-      "script": "vscode-esbuild-dev",
+      "script": "vscode-build-extension-dev",
       "problemMatcher": {
         "owner": "typescript",
         "source": "ts",
