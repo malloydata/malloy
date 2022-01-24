@@ -1,11 +1,11 @@
 # Puzzle #218
 _January 23, 2022_
 
-[⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)
+[⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle219.md)
 
 Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
-Today was a bit of a kerfluffel.  It turns out that the word list we were using was too small and missing the
+Today was a bit of a kerfuffle.  It turns out that the word list we were using was too small and missing the
 word we were searching for.  We found a larger dictionary and uploaded and re-ran.
 
 
@@ -53,7 +53,7 @@ query: wordle->find_words {
 <img src="/malloy/img/wordle218c.png" style="width: 200px">
 
 
-[⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)
+[⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle219.md)
 
 
 ### Code For Wordlbot:
