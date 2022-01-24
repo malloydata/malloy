@@ -10,7 +10,20 @@ footer: /generated/footers/language/join.html
           Joins
         </a>
       </h1>
-    <p>Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table and a foreign key in the <a href="explore.html">explore</a> being joined to.</p>
+    <p>Joins in malloy are different than SQL joins.  Wnen two explores are joined,
+Malloy retains the graph nature of the the data relationships. This is unlike
+SQL, which flattens them all into a single table space.</p>
+<p><a href="aggregates.html">Aggregate calculations</a> use this graph to deduce
+a locality of computation, so they always work regardless of join pattern.</p>
+<p>In Malloy syntaxes for join are:</p>
+<pre class="language-">    join_one: &lt;explore-name> [is &lt;explore-exp>] with &lt;foreign_key>
+    join_one: &lt;explore-name> [is &lt;explore-exp>] [on &lt;boolean expression>]
+    join_many: &lt;explore-name> [is &lt;explore-exp>] on &lt;boolean expression>
+    join_cross: &lt;explore-name> [is &lt;explore-exp>] [on &lt;boolean expression>]</pre><p><code class="language-malloy">join_one:</code> - the table we are joining has one row for each row in the source table.</p>
+<p><code class="language-malloy">join_many:</code> - the table we are joining has many rows for each row in the source table</p>
+<p><code class="language-malloy">join_cross:</code> - the join is a cross product and there will be many rows in each side of the join.</p>
+<p>Malloy's joins are left outer joins by default.
+Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).</p>
 
       <h2>
         <a id="join-types" class="header-link anchor" href="#join-types">
@@ -23,7 +36,9 @@ footer: /generated/footers/language/join.html
           Foreign Key to Primary Key
         </a>
       </h3>
-    <p>To join a foreign key of the source explore to the <code class="language-malloy">primary <span class="token keyword">key</span></code> of a joined explore, reference the foreign key by name in the <code class="language-malloy"><span class="token keyword">on</span></code> clause.</p>
+    <p>The easiest, most error proof way to perform a join is with <code class="language-malloy">join_one:<span class="token operator">/</span>with</code>.  The basic syntax is:</p>
+<p><code class="language-malloy">join_one: <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">></span> with <span class="token operator">&lt;</span>foreign_key<span class="token operator">></span></code></p>
+<p>To join a foreign key of the source explore to the <code class="language-malloy">primary <span class="token keyword">key</span></code> of a joined explore, reference the foreign key by name in the <code class="language-malloy">with</code> clause.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: id
 }
@@ -36,7 +51,8 @@ footer: /generated/footers/language/join.html
           Naming Joined Explores
         </a>
       </h2>
-    <p>To preserve the name of the explore being joined in, use <code class="language-malloy"><span class="token keyword">join</span> <span class="token keyword">on</span></code>.</p>
+    <p>If no name is specified with <code class="language-malloy"><span class="token keyword">is</span></code>, the name of the join will be the name of the
+explore being joined.</p>
 <pre class="language-malloy">
 <span class="token keyword">explore</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: code
@@ -44,7 +60,7 @@ footer: /generated/footers/language/join.html
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   join_one: carriers with carrier
-}</pre><p>To give the joined explore a different name within the source explore, specify the name of the explore being joined in between <code class="language-malloy"><span class="token keyword">join</span></code> and <code class="language-malloy"><span class="token keyword">on</span></code>.</p>
+}</pre><p>To give the joined explore a different name within the source explore, use <code class="language-malloy"><span class="token keyword">is</span></code> to specify the name of the explore.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: code
 }
@@ -57,7 +73,8 @@ footer: /generated/footers/language/join.html
           Inlining Joins
         </a>
       </h2>
-    <p>Explores do not need to be named before they are used in a join.</p>
+    <p>Explores do not need to be named before they are used in a join. if the join
+uses <code class="language-malloy"><span class="token keyword">is</span></code> to give the join a name.</p>
 <pre class="language-malloy">
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   join_one: carriers <span class="token keyword">is</span>  <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span>{<span class="token keyword">primary_key</span>: code} with carrier
@@ -223,4 +240,13 @@ retained.</p>
       </div>
     </div>
   </div><p>For more examples and how to reason about aggregation across joins, review the <a href="aggregates.html">Aggregates</a> section.</p>
-</div>
+
+      <h2>
+        <a id="sql-joins" class="header-link anchor" href="#sql-joins">
+          SQL Joins
+        </a>
+      </h2>
+    <p>Inner join are joins where the the joind table has rows.  The example below, suppose we only want users that have at least one row in the orders table.  The following is the equivalent of a SQL  INNER JOIN.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'users'</span><span class="token punctuation">)</span> {
+  join_many: orders <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'orders'</span><span class="token punctuation">)</span> <span class="token keyword">on</span> id<span class="token operator">=</span>orders<span class="token punctuation">.</span>user_id <span class="token keyword">and</span> orders<span class="token punctuation">.</span>user_id <span class="token operator">!=</span> <span class="token keyword">null</span>
+}</pre></div>

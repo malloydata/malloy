@@ -49,7 +49,7 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <pre class="language-malloy"><span class="token comment">-- define the query</span>
 <span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
   <span class="token comment">-- Cross join is missing at the moment</span>
-  join_many: <span class="token type">numbers</span>
+  join_cross: <span class="token type">numbers</span>
   }
 <span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: word
