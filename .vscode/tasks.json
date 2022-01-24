@@ -29,7 +29,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": {
-            "regexp": "assets by status"
+            "regexp": "Compiling"
           },
           "endsPattern": {
             "regexp": "[Cc]ompiled (.*?successfully|with .*?error|with .*?warning)|[Cc]ompilation .*?finished"

@@ -95,5 +95,6 @@ export async function doBuild(): Promise<void> {
   );
 }
 
+console.log("Compiling");
 doBuild();
-if (development) console.log("Compiled successfully");
+console.log("Compiled successfully");
