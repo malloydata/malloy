@@ -13,6 +13,8 @@ Malloy is a language for anyone who works with SQL--whether you’re an analyst,
 We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
 # Syntax Example
+We highly recommend starting [here](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax.
+
 Here's a SQL query one might write to answer "What flights were available from SFO to JFK/EWR in the year 2003," along with a bit of information that might help compare options.
 
 ```sql
