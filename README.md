@@ -13,29 +13,31 @@ Malloy is a language for anyone who works with SQL--whether you’re an analyst,
 We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
 # Syntax Example
-We highly recommend starting with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax. Here is a simple exmample of a query in SQL and Malloy to give a sense of the flavor of the syntax:
+We recommend starting with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax. Here is a simple exmample of a Malloy query:
 
-```sql
-SELECT
-    destination
-    , COUNT(1) AS flight_count
-    , AVG(flight_time) AS average_flight_time
-FROM `malloy-data.faa.flights` AS flights
-WHERE origin = 'SFO'
-GROUP BY destination
-```
-
-In Malloy, this would be expressed:
 ```malloy
 query: table('malloy-data.faa.flights') -> {
   where: origin: 'SFO'
   group_by: carrier
   aggregate: [
     flight_count is count()
-    average_flight_time is avg(flight_time)
+    average_flight_time is flight_time.avg()
   ]
 }
 ```
+
+This is the SQL Malloy will generate based on the above:
+```sql
+SELECT
+   base.carrier as carrier,
+   COUNT( 1) as flight_count,
+   AVG(base.flight_time) as average_flight_time
+FROM `malloy-data.faa.flights` as base
+WHERE base.origin='SFO'
+GROUP BY 1
+ORDER BY 2 desc         -- malloy automatically orders by the first aggregate
+```
+
 
 Learn more about the syntax with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html)!
 
