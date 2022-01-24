@@ -12,6 +12,37 @@ Malloy is a language for anyone who works with SQL--whether you’re an analyst,
 
 We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
+# Syntax Example
+We recommend starting with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax. Here is a simple exmample of a Malloy query:
+
+```malloy
+query: table('malloy-data.faa.flights') -> {
+  where: origin: 'SFO'
+  group_by: carrier
+  aggregate: [
+    flight_count is count()
+    average_flight_time is flight_time.avg()
+  ]
+}
+```
+
+In SQL this would be expressed:
+```sql
+SELECT
+   carrier,
+   COUNT(1) as flight_count,
+   AVG(flight_time) as average_flight_time
+FROM `malloy-data.faa.flights`
+WHERE origin = 'SFO'
+GROUP BY 1
+ORDER BY 2 desc         -- malloy automatically orders by the first aggregate
+```
+
+
+Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
+
+
+
 # Installing the Extension
 
 Currently, the Malloy extension works on Mac and Linux machines.
@@ -51,7 +82,7 @@ _Replace `{my_project_id}` with the **ID** of the bigquery project you want to u
 
 #### **Using Service Account Key**
 
-Add the relevant account information to the new connection, and include the path to the service account key.
+Add the relevant account information to the new connection, and include the path to the [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
 
 ## 4. Test the connection
 
@@ -59,7 +90,7 @@ Press "test" on the connection to confirm that you have successfully connected t
 
 ## 5. Write some Malloy!
 
-It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started. 
+It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
 
 If you want to dive right in, create a file called `test.malloy` and try to create queries on your dataset - you can find examples [here](https://looker-open-source.github.io/malloy/documentation/language/basic.html)
 
