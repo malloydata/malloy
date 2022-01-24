@@ -286,20 +286,37 @@ describe("explore properties", () => {
       }
     `)
   );
-  test("simple join", modelOK("explore: nab is a { join: b on astr }"));
-  test("inverse join", modelOK("explore: nab is a { join: b on b.astr }"));
-  test("is join", modelOK("explore: nab is a { join: nb is b on astr }"));
-  test(
-    "multiple joins",
-    modelOK(`
-      explore: nab is a {
-        join: [
-          b on astr,
-          br is b on b.astr
-        ]
-      }
-    `)
-  );
+  describe("joins", () => {
+    test("with", modelOK("explore: x is a { join_one: b with astr }"));
+    test("with", modelOK("explore: x is a { join_one: y is b with astr }"));
+    test("one on", modelOK("explore: x is a { join_one: b on astr = b.astr }"));
+    test(
+      "one is on",
+      modelOK("explore: x is a { join_one: y is b on astr = y.astr }")
+    );
+    test(
+      "many on",
+      modelOK("explore: nab is a { join_many: b on astr = b.astr }")
+    );
+    test(
+      "many is on",
+      modelOK("explore: y is a { join_many: x is b on astr = x.astr }")
+    );
+    test("cross", modelOK("explore: nab is a { join_cross: b }"));
+    test("cross is", modelOK("explore: nab is a { join_cross: xb is b }"));
+    test("cross on", modelOK("explore: nab is a { join_cross: b on true}"));
+    test(
+      "multiple joins",
+      modelOK(`
+        explore: nab is a {
+          join_one: [
+            b with astr,
+            br is b with astr
+          ]
+        }
+      `)
+    );
+  });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
   test("accept single", modelOK("explore: c is a { accept: astr }"));
@@ -575,7 +592,7 @@ describe("error handling", () => {
 
   test("join reference before definition", () => {
     const m = new BetaModel(`
-    explore: newAB is a { join: newB is bb on astring }
+    explore: newAB is a { join_one: newB is bb on astring }
     explore: newB is b
     `);
     expect(m).not.toCompile();

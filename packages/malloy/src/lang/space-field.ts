@@ -13,7 +13,13 @@
 
 import * as model from "../model/malloy_types";
 import { FieldSpace, StructSpace, NewFieldSpace } from "./field-space";
-import { FieldValueType, ExprFieldDecl, TurtleDecl, HasParameter } from "./ast";
+import {
+  FieldValueType,
+  ExprFieldDecl,
+  TurtleDecl,
+  HasParameter,
+  Join,
+} from "./ast";
 
 // "Space Fields" are a field in a field space
 
@@ -128,6 +134,12 @@ export class StructSpaceField extends SpaceField {
 
   type(): FieldType {
     return { type: "struct" };
+  }
+}
+
+export class JoinSpaceField extends StructSpaceField {
+  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
+    super(join.structDef());
   }
 }
 

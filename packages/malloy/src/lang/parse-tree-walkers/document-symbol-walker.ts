@@ -150,10 +150,10 @@ class DocumentSymbolWalker implements MalloyListener {
     }
   }
 
-  enterJoinDef(pcx: parser.JoinDefContext) {
+  enterJoinNameDef(pcx: parser.JoinNameDefContext) {
     const symbol = {
       range: this.rangeOf(pcx),
-      name: pcx.joinNameDef().id().text,
+      name: pcx.id().text,
       type: "join",
       children: [],
     };

@@ -1,67 +1,66 @@
-# Puzzle #215
-_January 20, 2022_
+# Puzzle #218
+_January 23, 2022_
 
-[⬅️ Previous Puzzle](wordle214.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle216.md)
+[⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
 Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
-Query for best starting words.
+Today was a bit of a kerfluffel.  It turns out that the word list we were using was too small and missing the
+word we were searching for.  We found a larger dictionary and uploaded and re-ran.
+
+
+## Query for the best starting words.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
 query: wordle->find_words
 ```
 
+Skipping 'SAREE' and 'SOOTY' to avoid duplicates this early in the game, let's go with 'SAUCE' again.
 
-### Start with 'SAUCE' today (why not?)
+<img src="/malloy/img/wordle218a.png" style="width: 200px">
 
-<img src="/malloy/img/wordle215a.png" style="width: 200px">
-
-### Query for words that
-  * Don't have the letters 'SAUCE'
-
-```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words{
-  where:
-    -- word ~ r'[]'
-    -- and word ~ r'.....'
-     word !~ r'[SAUCE]'
-}
-```
-
-### Best next word is 'BOOTY', trust double letters today.
-
-<img src="/malloy/img/wordle215b.png" style="width: 200px">
-
-### Query for words that
-   * Contain 'B' and 'O' and 'T'
-   * Don't have 'B' in the 1th spot and don't have 'O' in the thrid spot or 'T' in the forth spot.
-   * Have O in the second spot
-   * Don't have the Letters 'SAUCEY'.
+## The Second Guess
+'C' as yellow in the 4th position.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words{
+query: wordle->find_words {
   where:
-    word ~ r'B' and word ~ r'O' and word ~  r'T'
-    and word ~ r'[^B]O[^O][^T].'
-    and word !~ r'[SAUCEY]'
+    word ~ r'C'
+    and word ~ r'...[^C].'
+    and word !~ r'[SAUE]'
 }
 ```
 
+Wow, lots of double letter words, let's skip them this early in the game and pick 'CHOIR'
 
-<img src="/malloy/img/wordle215c.png" style="width: 200px">
+<img src="/malloy/img/wordle218b.png" style="width: 200px">
 
-## Solved in 3!
+## Bang!  There is is 'CRIMP' in 3 guesses
+In three.
 
-[⬅️ Previous Puzzle](wordle214.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle216.md)
+```malloy
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
+query: wordle->find_words {
+  where:
+    word ~ r'C' and word ~r'I' and word ~r'R'
+    and word ~ r'C..[^CI][^R]'
+    and word !~ r'[SAUEHO]'
+}
+```
+
+<img src="/malloy/img/wordle218c.png" style="width: 200px">
+
+
+[⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)
+
 
 ### Code For Wordlbot:
 
 ```malloy
 -- Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words'){
+explore: words is table('malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
     project: word is UPPER(word)
@@ -76,7 +75,7 @@ explore: numbers is table('malloy-data.malloytest.numbers'){
 -- Build a new table of word and each letter in position
 query: words_and_position is from(words->five_letter_words){
   -- Cross join is missing at the moment
-  join_cross: numbers
+  join_many: numbers
   }
 ->{
   group_by: word

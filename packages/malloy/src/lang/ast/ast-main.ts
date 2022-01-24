@@ -628,8 +628,19 @@ export class QuerySource extends Mallobj {
   }
 }
 
-export class Join extends MalloyElement {
-  elementType = "join";
+export abstract class Join extends MalloyElement {
+  abstract name: string;
+  abstract structDef(): model.StructDef;
+  needsFixup(): boolean {
+    return false;
+  }
+  fixupJoinOn(_outer: FieldSpace, _inStruct: model.StructDef): void {
+    return;
+  }
+}
+
+export class KeyJoin extends Join {
+  elementType = "joinOnKey";
   constructor(
     readonly name: string,
     readonly source: Mallobj,
@@ -654,6 +665,62 @@ export class Join extends MalloyElement {
       joinStruct.as = this.name;
     }
 
+    return joinStruct;
+  }
+}
+
+type ExpressionJoinType = "many" | "one" | "cross";
+export class ExpressionJoin extends Join {
+  elementType = "joinOnExpr";
+  joinType: ExpressionJoinType = "one";
+  private expr?: ExpressionDef;
+  constructor(readonly name: string, readonly source: Mallobj) {
+    super({ source });
+  }
+
+  needsFixup(): boolean {
+    return this.expr != undefined;
+  }
+
+  set joinOn(joinExpr: ExpressionDef | undefined) {
+    this.expr = joinExpr;
+    this.has({ on: joinExpr });
+  }
+
+  get joinOn(): ExpressionDef | undefined {
+    return this.expr;
+  }
+
+  fixupJoinOn(
+    outer: FieldSpace,
+    inStruct: model.StructDef
+  ): model.Expr | undefined {
+    if (this.expr == undefined) {
+      return;
+    }
+    const exprX = this.expr.getExpression(outer);
+    if (exprX.dataType !== "boolean") {
+      this.log("join conditions must be boolean expressions");
+      return;
+    }
+    const joinRel = inStruct.structRelationship;
+    if (model.isJoinOn(joinRel)) {
+      joinRel.onExpression = compressExpr(exprX.value);
+    }
+  }
+
+  structDef(): model.StructDef {
+    const sourceDef = this.source.structDef();
+    const joinStruct: model.StructDef = {
+      ...sourceDef,
+      structRelationship: { type: this.joinType },
+    };
+    if (sourceDef.structSource.type === "query") {
+      // the name from query does not need to be preserved
+      joinStruct.name = this.name;
+    } else {
+      joinStruct.as = this.name;
+    }
     return joinStruct;
   }
 }

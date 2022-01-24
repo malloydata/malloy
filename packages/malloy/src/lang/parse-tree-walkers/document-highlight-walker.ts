@@ -63,6 +63,7 @@ export const HighlightType = {
     Pick: "keyword.pick",
     When: "keyword.when",
     Else: "keyword.else",
+    With: "keyword.with",
     // TODO or is this a meta type?
     JSON: "keyword.json",
     // TODO or is this a meta type?
@@ -158,7 +159,13 @@ export function passForHighlights(
       case MalloyParser.INDEX:
         register(token, HighlightType.Property.Index, true);
         break;
-      case MalloyParser.JOIN:
+      case MalloyParser.JOIN_CROSS:
+        register(token, HighlightType.Property.Join, true);
+        break;
+      case MalloyParser.JOIN_ONE:
+        register(token, HighlightType.Property.Join, true);
+        break;
+      case MalloyParser.JOIN_MANY:
         register(token, HighlightType.Property.Join, true);
         break;
       case MalloyParser.LIMIT:

@@ -15,11 +15,11 @@ explore: aircraft_models is table('malloy-data.faa.aircraft_models'){
 
 explore: aircraft is table('malloy-data.faa.aircraft'){
   primary_key: tail_num
-  join: aircraft_models on aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
 }
 
 explore: flights is table('malloy-data.faa.flights'){
-  join: aircraft on tail_num
+  join_one: aircraft with tail_num
 }
 
 query: flights -> {

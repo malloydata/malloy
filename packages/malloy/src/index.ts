@@ -38,6 +38,8 @@ export {
 export {
   Malloy,
   Runtime,
+  ConnectionRuntime,
+  SingleConnectionRuntime,
   EmptyURLReader,
   InMemoryURLReader,
   FixedConnectionMap,

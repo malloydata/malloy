@@ -791,6 +791,12 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSQLRunner {
   public async lookupSQLRunner(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
+
+  public static fromArray(connections: Connection[]): FixedConnectionMap {
+    return new FixedConnectionMap(
+      new Map(connections.map((connection) => [connection.name, connection]))
+    );
+  }
 }
 
 /**
@@ -802,18 +808,18 @@ export enum SourceRelationship {
    */
   Nested = "nested",
 
-  // TODO document this
-  Condition = "condition",
-
   /**
    * The `Explore` is the base table.
    */
   BaseTable = "base_table",
 
   /**
-   * The `Explore` is joined to its source by a foreign key.
+   * The `Explore` is joined to its source
    */
   ForeignKey = "foreign_key",
+  Cross = "cross",
+  One = "one",
+  Many = "many",
 
   // TODO document this
   Inline = "inline",
@@ -992,8 +998,12 @@ export class Explore extends Entity {
 
   public get sourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "condition":
-        return SourceRelationship.Condition;
+      case "many":
+        return SourceRelationship.Many;
+      case "one":
+        return SourceRelationship.One;
+      case "cross":
+        return SourceRelationship.Cross;
       case "foreignKey":
         return SourceRelationship.ForeignKey;
       case "inline":
@@ -1328,9 +1338,12 @@ export class ExploreField extends Explore {
 
   public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "condition":
+      case "one":
       case "foreignKey":
         return JoinRelationship.OneToMany;
+      case "many":
+      case "cross":
+        return JoinRelationship.ManyToOne;
       case "inline":
         return JoinRelationship.OneToOne;
       case "nested":
@@ -1560,6 +1573,50 @@ export class Runtime {
     name: string
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name).getPreparedQuery();
+  }
+}
+
+export class ConnectionRuntime extends Runtime {
+  public readonly connections: Connection[];
+
+  constructor(urls: URLReader, connections: Connection[]);
+  constructor(connections: Connection[]);
+  constructor(
+    urlsOrConnections: URLReader | Connection[],
+    maybeConnections?: Connection[]
+  ) {
+    if (maybeConnections === undefined) {
+      const connections = urlsOrConnections as Connection[];
+      super(FixedConnectionMap.fromArray(connections));
+      this.connections = connections;
+    } else {
+      const connections = maybeConnections as Connection[];
+      super(
+        urlsOrConnections as URLReader,
+        FixedConnectionMap.fromArray(connections)
+      );
+      this.connections = connections;
+    }
+  }
+}
+
+export class SingleConnectionRuntime<
+  T extends Connection = Connection
+> extends Runtime {
+  public readonly connection: T;
+
+  constructor(urls: URLReader, connection: T);
+  constructor(connection: T);
+  constructor(urlsOrConnections: URLReader | T, maybeConnections?: T) {
+    if (maybeConnections === undefined) {
+      const connection = urlsOrConnections as T;
+      super(connection);
+      this.connection = connection;
+    } else {
+      const connection = maybeConnections as T;
+      super(urlsOrConnections as URLReader, connection);
+      this.connection = connection;
+    }
   }
 }
 

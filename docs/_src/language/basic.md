@@ -428,7 +428,7 @@ explore: airports is table('malloy-data.faa.airports'){
 
 explore: flights is table('malloy-data.faa.flights'){
   measure: flight_count is count()
-  join: origin_airport is airports on origin
+  join_one: origin_airport is airports with origin
 }
 
 query: flights->{

@@ -56,7 +56,7 @@ explore: inventory_items is table('malloy-data.ecomm.inventory_items'){
 }
 
 explore: order_items is table('malloy-data.ecomm.order_items'){
-  join: inventory_items  on inventory_item_id
+  join_one: inventory_items with inventory_item_id
   measure: order_item_count is count(*)
 }
 
@@ -86,7 +86,7 @@ explore: inventory_items is table('malloy-data.ecomm.inventory_items'){
 }
 
 explore: order_items is table('malloy-data.ecomm.order_items'){
-  join: inventory_items  on inventory_item_id
+  join_one: inventory_items  with inventory_item_id
   measure: order_item_count is count(*)
 }
 

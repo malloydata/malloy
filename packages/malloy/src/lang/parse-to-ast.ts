@@ -93,6 +93,18 @@ export class MalloyToAST
     return eps;
   }
 
+  protected onlyJoins(els: ast.MalloyElement[]): ast.Join[] {
+    const eps: ast.Join[] = [];
+    for (const el of els) {
+      if (el instanceof ast.Join) {
+        eps.push(el);
+      } else {
+        this.astError(el, `Expected explore property, not '${el.elementType}'`);
+      }
+    }
+    return eps;
+  }
+
   protected onlyDocStatements(els: ast.MalloyElement[]): ast.DocStatement[] {
     const eps: ast.DocStatement[] = [];
     for (const el of els) {
@@ -280,23 +292,85 @@ export class MalloyToAST
     );
   }
 
-  visitDefExploreJoin(pcx: parse.DefExploreJoinContext): ast.Joins {
-    return this.visitJoinList(pcx.joinList());
+  visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.Joins {
+    const joinList = this.getJoinList(pcx.joinList());
+    const joins: ast.Join[] = [];
+    for (const join of joinList) {
+      if (join instanceof ast.Join) {
+        joins.push(join);
+        if (join instanceof ast.ExpressionJoin) {
+          join.joinType = "many";
+          if (join.joinOn == undefined) {
+            join.log("join_many: requires ON expression");
+          }
+        } else if (join instanceof ast.KeyJoin) {
+          join.log("Foreign key join not legal in join_many:");
+        }
+      }
+    }
+    return new ast.Joins(joins);
   }
 
-  visitJoinList(pcx: parse.JoinListContext): ast.Joins {
-    const astJoins = pcx.joinDef().map((jcx) => this.visitJoinDef(jcx));
-    return new ast.Joins(astJoins);
+  visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.Joins {
+    const joinList = this.getJoinList(pcx.joinList());
+    const joins: ast.Join[] = [];
+    for (const join of joinList) {
+      if (join instanceof ast.Join) {
+        joins.push(join);
+        if (join instanceof ast.ExpressionJoin) {
+          join.joinType = "one";
+        }
+      }
+    }
+    return new ast.Joins(joins);
   }
 
-  visitJoinDef(pcx: parse.JoinDefContext): ast.Join {
+  visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.Joins {
+    const joinList = this.getJoinList(pcx.joinList());
+    const joins: ast.Join[] = [];
+    for (const join of joinList) {
+      if (join instanceof ast.Join) {
+        joins.push(join);
+        if (join instanceof ast.ExpressionJoin) {
+          join.joinType = "cross";
+        } else {
+          join.log("Foreign key join not legal in join_cross:");
+        }
+      }
+    }
+    return new ast.Joins(joins);
+  }
+
+  protected getJoinList(pcx: parse.JoinListContext): ast.MalloyElement[] {
+    return pcx.joinDef().map((jcx) => this.visit(jcx));
+  }
+
+  protected getJoinSource(
+    name: string,
+    ecx: parse.ExploreContext | undefined
+  ): ast.Mallobj {
+    if (ecx) {
+      return this.visitExplore(ecx);
+    }
+    return new ast.NamedSource(name);
+  }
+
+  visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
     const joinAs = this.getIdText(pcx.joinNameDef());
-    const fromExploreCx = pcx.explore();
-    const joinFrom = fromExploreCx
-      ? this.visitExplore(fromExploreCx)
-      : new ast.NamedSource(joinAs);
-    const joinOn = this.getFieldPath(pcx.fieldPath());
-    const join = new ast.Join(joinAs, joinFrom, joinOn);
+    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const join = new ast.ExpressionJoin(joinAs, joinFrom);
+    const onCx = pcx.joinExpression();
+    if (onCx) {
+      join.joinOn = this.getFieldExpr(onCx);
+    }
+    return this.astAt(join, pcx);
+  }
+
+  visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
+    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const joinOn = this.getIdText(pcx.fieldName());
+    const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
 
