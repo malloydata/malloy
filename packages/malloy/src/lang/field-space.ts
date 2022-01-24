@@ -459,3 +459,27 @@ export class IndexFieldSpace extends QueryFieldSpace {
     return seg;
   }
 }
+
+/**
+ * Used to detect references to fields in the statement which defines them
+ */
+export class CircleSpace implements FieldSpace {
+  foundCircle = false;
+  constructor(readonly realFS: FieldSpace, readonly circular: ExprFieldDecl) {}
+  structDef(): model.StructDef {
+    return this.realFS.structDef();
+  }
+  emptyStructDef(): model.StructDef {
+    return this.realFS.emptyStructDef();
+  }
+  findEntry(symbol: string): SpaceEntry | undefined {
+    if (symbol === this.circular.defineName) {
+      this.foundCircle = true;
+      return undefined;
+    }
+    return this.realFS.findEntry(symbol);
+  }
+  getDialect(): Dialect {
+    return this.realFS.getDialect();
+  }
+}
