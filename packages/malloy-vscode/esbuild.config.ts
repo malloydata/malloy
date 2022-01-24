@@ -83,10 +83,8 @@ export async function doBuild(): Promise<void> {
     path.join("src", "media", "refresh.svg"),
     path.join("src", "media", "database.svg"),
   ];
-  if (!fs.existsSync(path.join(outDir, "src")))
-    fs.mkdirSync(path.join(outDir, "src"));
-  if (!fs.existsSync(path.join(outDir, "src", "media")))
-    fs.mkdirSync(path.join(outDir, "src", "media"));
+  fs.mkdirSync(path.join(outDir, "src"));
+  fs.mkdirSync(path.join(outDir, "src", "media"));
 
   await copyFiles.forEach((file) =>
     fs.copyFile(file, path.join(outDir, file), (err) => {
