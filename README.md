@@ -78,7 +78,7 @@ GROUP BY carriers.nickname, flights.flight_num, destination.full_name, destinati
 ORDER BY average_flight_time ASC
 ```
 
-Here's how we expect you'd start working the reusable pieces into a Malloy model (note that there's no up-front need to model anything--you can model as you go to make your analysis more efficient over time)
+Here's how we expect one might start working the reusable pieces into a Malloy model. N ote that there's no up-front need to model anything--you can model as you go to make your analysis more efficient over time:
 
 ```malloy
 explore: carriers is table('malloy-data.faa.carriers'){
@@ -123,7 +123,17 @@ query: flights -> best_flights {      -- starting with the flights explore, refi
 
 ```
 
-So now when we want to ask "What are the best flights from DFW to OHR?" you'd simply write:
+So now when we instead want to ask, "What were the best flights from SFO to anywhere in the state of Colorado in January of any year?" you'd simply write:
+
+```
+query: flights -> best_flights {      -- starting with the flights explore, refine best_flights for our specific question
+  where: [
+    origin: 'SFO'
+    , destinations.state: 'CO'        -- the 'apply' operator means less repeating yourself
+    , month(dep_time): 1
+  ]
+}
+```
 
 
 
