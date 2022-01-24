@@ -988,12 +988,13 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
     let leafiest;
     for (const [name, join] of this.joins) {
       // first join is by default the
-      if (leafiest === undefined) {
+      const relationship = join.parentRelationship();
+      if (relationship === "many_to_many") {
+        // everything must be calculated with symmetric aggregates
+        leafiest = "0never";
+      } else if (leafiest === undefined) {
         leafiest = name;
-      } else if (
-        join.parentRelationship() === "one_to_many" ||
-        join.parentRelationship() === "many_to_many"
-      ) {
+      } else if (join.parentRelationship() === "one_to_many") {
         // check up the parent relationship until you find
         //  the current leafiest node.  If it isn't in the direct path
         //  we need symmetric aggregate for everything.
@@ -1003,7 +1004,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
           leafiest = name;
         } else {
           // we have more than on one_to_many join chain, all bets are off.
-          leafiest = "we'll never find this so everything will be symmetric";
+          leafiest = "0never";
         }
       }
     }
@@ -1082,6 +1083,7 @@ class JoinInstance {
       case "one":
         return "many_to_one";
       case "cross":
+        return "many_to_many";
       case "many":
         return "one_to_many";
       case "nested":
