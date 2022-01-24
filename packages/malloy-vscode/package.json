@@ -79,7 +79,7 @@
           "light": "src/media/play.svg",
           "dark": "src/media/play.svg"
         },
-        "enablement": "false"
+        "enablement": "view == malloySchema && viewItem == query"
       },
       {
         "command": "malloy.runTurtleWithFilters",
