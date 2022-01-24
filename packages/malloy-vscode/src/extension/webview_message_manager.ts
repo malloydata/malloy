@@ -34,14 +34,14 @@ export class WebviewMessageManager<T> {
   }
 
   private pendingMessages: T[] = [];
-  private panelCanReceiveMessages = false;
+  private panelCanReceiveMessages = true;
   private clientCanReceiveMessages = false;
   private callback: (message: T) => void = () => {
     /* Do nothing by default */
   };
 
   public postMessage(message: T): void {
-    if (this.panelCanReceiveMessages) {
+    if (this.canSendMessages) {
       this.panel.webview.postMessage(message);
     } else {
       this.pendingMessages.push(message);

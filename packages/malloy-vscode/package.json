@@ -51,51 +51,61 @@
     "commands": [
       {
         "command": "malloy.showLicenses",
-        "title": "Malloy: Show Licenses"
+        "title": "Show Licenses",
+        "category": "Malloy"
       },
       {
         "command": "malloy.runQueryFile",
-        "title": "Run Malloy Query File"
+        "title": "Run Query File",
+        "category": "Malloy"
       },
       {
         "command": "malloy.runQuery",
-        "title": "Run Malloy Query"
+        "title": "Run Query",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.runNamedQuery",
-        "title": "Run Named Malloy Query"
+        "title": "Run Named Query",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.runTurtleFromSchema",
-        "title": "Run Turtle From Schema",
+        "title": "Run Query From Schema",
+        "category": "Malloy",
         "icon": {
           "light": "src/media/play.svg",
           "dark": "src/media/play.svg"
-        }
+        },
+        "enablement": "false"
       },
       {
         "command": "malloy.runTurtleWithFilters",
-        "title": "Run Malloy Query With Filters"
+        "title": "Run Query With Filters",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.copyFieldPath",
-        "title": "Copy Field Path"
+        "title": "Copy Field Path",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.refreshSchema",
         "title": "Refresh Schema",
+        "category": "Malloy",
         "icon": {
           "light": "src/media/refresh.svg",
           "dark": "src/media/refresh.svg"
         }
       },
       {
-        "command": "malloy.showResultJSON",
-        "title": "Show Result JSON"
-      },
-      {
         "command": "malloy.editConnections",
-        "title": "Edit Connections"
+        "title": "Edit Connections",
+        "category": "Malloy"
       }
     ],
     "menus": {
