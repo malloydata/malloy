@@ -78,22 +78,6 @@ const config = [
             to: "language.json",
           },
           {
-            from: "src/media/refresh.svg",
-            to: "src/media/refresh.svg",
-          },
-          {
-            from: "src/media/play.svg",
-            to: "src/media/play.svg",
-          },
-          {
-            from: "src/media/logo.png",
-            to: "src/media/logo.png",
-          },
-          {
-            from: "src/media/database.svg",
-            to: "src/media/database.svg",
-          },
-          {
             from: "../../README.md",
             to: "README.md",
           },
