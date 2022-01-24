@@ -12,6 +12,121 @@ Malloy is a language for anyone who works with SQL--whether you’re an analyst,
 
 We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
+# Syntax Example
+Here's a SQL query one might write to answer "What flights were available from SFO to JFK/EWR in the year 2003," along with a bit of information that might help compare options.
+
+```sql
+SELECT
+    carrier
+    , flight_num
+    , destination
+    , COUNT(1) AS flight_count
+    , ROUND(AVG(flight_time),1) as average_flight_time
+    , ROUND(AVG(dep_delay),1) AS average_delay
+FROM `malloy-data.faa.flights` AS flights
+WHERE origin = 'SFO'
+    AND (destination = 'JFK' OR destination = 'EWR')
+    AND (dep_time>='2003-01-01')
+    AND (dep_time<'2004-01-01')
+GROUP BY carrier, flight_num, destination
+ORDER BY flight_count DESC
+```
+
+In Malloy, this would be expressed:
+```malloy
+query: table('malloy-data.faa.flights') -> {   -- start with the source
+  top: 20 by flight_count               -- `by flight_count` is optional here; Malloy automatically orders by your first measure, desc
+  where: [
+    origin: 'SFO'
+    , destination: 'JFK' | 'EWR'        -- the 'apply' operator means less repeating yourself
+    , dep_time: @2003                   -- easy handling of time/dates
+  ]
+  group_by: [                           -- no need to write non-aggregates in both SELECT and GROUP BY clause
+    carrier
+    , flight_num
+    , destination
+  ]
+  aggregate: [
+    flight_count is count()
+    average_flight_time is round(avg(flight_time),1)    -- in Malloy, we always start with the name of a field, table, etc. to improve readability
+    , average_delay is round(avg(dep_delay))            -- most familiar SQL expressions are supported
+  ]
+}
+```
+
+We think that the querying experience alone improves upon SQL substantially. But where Malloy really shines is as you begin building out a data model. Let's expand upon the prior SQL example by adding some joins to access prettier names.
+
+```sql
+SELECT
+    carriers.nickname
+    , flights.flight_num
+    , destination.full_name
+    , destination.city
+    , ROUND(AVG(flight_time),1) as average_flight_time
+    , COUNT(1) AS flight_count
+    , ROUND(AVG(dep_delay),1) AS average_delay
+FROM `malloy-data.faa.flights` AS flights
+LEFT JOIN `malloy-data.faa.carriers` AS carriers
+    ON flights.carrier = carriers.code
+LEFT JOIN `malloy-data.faa.airports` AS destination
+    ON flights.destination = destination.code
+WHERE flights.origin = 'SFO'
+    AND (flights.destination = 'JFK' OR flights.destination = 'EWR')
+    AND (flights.dep_time>='2003-01-01')
+    AND (flights.dep_time<'2004-01-01')
+GROUP BY carriers.nickname, flights.flight_num, destination.full_name, destination.city
+ORDER BY average_flight_time ASC
+```
+
+Here's how we expect you'd start working the reusable pieces into a Malloy model (note that there's no up-front need to model anything--you can model as you go to make your analysis more efficient over time)
+
+```malloy
+explore: carriers is table('malloy-data.faa.carriers'){
+  primary_key: code       -- we declare primary keys to let malloy solve the fan/chasm traps, calculating aggregates correctly anywhere
+}
+
+explore: airports is table('malloy-data.faa.airports'){
+  primary_key: code
+}
+
+explore: flights is table('malloy-data.faa.flights'){
+  join_one: carriers with carrier         -- for this join of many flights to one carrier, malloy only needs the key from flights and uses the primary key from carriers.
+  join_one: destinations is airports with destination
+  measure: [
+    flight_count is count()
+    average_flight_time is round(avg(flight_time),1)    -- in Malloy, we always start with the name of a field, table, etc. to improve readability
+    average_delay is round(avg(dep_delay))
+  ]
+
+  query: best_flights is {      -- define a common query of the best flights, we can filter/refine this when we reference it
+    top: 20 by flight_count
+    group_by: [
+      carriers.nickname
+      , flight_num
+      , destinations.full_name
+    ]
+    aggregate: [
+      flight_count        -- no need to re-define, this is in our explore now
+      average_flight_time
+      , average_delay
+    ]
+  }
+}
+
+query: flights -> best_flights {      -- starting with the flights explore, refine best_flights for our specific question
+  where: [
+    origin: 'SFO'
+    , destination: 'JFK' | 'EWR'        -- the 'apply' operator means less repeating yourself
+    , dep_time: @2003
+  ]
+}
+
+```
+
+So now when we want to ask "What are the best flights from DFW to OHR?" you'd simply write:
+
+
+
 # Installing the Extension
 
 Currently, the Malloy extension works on Mac and Linux machines.
