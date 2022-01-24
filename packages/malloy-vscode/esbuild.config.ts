@@ -75,7 +75,6 @@ export async function doBuild(): Promise<void> {
     process.exit(1);
   });
 
-  // TODO clean up
   const copyFiles = [
     "language.json",
     path.join("src", "media", "logo.png"),
