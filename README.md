@@ -26,14 +26,14 @@ query: table('malloy-data.faa.flights') -> {
 }
 ```
 
-This is the SQL Malloy will generate based on the above:
+In SQL this would be expressed:
 ```sql
 SELECT
-   base.carrier as carrier,
-   COUNT( 1) as flight_count,
-   AVG(base.flight_time) as average_flight_time
-FROM `malloy-data.faa.flights` as base
-WHERE base.origin='SFO'
+   carrier,
+   COUNT(1) as flight_count,
+   AVG(flight_time) as average_flight_time
+FROM `malloy-data.faa.flights`
+WHERE origin = 'SFO'
 GROUP BY 1
 ORDER BY 2 desc         -- malloy automatically orders by the first aggregate
 ```
