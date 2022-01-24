@@ -39,7 +39,7 @@ ORDER BY 2 desc         -- malloy automatically orders by the first aggregate
 ```
 
 
-Learn more about the syntax with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html)!
+Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
 
 
