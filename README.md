@@ -13,45 +13,26 @@ Malloy is a language for anyone who works with SQL--whether you’re an analyst,
 We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
 # Syntax Example
-We highly recommend starting [here](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax.
-
-If you'd like a quick introduction to the flavor of the language, here's an example of a SQL query one might write to answer "What flights were available from SFO to JFK/EWR in the year 2003," along with a bit of information that might help compare options.
+We highly recommend starting with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax. Here is a simple exmample of a query in SQL and Malloy to give a sense of the flavor of the syntax:
 
 ```sql
 SELECT
-    carrier
-    , flight_num
-    , destination
+    destination
     , COUNT(1) AS flight_count
-    , ROUND(AVG(flight_time),1) as average_flight_time
-    , ROUND(AVG(dep_delay),1) AS average_delay
+    , AVG(flight_time) AS average_flight_time
 FROM `malloy-data.faa.flights` AS flights
 WHERE origin = 'SFO'
-    AND (destination = 'JFK' OR destination = 'EWR')
-    AND (dep_time>='2003-01-01')
-    AND (dep_time<'2004-01-01')
-GROUP BY carrier, flight_num, destination
-ORDER BY flight_count DESC
+GROUP BY destination
 ```
 
 In Malloy, this would be expressed:
 ```malloy
-query: table('malloy-data.faa.flights') -> {   -- start with the source
-  top: 20 by flight_count               -- `by flight_count` is optional here; Malloy automatically orders by your first measure, desc
-  where: [
-    origin: 'SFO'
-    , destination: 'JFK' | 'EWR'        -- the 'apply' operator means less repeating yourself
-    , dep_time: @2003                   -- easy handling of time/dates
-  ]
-  group_by: [                           -- no need to write the same thing in both SELECT and GROUP BY clause
-    carrier
-    , flight_num
-    , destination
-  ]
+query: table('malloy-data.faa.flights') -> {
+  where: origin: 'SFO'
+  group_by: carrier
   aggregate: [
     flight_count is count()
-    average_flight_time is round(avg(flight_time),1)    -- in Malloy, we always start with the name of a field, table, etc. to improve readability
-    , average_delay is round(avg(dep_delay))            -- most familiar SQL expressions are supported
+    average_flight_time is avg(flight_time)
   ]
 }
 ```
