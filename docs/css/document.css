@@ -84,6 +84,11 @@ div.sidebar div.sidebar-item a {
   text-decoration: none;
 }
 
+/* hacks to get the side bar section to collapse -- looks at the first sibling element */
+div.sidebar-section-title.collapsed + div.sidebar-section-item-group {
+  display: none;
+}
+
 div.sidebar div.sidebar-item a img {
   width: 22px;
 }
@@ -103,8 +108,27 @@ div.sidebar-section-title {
   font-weight: 500;
   font-size: 14px;
   display: flex;
-  padding: 4px;
-  color: black;
+  padding: 3px 12px;
+  color: #48494c;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+}
+
+div.sidebar-section-title img.chevron-open {
+  display: none;
+}
+
+div.sidebar-section-title.collapsed img.chevron-closed {
+  display: none;
+}
+
+div.sidebar-section-title.collapsed img.chevron-open {
+  display: block;
+}
+
+div.sidebar-section-title:hover {
+  background-color: #85b0f730;
 }
 
 div.document-outer {
