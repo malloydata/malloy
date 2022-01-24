@@ -8,4 +8,5 @@ Let's solve some puzzles!
 - **[Wordle 215](wordle215.md)**: _Jan 20_ - Solved in 3
 - **[Wordle 216](wordle216.md)**: _Jan 21_ - Solved in 3.5
 - **[Wordle 217](wordle217.md)**: _Jan 22_ - Solved in 3.5
-- **[Wordle 218](wordle218.md)**: _Jan 22_ - Solved in 3
+- **[Wordle 218](wordle218.md)**: _Jan 23_ - Solved in 3
+- **[Wordle 219](wordle219.md)**: _Jan 24_ - Solved in 3.5
