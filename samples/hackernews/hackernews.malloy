@@ -123,3 +123,5 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
     }
   }
 }
+
+query: malloy_dashboard is stories->term_dashboard{where: title ~ r'Malloy'}
