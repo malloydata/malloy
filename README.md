@@ -15,7 +15,7 @@ We've built a Visual Studio Code extension to facilitate interacting with your d
 # Syntax Example
 We highly recommend starting [here](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax.
 
-Here's a SQL query one might write to answer "What flights were available from SFO to JFK/EWR in the year 2003," along with a bit of information that might help compare options.
+If you'd like a quick introduction to the flavor of the language, here's an example of a SQL query one might write to answer "What flights were available from SFO to JFK/EWR in the year 2003," along with a bit of information that might help compare options.
 
 ```sql
 SELECT
@@ -55,6 +55,8 @@ query: table('malloy-data.faa.flights') -> {   -- start with the source
   ]
 }
 ```
+
+Learn more about the syntax with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html)!
 
 
 
