@@ -41,7 +41,7 @@ query: table('malloy-data.faa.flights') -> {   -- start with the source
     , destination: 'JFK' | 'EWR'        -- the 'apply' operator means less repeating yourself
     , dep_time: @2003                   -- easy handling of time/dates
   ]
-  group_by: [                           -- no need to write non-aggregates in both SELECT and GROUP BY clause
+  group_by: [                           -- no need to write the same thing in both SELECT and GROUP BY clause
     carrier
     , flight_num
     , destination
