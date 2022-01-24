@@ -15,7 +15,7 @@
     "test": "jest --config=../../jest.config.js",
     "package": "yarn vsce package --yarn --githubBranch=main --no-git-tag-version --no-update-package-json"
   },
-  "icon": "logo.png",
+  "icon": "img/logo.png",
   "license": "GPL-2.0",
   "categories": [
     "Programming Languages",
@@ -44,7 +44,7 @@
         {
           "id": "malloy",
           "title": "Malloy",
-          "icon": "logo.png"
+          "icon": "img/logo.png"
         }
       ]
     },
@@ -76,8 +76,8 @@
         "title": "Run Query From Schema",
         "category": "Malloy",
         "icon": {
-          "light": "src/media/play.svg",
-          "dark": "src/media/play.svg"
+          "light": "img/play.svg",
+          "dark": "img/play.svg"
         },
         "enablement": "view == malloySchema && viewItem == query"
       },
@@ -98,8 +98,8 @@
         "title": "Refresh Schema",
         "category": "Malloy",
         "icon": {
-          "light": "src/media/refresh.svg",
-          "dark": "src/media/refresh.svg"
+          "light": "img/refresh.svg",
+          "dark": "img/refresh.svg"
         }
       },
       {
