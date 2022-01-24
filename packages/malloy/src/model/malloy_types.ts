@@ -400,23 +400,25 @@ export interface JoinForeignKey {
   foreignKey: FieldRef;
 }
 
-export interface JoinLeft {
-  type: "condition";
-  onExpression: Expr; // must be a boolean expression
-  many: boolean;
+export interface JoinOn {
+  type: "one" | "many" | "cross";
+  onExpression?: Expr;
 }
 
-export interface JoinCross {
-  type: "crossJoin";
-  onExpression?: Expr;
+export function isJoinOn(sr: StructRelationship): sr is JoinOn {
+  return ["one", "many", "cross"].includes(sr.type);
+}
+export function isAnyJoin(
+  sr: StructRelationship
+): sr is JoinOn | JoinForeignKey {
+  return isJoinOn(sr) || sr.type == "foreignKey";
 }
 
 /** types of joins. */
 export type StructRelationship =
   | { type: "basetable"; connectionName: string }
   | JoinForeignKey
-  | JoinLeft
-  | JoinCross
+  | JoinOn
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
 

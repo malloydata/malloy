@@ -704,33 +704,16 @@ export class ExpressionJoin extends Join {
       return;
     }
     const joinRel = inStruct.structRelationship;
-    if (joinRel.type === "crossJoin" || joinRel.type === "condition") {
+    if (model.isJoinOn(joinRel)) {
       joinRel.onExpression = compressExpr(exprX.value);
     }
-  }
-
-  condition(): model.JoinLeft {
-    return {
-      type: "condition",
-      onExpression: [],
-      many: this.joinType === "many",
-    };
-  }
-
-  cross(): model.JoinCross {
-    const crossJoin: model.JoinCross = { type: "crossJoin" };
-    if (this.expr) {
-      crossJoin.onExpression = [];
-    }
-    return crossJoin;
   }
 
   structDef(): model.StructDef {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
-      structRelationship:
-        this.joinType === "cross" ? this.cross() : this.condition(),
+      structRelationship: { type: this.joinType },
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved

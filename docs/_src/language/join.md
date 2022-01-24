@@ -1,17 +1,17 @@
 # Joins
 
-Joins in malloy are different than SQL joins.  Malloy retains the graph nature of the the data relationships
-while SQL flattens them all into a single table space.
+Joins in malloy are different than SQL joins.  Wnen two explores are joined,
+Malloy retains the graph nature of the the data relationships. This is unlike
+SQL, which flattens them all into a single table space.
 
-[Aggregate calculations](aggregates.md) locality of computation meaning calculations always work regardless of join pattern.
-
-Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).
+[Aggregate calculations](aggregates.md) use this graph to deduce
+a locality of computation, so they always work regardless of join pattern.
 
 In Malloy syntaxes for join are:
 
 ```
     join_one: <explore-name> [is <explore-exp>] with <foreign_key>
-    join_one: <explore-name> [is <explore-exp>] on <boolean expression>
+    join_one: <explore-name> [is <explore-exp>] [on <boolean expression>]
     join_many: <explore-name> [is <explore-exp>] on <boolean expression>
     join_cross: <explore-name> [is <explore-exp>] [on <boolean expression>]
 ```
@@ -22,8 +22,9 @@ In Malloy syntaxes for join are:
 
 `join_cross:` - the join is a cross product and there will be many rows in each side of the join.
 
-
 Malloy's joins are left outer joins by default.
+Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).
+
 
 ## Join Types
 
