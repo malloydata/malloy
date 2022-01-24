@@ -18,7 +18,7 @@
   "scripts": {
     "clean": "yarn workspace @malloydata/malloy clean && yarn tsc --build --clean",
     "build": "yarn workspace @malloydata/malloy build-parser && yarn tsc --build",
-    "package-extension": "yarn workspace malloy-vscode package-extension",
+    "package-extension": "yarn build && yarn workspace malloy-vscode package-extension",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn jest",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation",
