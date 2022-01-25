@@ -529,7 +529,7 @@ div.document .result-middle[data-result-kind="json"] pre {
 .result-controls {
   display: flex;
   justify-content: end;
-  padding: 5px 19px 0 5px;
+  padding: 5px 5px 0 5px;
   font-size: 12px;
   gap: 3px;
 }
