@@ -30,12 +30,12 @@ In SQL this would be expressed:
 ```sql
 SELECT
    carrier,
-   COUNT(1) as flight_count,
+   COUNT(*) as flight_count,
    AVG(flight_time) as average_flight_time
 FROM `malloy-data.faa.flights`
 WHERE origin = 'SFO'
-GROUP BY 1
-ORDER BY 2 desc         -- malloy automatically orders by the first aggregate
+GROUP BY carrier
+ORDER BY flight_count desc         -- malloy automatically orders by the first aggregate
 ```
 
 
