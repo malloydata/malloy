@@ -1575,7 +1575,7 @@ export class PipelineDesc extends MalloyElement {
       return oops();
     }
     if (seedQuery.type !== "query") {
-      this.log(`Illegal eference to '${this.headName}', query expected`);
+      this.log(`Illegal reference to '${this.headName}', query expected`);
       return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);

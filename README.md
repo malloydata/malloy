@@ -61,11 +61,7 @@ Click on the Malloy icon on the left side of VS Code. This opens the Malloy view
 
 In the "CONNECTIONS" panel, click "Edit Connections". This opens the connection manager page. Click "Add Connection".
 
-### Postgres
-
-Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.
-
-### BigQuery
+### BigQuery 
 
 Authenticating to BigQuery can be done either via oAuth (using your Google Cloud Account) or with a Service Account Key downloaded from Google Cloud
 
@@ -83,6 +79,10 @@ _Replace `{my_project_id}` with the **ID** of the bigquery project you want to u
 #### **Using Service Account Key**
 
 Add the relevant account information to the new connection, and include the path to the [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
+
+### Postgres (Development in Progress, date/time support currently incomplete)
+
+Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.
 
 ## 4. Test the connection
 
