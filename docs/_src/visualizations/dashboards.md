@@ -57,11 +57,8 @@ Naming the field with '_dashboard' is a quick way of telling the renderer to sho
 by tying the field name to a renderer in the styles file.
 
 ```malloy
---! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
--- documtation rendering bug: should be
--- query: county_dahsboard is airports->by_state_and_county
-query: airports->{ nest: county_dashboard is by_state_and_county{limit:10}}
-
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy", "queryName": "county_dashboard"}
+query: county_dashboard is airports->by_state_and_county
 ```
 
 ## Charting.

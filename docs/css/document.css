@@ -45,6 +45,13 @@ div.header {
   font-weight: 400;
   border-bottom: 1px solid #efefef;
   font-family: "Google Sans", Arial, Helvetica, sans-serif;
+  justify-content: space-between;
+}
+
+div.header-banner {
+  display: flex;
+  gap: 5px;
+  align-items: center;
 }
 
 div.header span.subtitle {
@@ -543,22 +550,6 @@ div.document .result-middle[data-result-kind="json"] pre {
   color: #b1b1b1;
 }
 
-/* .result-controls .result-control:first-of-type {
-  border-right: none;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.result-controls .result-control:last-of-type {
-  border-left: none;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.result-controls .result-control:not(:last-of-type):not(:first-of-type) {
-  border-radius: 0;
-} */
-
 .result-controls .result-control:hover {
   border-bottom: 1px solid #4285f4;
   color: #4285f4;
@@ -569,10 +560,27 @@ div.document .result-middle[data-result-kind="json"] pre {
   color: #4285f4;
 }
 
-/* .result-outer .result-controls {
-  display: none;
+.search-highlight {
+  background-color: #ffff005c;
+  color: unset;
 }
 
-.result-outer:hover .result-controls {
-  display: flex;
-} */
+.search-input-outer {
+  position: relative;
+}
+
+.search-input-outer img {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  pointer-events: none;
+}
+
+#search-input {
+  padding: 9px 10px 8px 40px;
+  border-radius: 5px;
+  border: 1px solid #efefef;
+  color: #505050;
+  font-size: 16px;
+  background-color: #fbfbfb;
+}
