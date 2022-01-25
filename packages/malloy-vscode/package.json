@@ -24,7 +24,21 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onCommand:malloy.showLicenses",
+    "onCommand:malloy.runQueryFile",
+    "onCommand:malloy.runQuery",
+    "onCommand:malloy.runNamedQuery",
+    "onCommand:malloy.runTurtleFromSchema",
+    "onCommand:malloy.runTurtleWithFilters",
+    "onCommand:malloy.copyFieldPath",
+    "onCommand:malloy.refreshSchema",
+    "onCommand:malloy.editConnections",
+    "onLanguage:malloy",
+    "workspaceContains:**/.malloy",
+    "onView:malloyConnections",
+    "onView:malloySchema",
+    "onWebviewPanel:malloyQuery",
+    "onWebviewPanel:malloyConnections"
   ],
   "main": "./dist/extension",
   "configurationDefaults": {
