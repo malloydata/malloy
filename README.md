@@ -76,13 +76,13 @@ gcloud config set project {my_project_id} --installation
 
 _Replace `{my_project_id}` with the **ID** of the bigquery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
 
-### Postgres (Development in Progress, date/time support currently incomplete)
-
-Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.
-
 #### **Using Service Account Key**
 
 Add the relevant account information to the new connection, and include the path to the [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
+
+### Postgres (Development in Progress, date/time support currently incomplete)
+
+Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.
 
 ## 4. Test the connection
 
