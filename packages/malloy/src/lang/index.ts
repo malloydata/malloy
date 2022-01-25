@@ -11,20 +11,16 @@
  * GNU General Public License for more details.
  */
 
-export {
-  MalloyTranslator,
+export { MalloyTranslator } from "./parse-malloy";
+export type {
   TranslateResponse,
   UpdateData,
   SchemaData,
   URLData,
 } from "./parse-malloy";
-export {
-  exploreQueryWalkerBuilder,
-  ExploreClauseRef,
-} from "./parse-tree-walkers/explore-query-walker";
-export {
-  DocumentHighlight,
-  HighlightType,
-} from "./parse-tree-walkers/document-highlight-walker";
-export { DocumentSymbol } from "./parse-tree-walkers/document-symbol-walker";
-export { LogMessage } from "./parse-log";
+export { exploreQueryWalkerBuilder } from "./parse-tree-walkers/explore-query-walker";
+export type { ExploreClauseRef } from "./parse-tree-walkers/explore-query-walker";
+export { HighlightType } from "./parse-tree-walkers/document-highlight-walker";
+export type { DocumentHighlight } from "./parse-tree-walkers/document-highlight-walker";
+export type { DocumentSymbol } from "./parse-tree-walkers/document-symbol-walker";
+export type { LogMessage } from "./parse-log";

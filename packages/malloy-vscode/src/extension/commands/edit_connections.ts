@@ -35,7 +35,7 @@ export function editConnectionsCommand(): void {
   );
 
   const onDiskPath = vscode.Uri.file(
-    path.join(__filename, "..", "connections_webview.js")
+    path.join(__filename, "..", "connections_page.js")
   );
 
   const entrySrc = panel.webview.asWebviewUri(onDiskPath);

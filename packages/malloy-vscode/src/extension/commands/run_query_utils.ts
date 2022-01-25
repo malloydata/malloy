@@ -180,7 +180,7 @@ export function runMalloyQuery(
       }
 
       const onDiskPath = vscode.Uri.file(
-        path.join(__filename, "..", "query_webview.js")
+        path.join(__filename, "..", "query_page.js")
       );
 
       const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);

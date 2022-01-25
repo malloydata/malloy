@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import * as crypto from "crypto";
 import { cloneDeep } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
@@ -58,6 +57,7 @@ import {
 
 import { indent, AndChain } from "./utils";
 import { parseTableURL } from "../malloy";
+import md5 from "md5";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -106,10 +106,7 @@ class StageWriter {
   addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName =
-      "scratch." +
-      baseName +
-      crypto.createHash("md5").update(sql).digest("hex");
+    const tableName = "scratch." + baseName + md5(sql);
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }
