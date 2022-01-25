@@ -418,7 +418,7 @@ query: airports->{
 
 ## Joins
 
-Joins are declared as part of an explore. When joining an explore to another, it brings with it all child joins.
+[Joins](join.md) are declared as part of an explore. When joining an explore to another, it brings with it all child joins.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
