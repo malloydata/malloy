@@ -73,7 +73,7 @@ query: flights->{
 ## Aggregate Locality
 
 In SQL, some kinds of aggregations are difficult to express because locality of aggregation is restricted to the top level of a query. Malloy
-offers more control over this behavior, allowing these types of analysis to be
+offers more control over this behavior, allowing these types of analyses to be
 expressed much more easily.
 
 ### The Problem

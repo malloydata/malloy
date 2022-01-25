@@ -438,7 +438,7 @@ explore: flights is table('malloy-data.faa.flights') {
 
 query: flights->{
   where: dep_time: @2003-01
-  group_by: carrier
+  group_by: aircraft.aircraft_models.manufacturer
   aggregate: [
     flight_count is count()
     aircraft_count is aircraft.count()
