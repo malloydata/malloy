@@ -14,12 +14,12 @@
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { Connection, FixedConnectionMap } from "@malloydata/malloy";
-import { getPassword } from "keytar";
 import {
   ConnectionBackend,
   ConnectionConfig,
   getDefaultIndex,
 } from "./connection_manager_types";
+import { loadKeytar } from "./keytar_loader";
 
 export class ConnectionManager {
   private _connections: FixedConnectionMap;
@@ -86,8 +86,9 @@ export class ConnectionManager {
           if (connectionConfig.password !== undefined) {
             password = connectionConfig.password;
           } else if (connectionConfig.useKeychainPassword) {
+            const keytar = await loadKeytar();
             password =
-              (await getPassword(
+              (await keytar.getPassword(
                 "com.malloy-lang.vscode-extension",
                 `connections.${connectionConfig.id}.password`
               )) || undefined;

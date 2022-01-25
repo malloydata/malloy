@@ -75,16 +75,7 @@ export async function doBuild(): Promise<void> {
     process.exit(1);
   });
 
-  const copyFiles = [
-    "language.json",
-    path.join("src", "media", "logo.png"),
-    path.join("src", "media", "play.svg"),
-    path.join("src", "media", "refresh.svg"),
-    path.join("src", "media", "database.svg"),
-  ];
-  fs.mkdirSync(path.join(outDir, "src"));
-  fs.mkdirSync(path.join(outDir, "src", "media"));
-
+  const copyFiles = ["language.json"];
   await copyFiles.forEach((file) =>
     fs.copyFile(file, path.join(outDir, file), (err) => {
       if (err) throw err;

@@ -23,8 +23,8 @@ import {
 } from "../webview_message_manager";
 import { CONNECTION_MANAGER, getConnectionsConfig } from "../state";
 import { ConnectionBackend, ConnectionConfig } from "../../common";
-import { deletePassword, setPassword } from "keytar";
 import { getDefaultIndex } from "../../common/connection_manager_types";
+import { loadKeytar } from "../../common/keytar_loader";
 
 export function editConnectionsCommand(): void {
   const panel = vscode.window.createWebviewPanel(
@@ -123,13 +123,14 @@ async function handleConnectionsPreSave(
 ): Promise<ConnectionConfig[]> {
   const defaultIndex = getDefaultIndex(connections);
   const modifiedConnections = [];
+  const keytar = await loadKeytar();
   for (let index = 0; index < connections.length; index++) {
     const connection = connections[index];
     connection.isDefault = index === defaultIndex;
     if (connection.backend === ConnectionBackend.Postgres) {
       if (connection.useKeychainPassword === false) {
         connection.useKeychainPassword = undefined;
-        await deletePassword(
+        await keytar.deletePassword(
           "com.malloy-lang.vscode-extension",
           `connections.${connection.id}.password`
         );
@@ -145,7 +146,7 @@ async function handleConnectionsPreSave(
         password: undefined,
         useKeychainPassword: true,
       });
-      await setPassword(
+      await keytar.setPassword(
         "com.malloy-lang.vscode-extension",
         `connections.${connection.id}.password`,
         connection.password
