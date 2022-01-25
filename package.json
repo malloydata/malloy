@@ -21,7 +21,7 @@
     "build-extension": "yarn build && yarn workspace malloy-vscode package",
     "lint": "yarn eslint '**/*.ts{,x}'",
     "test": "yarn jest",
-    "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation",
+    "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation && rm -rf js/generated/",
     "docs-prebuild": "yarn build && yarn docs-clean",
     "docs-build": "yarn docs-prebuild && ts-node --project tsconfig.packages.json docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
     "docs-preprocess": "ts-node --project tsconfig.packages.json docs/_scripts/build_docs/index.ts --watch",
