@@ -41,6 +41,11 @@ ORDER BY 2 desc         -- malloy automatically orders by the first aggregate
 
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
+# Get Started
+
+
+https://user-images.githubusercontent.com/7178946/150899566-a899200b-8973-406d-83a0-6cae911146ca.mp4
+
 
 
 # Installing the Extension
