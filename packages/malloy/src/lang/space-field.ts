@@ -256,7 +256,7 @@ export class FANSPaceField extends SpaceField {
     }
     const fieldTypeInfo = fromField.type();
     const fieldType = fieldTypeInfo.type;
-    // TODO starting to feel like this should me a method call on a spaceentry
+    // TODO starting to feel like this should be a method call on a spaceentry
     if (model.isAtomicFieldType(fieldType)) {
       if (fromField instanceof SpaceParam) {
         return {
@@ -338,7 +338,7 @@ export class ExpressionFieldFromAst extends SpaceField {
   }
 
   queryFieldDef(): model.QueryFieldDef {
-    return this.fieldDef();
+    return this.exprDef.queryFieldDef(this.space, this.name);
   }
 
   type(): FieldType {

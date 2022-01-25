@@ -71,6 +71,7 @@ async function compileDoc(
 function rebuildSidebarAndFooters() {
   const tableOfContents = JSON.parse(fs.readFileSync(CONTENTS_PATH, "utf8"))
     .contents as Section[];
+
   const renderedSidebar = renderSidebar(tableOfContents);
   fs.writeFileSync(path.join(OUT_PATH, "toc.html"), renderedSidebar);
   log(`File _includes/toc.html written.`);

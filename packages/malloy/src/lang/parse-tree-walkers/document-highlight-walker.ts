@@ -56,7 +56,6 @@ export const HighlightType = {
       As: "keyword.cast_modifier.as",
     },
     Is: "keyword.is",
-    Join: "keyword.join",
     On: "keyword.on",
     Desc: "keyword.desc",
     Asc: "keyword.asc",
@@ -88,7 +87,9 @@ export const HighlightType = {
     GroupBy: "property.group_by",
     Having: "property.having",
     Index: "property.index",
-    Join: "property.join",
+    JoinOne: "keyword.join_one",
+    JoinMany: "keyword.join_many",
+    JoinCross: "keyword.join_cross",
     Limit: "property.limit",
     Measure: "property.measure",
     Nest: "property.nest",
@@ -160,13 +161,13 @@ export function passForHighlights(
         register(token, HighlightType.Property.Index, true);
         break;
       case MalloyParser.JOIN_CROSS:
-        register(token, HighlightType.Property.Join, true);
+        register(token, HighlightType.Property.JoinOne, true);
         break;
       case MalloyParser.JOIN_ONE:
-        register(token, HighlightType.Property.Join, true);
+        register(token, HighlightType.Property.JoinMany, true);
         break;
       case MalloyParser.JOIN_MANY:
-        register(token, HighlightType.Property.Join, true);
+        register(token, HighlightType.Property.JoinCross, true);
         break;
       case MalloyParser.LIMIT:
         register(token, HighlightType.Property.Limit, true);
@@ -241,6 +242,9 @@ export function passForHighlights(
         break;
       case MalloyParser.WHEN:
         register(token, HighlightType.Keyword.When);
+        break;
+      case MalloyParser.WITH:
+        register(token, HighlightType.Keyword.With);
         break;
       case MalloyParser.ELSE:
         register(token, HighlightType.Keyword.Else);

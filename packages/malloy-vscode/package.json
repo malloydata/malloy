@@ -15,7 +15,7 @@
     "test": "jest --config=../../jest.config.js",
     "package": "yarn vsce package --yarn --githubBranch=main --no-git-tag-version --no-update-package-json"
   },
-  "icon": "logo.png",
+  "icon": "img/logo.png",
   "license": "GPL-2.0",
   "categories": [
     "Programming Languages",
@@ -24,9 +24,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:malloy.runQueryFile",
-    "onCommand:malloy.showLicenses",
-    "onLanguage:malloy"
+    "*"
   ],
   "main": "./dist/extension",
   "configurationDefaults": {
@@ -44,58 +42,68 @@
         {
           "id": "malloy",
           "title": "Malloy",
-          "icon": "logo.png"
+          "icon": "img/logo.png"
         }
       ]
     },
     "commands": [
       {
         "command": "malloy.showLicenses",
-        "title": "Malloy: Show Licenses"
+        "title": "Show Licenses",
+        "category": "Malloy"
       },
       {
         "command": "malloy.runQueryFile",
-        "title": "Run Malloy Query File"
+        "title": "Run Query File",
+        "category": "Malloy"
       },
       {
         "command": "malloy.runQuery",
-        "title": "Run Malloy Query"
+        "title": "Run Query",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.runNamedQuery",
-        "title": "Run Named Malloy Query"
+        "title": "Run Named Query",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.runTurtleFromSchema",
-        "title": "Run Turtle From Schema",
+        "title": "Run Query From Schema",
+        "category": "Malloy",
         "icon": {
-          "light": "src/media/play.svg",
-          "dark": "src/media/play.svg"
-        }
+          "light": "img/play.svg",
+          "dark": "img/play.svg"
+        },
+        "enablement": "view == malloySchema && viewItem == query"
       },
       {
         "command": "malloy.runTurtleWithFilters",
-        "title": "Run Malloy Query With Filters"
+        "title": "Run Query With Filters",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.copyFieldPath",
-        "title": "Copy Field Path"
+        "title": "Copy Field Path",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.refreshSchema",
         "title": "Refresh Schema",
+        "category": "Malloy",
         "icon": {
-          "light": "src/media/refresh.svg",
-          "dark": "src/media/refresh.svg"
+          "light": "img/refresh.svg",
+          "dark": "img/refresh.svg"
         }
       },
       {
-        "command": "malloy.showResultJSON",
-        "title": "Show Result JSON"
-      },
-      {
         "command": "malloy.editConnections",
-        "title": "Edit Connections"
+        "title": "Edit Connections",
+        "category": "Malloy"
       }
     ],
     "menus": {

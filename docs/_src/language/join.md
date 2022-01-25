@@ -9,11 +9,11 @@ a locality of computation, so they always work regardless of join pattern.
 
 In Malloy syntaxes for join are:
 
-```
-    join_one: <explore-name> [is <explore-exp>] with <foreign_key>
-    join_one: <explore-name> [is <explore-exp>] [on <boolean expression>]
-    join_many: <explore-name> [is <explore-exp>] on <boolean expression>
-    join_cross: <explore-name> [is <explore-exp>] [on <boolean expression>]
+```malloy
+join_one: <explore-name> [is <explore-exp>] with <foreign_key>
+join_one: <explore-name> [is <explore-exp>] [on <boolean expression>]
+join_many: <explore-name> [is <explore-exp>] on <boolean expression>
+join_cross: <explore-name> [is <explore-exp>] [on <boolean expression>]
 ```
 
 `join_one:` - the table we are joining has one row for each row in the source table.

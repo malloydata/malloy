@@ -335,7 +335,7 @@ export class Model {
    * @returns A prepared query.
    */
   public get preparedQuery(): PreparedQuery {
-    if (this.queryList.length < 0) {
+    if (this.queryList.length === 0) {
       throw new Error("Model has no queries.");
     }
     return new PreparedQuery(
@@ -1720,7 +1720,7 @@ export class ModelMaterializer extends FluentState<Model> {
         query instanceof URL
           ? await Malloy.parse({
               url: query,
-              urlReader: urlReader,
+              urlReader,
             })
           : Malloy.parse({
               source: query,

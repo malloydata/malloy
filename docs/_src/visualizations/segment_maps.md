@@ -67,7 +67,6 @@ query: flights{ where: dep_time = @2003-02 and origin.code ='ORD'}->{
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/flights.malloy"}
---! {"isRunnable": true, "runMode": "auto", "source": "/inline/e.malloy", "size": "medium", "dataStyles":{"routes_map": {"renderer": "segment_map"}}}
 query: flights->{
   group_by: carrier
   aggregate: flight_count
