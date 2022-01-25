@@ -14,6 +14,7 @@
 import React from "react";
 import { BigQueryConnectionConfig } from "../../../../../common/connection_manager_types";
 import { TextField, VSCodeButton } from "../../../components";
+import { VSCodeCheckbox } from "../../../components/fast";
 import { Label } from "../Label";
 import { LabelCell } from "../LabelCell";
 
@@ -70,27 +71,42 @@ export const BigQueryConnectionEditor: React.FC<BigQueryConnectionEditorProps> =
             </td>
           </tr>
           <tr>
-            <LabelCell>
-              <Label>Service Account Key File Path:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.serviceAccountKeyPath || ""}
-                setValue={(serviceAccountKeyPath) => {
-                  setConfig({ ...config, serviceAccountKeyPath });
+            <LabelCell></LabelCell>
+            <td colSpan={2}>
+              <VSCodeCheckbox
+                checked={config.serviceAccountKeyPath !== undefined}
+                onChange={(event) => {
+                  const checked = (event.target as any).checked;
+                  setConfig({ ...config, serviceAccountKeyPath: checked ? "" : undefined });
                 }}
-                placeholder="Optional"
-              />
-            </td>
-            <td>
-              <VSCodeButton
-                onClick={requestServiceAccountKeyPath}
-                style={{ height: "25px" }}
               >
-                Pick File
-              </VSCodeButton>
+                Specify Service Account Key
+              </VSCodeCheckbox>
             </td>
           </tr>
+          {config.serviceAccountKeyPath !== undefined && (
+            <tr>
+              <LabelCell>
+                <Label>Service Account Key File Path:</Label>
+              </LabelCell>
+              <td>
+                <TextField
+                  value={config.serviceAccountKeyPath || ""}
+                  setValue={(serviceAccountKeyPath) => {
+                    setConfig({ ...config, serviceAccountKeyPath });
+                  }}
+                />
+              </td>
+              <td>
+                <VSCodeButton
+                  onClick={requestServiceAccountKeyPath}
+                  style={{ height: "25px" }}
+                >
+                  Pick File
+                </VSCodeButton>
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     );
