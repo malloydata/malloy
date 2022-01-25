@@ -24,7 +24,7 @@ import {
 import { CONNECTION_MANAGER, getConnectionsConfig } from "../state";
 import { ConnectionBackend, ConnectionConfig } from "../../common";
 import { getDefaultIndex } from "../../common/connection_manager_types";
-import { loadKeytar } from "../../common/keytar_loader";
+import { loadKeytar } from "../../common/keytar/keytar_loader";
 
 export function editConnectionsCommand(): void {
   const panel = vscode.window.createWebviewPanel(

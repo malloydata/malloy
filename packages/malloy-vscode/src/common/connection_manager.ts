@@ -19,7 +19,7 @@ import {
   ConnectionConfig,
   getDefaultIndex,
 } from "./connection_manager_types";
-import { loadKeytar } from "./keytar_loader";
+import { loadKeytar } from "./keytar/keytar_loader";
 
 export class ConnectionManager {
   private _connections: FixedConnectionMap;

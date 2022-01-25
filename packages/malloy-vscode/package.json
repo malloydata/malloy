@@ -241,7 +241,7 @@
     "@microsoft/fast-react-wrapper": "^0.1.21",
     "@observablehq/plot": "^0.1.0",
     "@vscode/webview-ui-toolkit": "^0.8.5",
-    "keytar": "^7.7.0",
+    "keytar": "7.7.0",
     "react": "^17.0.2",
     "styled-components": "^5.3.3",
     "us-atlas": "^3.0.0",
