@@ -52,6 +52,7 @@ import {
   isValueParameter,
   JoinRelationship,
   isPhysical,
+  isAnyJoin,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -984,12 +985,13 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
     let leafiest;
     for (const [name, join] of this.joins) {
       // first join is by default the
-      if (leafiest === undefined) {
+      const relationship = join.parentRelationship();
+      if (relationship === "many_to_many") {
+        // everything must be calculated with symmetric aggregates
+        leafiest = "0never";
+      } else if (leafiest === undefined) {
         leafiest = name;
-      } else if (
-        join.parentRelationship() === "one_to_many" ||
-        join.parentRelationship() === "many_to_many"
-      ) {
+      } else if (join.parentRelationship() === "one_to_many") {
         // check up the parent relationship until you find
         //  the current leafiest node.  If it isn't in the direct path
         //  we need symmetric aggregate for everything.
@@ -999,7 +1001,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
           leafiest = name;
         } else {
           // we have more than on one_to_many join chain, all bets are off.
-          leafiest = "we'll never find this so everything will be symmetric";
+          leafiest = "0never";
         }
       }
     }
@@ -1075,17 +1077,16 @@ class JoinInstance {
     }
     switch (this.queryStruct.fieldDef.structRelationship.type) {
       case "foreignKey":
+      case "one":
         return "many_to_one";
+      case "cross":
+        return "many_to_many";
+      case "many":
+        return "one_to_many";
       case "nested":
         return "one_to_many";
       case "inline":
         return "one_to_one";
-      case "condition":
-        return this.queryStruct.fieldDef.structRelationship.many
-          ? "one_to_many"
-          : "many_to_one";
-      case "crossJoin":
-        return "one_to_many";
       default:
         throw new Error(
           `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
@@ -1698,11 +1699,7 @@ class QueryQuery extends QueryField {
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
-    if (
-      structRelationship.type === "foreignKey" ||
-      structRelationship.type === "condition" ||
-      structRelationship.type === "crossJoin"
-    ) {
+    if (isAnyJoin(structRelationship)) {
       if (ji.makeUniqueKey) {
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
@@ -1723,7 +1720,7 @@ class QueryQuery extends QueryField {
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
         onCondition = `${fkSQL} = ${pkSQL}`;
-      } else if (structRelationship.type == "condition") {
+      } else if (structRelationship.onExpression) {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
@@ -1732,7 +1729,7 @@ class QueryQuery extends QueryField {
           },
           qs.parent
         ).generateExpression(this.rootResult);
-      } else if (structRelationship.type === "crossJoin") {
+      } else {
         onCondition = "1=1";
       }
       let filters = "";

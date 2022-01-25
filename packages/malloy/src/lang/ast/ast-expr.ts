@@ -26,7 +26,7 @@ import {
   isConditionParameter,
   StructDef,
 } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
+import { CircleSpace, FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
 import {
   Filter,
@@ -214,7 +214,21 @@ export class ExprFieldDecl extends MalloyElement {
   }
 
   fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
-    const exprValue = this.expr.getExpression(fs);
+    /*
+     * In an explore we cannot reference the thing we are defining, you need
+     * to use rename. In a query, the output space is a new thing, and expressions
+     * can reference the outer value in order to make a value with the new name,
+     * and it feels wrong that this is HERE and not somehow in the QueryOperation.
+     * For now, this stops the stack overflow, and passes all tests, but I think
+     * a refactor of QueryFieldSpace might someday be the place where this should
+     * happen.
+     */
+    const circleFS = new CircleSpace(fs, this);
+    return this.queryFieldDef(circleFS, exprName);
+  }
+
+  queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
+    const exprValue = this.expr.getExpression(exprFS);
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
     if (isAtomicFieldType(retType)) {
@@ -237,9 +251,12 @@ export class ExprFieldDecl extends MalloyElement {
       }
       return template;
     }
-    this.log(
-      `Cannot define ${exprName}, unexpected type ${FT.inspect(exprValue)}`
-    );
+    const complained = exprFS instanceof CircleSpace && exprFS.foundCircle;
+    if (!complained) {
+      this.log(
+        `Cannot define ${exprName}, unexpected type ${FT.inspect(exprValue)}`
+      );
+    }
     return {
       name: `error_defining_${exprName}`,
       type: "string",
@@ -397,7 +414,15 @@ export class ExprIdReference extends ExpressionDef {
       const value = [{ type: entry.refType, path: this.refString }];
       return { dataType, aggregate, value };
     }
-    this.log(`Reference to '${this.refString}' with no definition`);
+    if (
+      fs instanceof CircleSpace &&
+      fs.foundCircle &&
+      this.refString === fs.circular.defineName
+    ) {
+      this.log(`Circular reference to '${this.refString}' in definition`);
+    } else {
+      this.log(`Reference to '${this.refString}' with no definition`);
+    }
     return errorFor(`undefined ${this.refString}`);
   }
 

@@ -226,6 +226,10 @@ export function runMalloyQuery(
               URL.fromString("file://" + query.file.uri.fsPath),
               query.name
             );
+          } else if (query.index === -1) {
+            queryMaterializer = runtime.loadQuery(
+              URL.fromString("file://" + query.file.uri.fsPath)
+            );
           } else {
             queryMaterializer = runtime.loadQueryByIndex(
               URL.fromString("file://" + query.file.uri.fsPath),

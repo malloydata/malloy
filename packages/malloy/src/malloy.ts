@@ -335,7 +335,7 @@ export class Model {
    * @returns A prepared query.
    */
   public get preparedQuery(): PreparedQuery {
-    if (this.queryList.length < 0) {
+    if (this.queryList.length === 0) {
       throw new Error("Model has no queries.");
     }
     return new PreparedQuery(
@@ -808,19 +808,18 @@ export enum SourceRelationship {
    */
   Nested = "nested",
 
-  // TODO document these
-  Condition = "condition",
-  Cross = "cross",
-
   /**
    * The `Explore` is the base table.
    */
   BaseTable = "base_table",
 
   /**
-   * The `Explore` is joined to its source by a foreign key.
+   * The `Explore` is joined to its source
    */
   ForeignKey = "foreign_key",
+  Cross = "cross",
+  One = "one",
+  Many = "many",
 
   // TODO document this
   Inline = "inline",
@@ -999,9 +998,11 @@ export class Explore extends Entity {
 
   public get sourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "condition":
-        return SourceRelationship.Condition;
-      case "crossJoin":
+      case "many":
+        return SourceRelationship.Many;
+      case "one":
+        return SourceRelationship.One;
+      case "cross":
         return SourceRelationship.Cross;
       case "foreignKey":
         return SourceRelationship.ForeignKey;
@@ -1337,9 +1338,12 @@ export class ExploreField extends Explore {
 
   public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "condition":
+      case "one":
       case "foreignKey":
         return JoinRelationship.OneToMany;
+      case "many":
+      case "cross":
+        return JoinRelationship.ManyToOne;
       case "inline":
         return JoinRelationship.OneToOne;
       case "nested":
@@ -1716,7 +1720,7 @@ export class ModelMaterializer extends FluentState<Model> {
         query instanceof URL
           ? await Malloy.parse({
               url: query,
-              urlReader: urlReader,
+              urlReader,
             })
           : Malloy.parse({
               source: query,

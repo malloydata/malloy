@@ -22,6 +22,7 @@ import {
 } from "../../webview_message_manager";
 import { useConnectionsVSCodeContext } from "./connections_vscode_context";
 import { ConnectionEditorList } from "./ConnectionEditorList";
+import { Spinner } from "../components";
 
 export const App: React.FC = () => {
   const vscode = useConnectionsVSCodeContext();
@@ -96,7 +97,7 @@ export const App: React.FC = () => {
   });
 
   return (
-    <div>
+    <div style={{ height: "100%" }}>
       {connections !== undefined && (
         <ConnectionEditorList
           connections={connections}
@@ -106,6 +107,11 @@ export const App: React.FC = () => {
           testStatuses={testStatuses}
           requestServiceAccountKeyPath={requestServiceAccountKeyPath}
         />
+      )}
+      {connections === undefined && (
+        <div style={{ height: "100%" }}>
+          <Spinner text="Loading" />
+        </div>
       )}
     </div>
   );

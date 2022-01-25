@@ -631,8 +631,11 @@ export class QuerySource extends Mallobj {
 export abstract class Join extends MalloyElement {
   abstract name: string;
   abstract structDef(): model.StructDef;
-  onExpression(_outer: FieldSpace): model.Expr | undefined {
-    return undefined;
+  needsFixup(): boolean {
+    return false;
+  }
+  fixupJoinOn(_outer: FieldSpace, _inStruct: model.StructDef): void {
+    return;
   }
 }
 
@@ -666,59 +669,51 @@ export class KeyJoin extends Join {
   }
 }
 
+type ExpressionJoinType = "many" | "one" | "cross";
 export class ExpressionJoin extends Join {
   elementType = "joinOnExpr";
-  many = true;
-  outer?: model.StructDef;
-  constructor(
-    readonly name: string,
-    readonly source: Mallobj,
-    readonly expr: ExpressionDef
-  ) {
-    super({ source, expr });
-  }
-
-  onExpression(outer: FieldSpace): model.Expr | undefined {
-    const exprX = this.expr.getExpression(outer);
-    if (exprX.dataType !== "boolean") {
-      this.log("join conditions must be boolean expressions");
-      return undefined;
-    }
-    const ret = compressExpr(exprX.value);
-    return ret;
-  }
-
-  structDef(): model.StructDef {
-    const sourceDef = this.source.structDef();
-
-    const joinStruct: model.StructDef = {
-      ...sourceDef,
-      structRelationship: {
-        type: "condition",
-        onExpression: [],
-        many: this.many,
-      },
-    };
-    if (sourceDef.structSource.type === "query") {
-      // the name from query does not need to be preserved
-      joinStruct.name = this.name;
-    } else {
-      joinStruct.as = this.name;
-    }
-    return joinStruct;
-  }
-}
-
-export class CrossJoin extends Join {
-  elementType = "crossJoin";
+  joinType: ExpressionJoinType = "one";
+  private expr?: ExpressionDef;
   constructor(readonly name: string, readonly source: Mallobj) {
     super({ source });
   }
+
+  needsFixup(): boolean {
+    return this.expr != undefined;
+  }
+
+  set joinOn(joinExpr: ExpressionDef | undefined) {
+    this.expr = joinExpr;
+    this.has({ on: joinExpr });
+  }
+
+  get joinOn(): ExpressionDef | undefined {
+    return this.expr;
+  }
+
+  fixupJoinOn(
+    outer: FieldSpace,
+    inStruct: model.StructDef
+  ): model.Expr | undefined {
+    if (this.expr == undefined) {
+      return;
+    }
+    const exprX = this.expr.getExpression(outer);
+    if (exprX.dataType !== "boolean") {
+      this.log("join conditions must be boolean expressions");
+      return;
+    }
+    const joinRel = inStruct.structRelationship;
+    if (model.isJoinOn(joinRel)) {
+      joinRel.onExpression = compressExpr(exprX.value);
+    }
+  }
+
   structDef(): model.StructDef {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
-      structRelationship: { type: "crossJoin" },
+      structRelationship: { type: this.joinType },
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -726,7 +721,6 @@ export class CrossJoin extends Join {
     } else {
       joinStruct.as = this.name;
     }
-
     return joinStruct;
   }
 }

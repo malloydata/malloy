@@ -23,26 +23,61 @@ export interface SectionItem {
   link: string;
 }
 
+interface EnrichedSection {
+  title: string;
+  id: string;
+  items: EnrichedSectionItem[];
+}
+
+interface EnrichedSectionItem {
+  title: string;
+  link: string;
+  fullLink: string;
+  compareLink: string;
+}
+
+function enrichTableOfContents(sections: Section[]): EnrichedSection[] {
+  return sections.map((section) => {
+    return {
+      id: section.title.toLowerCase().replace(" ", "_"),
+      title: section.title,
+      items: section.items.map((item) => {
+        const htmlLink = item.link.replace(/\.md$/, ".html");
+        const fullLink = path.join("/documentation", htmlLink);
+        const compareLink =
+          htmlLink === "/index.html" ? "/documentation/" : fullLink;
+
+        return { title: item.title, link: item.link, fullLink, compareLink };
+      }),
+    };
+  });
+}
+
 export function renderSidebar(sections: Section[]): string {
-  return `<div class="sidebar">
-    ${sections
+  return `<div class="sidebar" id="sidebar">
+    ${enrichTableOfContents(sections)
       .map((section) => {
         return `<div>
-        <div class="sidebar-section-title">${section.title}</div>
-        ${section.items
-          .map((item) => {
-            const htmlLink = item.link.replace(/\.md$/, ".html");
-            const fullLink = path.join("/documentation", htmlLink);
-            const compareLink =
-              htmlLink === "/index.html" ? "/documentation/" : fullLink;
-            return `<div class='sidebar-item {% if page.url == "${compareLink}" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}${fullLink}">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              ${item.title}
-            </a>
-          </div>`;
-          })
-          .join("\n")}
+        <div id=${
+          section.id
+        } class="sidebar-section-title {% unless ${section.items.map(
+          (item) => item.compareLink
+        )} contains page.url)} %}collapsed{% endunless %}">${
+          section.title
+        }<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          ${section.items
+            .map((item) => {
+              return `<div class='sidebar-item {% if page.url == "${item.compareLink}" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}${item.fullLink}">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                ${item.title}
+              </a>
+            </div>`;
+            })
+            .join("\n")}
+          </div>
       </div>`;
       })
       .join("\n")}

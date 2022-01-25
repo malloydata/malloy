@@ -302,8 +302,9 @@ describe("explore properties", () => {
       "many is on",
       modelOK("explore: y is a { join_many: x is b on astr = x.astr }")
     );
-    test("cross", modelOK("explore: nab is a { join_many: b }"));
-    test("cross is", modelOK("explore: nab is a { join_many: xb is b }"));
+    test("cross", modelOK("explore: nab is a { join_cross: b }"));
+    test("cross is", modelOK("explore: nab is a { join_cross: xb is b }"));
+    test("cross on", modelOK("explore: nab is a { join_cross: b on true}"));
     test(
       "multiple joins",
       modelOK(`
@@ -311,10 +312,6 @@ describe("explore properties", () => {
           join_one: [
             b with astr,
             br is b with astr
-          ]
-          join_many: [
-            bm is b on bm.astr = astr,
-            bx is b
           ]
         }
       `)
@@ -366,6 +363,7 @@ describe("explore properties", () => {
 
 describe("qops", () => {
   test("group by single", modelOK("query: a->{ group_by: astr }"));
+  test("group_by x is x'", modelOK("query: a->{ group_by: ai is ai/2 }"));
   test("group by multiple", modelOK("query: a->{ group_by: [astr,ai] }"));
   test("aggregate single", modelOK("query: a->{ aggregate: num is count() }"));
   test(
@@ -609,5 +607,18 @@ describe("error handling", () => {
     const errList = m.errors().errors;
     const firstError = errList[0];
     expect(firstError.message).toBe("Can't rename field to itself");
+  });
+  test("reference to field in its definition", () => {
+    const m = new BetaModel(`
+      explore: na is a {
+        dimension: astr is UPPER(astr)
+      }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe(
+      "Circular reference to 'astr' in definition"
+    );
   });
 });
