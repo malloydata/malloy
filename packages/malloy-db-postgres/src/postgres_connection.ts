@@ -31,7 +31,21 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   integer: "number",
   bigint: "number",
   "double precision": "number",
-  "timestamp without time zone": "timestamp", // maybe not right
+  "timestamp without time zone": "timestamp", // maybe not
+  oid: "string",
+  boolean: "boolean",
+  // ARRAY: "string",
+  "timestamp with time zone": "string",
+  '"char"': "string",
+  smallint: "number",
+  xid: "string",
+  real: "number",
+  interval: "string",
+  inet: "string",
+  regtype: "string",
+  numeric: "number",
+  bytea: "string",
+  pg_ndistinct: "number",
 };
 
 interface PostgresConnectionConfiguration {
