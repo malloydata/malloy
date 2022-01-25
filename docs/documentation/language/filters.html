@@ -37,7 +37,15 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>}<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -51,6 +59,25 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">8784806</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">WHERE</span> flights<span class="token punctuation">.</span>distance<span class="token operator">></span><span class="token number">1000</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -67,7 +94,15 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
   <span class="token keyword">where</span>: carrier: <span class="token string">'UA'</span> <span class="token operator">|</span> <span class="token string">'AA'</span>
   <span class="token keyword">project</span> : <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> flight_count<span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -88,6 +123,38 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+     <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   base<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   base<span class="token punctuation">.</span>flight_count <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage0<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>base<span class="token punctuation">.</span>carrier<span class="token operator">=</span><span class="token string">'UA'</span><span class="token punctuation">)</span><span class="token operator">or</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>carrier<span class="token operator">=</span><span class="token string">'AA'</span><span class="token punctuation">)</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h3>
         <a id="filtering-aggregate-calculations" class="header-link anchor" href="#filtering-aggregate-calculations">
@@ -102,7 +169,15 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     avg_km_from_ca <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>distance<span class="token operator">/</span><span class="token number">0.621371</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span>}
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -120,6 +195,29 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"ca_flights"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
+    <span class="token property">"ny_flights"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
+    <span class="token property">"avg_km_from_ca"</span><span class="token operator">:</span> <span class="token number">1385.1741412354318</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_flights<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_flights<span class="token punctuation">,</span>
+   <span class="token function">AVG</span><span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> flights<span class="token punctuation">.</span>distance<span class="token operator">/</span><span class="token number">0.621371</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> avg_km_from_ca
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -146,7 +244,15 @@ measure and then create that as a percent of total.</p>
     ny_percent_delayed <span class="token keyword">is</span> percent_delayed {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -170,6 +276,39 @@ measure and then create that as a percent of total.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"ca_flights"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
+    <span class="token property">"ca_delayed_flights"</span><span class="token operator">:</span> <span class="token number">371416</span><span class="token punctuation">,</span>
+    <span class="token property">"ca_percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.08251035722513228</span><span class="token punctuation">,</span>
+    <span class="token property">"ny_flights"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
+    <span class="token property">"ny_delayed_flights"</span><span class="token operator">:</span> <span class="token number">154338</span><span class="token punctuation">,</span>
+    <span class="token property">"ny_percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.09540617694075641</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_flights<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span>
+  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_delayed_flights<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span>
+  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_percent_delayed<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_flights<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span><span class="token punctuation">)</span>
+  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_delayed_flights<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span><span class="token punctuation">)</span>
+  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_percent_delayed
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> my_flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> my_flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -198,7 +337,15 @@ measure and then create that as a percent of total.</p>
     ny_stats <span class="token keyword">is</span> delay_stats {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -244,6 +391,49 @@ measure and then create that as a percent of total.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"ca_stats"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
+      <span class="token property">"delayed_flights"</span><span class="token operator">:</span> <span class="token number">371416</span><span class="token punctuation">,</span>
+      <span class="token property">"percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.08251035722513228</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"ny_stats"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
+      <span class="token property">"delayed_flights"</span><span class="token operator">:</span> <span class="token number">154338</span><span class="token punctuation">,</span>
+      <span class="token property">"percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.09540617694075641</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> delayed_flights__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> percent_delayed__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__2<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> delayed_flights__2<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> percent_delayed__2
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> my_flights
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> my_flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>group_set <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">OR</span> <span class="token punctuation">(</span>group_set <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">AND</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token operator">AND</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>group_set <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">OR</span> <span class="token punctuation">(</span>group_set <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">AND</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span>
+  <span class="token keyword">COALESCE</span><span class="token punctuation">(</span>ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>flight_count__1 <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> delayed_flights__1 <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> percent_delayed__1 <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token punctuation">,</span> STRUCT<span class="token punctuation">(</span><span class="token boolean">NULL</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_stats<span class="token punctuation">,</span>
+  <span class="token keyword">COALESCE</span><span class="token punctuation">(</span>ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>flight_count__2 <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> delayed_flights__2 <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> percent_delayed__2 <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token punctuation">,</span> STRUCT<span class="token punctuation">(</span><span class="token boolean">NULL</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_stats
+<span class="token keyword">FROM</span> __stage0
+</pre>
       </div>
     </div>
   </div>

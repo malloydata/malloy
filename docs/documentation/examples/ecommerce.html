@@ -17,7 +17,15 @@ footer: /generated/footers/examples/ecommerce.html
   <span class="token keyword">group_by</span>: status
   <span class="token keyword">aggregate</span>: order_item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -47,6 +55,43 @@ footer: /generated/footers/examples/ecommerce.html
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Complete"</span><span class="token punctuation">,</span>
+    <span class="token property">"order_item_count"</span><span class="token operator">:</span> <span class="token number">221175</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Cancelled"</span><span class="token punctuation">,</span>
+    <span class="token property">"order_item_count"</span><span class="token operator">:</span> <span class="token number">8268</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Returned"</span><span class="token punctuation">,</span>
+    <span class="token property">"order_item_count"</span><span class="token operator">:</span> <span class="token number">2261</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Shipped"</span><span class="token punctuation">,</span>
+    <span class="token property">"order_item_count"</span><span class="token operator">:</span> <span class="token number">1482</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Processing"</span><span class="token punctuation">,</span>
+    <span class="token property">"order_item_count"</span><span class="token operator">:</span> <span class="token number">862</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   base<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token keyword">as</span> <span class="token keyword">status</span><span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> order_item_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>The use of <code class="language-malloy"><span class="token keyword">group_by</span></code> in the above query invokes a <code class="language-malloy">SELECT</code> with a <code class="language-malloy">GROUP <span class="token keyword">BY</span></code> in SQL. Malloy also has a <code class="language-malloy"><span class="token keyword">project</span></code> transformation, which will <code class="language-malloy">SELECT</code> without a <code class="language-malloy">GROUP <span class="token keyword">BY</span></code>.</p>
 <p>Notice that after you write this, small "Run | Render" code lens will appear above the query. Run will show the JSON result, while Render will show a table by default, or a visualization if you've configured one (more on this later). Click the code lens to run the query. This will produce the following SQL:</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span>
@@ -58,7 +103,7 @@ footer: /generated/footers/examples/ecommerce.html
 <p><img src="https://user-images.githubusercontent.com/7178946/130125702-7049299a-fe0f-4f50-aaed-1c9016835da7.gif" alt="Kapture 2021-08-18 at 17 07 03"/></p>
 <p>Next question: In 2020, how much did we sell to users in each state? This requires filtering to the year 2020, excluding cancelled and returned orders, as well as joining in the users table.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span>{
-  join_one: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span> <span class="token keyword">on</span> user_id <span class="token operator">=</span> users<span class="token punctuation">.</span>id
+  <span class="token keyword">join_one</span>: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span> <span class="token keyword">on</span> user_id <span class="token operator">=</span> users<span class="token punctuation">.</span>id
 }
 <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: <span class="token punctuation">[</span>
@@ -67,7 +112,15 @@ footer: /generated/footers/examples/ecommerce.html
   <span class="token keyword">group_by</span>: users<span class="token punctuation">.</span>state
   <span class="token keyword">aggregate</span>: total_sales <span class="token keyword">is</span> sale_price<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -97,6 +150,46 @@ footer: /generated/footers/examples/ecommerce.html
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"California"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">536674.7821646929</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Texas"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">315770.551210165</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"New York"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">214908.1908490844</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Illinois"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">178621.4707119465</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Florida"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">131839.15053749084</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   users_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state<span class="token punctuation">,</span>
+   <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>sale_price<span class="token punctuation">)</span> <span class="token keyword">as</span> total_sales
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>users<span class="token punctuation">`</span> <span class="token keyword">AS</span> users_0 <span class="token keyword">ON</span> base<span class="token punctuation">.</span>user_id<span class="token operator">=</span>users_0<span class="token punctuation">.</span>id
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>created_at<span class="token operator">>=</span><span class="token string">'2020-01-01'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>created_at<span class="token operator">&lt;</span><span class="token string">'2021-01-01'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token operator">AND</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>IFNULL<span class="token punctuation">(</span><span class="token operator">NOT</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span><span class="token keyword">status</span><span class="token operator">=</span><span class="token string">'Cancelled'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">FALSE</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>IFNULL<span class="token punctuation">(</span><span class="token operator">NOT</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span><span class="token keyword">status</span><span class="token operator">=</span><span class="token string">'Returned'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">FALSE</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>At this point we might notice we’re defining a few things we might like to re-use, so let’s add them to the model:</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: id
@@ -104,7 +197,7 @@ footer: /generated/footers/examples/ecommerce.html
 
 <span class="token keyword">explore</span>: order_items <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span>{
   <span class="token keyword">primary_key</span>: id
-  join_one: users with user_id
+  <span class="token keyword">join_one</span>: users <span class="token keyword">with</span> user_id
   <span class="token keyword">measure</span>: <span class="token punctuation">[</span>
     total_sales <span class="token keyword">is</span> sale_price<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span>
@@ -115,7 +208,15 @@ footer: /generated/footers/examples/ecommerce.html
   <span class="token keyword">group_by</span>: users<span class="token punctuation">.</span>state
   <span class="token keyword">aggregate</span>: total_sales
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -143,6 +244,45 @@ footer: /generated/footers/examples/ecommerce.html
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"California"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">561080.7323037386</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Texas"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">330723.27126312256</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"New York"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">224256.63089038804</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Illinois"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">185573.6007373333</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Florida"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">137869.36056947708</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   users_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state<span class="token punctuation">,</span>
+   <span class="token function">SUM</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>sale_price<span class="token punctuation">)</span> <span class="token keyword">as</span> total_sales
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> order_items
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>users<span class="token punctuation">`</span> <span class="token keyword">AS</span> users_0 <span class="token keyword">ON</span> order_items<span class="token punctuation">.</span>user_id <span class="token operator">=</span> users_0<span class="token punctuation">.</span>id
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">>=</span><span class="token string">'2020-01-01'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">&lt;</span><span class="token string">'2021-01-01'</span><span class="token punctuation">)</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div><p>To further simplify, we can add this and a couple other queries we’ll frequently use to our model. Once you define these, the VSCode plugin will supply a “Run” button next to each query:</p>
@@ -162,7 +302,15 @@ footer: /generated/footers/examples/ecommerce.html
     <span class="token keyword">aggregate</span>: total_sales
   }</pre><p>Allowing us to run the following very simple command next time we want to run any of these queries:</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: order_items <span class="token operator">-</span><span class="token operator">></span> sales_by_state_2020</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -192,6 +340,45 @@ footer: /generated/footers/examples/ecommerce.html
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"California"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">561080.7323037386</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Texas"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">330723.27126312256</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"New York"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">224256.63089038804</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Illinois"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">185573.6007373333</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Florida"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">137869.36056947708</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   users_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state<span class="token punctuation">,</span>
+   <span class="token function">SUM</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>sale_price<span class="token punctuation">)</span> <span class="token keyword">as</span> total_sales
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> order_items
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>users<span class="token punctuation">`</span> <span class="token keyword">AS</span> users_0 <span class="token keyword">ON</span> order_items<span class="token punctuation">.</span>user_id <span class="token operator">=</span> users_0<span class="token punctuation">.</span>id
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">>=</span><span class="token string">'2020-01-01'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">&lt;</span><span class="token string">'2021-01-01'</span><span class="token punctuation">)</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>Note that queries can be filtered at any level, by inserting filter expressions between square brackets. A filter after an explore applies to the whole explore; one before the fields in a <code class="language-malloy"><span class="token keyword">reduce</span></code> or <code class="language-malloy"><span class="token keyword">project</span></code> transformation applies to that transformation; and one after an aggregate field applies to that aggregate only. See filters documentation for more information on filter expressions. Here's an example with a variety of filter usage:</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: order_items {
   <span class="token keyword">where</span>: <span class="token punctuation">[</span>
@@ -205,7 +392,15 @@ footer: /generated/footers/examples/ecommerce.html
     percent_items_returned <span class="token keyword">is</span> <span class="token number">100.0</span> <span class="token operator">*</span> <span class="token punctuation">(</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {<span class="token keyword">where</span>: status : <span class="token string">'Returned'</span>}<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -233,6 +428,42 @@ footer: /generated/footers/examples/ecommerce.html
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"California"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_price_2020"</span><span class="token operator">:</span> <span class="token number">541953.7321833372</span><span class="token punctuation">,</span>
+    <span class="token property">"percent_items_returned"</span><span class="token operator">:</span> <span class="token number">1.0120256129939091</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Texas"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_price_2020"</span><span class="token operator">:</span> <span class="token number">318803.82123184204</span><span class="token punctuation">,</span>
+    <span class="token property">"percent_items_returned"</span><span class="token operator">:</span> <span class="token number">1.0844629822732013</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"New York"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_price_2020"</span><span class="token operator">:</span> <span class="token number">216558.84085514024</span><span class="token punctuation">,</span>
+    <span class="token property">"percent_items_returned"</span><span class="token operator">:</span> <span class="token number">1.0345352198387343</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   users_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state<span class="token punctuation">,</span>
+   <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">>=</span><span class="token string">'2020-01-01'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">&lt;</span><span class="token string">'2021-01-01'</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> order_items<span class="token punctuation">.</span>sale_price <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> total_sale_price_2020<span class="token punctuation">,</span>
+   <span class="token punctuation">(</span><span class="token number">100.0</span><span class="token operator">*</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> order_items<span class="token punctuation">.</span><span class="token keyword">status</span><span class="token operator">=</span><span class="token string">'Returned'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> percent_items_returned
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> order_items
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>users<span class="token punctuation">`</span> <span class="token keyword">AS</span> users_0 <span class="token keyword">ON</span> order_items<span class="token punctuation">.</span>user_id <span class="token operator">=</span> users_0<span class="token punctuation">.</span>id
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>users_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'California'</span><span class="token punctuation">)</span><span class="token operator">or</span><span class="token punctuation">(</span><span class="token punctuation">(</span>users_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'New York'</span><span class="token punctuation">)</span><span class="token operator">or</span><span class="token punctuation">(</span>users_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'Texas'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token operator">AND</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>IFNULL<span class="token punctuation">(</span><span class="token operator">NOT</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span><span class="token keyword">status</span><span class="token operator">=</span><span class="token string">'Cancelled'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">FALSE</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>IFNULL<span class="token punctuation">(</span><span class="token operator">NOT</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span><span class="token keyword">status</span><span class="token operator">=</span><span class="token string">'Processing'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">FALSE</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>Queries can contain other nested structures, by including additional transformations as fields, so our named query (<code class="language-malloy">sales_by_month_2020</code>) can also now be called anywhere as a nested structure. Note that these structures can nest infinitely!:</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: order_items <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: users<span class="token punctuation">.</span>state
@@ -242,7 +473,15 @@ footer: /generated/footers/examples/ecommerce.html
     sales_by_month_2020
     <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -637,6 +876,540 @@ footer: /generated/footers/examples/ecommerce.html
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"California"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">1539771.8357886076</span><span class="token punctuation">,</span>
+    <span class="token property">"orders_by_status"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Complete"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">30698</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Cancelled"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">1142</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Returned"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">323</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Shipped"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">241</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Processing"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">137</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token property">"sales_by_month_2020"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-12-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">57695.93021321297</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-11-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">54365.51019859314</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-10-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">52298.45022058487</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-09-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">50920.11014723778</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-08-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">47374.12017083168</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-07-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">46771.7001850605</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-06-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">41960.92015624046</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-05-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">44562.070222854614</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-04-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">43275.720215559006</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-03-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">46044.38015651703</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-02-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">38662.1302229166</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-01-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">37149.690194129944</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Texas"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">920402.4634789228</span><span class="token punctuation">,</span>
+    <span class="token property">"orders_by_status"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Complete"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">18398</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Cancelled"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">705</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Returned"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">208</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Shipped"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">100</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Processing"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">61</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token property">"sales_by_month_2020"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-12-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">36157.21014499664</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-11-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">32742.490122556686</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-10-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">35763.75009179115</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-09-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">29206.38013267517</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-08-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">26788.340130090714</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-07-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">27071.270101308823</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-06-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">25285.950115680695</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-05-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">24210.730105400085</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-04-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">23920.980100870132</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-03-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">24183.600080013275</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-02-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">23102.07008457184</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-01-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">22290.500053167343</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"New York"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">628942.4123652168</span><span class="token punctuation">,</span>
+    <span class="token property">"orders_by_status"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Complete"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">12583</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Cancelled"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">451</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Returned"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">134</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Shipped"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">68</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Processing"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">40</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token property">"sales_by_month_2020"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-12-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">22863.100113391876</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-11-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">23641.71011163667</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-10-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">24208.24006664753</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-09-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">19220.52008509636</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-08-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">18260.89007139206</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-07-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">17018.140040159225</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-06-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">16414.150043964386</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-05-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">16537.970086097717</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-04-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">19970.49004650116</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-03-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">15851.280097007751</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-02-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">15669.130051732063</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-01-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">14601.010076761246</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Illinois"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">527157.3720983267</span><span class="token punctuation">,</span>
+    <span class="token property">"orders_by_status"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Complete"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">10548</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Cancelled"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">405</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Returned"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">111</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Shipped"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">78</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Processing"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">30</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token property">"sales_by_month_2020"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-12-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">20242.450085878372</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-11-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">19276.62005352974</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-10-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">15826.88006734848</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-09-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">16070.600063800812</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-08-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">14747.610058784485</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-07-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">16104.340077638626</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-06-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">14405.610061049461</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-05-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">14105.000072360039</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-04-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">15246.360042333603</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-03-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">13413.230053663254</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-02-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">13309.830061674118</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-01-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">12825.070039272308</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"Florida"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">369103.3215661049</span><span class="token punctuation">,</span>
+    <span class="token property">"orders_by_status"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Complete"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">7495</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Cancelled"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">256</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Returned"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">86</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Shipped"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">40</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"status"</span><span class="token operator">:</span> <span class="token string">"Processing"</span><span class="token punctuation">,</span>
+        <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">22</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token property">"sales_by_month_2020"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-12-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">13086.990067481995</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-11-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">14909.820038557053</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-10-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">12997.540064811707</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-09-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">10117.960050582886</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-08-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">11594.440055847168</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-07-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">11254.970042228699</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-06-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">10162.69005203247</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-05-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">10830.160037517548</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-04-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">11232.000043392181</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-03-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">11762.230028390884</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-02-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">10759.310051441193</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"order_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2020-01-01"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sales"</span><span class="token operator">:</span> <span class="token number">9161.250037193298</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    users_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>sale_price<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_sales__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> order_items<span class="token punctuation">.</span><span class="token keyword">status</span> <span class="token keyword">END</span> <span class="token keyword">as</span> status__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> order_items<span class="token punctuation">.</span>order_id<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> order_count__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> DATE_TRUNC<span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>TIMESTAMP_TRUNC<span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token punctuation">,</span><span class="token keyword">MONTH</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'UTC'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">month</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> order_month__2<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>sale_price<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_sales__2
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> order_items
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>users<span class="token punctuation">`</span> <span class="token keyword">AS</span> users_0 <span class="token keyword">ON</span> order_items<span class="token punctuation">.</span>user_id <span class="token operator">=</span> users_0<span class="token punctuation">.</span>id
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span>group_set <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">OR</span> <span class="token punctuation">(</span>group_set <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">AND</span> <span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">>=</span><span class="token string">'2020-01-01'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>created_at<span class="token operator">&lt;</span><span class="token string">'2021-01-01'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">4</span><span class="token punctuation">,</span><span class="token number">6</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span>
+  state__0 <span class="token keyword">as</span> state<span class="token punctuation">,</span>
+  ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> total_sales__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> total_sales<span class="token punctuation">,</span>
+  ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>status__1 <span class="token keyword">as</span> <span class="token keyword">status</span><span class="token punctuation">,</span> order_count__1 <span class="token keyword">as</span> order_count<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  order_count__1 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> orders_by_status<span class="token punctuation">,</span>
+  ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>order_month__2 <span class="token keyword">as</span> order_month<span class="token punctuation">,</span> total_sales__2 <span class="token keyword">as</span> total_sales<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  order_month__2 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> sales_by_month_2020
+<span class="token keyword">FROM</span> __stage0
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div><p>Which can be visualized using a data_style</p>

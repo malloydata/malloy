@@ -29,8 +29,8 @@ be included in the file's <em>public namespace</em>.</p>
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-  join_one: origin <span class="token keyword">is</span> airports with origin_code
-  join_one: destination <span class="token keyword">is</span> airports with destination_code
+  <span class="token keyword">join_one</span>: origin <span class="token keyword">is</span> airports <span class="token keyword">with</span> origin_code
+  <span class="token keyword">join_one</span>: destination <span class="token keyword">is</span> airports <span class="token keyword">with</span> destination_code
   <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
 <span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>In this example, <code class="language-malloy">flights</code> is exported, but <code class="language-malloy">airports</code> is not, and therefore
 only <code class="language-malloy">flights</code> is part of the file's public namespace.</p>

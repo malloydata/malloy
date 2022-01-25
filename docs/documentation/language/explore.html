@@ -48,7 +48,15 @@ or queries.</p>
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -76,6 +84,40 @@ or queries.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
+    <span class="token property">"origin"</span><span class="token operator">:</span> <span class="token string">"ATL"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1248319</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"origin"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">967916</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
+    <span class="token property">"origin"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">755020</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   flights<span class="token punctuation">.</span>origin <span class="token keyword">as</span> origin<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">3</span> <span class="token keyword">desc</span>
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h3>
         <a id="explores-from-other-explores" class="header-link anchor" href="#explores-from-other-explores">
@@ -99,7 +141,15 @@ the base explore with modifications only relevant in that specific context.</p>
     <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>total_distance<span class="token punctuation">,</span> flight_count<span class="token punctuation">]</span>
   }
 }</pre><pre class="language-malloy"><span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>carrier_stats{<span class="token keyword">limit</span>: <span class="token number">3</span>}</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -125,6 +175,40 @@ the base explore with modifications only relevant in that specific context.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">4600336769</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">3662207108</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
+    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">3555868325</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   my_flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   <span class="token function">SUM</span><span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>distance<span class="token punctuation">)</span> <span class="token keyword">as</span> total_distance<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> my_flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
       </div>
     </div>
   </div>
@@ -156,7 +240,15 @@ be defined inline or referenced by name.</p>
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> lifetime_flights_bucketed<span class="token punctuation">,</span> lifetime_flights<span class="token punctuation">]</span>
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -184,6 +276,46 @@ be defined inline or referenced by name.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">5770000</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">5775777</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4470000</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4477929</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4430000</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+     <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> lifetime_flights
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   carrier_facts<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   <span class="token punctuation">(</span>FLOOR<span class="token punctuation">(</span>carrier_facts<span class="token punctuation">.</span>lifetime_flights<span class="token operator">/</span><span class="token number">10000</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10000</span> <span class="token keyword">as</span> lifetime_flights_bucketed<span class="token punctuation">,</span>
+   carrier_facts<span class="token punctuation">.</span>lifetime_flights <span class="token keyword">as</span> lifetime_flights
+<span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> carrier_facts
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
+      </div>
+    </div>
   </div><p><strong>Named query as explore source</strong></p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
@@ -199,7 +331,15 @@ be defined inline or referenced by name.</p>
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> lifetime_flights_bucketed<span class="token punctuation">,</span> lifetime_flights<span class="token punctuation">]</span>
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -225,6 +365,46 @@ be defined inline or referenced by name.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">5770000</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">5775777</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4470000</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4477929</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4430000</span><span class="token punctuation">,</span>
+    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+     <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> lifetime_flights
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   carrier_facts<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   <span class="token punctuation">(</span>FLOOR<span class="token punctuation">(</span>carrier_facts<span class="token punctuation">.</span>lifetime_flights<span class="token operator">/</span><span class="token number">10000</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10000</span> <span class="token keyword">as</span> lifetime_flights_bucketed<span class="token punctuation">,</span>
+   carrier_facts<span class="token punctuation">.</span>lifetime_flights <span class="token keyword">as</span> lifetime_flights
+<span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> carrier_facts
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
       </div>
     </div>
   </div><p>For more information about named queries appearing in models, see the <a href="statement.html">Models</a> section.</p>
@@ -253,7 +433,15 @@ available.</p>
 <span class="token keyword">explore</span>: long_sfo_flights <span class="token keyword">is</span> flights{
   <span class="token keyword">where</span>: origin<span class="token operator">=</span><span class="token string">'SFO'</span> <span class="token keyword">and</span> distance <span class="token operator">></span> <span class="token number">1000</span>
 }</pre><pre class="language-malloy"><span class="token keyword">query</span>: long_sfo_flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">group_by</span>: destination<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">3</span>}</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -275,6 +463,37 @@ available.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">41026</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"JFK"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">31108</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">28158</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   long_sfo_flights<span class="token punctuation">.</span>destination <span class="token keyword">as</span> destination<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> long_sfo_flights
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>long_sfo_flights<span class="token punctuation">.</span>origin<span class="token operator">=</span><span class="token string">'SFO'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>long_sfo_flights<span class="token punctuation">.</span>distance<span class="token operator">></span><span class="token number">1000</span><span class="token punctuation">)</span>
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
       </div>
     </div>
   </div>
@@ -299,14 +518,22 @@ have a primary key specified.</p>
 }
 
 <span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  join_one: carriers with carrier
+  <span class="token keyword">join_one</span>: carriers <span class="token keyword">with</span> carrier
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -328,6 +555,37 @@ have a primary key specified.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"Southwest"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5775777</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"Delta"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"American"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   carriers_0<span class="token punctuation">.</span>nickname <span class="token keyword">as</span> nickname<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>carriers<span class="token punctuation">`</span> <span class="token keyword">AS</span> carriers_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>carrier <span class="token operator">=</span> carriers_0<span class="token punctuation">.</span>code
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
       </div>
     </div>
   </div><p>See the <a href="join.html">Joins</a> section for more information on working with joins.</p>
@@ -364,7 +622,7 @@ new explore. This is useful when the original name is undescriptive or has a dif
   <span class="token keyword">rename</span>: facility_type <span class="token keyword">is</span> fac_type
   <span class="token keyword">rename</span>: origin_code <span class="token keyword">is</span> origin
 
-  join_one: origin <span class="token keyword">is</span> airports with origin_code
+  <span class="token keyword">join_one</span>: origin <span class="token keyword">is</span> airports <span class="token keyword">with</span> origin_code
 }</pre>
       <h3>
         <a id="limiting-access-to-fields" class="header-link anchor" href="#limiting-access-to-fields">

@@ -23,7 +23,15 @@ into BigQuery.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{}
 
 <span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: <span class="token operator">*</span>}</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -237,6 +245,320 @@ into BigQuery.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"African"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"African's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Africans"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Allah"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Allah's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"American"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"American's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Americanism"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Americanism's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Americanisms"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Americans"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"April"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"April's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Aprils"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Asian"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Asian's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Asians"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"August"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"August's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Augusts"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"B"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"B's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"British"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"British's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Britisher"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Brown"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"C"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"C's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Catholic"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Catholic's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Catholicism"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Catholicism's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Catholicisms"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Catholics"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Celsius"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Celsius's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Chicano"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Chicano's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christian"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christian's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christianities"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christianity"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christianity's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christians"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christmas"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christmas's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Christmases"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Congress"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Cs"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"D"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"D's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"December"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"December's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Decembers"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Doctor"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Dutch"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Dutch's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"E"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"E's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Easter"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Easter's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Easters"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"England"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"English"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"English's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Englisher"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Englishes"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Es"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Eskimo"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Eskimo's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Eskimos"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Europe"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"European"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"European's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Europeans"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"F"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"F's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Fahrenheit"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Fahrenheit's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Februaries"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"February"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"February's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"French"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Friday"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Friday's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Fridays"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"G"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"G's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"God"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Greek"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Greek's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Greeks"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"H"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"H's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Halloween"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Halloween's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Halloweens"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Hebrew"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Hebrew's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Hebrews"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   words<span class="token punctuation">.</span>word <span class="token keyword">as</span> word
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+</pre>
+      </div>
+    </div>
   </div><p>We are only interested in 5 letter words so create a query for that and
 limit the results to 5 letter words.</p>
 <pre class="language-malloy"><span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
@@ -247,7 +569,15 @@ limit the results to 5 letter words.</p>
 }
 
 <span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -461,6 +791,321 @@ limit the results to 5 letter words.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Allah"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"April"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Asian"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Brown"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Dutch"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Greek"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Islam"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Jew's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Junes"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Koran"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Latin"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"March"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"May's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Nazis"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Negro"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"OKing"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Quran"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"Satan"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abaci"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aback"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abate"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abbey"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abbot"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abets"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abhor"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abide"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abler"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abode"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abort"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"about"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"above"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abuse"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"abyss"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ace's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ached"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aches"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acids"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acing"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acorn"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acres"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acrid"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"act's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acted"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"actor"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"acute"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adage"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adapt"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"added"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adept"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"admit"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ado's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adobe"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adopt"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adore"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adorn"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"adult"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aeons"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"affix"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"afoot"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"after"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"again"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"age's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"agent"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"agile"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aging"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aglow"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"agony"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"agree"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ahead"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aid's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aided"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aides"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ailed"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aim's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aimed"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ain't"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"air's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aired"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aisle"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alarm"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"album"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ale's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alert"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"algae"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alias"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alibi"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alien"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"align"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alike"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aline"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alive"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"all's"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"allay"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alley"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"allot"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"allow"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alloy"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"aloft"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"alone"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"along"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   words<span class="token punctuation">.</span>word <span class="token keyword">as</span> word
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span>
+</pre>
+      </div>
+    </div>
   </div><p>Notice that there are a bunch of proper names?  Let's look for only lowercase words as input
 and Uppercase words in the output of our query.</p>
 <pre class="language-malloy">
@@ -471,7 +1116,15 @@ and Uppercase words in the output of our query.</p>
   }
 }</pre><p>and the query:</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: words<span class="token operator">-</span><span class="token operator">></span>five_letter_words</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -685,6 +1338,321 @@ and Uppercase words in the output of our query.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABACI"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABACK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABATE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABBEY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABBOT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABETS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABHOR"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABIDE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABLER"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABODE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABORT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABOUT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABOVE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABUSE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABYSS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACHED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACHES"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACIDS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACORN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACRES"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACRID"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACTED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACTOR"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACUTE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADAGE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADAPT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADDED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADEPT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADMIT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADOBE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADOPT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADORE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADORN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADULT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AEONS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFFIX"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFOOT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFTER"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGAIN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGENT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGILE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGLOW"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGONY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGREE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AHEAD"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AIDED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AIDES"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AILED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AIMED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AIRED"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AISLE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALARM"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALBUM"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALERT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALGAE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALIAS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALIBI"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALIEN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALIGN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALIKE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALINE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALIVE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALLAY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALLEY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALLOT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALLOW"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALLOY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALOFT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALONE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALONG"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALOOF"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALOUD"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALPHA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTAR"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTER"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTHO"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTOS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMASS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMAZE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMBER"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMBLE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMEBA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMEER"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMEND"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMIRS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMISS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMONG"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMPLE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMPLY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMUCK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMUSE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGEL"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGER"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGLE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGRY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGST"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANKLE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANNEX"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h2>
         <a id="searching-for-words" class="header-link anchor" href="#searching-for-words">
@@ -703,7 +1671,15 @@ and Uppercase words in the output of our query.</p>
   <span class="token keyword">where</span>: word <span class="token operator">~</span> <span class="token regular_expression">r'[X]'</span> <span class="token operator">&amp;</span> <span class="token operator">~</span> <span class="token regular_expression">r'[Y]'</span>
   <span class="token keyword">project</span>: word
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -721,6 +1697,33 @@ and Uppercase words in the output of our query.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PROXY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SIXTY"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage0<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'[X]'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'[Y]'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h3>
         <a id="letter-position-this-letter-here-that-letter-not-there" class="header-link anchor" href="#letter-position-this-letter-here-that-letter-not-there">
@@ -732,7 +1735,15 @@ and Uppercase words in the output of our query.</p>
   <span class="token keyword">where</span>: word <span class="token operator">~</span> <span class="token regular_expression">r'...M[^EZ]'</span>
   <span class="token keyword">project</span>: word
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -934,6 +1945,309 @@ and Uppercase words in the output of our query.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AROMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ATOMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BALMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BALMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BEAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BLIMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BOOMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CALMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHAMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHIMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHUMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLAMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLIMB"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLUMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"COMMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRAMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRUMB"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DEEMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DOGMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DOOMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRAMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRUMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DUMMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ENEMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ENEMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"EXAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FARMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FILMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FILMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FIRMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FOAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FOAMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FORMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"GAMMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"GERMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"GRAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"GRIMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"GUMMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"HARMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"HELMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ITEMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"LLAMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"LOOMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"MAIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"MAMMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"MOMMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"MUMMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"NORMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PALMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PLUMB"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PLUMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PLUMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"POEMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PRIMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PROMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"REAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ROAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ROOMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ROOMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"RUMMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SCUMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SEAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SEEMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SHAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SIGMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SKIMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SKIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLIMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLUMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLUMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"STAMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"STEMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"STOMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"STUMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SWAMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SWIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TEAMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TEEMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TERMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"THUMB"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"THUMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TRAMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TRIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TRUMP"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"TUMMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"WARMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"WHIMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"WORMS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ZOOMS"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage0<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token keyword">WHERE</span> REGEXP_CONTAINS<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'...M[^EZ]'</span><span class="token punctuation">)</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h3>
         <a id="ruling-letters-out" class="header-link anchor" href="#ruling-letters-out">
@@ -945,7 +2259,15 @@ and Uppercase words in the output of our query.</p>
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'[SLOPE]'</span>
   <span class="token keyword">project</span>: word
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -1157,6 +2479,327 @@ and Uppercase words in the output of our query.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABACI"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABACK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACRID"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADMIT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFFIX"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGAIN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMUCK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGRY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANTIC"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ARRAY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ATTIC"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AUDIT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AWAIT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AWARD"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AWING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AXING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BAGGY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BANDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BATCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BAWDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BIRCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BIRTH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BITCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRAID"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRAIN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRAND"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRAWN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRICK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRINK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRINY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BRUNT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BUDDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BUGGY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BUNCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BUNNY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BURNT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BYWAY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CABIN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CACTI"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CADDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CANDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CANNY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CARAT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CARRY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CATCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHAFF"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHAIN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHAIR"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHANT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHARM"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHART"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHICK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHINA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHINK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHUCK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHUNK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHURN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CIGAR"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CINCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CIRCA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CIVIC"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRACK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRAFT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRANK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRAZY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRUMB"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CUBIC"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CUING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CURRY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CYNIC"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DADDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DAIRY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DANDY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DATUM"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DAUNT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DIARY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DIGIT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DINGY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DIRTY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DITCH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DITTY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DIZZY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRAFT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRAIN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRAMA"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRANK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRAWN"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRIFT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRINK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DRUNK"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DUMMY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DWARF"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"DYING"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FAINT"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FAIRY"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FAITH"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"FANCY"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage0<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token keyword">WHERE</span> IFNULL<span class="token punctuation">(</span><span class="token operator">NOT</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'[SLOPE]'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">FALSE</span><span class="token punctuation">)</span>
+</pre>
       </div>
     </div>
   </div></div>

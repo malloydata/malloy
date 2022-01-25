@@ -27,7 +27,15 @@ each row is the letter and position in that row.</p>
         </a>
       </h2>
     <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: word_count}</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -41,6 +49,49 @@ each row is the letter and position in that row.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">3553</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> substr<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>numbers_0<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> letter__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> numbers_0<span class="token punctuation">.</span>num <span class="token keyword">END</span> <span class="token keyword">as</span> position__1
+  <span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> base
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>numbers<span class="token punctuation">`</span> <span class="token keyword">AS</span> numbers_0 <span class="token keyword">ON</span> <span class="token number">1</span><span class="token operator">=</span><span class="token number">1</span> <span class="token operator">AND</span> numbers_0<span class="token punctuation">.</span>num<span class="token operator">&lt;=</span><span class="token number">5</span>
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">4</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage2 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    word__0 <span class="token keyword">as</span> word<span class="token punctuation">,</span>
+    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>letter__1 <span class="token keyword">as</span> letter<span class="token punctuation">,</span> position__1 <span class="token keyword">as</span> position<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  position__1 <span class="token keyword">ASC</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> letters
+  <span class="token keyword">FROM</span> __stage1
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">asc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> word_count
+<span class="token keyword">FROM</span> __stage2 <span class="token keyword">as</span> wordle
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -58,7 +109,15 @@ letter more than once.</p>
       use_count <span class="token keyword">is</span> letters<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -178,6 +237,180 @@ letter more than once.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1794</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">2045</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1711</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1948</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1326</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1394</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1128</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1193</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">983</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1111</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">951</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1059</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">935</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">959</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">931</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1003</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">763</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">792</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">747</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">800</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">618</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">626</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"C"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">584</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">612</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">531</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">560</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"H"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">486</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">495</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">459</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">482</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Y"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">413</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">417</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">404</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">419</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">387</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">404</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"K"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">365</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">375</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"W"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">327</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">329</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"F"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">322</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">352</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"V"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">197</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">201</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Z"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">59</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">64</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"X"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">53</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">53</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"J"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">42</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">42</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Q"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">30</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">30</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> substr<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>numbers_0<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> letter__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> numbers_0<span class="token punctuation">.</span>num <span class="token keyword">END</span> <span class="token keyword">as</span> position__1
+  <span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> base
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>numbers<span class="token punctuation">`</span> <span class="token keyword">AS</span> numbers_0 <span class="token keyword">ON</span> <span class="token number">1</span><span class="token operator">=</span><span class="token number">1</span> <span class="token operator">AND</span> numbers_0<span class="token punctuation">.</span>num<span class="token operator">&lt;=</span><span class="token number">5</span>
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">4</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage2 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    word__0 <span class="token keyword">as</span> word<span class="token punctuation">,</span>
+    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>letter__1 <span class="token keyword">as</span> letter<span class="token punctuation">,</span> position__1 <span class="token keyword">as</span> position<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  position__1 <span class="token keyword">ASC</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> letters
+  <span class="token keyword">FROM</span> __stage1
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">asc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   letters_0<span class="token punctuation">.</span>letter <span class="token keyword">as</span> letter<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> wordle<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word_count<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> use_count
+<span class="token keyword">FROM</span> __stage2 <span class="token keyword">as</span> wordle
+<span class="token punctuation">,</span> UNNEST<span class="token punctuation">(</span>wordle<span class="token punctuation">.</span>letters<span class="token punctuation">)</span> <span class="token keyword">as</span> letters_0
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h2>
         <a id="common-letters-and-positions" class="header-link anchor" href="#common-letters-and-positions">
@@ -195,7 +428,15 @@ letter more than once.</p>
     <span class="token keyword">aggregate</span>: word_count
   }
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -342,6 +583,745 @@ letter more than once.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1794</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">2045</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1225</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">500</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">154</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">145</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">21</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1711</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1948</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">823</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">396</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">378</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">266</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">85</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1326</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1394</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">590</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">427</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">163</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">160</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">54</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1128</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1193</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">320</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">285</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">218</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">197</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">173</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">983</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1111</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">533</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">336</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">144</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">60</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">38</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">951</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1059</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">270</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">246</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">241</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">164</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">138</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">935</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">959</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">397</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">363</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">142</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">41</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">16</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">931</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">1003</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">292</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">236</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">233</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">155</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">87</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">763</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">792</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">265</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">245</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">122</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">98</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">62</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">747</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">800</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">341</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">182</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">145</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">105</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">27</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">618</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">626</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">309</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">209</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">72</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">35</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"C"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">584</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">612</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">289</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">151</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">100</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">46</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">26</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">531</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">560</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">237</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">118</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">81</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">74</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">50</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"H"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">486</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">495</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">180</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">146</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">124</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">33</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">12</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">459</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">482</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">179</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">112</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">111</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">43</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">37</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Y"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">413</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">417</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">314</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">35</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">25</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">24</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">19</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">404</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">419</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">175</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">104</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">82</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">46</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">12</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">387</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">404</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">263</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">63</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">50</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">20</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">8</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"K"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">365</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">375</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">150</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">110</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">56</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">38</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">21</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"W"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">327</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">329</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">148</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">57</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">56</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">51</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">17</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"F"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">322</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">352</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">221</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">58</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">41</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">26</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">6</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"V"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">197</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">201</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">75</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">65</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">43</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">18</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Z"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">59</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">64</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">30</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">18</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">8</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"X"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">53</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">53</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">29</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">17</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">6</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"J"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">42</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">42</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">38</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Q"</span><span class="token punctuation">,</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">30</span><span class="token punctuation">,</span>
+    <span class="token property">"use_count"</span><span class="token operator">:</span> <span class="token number">30</span><span class="token punctuation">,</span>
+    <span class="token property">"positition_order_bar_chart"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">24</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+        <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> substr<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>numbers_0<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> letter__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> numbers_0<span class="token punctuation">.</span>num <span class="token keyword">END</span> <span class="token keyword">as</span> position__1
+  <span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> base
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>numbers<span class="token punctuation">`</span> <span class="token keyword">AS</span> numbers_0 <span class="token keyword">ON</span> <span class="token number">1</span><span class="token operator">=</span><span class="token number">1</span> <span class="token operator">AND</span> numbers_0<span class="token punctuation">.</span>num<span class="token operator">&lt;=</span><span class="token number">5</span>
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">4</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage2 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    word__0 <span class="token keyword">as</span> word<span class="token punctuation">,</span>
+    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>letter__1 <span class="token keyword">as</span> letter<span class="token punctuation">,</span> position__1 <span class="token keyword">as</span> position<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  position__1 <span class="token keyword">ASC</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> letters
+  <span class="token keyword">FROM</span> __stage1
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">asc</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage3 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    letters_0<span class="token punctuation">.</span>letter <span class="token keyword">as</span> letter__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> wordle<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> word_count__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> use_count__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> letters_0<span class="token punctuation">.</span>position <span class="token keyword">END</span> <span class="token keyword">as</span> position__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> wordle<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> word_count__1
+  <span class="token keyword">FROM</span> __stage2 <span class="token keyword">as</span> wordle
+  <span class="token punctuation">,</span> UNNEST<span class="token punctuation">(</span>wordle<span class="token punctuation">.</span>letters<span class="token punctuation">)</span> <span class="token keyword">as</span> letters_0
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">5</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span>
+  letter__0 <span class="token keyword">as</span> letter<span class="token punctuation">,</span>
+  ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> word_count__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> word_count<span class="token punctuation">,</span>
+  ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> use_count__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> use_count<span class="token punctuation">,</span>
+  ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>position__1 <span class="token keyword">as</span> position<span class="token punctuation">,</span> word_count__1 <span class="token keyword">as</span> word_count<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  word_count__1 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> positition_order_bar_chart
+<span class="token keyword">FROM</span> __stage3
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h2>
         <a id="removing-plurals-and-words-that-end-in-ed-" class="header-link anchor" href="#removing-plurals-and-words-that-end-in-ed-">
@@ -359,7 +1339,15 @@ letter more than once.</p>
         </a>
       </h2>
     <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: word_count}</pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -373,6 +1361,50 @@ letter more than once.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word_count"</span><span class="token operator">:</span> <span class="token number">2073</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span> 
+     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    base<span class="token punctuation">.</span>word <span class="token keyword">as</span> word__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> substr<span class="token punctuation">(</span>base<span class="token punctuation">.</span>word<span class="token punctuation">,</span>numbers_0<span class="token punctuation">.</span>num<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> letter__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> numbers_0<span class="token punctuation">.</span>num <span class="token keyword">END</span> <span class="token keyword">as</span> position__1
+  <span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> base
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>numbers<span class="token punctuation">`</span> <span class="token keyword">AS</span> numbers_0 <span class="token keyword">ON</span> <span class="token number">1</span><span class="token operator">=</span><span class="token number">1</span> <span class="token operator">AND</span> numbers_0<span class="token punctuation">.</span>num<span class="token operator">&lt;=</span><span class="token number">5</span>
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">4</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage2 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    word__0 <span class="token keyword">as</span> word<span class="token punctuation">,</span>
+    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>letter__1 <span class="token keyword">as</span> letter<span class="token punctuation">,</span> position__1 <span class="token keyword">as</span> position<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  position__1 <span class="token keyword">ASC</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> letters
+  <span class="token keyword">FROM</span> __stage1
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">asc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> word_count
+<span class="token keyword">FROM</span> __stage2 <span class="token keyword">as</span> wordle
+<span class="token keyword">WHERE</span> IFNULL<span class="token punctuation">(</span><span class="token operator">NOT</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>wordle<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'(S|ED)$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">FALSE</span><span class="token punctuation">)</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div></div>

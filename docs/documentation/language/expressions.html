@@ -141,7 +141,15 @@ the same syntax users are familiar with. However, Malloy also introduces several
   <span class="token keyword">project</span>: by_county<span class="token punctuation">.</span>county
   <span class="token keyword">limit</span>: <span class="token number">3</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -159,6 +167,51 @@ the same syntax users are familiar with. However, Malloy also introduces several
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"ANCHORAGE"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"FAIRBANKS"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"JUNEAU"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    group_set<span class="token punctuation">,</span>
+    origin_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state__0<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> origin_0<span class="token punctuation">.</span>county <span class="token keyword">END</span> <span class="token keyword">as</span> county__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__1
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
+  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token keyword">WHERE</span> origin_0<span class="token punctuation">.</span>county <span class="token operator">IS</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span>
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">3</span>
+<span class="token punctuation">)</span>
+<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
+  <span class="token keyword">SELECT</span>
+    state__0 <span class="token keyword">as</span> state<span class="token punctuation">,</span>
+    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>county__1 <span class="token keyword">as</span> county<span class="token punctuation">,</span> flight_count__1 <span class="token keyword">as</span> flight_count<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  flight_count__1 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> by_county
+  <span class="token keyword">FROM</span> __stage0
+  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">asc</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">SELECT</span> 
+   by_county_0<span class="token punctuation">.</span>county <span class="token keyword">as</span> county
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage1<span class="token punctuation">`</span> <span class="token keyword">as</span> base
+<span class="token punctuation">,</span> UNNEST<span class="token punctuation">(</span>base<span class="token punctuation">.</span>by_county<span class="token punctuation">)</span> <span class="token keyword">as</span> by_county_0
+<span class="token keyword">LIMIT</span> <span class="token number">3</span>
+</pre>
       </div>
     </div>
   </div><p>Identifiers that share a name with a keyword in Malloy must be enclosed in back ticks <code class="language-malloy"><span class="token punctuation">`</span></code>, e.g. <code class="language-malloy"><span class="token identifier">`year`</span></code>.</p>
@@ -219,7 +272,15 @@ typecast to work around the errors in typing.</p>
   <span class="token keyword">aggregate</span>: distance_2003 <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>{<span class="token keyword">where</span>: dep_time: <span class="token date">@2003</span>}
   <span class="token keyword">aggregate</span>: ca_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -237,6 +298,27 @@ typecast to work around the errors in typing.</p>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"distance_2003"</span><span class="token operator">:</span> <span class="token number">4615025467</span><span class="token punctuation">,</span>
+    <span class="token property">"ca_flights"</span><span class="token operator">:</span> <span class="token number">4501447</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>flights<span class="token punctuation">.</span>dep_time<span class="token operator">>=</span><span class="token string">'2003-01-01'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>dep_time<span class="token operator">&lt;</span><span class="token string">'2004-01-01'</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> flights<span class="token punctuation">.</span>distance <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> distance_2003<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_flights
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div>
       <h2>
         <a id="safe-type-cast" class="header-link anchor" href="#safe-type-cast">
@@ -247,7 +329,15 @@ typecast to work around the errors in typing.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">aggregate</span>: distance_summary <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>total_distance::<span class="token type">string</span><span class="token punctuation">,</span> <span class="token string">' miles'</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer large">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -261,6 +351,24 @@ typecast to work around the errors in typing.</p>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"distance_summary"</span><span class="token operator">:</span> <span class="token string">"27540298839 miles"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   concat<span class="token punctuation">(</span>safe_cast<span class="token punctuation">(</span><span class="token function">SUM</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>distance<span class="token punctuation">)</span> <span class="token keyword">as</span> string<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token string">' miles'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> distance_summary
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>

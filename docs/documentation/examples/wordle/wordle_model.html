@@ -19,21 +19,21 @@ footer: /generated/footers/examples/wordle/wordle_model.html
 }
 
 <span class="token comment">-- table with numbers 1 to 5</span>
-<span class="token keyword">explore</span>: <span class="token type">numbers</span> <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
   <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
 }
 
 <span class="token comment">-- Build a new table of word and each letter in position</span>
 <span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
-  join_many: <span class="token type">numbers</span> <span class="token comment">-- cross join numbers</span>
+  <span class="token keyword">join_many</span>: numbers <span class="token comment">-- cross join numbers</span>
   }
 <span class="token operator">-</span><span class="token operator">></span>{
   <span class="token keyword">group_by</span>: word
   <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
     <span class="token keyword">order_by</span>: <span class="token number">2</span>
     <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-      letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
-      position <span class="token keyword">is</span> <span class="token type">numbers</span><span class="token punctuation">.</span>num
+      letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> numbers<span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+      position <span class="token keyword">is</span> numbers<span class="token punctuation">.</span>num
     <span class="token punctuation">]</span>
   }
 }
