@@ -1,6 +1,6 @@
 # Malloy Quickstart
 
-This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render [results as tables, charts or dashboards](../visualizations/dashboards.md), but fundementally the Malloy just returns data.
+This guide introduces the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render [results as tables, charts or dashboards](../visualizations/dashboards.md), but fundamentally the Malloy just returns data.
 
 _Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there._
 
@@ -10,8 +10,8 @@ Queries are of the form "_source_ `->` _operation_"
 
 In Malloy, the source of a query is either a raw table, a [modeled explore](explore.md), or another query.
 
-In this example the `table()` function provides the query _source_ from a table (or view) in the database.
-They query _operation_ is explicit about which fields are grouped, aggregated or projected.
+In this example, the `table()` function provides the query _source_ from a table (or view) in the database.
+The query _operation_ is explicit about which fields are grouped, aggregated or projected.
 
 
 ```malloy
@@ -418,26 +418,36 @@ query: airports->{
 
 ## Joins
 
-Joins are declared as part of an explore, and link primary and foreign keys.
+Joins are declared as part of an explore. When joining an explore to another, it brings with it all child joins.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-explore: airports is table('malloy-data.faa.airports'){
-  primary_key: code
+
+explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+  primary_key: aircraft_model_code
 }
 
-explore: flights is table('malloy-data.faa.flights'){
-  measure: flight_count is count()
-  join_one: origin_airport is airports with origin
+explore: aircraft is table('malloy-data.faa.aircraft') {
+  primary_key: tail_num
+  join_one: aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code
+}
+
+explore: flights is table('malloy-data.faa.flights') {
+  join_one: aircraft on tail_num = aircraft.tail_num
 }
 
 query: flights->{
-  group_by: origin_state is origin_airport.state
-  aggregate: flight_count
+  where: dep_time: @2003-01
+  group_by: carrier
+  aggregate: [
+    flight_count is count()
+    aircraft_count is aircraft.count()
+    average_seats_per_model is aircraft.aircraft_models.seats.avg()
+  ]
 }
 ```
 
-In this example, the `airports` explore is joined to `flights`, linking the foreign key `origin` of `flights` to the primary key `code` of `airports`. The resulting joined explore is aliased as `origin_airport` within `flights`.
+In this example, the `aircraft` explore is joined to `flights`, and aircraft_models is joined via aircraft. These examples explicitly name both keys--this same syntax can be used to write more complex joins.
 
 ## Aggregate Calculations
 
