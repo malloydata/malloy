@@ -32,6 +32,14 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   bigint: "number",
   "double precision": "number",
   "timestamp without time zone": "timestamp", // maybe not right
+  "timestamp with time zone": "timestamp", // also maybe not right?
+  boolean: "boolean",
+  smallint: "number",
+  "\"char\"": "string", // This has to be in quotes because the DB sends it back like this from the information_schema query
+  numeric: "number",
+  real: "number",
+  oid: "number", // (object identifier type) https://www.postgresql.org/docs/9.4/datatype-oid.html
+  xid: "number" // transaction ID
 };
 
 interface PostgresConnectionConfiguration {
