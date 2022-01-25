@@ -103,6 +103,7 @@ function outputSearchSegmentsFile(
   searchSegments: { path: string; titles: string[], paragraphs: string [] }[]
 ) {
   const file = `window.SEARCH_SEGMENTS = ${JSON.stringify(searchSegments, null, 2)}`;
+  fs.mkdirSync(JS_OUT_PATH, { recursive: true });
   fs.writeFileSync(path.join(JS_OUT_PATH, "search_segments.js"), file);
   log(`File js/generated/search_segments.js written.`);
 }
