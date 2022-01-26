@@ -36,31 +36,23 @@ async function publishExtensions() {
   //   "darwin-arm64",
   // ];
 
-  const targets = [["darwin-x64", "keytar-v7.7.0-napi-v3-darwin-x64"]];
+  const targets = [["darwin-x64", "keytar-v7.7.0-napi-v3-darwin-x64.node"]];
 
   for (const [target, filename] of targets) {
     await doBuild();
 
-    // copy target-specific native extension into the dist/ folder. esbuild has already moved the
-    // empty keytar.node file and renamed it. first, we have to find it.
-    const keytarFile = fs
-      .readdirSync(outDir)
-      .filter((fn) => fn.startsWith("keytar-"));
-
-    console.log(keytarFile);
-
-    // fs.copyFileSync(
-    //   path.join(
-    //     "..",
-    //     "..",
-    //     "third_party",
-    //     "github.com",
-    //     "atom",
-    //     "node-keytar",
-    //     filename
-    //   ),
-    //   path.join(outDir, "blah")
-    // );
+    fs.copyFileSync(
+      path.join(
+        "..",
+        "..",
+        "third_party",
+        "github.com",
+        "atom",
+        "node-keytar",
+        filename
+      ),
+      path.join(outDir, "keytar-native")
+    );
   }
 }
 

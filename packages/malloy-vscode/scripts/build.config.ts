@@ -23,6 +23,12 @@ const development = process.env.NODE_ENV == "development";
 export async function doBuild(): Promise<void> {
   fs.rmdirSync(outDir, { recursive: true });
 
+  // if we're in production (packaged as an extension for a specific platform), exclude the
+  // node_modules npm package "keytar" as we'll use the native lib we copied in when building
+  const extensionExternals = development
+    ? ["vscode", "pg-native", "./keytar-native"]
+    : ["vscode", "pg-native", "./keytar-native", "keytar"];
+
   await build({
     entryPoints: ["./src/extension/extension.ts", "./src/server/server.ts"],
     entryNames: "[name]",
@@ -31,7 +37,7 @@ export async function doBuild(): Promise<void> {
     sourcemap: development,
     outdir: outDir,
     platform: "node",
-    external: ["vscode", "pg-native"],
+    external: extensionExternals,
     loader: { [".png"]: "file", [".svg"]: "file" },
     plugins: [nativeNodeModulesPlugin],
     watch: development

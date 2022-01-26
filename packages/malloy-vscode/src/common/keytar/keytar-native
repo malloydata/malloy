@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
- // This file is intentionally blank. WHen NODE_ENV==development, keytar is loaded
- // from node_modules, and should have been built by npm on install to proper architecture.
- // When NODE_ENV is production, this means the extension is running as an installed, packaged
- // extension - we have, in that case (hopefully) packaged the extension with a specific
- // keytar lib that matches the platform the extension is running on
+// This file is intentionally blank, it's only here to stop errors. WHen NODE_ENV==development, keytar is loaded
+// from node_modules, and should have been built by npm on install to proper architecture.
+// When NODE_ENV is production, this means the extension is running as an installed, packaged
+// extension - we have, in that case (hopefully) packaged the extension with a specific
+// keytar lib that matches the platform the extension is running on

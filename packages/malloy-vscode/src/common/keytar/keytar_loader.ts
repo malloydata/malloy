@@ -12,8 +12,6 @@
  */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// if we're in production, we've packaged the extension targeted to a specific platform,
-// so grab the local binary we've included. Otherwise, load keytar from node_modules like normal
 export type KeytarModule = {
   default: typeof import("/Users/bporterfield/dev/malloy/node_modules/keytar/keytar");
   getPassword(service: string, account: string): Promise<string | null>;
@@ -22,8 +20,11 @@ export type KeytarModule = {
   findPassword(service: string): Promise<any>;
   findCredentials(service: string): Promise<any>;
 };
+
+// in production the extension is packaged with native keytar lib targeted to a specific platform,
+// so grab the local binary. Otherwise, load keytar from node_modules like normal
 export async function loadKeytar(): Promise<KeytarModule> {
   return process.env.NODE_ENV == "production"
-    ? await require("./keytar.node")
+    ? await require("./keytar-native")
     : await import("keytar");
 }
