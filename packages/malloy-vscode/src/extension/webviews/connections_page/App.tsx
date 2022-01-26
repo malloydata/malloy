@@ -23,6 +23,7 @@ import {
 import { useConnectionsVSCodeContext } from "./connections_vscode_context";
 import { ConnectionEditorList } from "./ConnectionEditorList";
 import { Spinner } from "../components";
+import styled from "styled-components";
 
 export const App: React.FC = () => {
   const vscode = useConnectionsVSCodeContext();
@@ -96,9 +97,13 @@ export const App: React.FC = () => {
     return () => window.removeEventListener("message", listener);
   });
 
-  return (
+  return connections === undefined ? (
     <div style={{ height: "100%" }}>
-      {connections !== undefined && (
+      <Spinner text="Loading" />
+    </div>
+  ) : (
+    <Scroll>
+      <div style={{ margin: "0 10px 10px 10px" }}>
         <ConnectionEditorList
           connections={connections}
           setConnections={setConnections}
@@ -107,12 +112,12 @@ export const App: React.FC = () => {
           testStatuses={testStatuses}
           requestServiceAccountKeyPath={requestServiceAccountKeyPath}
         />
-      )}
-      {connections === undefined && (
-        <div style={{ height: "100%" }}>
-          <Spinner text="Loading" />
-        </div>
-      )}
-    </div>
+      </div>
+    </Scroll>
   );
 };
+
+const Scroll = styled.div`
+  height: 100%;
+  overflow: auto;
+`;
