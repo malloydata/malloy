@@ -51,7 +51,7 @@ Currently, the Malloy extension works on Mac and Linux machines.
 
 2. **Add the Malloy extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
-3. **Connect to your database**: Directions [here](connection_instructions.md).
+3. **Connect to your database**: Directions [here]((https://looker-open-source.github.io/malloy/documentation/connection_instructions.html)).
 
 4. **Write some Malloy!**: Start with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html). It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
 
