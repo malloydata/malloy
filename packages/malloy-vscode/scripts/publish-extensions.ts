@@ -16,10 +16,10 @@ import { doBuild, outDir } from "./build.config";
 import * as semver from "semver";
 import * as fs from "fs";
 import * as path from "path";
+import { createVSIX, publish, ICreateVSIXOptions } from "vsce";
 
 const args = process.argv.slice(2);
 const version = args[0];
-console.log(version);
 if (!semver.valid(version)) {
   console.error("invalid version number");
   process.exit(1);
@@ -32,8 +32,8 @@ async function publishExtensions() {
   //   "linux-armhf",
   //   "alpine-x64",
   //   "alpine-arm64",
-  //   "darwin-x64",
-  //   "darwin-arm64",
+  //   ["darwin-x64", "keytar-v7.7.0-napi-v3-darwin-x64.node"],
+  //   ["darwin-arm64", "keytar-v7.7.0-napi-v3-darwin-arm64.node"],
   // ];
 
   const targets = [["darwin-x64", "keytar-v7.7.0-napi-v3-darwin-x64.node"]];
@@ -41,6 +41,7 @@ async function publishExtensions() {
   for (const [target, filename] of targets) {
     await doBuild();
 
+    // copy target-specific keytar binary into build
     fs.copyFileSync(
       path.join(
         "..",
@@ -53,6 +54,15 @@ async function publishExtensions() {
       ),
       path.join(outDir, "keytar-native")
     );
+
+    const vsixOptions: ICreateVSIXOptions = {
+      githubBranch: "main",
+      preRelease: false,
+      useYarn: true,
+      target,
+      packagePath: "",
+    };
+    await createVSIX(vsixOptions);
   }
 }
 

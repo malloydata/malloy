@@ -16,12 +16,21 @@ import { build } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as fs from "fs";
 import * as path from "path";
+import { exec } from "child_process";
 
 export const outDir = "dist";
 const development = process.env.NODE_ENV == "development";
 
 export async function doBuild(): Promise<void> {
   fs.rmdirSync(outDir, { recursive: true });
+
+  exec("yarn licenses generate-disclaimer --prod", (error, stdout, _stderr) => {
+    if (error) {
+      console.log(error);
+      process.exit(1);
+    }
+    fs.writeFileSync(path.join(outDir, "third_party_notices.txt"), stdout);
+  });
 
   // if we're in production (packaged as an extension for a specific platform), exclude the
   // node_modules npm package "keytar" as we'll use the native lib we copied in when building
