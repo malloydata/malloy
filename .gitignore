@@ -47,3 +47,4 @@ out/
 *.iml
 gems/
 .vscode/settings.json
+.vscode/spellright.dict

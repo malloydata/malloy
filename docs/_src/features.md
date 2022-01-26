@@ -11,8 +11,8 @@ Malloy introduces [simplified filtering](language/filters.md) for all types and 
 applied.  [Time calculations](language/time-ranges.md) are powerful and understandable.
 
 ### Reusable Aggregates
-In a Malloy Data Model, an agggreate computation need only be defined once (for example revenue).  Once defined, it can be used
-in any query at any level of granulatity or dimensionality. Malloy retains enough information in the data graph
+In a Malloy Data Model, an aggregate computation need only be defined once (for example revenue).  Once defined, it can be used
+in any query at any level of granularity or dimensionality. Malloy retains enough information in the data graph
 to perform this calculation no matter how you ask for it. Reusable Aggregates help improve accuracy.
 
 ### Reusable Dimensional calculations
@@ -21,14 +21,14 @@ mapping values, bucketing results and data cleanup.
 
 ### Maintains Relationships
 SQL's <code>SELECT</code> statement flattens the namespace into a wide table. Malloy retains the graph relationship
-of data lets you access and correctly perform comutations and any place in the graph.
+of data lets you access and correctly perform computations and any place in the graph.
 
 ### Reusable Queries
 Queries can be introduced into a Malloy model and accessed by name.  One benefit is that the
 queries are always accurate.  Think of a Malloy model as a data function library.
 Queries can also be used to create [nested subtables](nesting.md) in other queries.
 
-### Aggregating Subueries
+### Aggregating Subqueries
 Malloy easily produces nested results.  Entire dashboards can be fetched in a single query.
 Named queries of a given shape can easily be nested, visualized and reused.
 

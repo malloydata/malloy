@@ -222,7 +222,7 @@ explore airports is table('malloy-data.faa.airports'){
 ### Renaming Fields
 
 Fields from an explore's source may be renamed in the context of the
-new explore. This is useful when the original name is undescriptive or has a different meaning in the new explore.
+new explore. This is useful when the original name is not descriptive, or has a different meaning in the new explore.
 
 ```malloy
 explore flights is table('malloy-data.faa.flights'){
@@ -234,8 +234,6 @@ explore flights is table('malloy-data.faa.flights'){
 ```
 
 ### Limiting Access to Fields
-
-LTNOTE: not sure if this is still supported @mtoy?
 
 The list of fields available in an explore from its source
 can be limited. This can be done either by `accept`ing a

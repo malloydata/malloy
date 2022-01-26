@@ -1,10 +1,10 @@
 # Bar Charts
 
-There are two types of bar charts.  _Two measure bar charts_ (gradiant bar charts) and _Two Dimension Bar_ Charts (stacked bar charts).
+There are two types of bar charts.  _Two measure bar charts_ (gradient bar charts) and _Two Dimension Bar_ Charts (stacked bar charts).
 
 ## Two Measures
 
-This chart looks at flights and counts the number of aircraft owned by each carrier.  It also, using a gradiant,
+This chart looks at flights and counts the number of aircraft owned by each carrier.  It also, using a gradient,
 shows the number of flights made per plane.
 
 ```malloy

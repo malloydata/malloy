@@ -118,7 +118,7 @@ query: aircraft_models->{
 
 However, this isn't actually the number you were interested in, because this measures the average number of seats across _all_ aircraft models, not just the ones with actively-registered aircraft.
 
-Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysists often resort to complicated [fact tables](https://www.zentut.com/data-warehouse/fact-table/) to perform this kind of query.
+Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysts often resort to complicated [fact tables](https://www.zentut.com/data-warehouse/fact-table/) to perform this kind of query.
 
 ### The Solution
 
@@ -179,7 +179,7 @@ This table summarizes the meaning of each of these calculations.
 
 ### Aggregates that Support Locality
 
-The aggregate fuctions that support locality are `count`, `sum`, and `avg`.
+The aggregate functions that support locality are `count`, `sum`, and `avg`.
 
 The `min` and `max` aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once.
 

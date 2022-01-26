@@ -3,7 +3,7 @@ Line charts take two or three parameters.
 
 * First parameter -  X-axis is time field or numeric expression
 * Second parameter - Y-axis is a numeric expression
-* Thrid (optional) Pivot is dimensional field (numeric or string)
+* Third (optional) Pivot is dimensional field (numeric or string)
 
 Data Style is <code>'line_chart'</code>
 

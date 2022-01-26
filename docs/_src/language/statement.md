@@ -1,6 +1,6 @@
 # Models
 
-Malloy recognizes modeling as a key aspect of data analyitics and
+Malloy recognizes modeling as a key aspect of data analytics and
 provides tools that allow for modularity and reusability of definitions.
 Whereas in SQL, queries generally define all metrics inline,
 requiring useful snippets to be saved and managed separately, in Malloy,

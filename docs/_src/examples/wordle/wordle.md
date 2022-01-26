@@ -1,6 +1,6 @@
 # A Perfect Solver for Wordle using Data
 
-[Worldle](https://www.powerlanguage.co.uk/wordle/) is an interesting, challenging and fun word game.  If you aren't familiar with it, I suggest that you play it before reading this article
+[Wordle](https://www.powerlanguage.co.uk/wordle/) is an interesting, challenging and fun word game.  If you aren't familiar with it, I suggest that you play it before reading this article
 
 ## Step 1 - Raw Materials
 The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be

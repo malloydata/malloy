@@ -1,6 +1,6 @@
 # Malloy Quickstart
 
-This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a redering system that can render [results as tables, charts or dashboards](../visualizations/dashboards.md), but fundementally the Malloy just returns data.
+This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a rendering system that can render [results as tables, charts or dashboards](../visualizations/dashboards.md), but fundamentally the Malloy just returns data.
 
 _Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there._
 
@@ -29,7 +29,7 @@ In SQL, the <code>SELECT</code> command does two very different things.  A <code
 
 The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called `project:`.
 
-In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count` and `average_elevation`.  `group_by:`. The `aggregate:` list can contain refernces to existing aggregate fields or add new aggregate computations.
+In the query below, the data will be grouped by `state` and will produce an aggregate calculation for `airport_count` and `average_elevation`.  `group_by:`. The `aggregate:` list can contain references to existing aggregate fields or add new aggregate computations.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -47,7 +47,7 @@ query: table('malloy-data.faa.airports')->{
 
 ### Multiple Field Operations
 
-Multiple `group_by:` and `aggregate:` statements can appear in the same query operation.  This can be helful in rendering when the order of fields in the query output is significant.
+Multiple `group_by:` and `aggregate:` statements can appear in the same query operation.  This can be helpful in rendering when the order of fields in the query output is significant.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -145,7 +145,7 @@ query: airports->{
 
 In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some [reasonable defaults](order_by.md).
 
-The `top:` and `limit:` statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure decending—in this case, `airport_count`.
+The `top:` and `limit:` statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure descending--in this case, `airport_count`.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -156,7 +156,7 @@ query: table('malloy-data.faa.airports')->{
 }
 ```
 
-Default ordering can be overridden with `order_by:`, as in the following query, which shows the states in alphabetical order.  `order_by:` can take a field index nuber or the name of a field.
+Default ordering can be overridden with `order_by:`, as in the following query, which shows the states in alphabetical order.  `order_by:` can take a field index number or the name of a field.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -205,7 +205,7 @@ query: table('malloy-data.faa.airports')->{
 ### Filtering in Query Stages
 
 Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to
-the data for that opeation alone. (More on this later, in the section on `nest:` operations in queries.)
+the data for that operation alone. (More on this later, in the section on `nest:` operations in queries.)
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
@@ -277,7 +277,7 @@ query: table('malloy-data.faa.flights') ->{
 
 <!-- TODO it may be worth having a doc describing what the JSON+Metadata
 output of these look like, i.e. that the JSON just includes a regular date,
-but the metadata specifices that it's in that given timeframe.
+but the metadata specifies that it's in that given timeframe.
 And likewise for any other data type that has interesting output metadata. -->
 
 ### Time Ranges
@@ -485,7 +485,7 @@ query: flights-> {
 
 
 
-<!-- ## Joins are between primary and foriegn keys.
+<!-- ## Joins are between primary and foreign keys.
 
 
 ## Full graph of the data is available to query

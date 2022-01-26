@@ -1,6 +1,6 @@
 # Joins
 
-Joins in malloy are different than SQL joins.  Wnen two explores are joined,
+Joins in malloy are different than SQL joins.  When two explores are joined,
 Malloy retains the graph nature of the the data relationships. This is unlike
 SQL, which flattens them all into a single table space.
 
@@ -30,7 +30,7 @@ Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, 
 
 ### Foreign Key to Primary Key
 
-The easiest, most error proof way to perform a join is with `join_one:/with`.  The basic syntax is:
+The easiest, most error proof way to perform a join is with `join_one:/with`. The basic syntax is:
 
 `join_one: <explore> with <foreign_key>`
 
@@ -82,7 +82,7 @@ uses `is` to give the join a name.
 ```malloy
 
 explore: flights is table('malloy-data.faa.flights'){
-  join_one: carriers is  table('malloy-data.faa.carriers'){primary_key: code} with carrier
+  join_one: carriers is table('malloy-data.faa.carriers'){primary_key: code} with carrier
 }
 ```
 
@@ -112,7 +112,7 @@ query: flights->{
 
 This example demonstrates the definition of several different joins in a model and their use in a query.
 Entire subtrees of data can be joined.  In the example below, `aircraft` joins `aircraft_models`.  `flights`
-jois aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
+joins aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
 retained.
 
   `group_by: aircraft.aircraft_models.manufacturer`
@@ -157,7 +157,7 @@ For more examples and how to reason about aggregation across joins, review the [
 
 ## SQL Joins
 
-Inner join are joins where the the joind table has rows.  The example below, suppose we only want users that have at least one row in the orders table.  The following is the equivalent of a SQL  INNER JOIN.
+Inner join are joins where the the joined table has rows.  The example below, suppose we only want users that have at least one row in the orders table.  The following is the equivalent of a SQL  INNER JOIN.
 
 ```malloy
 explore users is table('users') {

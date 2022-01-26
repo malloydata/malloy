@@ -3,7 +3,7 @@ _January 21, 2022_
 
 [⬅️ Previous Puzzle](wordle215.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle217.md)
 
-Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
+Wordlebot is written in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
 
 ## Query for the best starting words.
@@ -33,7 +33,7 @@ query: wordle->find_words{
 <img src="/malloy/img/wordle216b.png" style="width: 200px">
 
 ## Round 3: Tie Breaking
-'CRONY' gave us one match and a yellow tile, so we'll query for words with 'R' in the second positon, and that contain 'C', but not in the first position.
+'CRONY' gave us one match and a yellow tile, so we'll query for words with 'R' in the second position, and that contain 'C', but not in the first position.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}

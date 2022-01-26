@@ -79,7 +79,7 @@ These nested subtables allow us to view both the high-level information of "who 
 ## Bucketing the data
 The `price_per_100ml` calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket `price_per_100ml` into even dollar amounts, and nest our `top_sellers_by_revenue` query to create a subtable for each bucket.
 
-At the top we see our lowest cost options at under $1/mL, with the more pricey bevarages appearing as we scroll down.
+At the top we see our lowest cost options at under $1/mL, with the more pricey beverages appearing as we scroll down.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
