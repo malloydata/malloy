@@ -35,8 +35,9 @@ class Renderer {
   private readonly path: string;
   private models: Map<string, string>;
   private _errors: { snippet: string; error: string }[] = [];
-  private readonly titleStack: { level: number, title: string }[] = [];
-  public readonly searchSegments: { titles: string[], paragraphs: string[] }[] = [];
+  private readonly titleStack: { level: number; title: string }[] = [];
+  public readonly searchSegments: { titles: string[]; paragraphs: string[] }[] =
+    [];
 
   constructor(path: string) {
     this.path = path;
@@ -129,7 +130,7 @@ class Renderer {
   }
 
   private registerTitle(titleHTML: string, level: number) {
-    while (true) {
+    for (;;) {
       const lastTitle = this.titleStack[this.titleStack.length - 1];
       if (lastTitle === undefined || lastTitle.level < level) {
         break;
@@ -138,7 +139,10 @@ class Renderer {
       }
     }
     this.titleStack.push({ level, title: titleHTML });
-    this.searchSegments.push({ titles: this.titleStack.map((item) => item.title), paragraphs: [] });
+    this.searchSegments.push({
+      titles: this.titleStack.map((item) => item.title),
+      paragraphs: [],
+    });
   }
 
   protected async heading(content: Markdown[], level: 1 | 2 | 3 | 4 | 5 | 6) {
@@ -388,7 +392,7 @@ export async function renderDoc(
 ): Promise<{
   renderedDocument: string;
   errors: { snippet: string; error: string }[];
-  searchSegments: { titles: string[], paragraphs: string[] }[];
+  searchSegments: { titles: string[]; paragraphs: string[] }[];
 }> {
   const ast = unified().use(remarkParse).use(remarkGfm).parse(text);
   const renderer = new Renderer(path);
