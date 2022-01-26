@@ -31,6 +31,7 @@ import {
   WebviewMessageManager,
 } from "../webview_message_manager";
 import { queryDownload } from "./query_download";
+import { trackQueryRun } from "../telemetry";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
