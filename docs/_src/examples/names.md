@@ -2,7 +2,7 @@
 
 _You can find the complete source code for this model [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/names/names.malloy)._
 
-The Data set consits of name, gender, state and year with the number of people that
+The Data set consists of name, gender, state and year with the number of people that
 were born with that name in that gender, state and year.
 
 ```malloy

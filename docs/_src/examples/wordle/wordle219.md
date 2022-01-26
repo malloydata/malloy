@@ -3,7 +3,7 @@ _January 24, 2022_
 
 [⬅️ Previous Puzzle](wordle218.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
-Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
+Wordlebot is written in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
 
 ## Query for the best starting words
@@ -32,7 +32,7 @@ Still feels a bit early for double letters, so we're running with 'DOILY'
 
 <img src="/malloy/img/wordle219b.png" style="width: 200px">
 
-## Round 3/4: More Creative Tiebreaking
+## Round 3/4: More Creative Tie-breaking
  With one green and one yellow match we're down to two possible words.
 
  ```malloy

@@ -146,7 +146,7 @@ size:
 ```
 
 Pick can be used to "clean" data, combining similar dirty values into one clean value. In the following example, the `pick` statement collects all the "this actually
-shiped" statuses, and because there is no `else`, leaves the other
+shipped" statuses, and because there is no `else`, leaves the other
 status values alone.
 
 ```malloy
@@ -186,7 +186,7 @@ To truncate a time value to a given timeframe, use the `.` operator followed by 
 By way of example, if the value of `time` is `@2021-08-06 00:36`, then the below truncations will produce the results on the right:
 
 
- timeession | result
+truncation | result
  ---- | ----
 `time.minute` | 2021-08-06 00:36
 `time.hour`   | 2021-08-06 00:00
@@ -202,7 +202,7 @@ at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example `time.year`
 would be a range covering the entire year which contains `time`.
 
-This is extremely useful with the [apply operator](#apply-operator), `:`. To see if two events happen in the same calendar year, for example, the boolean expresison in Malloy is `one_time: other_time.year`.
+This is extremely useful with the [apply operator](#apply-operator), `:`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `one_time: other_time.year`.
 
 ### Time Extraction
 
@@ -228,7 +228,7 @@ expression | meaning | result
 <!-- * `@2021-10-24 10:00:00` -->
 <!-- * `now` -->
 
-Time literals are specified in malloy with th `@` character. A literal
+Time literals are specified in malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 
@@ -263,14 +263,13 @@ Partial comparisons, or "partials" are written with a binary comparison operator
 <!-- * `> 5 & < 10` -->
 <!-- * `'CA' | 'NY'` -->
 
-Conditions can be logically combined with the two alternation operators, `&` and `|`. These are different from `and` and `or` in that they operate on conditions which return boolean vlues, rather than boolean values directly.
+Conditions can be logically combined with the two alternation operators, `&` and `|`. These are different from `and` and `or` in that they operate on conditions which return boolean values, rather than boolean values directly.
 
 The _union alternation_ operator `|` represents the logical union of two conditions. An expression like `x | y` can be read "if either `x` or `y`." For example `= 'CA' | = 'NY'` represents the condition "is either CA or NY".
 
 The _conjunction alternation_ operator `&` represents the logical conjunction of two conditions. An expression like "`x & y` can be read "if both `x` and `y`." For example, `> 5 & < 10` represents the condition "is greater than 5 and less than 10".
 
 Values can be used directly with the alternation operators, in which case the operator is assumed to be `=`. For example, `'CA' | 'NY'` is equivalent to `= 'CA' | = 'NY'`.
-
 ### Application
 
 <!-- * `state: 'CA'` -->

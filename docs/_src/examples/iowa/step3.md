@@ -2,7 +2,7 @@
 
 **TLDR:** *This step builds a couple of useful derivations, `category_class` and `bottle_size`.  There as 68 different `category_name`s in this data set, we reduce that to 9.  There are 34 *liter sizes*, we make a new dimension, `bottle_size` that only has 3 possible values.*
 
-Our previous analysis of price per mL brings to mind quetsions around bottle size. How many different sizes do bottles come in?  Are there standards and uncommon ones?  Do vendors specialize in different bottle sizes?
+Our previous analysis of price per mL brings to mind questions around bottle size. How many different sizes do bottles come in?  Are there standards and uncommon ones?  Do vendors specialize in different bottle sizes?
 
 
 ## Building *category_class*, a simplified version of *category_name*

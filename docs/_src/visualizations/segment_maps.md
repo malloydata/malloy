@@ -1,6 +1,6 @@
 # Segment Maps
 
-The plugin currently supports US maps. Segement maps take as input 4 columns: start latitude , start longitude, end latitude, and  end longitude of the segment.  The model and data styles for the subsequent examples are:
+The plugin currently supports US maps. Segment maps take as input 4 columns: start latitude , start longitude, end latitude, and  end longitude of the segment.  The model and data styles for the subsequent examples are:
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}

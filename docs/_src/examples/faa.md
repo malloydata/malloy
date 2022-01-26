@@ -4,7 +4,7 @@ _The follow examples all run against the model at the bottom of this page OR you
 
 ## Airport Dashboard
 Where can you fly from SJC? For each destination; Which carriers?  How long have they been flying there?
-Are they ontime?
+Are they on time?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
@@ -15,8 +15,8 @@ query: flights -> airport_dashboard {where: origin.code: 'SJC'}
 ## Carrier Dashboard
 Tell me everything about a carrier.  How many destinations?, flights? hubs?
 What kind of planes to they use? How many flights over time?  What are
-the major hubs?  For each destionation, How many flights? Where can you? Have they been
-flying there long?  Increasing or decresing year by year?  Any seasonality?
+the major hubs?  For each destination, How many flights? Where can you? Have they been
+flying there long?  Increasing or decreasing year by year?  Any seasonality?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
@@ -26,7 +26,7 @@ query: flights -> carrier_dashboard {where: carriers.nickname : 'Jetblue'}
 
 ## Kayak Example Query
 Suppose you wanted to build a website like Kayak.  Let's assume that the data we have is
-in the future instead ofthe past.  The query below will fetch all the data needed
+in the future instead of the past.  The query below will fetch all the data needed
 to render a Kayak page in a singe query.
 
 ```malloy
@@ -41,7 +41,7 @@ query: flights -> kayak {
 ```
 
 ## Sessionizing Flight Data.
-You can think of flight data as event data.  The below is a classic map/reduce roll up of the filght data by carrier and day, plane and day, and individual events for each plane.
+You can think of flight data as event data.  The below is a classic map/reduce roll up of the flight data by carrier and day, plane and day, and individual events for each plane.
 
 ```malloy
   query: sessionize is {

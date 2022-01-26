@@ -27,7 +27,7 @@ query: flights->{
 }
 ```
 
-## Top 5 Destinstinations
+## Top 5 Destinations
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
 query: flights->{

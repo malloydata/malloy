@@ -1,4 +1,4 @@
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 -- Make a table of 5 letter words

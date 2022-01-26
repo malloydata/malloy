@@ -2,13 +2,13 @@
 
 Malloy, when running a query simply returns the data.  By default in the VSCode extension,
 this data is shown as JSON.  Malloy includes a rendering library that can show this data in different ways.
-The rendering libary is a separate layer from Malloy's data access layer and using configuration an
+The rendering library is a separate layer from Malloy's data access layer and using configuration an
 convention to figure out how to show data.
 
 The rendering engine works by mapping at the names of the fields to a renderer.
 By default nested queries are rendered in tables, but, for example the field name ends in '_bar_chart' it is rendered as a bar chart instead.
 
-This map can also be specified in a datastyles file and included in the model.
+This map can also be specified in a data styles file and included in the model.
 
 ## Example Model
 
@@ -46,7 +46,7 @@ query: airports->by_state_and_county
 
 
 ## Render shows results as a Table
-By default, the renderer shows tablular results are rendered as tables.
+By default, the renderer shows tabular results are rendered as tables.
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
 query: airports->by_state_and_county
@@ -65,7 +65,7 @@ query: county_dashboard is airports->by_state_and_county
 The Malloy Renderer uses [Vega](https://vega.github.io/vega-lite/) for charting.  Including some style information (that gets returned with the results) allows the renderer to
 style nested queries using charts and more.
 
-Add styels for `by_fac_type` and `by_county`
+Add styles for `by_fac_type` and `by_county`
 
 Data Style:
 ```json

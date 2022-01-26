@@ -3,7 +3,7 @@ There are a couple of different ways to go about this in Malloy.
 
 ## Method 1: Pivoting a Visualization
 
-Compare performace of different years on the same scale.  Line charts take the X-Axis, Y-Axis and Dimensional Axis as parameters.
+Compare performance of different years on the same scale.  Line charts take the X-Axis, Y-Axis and Dimensional Axis as parameters.
 In this Case, the X-Axis is `month_of_year`, the Y-Axis is `flight_count` and the Dimensional Axis is the year.
 
 ```malloy
@@ -22,7 +22,7 @@ query: flights->{
 ```
 
 ## Method 2: Filtered Aggregates
-Filters make it easy to reuse aggreate calculations for trends analysis.
+Filters make it easy to reuse aggregate calculations for trends analysis.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
