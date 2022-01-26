@@ -19,7 +19,6 @@ import {
   TextDocumentSyncKind,
   InitializeResult,
   SemanticTokensBuilder,
-  DidChangeConfigurationNotification,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -65,10 +64,6 @@ connection.onInitialize((params: InitializeParams) => {
       },
     };
   }
-
-  connection.client.register(DidChangeConfigurationNotification.type, {
-    section: "malloy.connections",
-  });
 
   return result;
 });

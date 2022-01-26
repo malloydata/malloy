@@ -57,9 +57,21 @@ export function editConnectionsCommand(): void {
     switch (message.type) {
       case ConnectionMessageType.SetConnections: {
         const connections = await handleConnectionsPreSave(message.connections);
-        vscode.workspace
-          .getConfiguration("malloy")
-          .update("connections", connections);
+        const malloyConfig = vscode.workspace.getConfiguration("malloy");
+        const hasWorkspaceConfig =
+          malloyConfig.inspect("connections")?.workspaceValue !== undefined;
+        malloyConfig.update(
+          "connections",
+          connections,
+          vscode.ConfigurationTarget.Global
+        );
+        if (hasWorkspaceConfig) {
+          malloyConfig.update(
+            "connections",
+            connections,
+            vscode.ConfigurationTarget.Workspace
+          );
+        }
         messageManager.postMessage({
           type: ConnectionMessageType.SetConnections,
           connections,
