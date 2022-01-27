@@ -14,8 +14,7 @@
 import { doBuild, outDir } from "./build-extension";
 import * as fs from "fs";
 import * as path from "path";
-import { createVSIX, ICreateVSIXOptions } from "vsce";
-import { execSync } from "child_process";
+import { createVSIX } from "vsce";
 
 // TODO
 type Target =
@@ -58,10 +57,10 @@ export async function doPackage(
 
   // get version info from package.json if it isn't passed in
   if (!version) {
-    const packageInfo = JSON.parse(
-      execSync("yarn info --json", { encoding: "utf8" })
+    const packageJSON = JSON.parse(
+      fs.readFileSync(path.join("package.json"), "utf8")
     );
-    version = packageInfo.data.version;
+    version = packageJSON.version;
   }
 
   await createVSIX({

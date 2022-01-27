@@ -13,7 +13,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export type KeytarModule = {
-  default: typeof import("/Users/bporterfield/dev/malloy/node_modules/keytar/keytar");
   getPassword(service: string, account: string): Promise<string | null>;
   setPassword(service: string, account: string, password: string): Promise<any>;
   deletePassword(service: string, account: string): Promise<any>;
