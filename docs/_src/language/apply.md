@@ -17,4 +17,3 @@ match | `x: /'ab'` | `x ~ /'ab'` _(this only works when applying a regular expre
 In addition it is very common to use [Time Ranges](time-ranges.md)
 with the apply operator, which operate similar to the numeric range
 example above.
-

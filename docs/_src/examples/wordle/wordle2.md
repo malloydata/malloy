@@ -36,7 +36,7 @@ Starting with the [query we built in step one](wordle1a.md), we built a query th
 each row is the letter and position in that row.
 
 
-## Create a new expore `wordle` to query the data in this form.
+## Create a new explore `wordle` to query the data in this form.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy"}

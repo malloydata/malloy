@@ -1,7 +1,7 @@
 # Queries
 
 The basic syntax for a query in Malloy consists of a source
-and a "pipeline" of one or more _stages_ seperated by `->`. The shape of the data defined in the original explore is transformed by each stage.
+and a "pipeline" of one or more _stages_ separated by `->`. The shape of the data defined in the original explore is transformed by each stage.
 
 ```malloy
 query: flights->{ group_by: carrier; aggregate: flight_count is count() }
@@ -66,7 +66,7 @@ query: flights->{
 }
 ```
 
-A reference to a [named query](nesting.md) (which defines its own pipeline) can be the first stage in a pipleline.
+A reference to a [named query](nesting.md) (which defines its own pipeline) can be the first stage in a pipeline.
 
 ```malloy
 query: flights->by_carrier

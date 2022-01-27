@@ -1,15 +1,15 @@
 # Cohort Analysis
 
-One of the most powerful way of understanding what is happening using data is to use *cohort analisys*.
-Fundementally, cohort analysis is used to group people into sets and to analyse the success,
+One of the most powerful way of understanding what is happening using data is to use *cohort analysis*.
+Fundamentally, cohort analysis is used to group people into sets and to analyze the success,
 attributes or characteristics of that group as compared to the population in general.
 
 To understand this, we're going to use Social Security Administrations birth/name data.
 
 We have a table with `name`, `gender`, `` `year` ``, `state` and the `` `number` `` of people born with those
-characterisitics.
+characteristics.
 
-In the simplelist form, a cohort calculation is a [percentage of total calculation](percent_of_total.md).
+In the simplest form, a cohort calculation is a [percentage of total calculation](percent_of_total.md).
 For example, if we were interested in the name 'Billie' as it relates to location. We could look
 could filter on 'Billie' and look a states as it relates to total population.
 
@@ -60,7 +60,7 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
 ## Names as Cohorts
 
 In the above example, the population was *People named Billie* and we used *state* or *year* for our cohort (grouping).
-Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our popuation.
+Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our population.
 Let's limit our population to California in 1990 and look at the most cohorts (people with a given name).  We are also going
 to measure a little differently.  Instead of looking at a percentage, let's look at births per 100,000 people.
 

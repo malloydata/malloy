@@ -1,6 +1,6 @@
 # Filters
 
-Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individal filters.
+Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individual filters.
 
 ## Filter Syntax
 
@@ -12,7 +12,7 @@ Regardless of the placement of a filter, the syntax looks the same.
 
 Each filter be any expression of type `boolean`, whether that's a boolean field `is_commercial_flight`, a comparison `distance > 1000`, or any of the other kinds of boolean expressions that Malloy supports. For examples see [the table below](#examples-of-filter-expressions), or for detailed information on the kinds of expressions Malloy supports, see the [Expressions](expressions.md) section.
 
-Logically, the comma-seperated list of filters are `and`ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.
+Logically, the comma-separated list of filters are `and`ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.
 
 <!--
 TODO "see where vs having for more information on how Malloy generates SQL for filters"
@@ -61,7 +61,7 @@ query: flights->{
 }
 ```
 
-### Filtering Complex Meausre
+### Filtering Complex Measure
 
 Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.

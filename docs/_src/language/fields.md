@@ -2,7 +2,7 @@
 
 Fields constitute all kinds of data in Malloy. They
 can represent dimensional attributes sourced directly from
-tables in a database, constant values to be used in later analyis, computed metrics derived from other fields, or even nested structures created from aggregating subqueries.
+tables in a database, constant values to be used in later analysis, computed metrics derived from other fields, or even nested structures created from aggregating subqueries.
 
 ## Defining Fields
 
@@ -46,7 +46,7 @@ query: flights->{
 
 ## Field Names
 
-Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in backticks, e.g. `` `year` is dep_time.year``.
+Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in back ticks, e.g. `` `year` is dep_time.year``.
 
 ## Kinds of Fields
 
@@ -70,11 +70,11 @@ Dimensions may be used in both `reduce` and `project`
 queries.
 
 ```malloy
--- Show the top 10 full names by number of occurrances
+-- Show the top 10 full names by number of occurrences
 query: users->{
   top: 10
   group_by: full_name
-  aggregate: occurances is count()
+  aggregate: occurrences is count()
 }
 
 -- Show 10 users' full names

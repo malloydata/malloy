@@ -3,7 +3,7 @@ _January 20, 2022_
 
 [⬅️ Previous Puzzle](wordle214.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle216.md)
 
-Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
+Wordlebot is written in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
 Query for best starting words.
 
@@ -36,7 +36,7 @@ query: wordle->find_words{
 
 ### Query for words that
    * Contain 'B' and 'O' and 'T'
-   * Don't have 'B' in the 1th spot and don't have 'O' in the thrid spot or 'T' in the forth spot.
+   * Don't have 'B' in the first spot and don't have 'O' in the third spot or 'T' in the forth spot.
    * Have O in the second spot
    * Don't have the Letters 'SAUCEY'.
 

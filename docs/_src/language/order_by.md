@@ -9,7 +9,7 @@ Often when querying data the amount of data returned to look at is much smaller 
 
 ### Rule 1: Newest first
 If a query stage has a [dimensional](fields.md#dimensions) column that represents a point in time, it is usually the most
-important concept in the query.  Because the most recent data is usally the most relevant, Malloy sorts the newest data first.
+important concept in the query.  Because the most recent data is usually the most relevant, Malloy sorts the newest data first.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
@@ -63,7 +63,7 @@ query: flights->{
 
 In Malloy, you can limit the number of results returned using a `top: n` or `limit: n`.  Both are provided for readability.
 
-In the exmaple below, the results are limited to 2 rows, which are sorted by `dep_month` with newest results first (due to Rule 1).
+In the example below, the results are limited to 2 rows, which are sorted by `dep_month` with newest results first (due to Rule 1).
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }

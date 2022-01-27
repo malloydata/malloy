@@ -1,6 +1,6 @@
 --! styles names.styles.json
 
-query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_current') -> {
   group_by: [
     decade is floor(`year`/10)*10,
     state,
