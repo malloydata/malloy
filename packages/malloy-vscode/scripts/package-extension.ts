@@ -10,19 +10,17 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
+/* eslint-disable no-console */
 
-import { doBuild, outDir, Target, targetInfo } from "./build-extension";
+import { doBuild, outDir, Target } from "./build-extension";
 import * as fs from "fs";
 import * as path from "path";
 import { createVSIX } from "vsce";
 
 export async function doPackage(
-  target: Target,
+  target?: Target,
   version?: string
-): Promise<void> {
-  const nativeKeytarFile = targetInfo[target];
-  if (!nativeKeytarFile) throw new Error("Invalid target");
-
+): Promise<string> {
   await doBuild(target);
 
   // get version info from package.json if it isn't passed in
@@ -33,13 +31,37 @@ export async function doPackage(
     version = packageJSON.version;
   }
 
+  const packagePath = path.join(
+    outDir,
+    `malloy-vscode-${target}-${version}.vsix`
+  );
   await createVSIX({
     githubBranch: "main",
     preRelease: false,
     useYarn: true,
     target,
-    packagePath: path.join(outDir, `malloy-vscode-${target}-${version}.vsix`),
+    packagePath,
   });
+
+  return packagePath;
 }
 
-doPackage("darwin-x64");
+const args = process.argv.slice(2);
+if (args[0] == "package") {
+  const target = args[1] ? (args[1] as Target) : undefined;
+  console.log(
+    target
+      ? `Packaging extension for ${target}`
+      : "Packaging extension with no target specified, using current machine as target"
+  );
+
+  doPackage(target)
+    .then(() => {
+      console.log("Extension packaged successfully");
+    })
+    .catch((error) => {
+      console.error("Extension packaged with errors");
+      console.log(error);
+      process.exit(1);
+    });
+}

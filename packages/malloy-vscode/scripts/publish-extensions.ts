@@ -12,14 +12,15 @@
  */
 /* eslint-disable no-console */
 
-import { doBuild, outDir } from "./build-extension";
 import * as fs from "fs";
 import * as path from "path";
+import { publishVSIX } from "vsce";
 
-async function publishExtensions() {
+async function publishExtensions(preRelease?: boolean) {
   const targets = [["darwin-x64", "keytar-v7.7.0-napi-v3-darwin-x64.node"]];
 
   for (const [target, filename] of targets) {
+    //
   }
 }
 
