@@ -41,6 +41,7 @@ export async function doPackage(
 
   await doBuild();
 
+  // TODO move into build, pass target into build. this is really part of the build
   // copy target-specific keytar binary into build
   fs.copyFileSync(
     path.join(

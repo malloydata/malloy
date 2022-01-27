@@ -18,29 +18,49 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
+type Target =
+  | "linux-x64"
+  | "linux-arm64"
+  | "linux-armhf"
+  | "alpine-x64"
+  | "alpine-arm64"
+  | "darwin-x64"
+  | "darwin-arm64";
+
+const targetInfo: { [id: string]: string } = {
+  "linux-x64": "DOES NOT EXIST",
+  "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
+  "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+};
+
 export const outDir = "dist";
 const development = process.env.NODE_ENV == "development";
 
+// This plugin replaces keytar's attempt to load the keytar.node native binary built in node_modules
+// with a raw require function to load from the local filesystem
 const keytarReplacerPlugin = {
   name: "keytarReplacer",
   setup(build: any) {
-    build.onResolve({ filter: /keytar/ }, (args: any) => ({
-      path: args.path,
-      namespace: "keytar-replacer",
-    }));
+    build.onResolve({ filter: /build\/Release\/keytar.node/ }, (args: any) => {
+      console.log("WHAT");
+      return {
+        path: args.path,
+        namespace: "keytar-replacer",
+      };
+    });
     build.onLoad(
-      { filter: /keytar/, namespace: "keytar-replacer" },
+      { filter: /build\/Release\/keytar.node/, namespace: "keytar-replacer" },
       (args: any) => {
         console.log("match");
         return {
-          contents: "butts",
+          contents: "require('./keytar-native.node')",
         };
       }
     );
   },
 };
 
-export async function doBuild(): Promise<void> {
+export async function doBuild(target?: Target): Promise<void> {
   fs.rmdirSync(outDir, { recursive: true });
   fs.mkdirSync(outDir);
 
@@ -54,6 +74,19 @@ export async function doBuild(): Promise<void> {
   const copyFiles = ["language.json"];
   copyFiles.forEach((file) => fs.copyFileSync(file, path.join(outDir, file)));
 
+  fs.copyFileSync(
+    path.join(
+      "..",
+      "..",
+      "third_party",
+      "github.com",
+      "atom",
+      "node-keytar",
+      "keytar-v7.7.0-napi-v3-darwin-x64.node"
+    ),
+    path.join(outDir, "keytar-native.node")
+  );
+
   // if we're building for production, replace keytar imports using plugin that imports
   // binary builds of keytar
   const plugins = development
@@ -64,13 +97,13 @@ export async function doBuild(): Promise<void> {
     entryPoints: ["./src/extension/extension.ts", "./src/server/server.ts"],
     entryNames: "[name]",
     bundle: true,
-    minify: !development,
+    minify: false,
     sourcemap: development,
     outdir: outDir,
     platform: "node",
-    external: ["vscode", "pg-native"],
+    external: ["vscode", "pg-native", "./keytar-native.node"],
     loader: { [".png"]: "file", [".svg"]: "file" },
-    plugins,
+    plugins: [keytarReplacerPlugin],
     watch: development
       ? {
           onRebuild(error, result) {
