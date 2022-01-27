@@ -19,7 +19,7 @@ import {
   ConnectionConfig,
   getDefaultIndex,
 } from "./connection_manager_types";
-import { loadKeytar } from "./keytar/keytar_loader";
+import { getPassword } from "keytar";
 
 export class ConnectionManager {
   private _connections: FixedConnectionMap;
@@ -86,9 +86,8 @@ export class ConnectionManager {
           if (connectionConfig.password !== undefined) {
             password = connectionConfig.password;
           } else if (connectionConfig.useKeychainPassword) {
-            const keytar = await loadKeytar();
             password =
-              (await keytar.getPassword(
+              (await getPassword(
                 "com.malloy-lang.vscode-extension",
                 `connections.${connectionConfig.id}.password`
               )) || undefined;

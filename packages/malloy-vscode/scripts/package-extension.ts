@@ -33,7 +33,7 @@ const targetInfo: { [id: string]: string } = {
 };
 
 export async function doPackage(
-  target: string,
+  target: Target,
   version?: string
 ): Promise<void> {
   const nativeKeytarFile = targetInfo[target];

@@ -21,6 +21,25 @@ import { execSync } from "child_process";
 export const outDir = "dist";
 const development = process.env.NODE_ENV == "development";
 
+const keytarReplacerPlugin = {
+  name: "keytarReplacer",
+  setup(build: any) {
+    build.onResolve({ filter: /keytar/ }, (args: any) => ({
+      path: args.path,
+      namespace: "keytar-replacer",
+    }));
+    build.onLoad(
+      { filter: /keytar/, namespace: "keytar-replacer" },
+      (args: any) => {
+        console.log("match");
+        return {
+          contents: "butts",
+        };
+      }
+    );
+  },
+};
+
 export async function doBuild(): Promise<void> {
   fs.rmdirSync(outDir, { recursive: true });
   fs.mkdirSync(outDir);
@@ -35,11 +54,11 @@ export async function doBuild(): Promise<void> {
   const copyFiles = ["language.json"];
   copyFiles.forEach((file) => fs.copyFileSync(file, path.join(outDir, file)));
 
-  // if we're in production (packaged as an extension for a specific platform), exclude the
-  // node_modules npm package "keytar" as we'll use the native lib we copied in when building
-  const extensionExternals = development
-    ? ["vscode", "pg-native", "./keytar-native"]
-    : ["vscode", "pg-native", "./keytar-native", "keytar"];
+  // if we're building for production, replace keytar imports using plugin that imports
+  // binary builds of keytar
+  const plugins = development
+    ? [nativeNodeModulesPlugin]
+    : [keytarReplacerPlugin];
 
   await build({
     entryPoints: ["./src/extension/extension.ts", "./src/server/server.ts"],
@@ -49,9 +68,9 @@ export async function doBuild(): Promise<void> {
     sourcemap: development,
     outdir: outDir,
     platform: "node",
-    external: extensionExternals,
+    external: ["vscode", "pg-native"],
     loader: { [".png"]: "file", [".svg"]: "file" },
-    plugins: [nativeNodeModulesPlugin],
+    plugins,
     watch: development
       ? {
           onRebuild(error, result) {
