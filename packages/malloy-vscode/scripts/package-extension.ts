@@ -11,10 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { doBuild } from "./build-extension";
+import { doBuild, outDir } from "./build-extension";
 import * as fs from "fs";
 import * as path from "path";
+import { createVSIX, ICreateVSIXOptions } from "vsce";
+import { execSync } from "child_process";
 
+// TODO
 type Target =
   | "linux-x64"
   | "linux-arm64"
@@ -24,14 +27,19 @@ type Target =
   | "darwin-x64"
   | "darwin-arm64";
 
-interface TargetInfo {
-  target: Target;
-  keytarBinaryFilename: string;
-}
+const targetInfo: { [id: string]: string } = {
+  "linux-x64": "DOES NOT EXIST",
+  "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
+  "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+};
 
-const targetInfo: { [id: string]: SimpleLayer } = {};
+export async function doPackage(
+  target: string,
+  version?: string
+): Promise<void> {
+  const nativeKeytarFile = targetInfo[target];
+  if (!nativeKeytarFile) throw new Error("Invalid target");
 
-export async function doPackage(target: string): Promise<void> {
   await doBuild();
 
   // copy target-specific keytar binary into build
@@ -43,17 +51,26 @@ export async function doPackage(target: string): Promise<void> {
       "github.com",
       "atom",
       "node-keytar",
-      filename
+      nativeKeytarFile
     ),
     path.join(outDir, "keytar-native")
   );
 
-  const vsixOptions: ICreateVSIXOptions = {
+  // get version info from package.json if it isn't passed in
+  if (!version) {
+    const packageInfo = JSON.parse(
+      execSync("yarn info --json", { encoding: "utf8" })
+    );
+    version = packageInfo.data.version;
+  }
+
+  await createVSIX({
     githubBranch: "main",
     preRelease: false,
     useYarn: true,
     target,
-    packagePath: path.join(outDir, `malloy-vscode-${target}-${version}`),
-  };
-  await createVSIX(vsixOptions);
+    packagePath: path.join(outDir, `malloy-vscode-${target}-${version}.vsix`),
+  });
 }
+
+doPackage("darwin-x64");
