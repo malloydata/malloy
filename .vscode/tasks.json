@@ -29,10 +29,10 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": {
-            "regexp": "Compiling"
+            "regexp": "Building extension"
           },
           "endsPattern": {
-            "regexp": "[Cc]ompiled (.*?successfully|with .*?error|with .*?warning)|[Cc]ompilation .*?finished"
+            "regexp": "Extension built (.*?successfully|with .*?error)"
           }
         }
       },

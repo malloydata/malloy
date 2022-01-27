@@ -12,7 +12,7 @@
  */
 /* eslint-disable no-console */
 
-import { doBuild, outDir } from "./build.config";
+import { doBuild, outDir } from "./build-extension";
 import * as semver from "semver";
 import * as fs from "fs";
 import * as path from "path";
@@ -60,7 +60,7 @@ async function publishExtensions() {
       preRelease: false,
       useYarn: true,
       target,
-      packagePath: "",
+      packagePath: path.join(outDir, `malloy-vscode-${target}-${version}`),
     };
     await createVSIX(vsixOptions);
   }
