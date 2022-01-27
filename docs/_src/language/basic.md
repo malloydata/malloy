@@ -16,7 +16,7 @@ They query _operation_ is explicit about which fields are grouped, aggregated or
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   group_by: state
   aggregate: airport_count is count()
 }
@@ -33,13 +33,13 @@ In the query below, the data will be grouped by `state` and will produce an aggr
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   group_by: [
     state
     county
   ]
-  aggregate:[
-    airport_count is count(*)
+  aggregate: [
+    airport_count is count()
     average_elevation is avg(elevation)
   ]
 }
@@ -51,7 +51,7 @@ Multiple `group_by:` and `aggregate:` statements can appear in the same query op
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   group_by: fac_type
   aggregate: airport_count is count()
   group_by: county
@@ -64,9 +64,9 @@ query: table('malloy-data.faa.airports')->{
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
-  project: [code, full_name, city, county]
-  where: county='SANTA CRUZ'
+query: table('malloy-data.faa.airports') -> {
+  project: [ code, full_name, city, county ]
+  where: county = 'SANTA CRUZ'
 }
 ```
 
@@ -78,7 +78,7 @@ which allows un-named expressions)_
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   aggregate: max_elevation is max(elevation)
 }
 ```
@@ -92,7 +92,7 @@ in field lists without an `is`
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   project: [
     full_name
     elevation
@@ -106,7 +106,7 @@ Many SQL expressions will work unchanged in Malloy, and many functions available
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   group_by: county_and_state is concat(county, ', ', state)
   aggregate: [
     airport_count is count()
@@ -126,7 +126,7 @@ add a `dimension:` calculation for `county_and_state` and `measure:` calculation
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
-explore: airports is table('malloy-data.faa.airports'){
+explore: airports is table('malloy-data.faa.airports') {
   dimension: county_and_state is concat(county, ', ', state)
   measure: airport_count is count()
   measure: average_elevation is avg(elevation)
@@ -135,8 +135,8 @@ explore: airports is table('malloy-data.faa.airports'){
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
-query: airports->{
-  group_by:county_and_state
+query: airports -> {
+  group_by: county_and_state
   aggregate: airport_count
 }
 ```
@@ -149,10 +149,10 @@ The `top:` and `limit:` statements are synonyms and limits the number of rows re
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   top: 2
   group_by: state
-  aggregate: airport_count is count(*)
+  aggregate: airport_count is count()
 }
 ```
 
@@ -160,10 +160,10 @@ Default ordering can be overridden with `order_by:`, as in the following query, 
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   order_by: state
   group_by: state
-  aggregate: airport_count is count(*)
+  aggregate: airport_count is count()
 }
 ```
 
@@ -179,7 +179,7 @@ In this case, the data from the table is filtered to just airports in California
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports'){where: state = 'CA'}->{
+query: table('malloy-data.faa.airports') { where: state = 'CA' } -> {
   top: 2
   group_by: county
   aggregate: airport_count is count()
@@ -192,11 +192,11 @@ A filter on an aggregate calculation (a _measure_) narrows down the data used in
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')->{
+query: table('malloy-data.faa.airports') -> {
   group_by: state
   aggregate: [
-    airports is count() {where: fac_type = 'AIRPORT'}
-    heliports is count() {where: fac_type = 'HELIPORT'}
+    airports is count() { where: fac_type = 'AIRPORT' }
+    heliports is count() { where: fac_type = 'HELIPORT' }
     total is count()
   ]
 }
@@ -209,13 +209,13 @@ the data for that operation alone. (More on this later, in the section on `nest:
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.airports')-> {
+query: table('malloy-data.faa.airports') -> {
   where: state: 'AL' | 'KY'
   top: 5
   group_by: state
   aggregate: [
-    airports  is count() {where: fac_type: 'AIRPORT'}
-    heliports is count() {where: fac_type: 'HELIPORT'}
+    airports  is count() { where: fac_type: 'AIRPORT' }
+    heliports is count() { where: fac_type: 'HELIPORT' }
     total     is count()
   ]
 }
@@ -234,7 +234,7 @@ shows the number of flights in 2003.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
-query: table('malloy-data.faa.flights') {where: dep_time: @2003}->{
+query: table('malloy-data.faa.flights') { where: dep_time: @2003 } -> {
   aggregate: flight_count is count()
 }
 ```
@@ -242,7 +242,7 @@ query: table('malloy-data.faa.flights') {where: dep_time: @2003}->{
 There is a special time literal `now`, referring to the current timestamp, which allows for relative time filters.
 
 ```malloy
-query: table('malloy-data.faa.flights'){where: dep_time > now - 6 hours}->{
+query: table('malloy-data.faa.flights') { where: dep_time > now - 6 hours } -> {
   aggregate: flights_last_6_hours is count()
 }
 ```
@@ -253,7 +253,7 @@ Time values can be truncated to a given timeframe, which can be `second`, `minut
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
-query: table('malloy-data.faa.flights')->{
+query: table('malloy-data.faa.flights') -> {
   group_by: [
     flight_year is dep_time.year
     flight_month is dep_time.month
@@ -268,7 +268,7 @@ Numeric values can be extracted from time values, e.g. `day_of_year(some_date)` 
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "pageSize": 7, "size": "large"}
-query: table('malloy-data.faa.flights') ->{
+query: table('malloy-data.faa.flights') -> {
   order_by: 1
   group_by: day_of_week is day(dep_time)
   aggregate: flight_count is count()
@@ -286,8 +286,8 @@ Two kinds of time ranges are given special syntax: the range between two times a
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
-query: table('malloy-data.faa.flights'){where: dep_time: @2003 to @2005}->{
-  aggregate:flight_count is count()
+query: table('malloy-data.faa.flights') { where: dep_time: @2003 to @2005 } -> {
+  aggregate: flight_count is count()
 }
 ```
 
@@ -298,9 +298,9 @@ When a time range is used in a comparison, `=` checks for "is in the range", `>`
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
-query: table('malloy-data.faa.flights'){where: dep_time > @2003}->{
-  top: 3; order_by: 1 asc
-  group_by:departure_date is dep_time.day
+query: table('malloy-data.faa.flights') { where: dep_time > @2003 } -> {
+  top: 3; order_by: departure_date asc
+  group_by: departure_date is dep_time.day
   aggregate: flight_count is count()
 }
 ```
@@ -310,7 +310,7 @@ query: table('malloy-data.faa.flights'){where: dep_time > @2003}->{
 The next several examples will use this simple explore definition:
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports'){
+explore: airports is table('malloy-data.faa.airports') {
   airport_count is count()
 };
 ```
@@ -322,7 +322,7 @@ In Malloy, queries can be [nested](nesting.md) to produce subtables on each outp
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy"}
 
-query: airports->{
+query: airports -> {
   group_by: state
   aggregate: airport_count
   nest: by_facility is {
@@ -338,7 +338,7 @@ Queries can be nested infinitely, allowing for rich, complex output structures. 
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-query: airports->{
+query: airports -> {
   group_by: state
   aggregate: airport_count
   nest: top_5_counties is {
@@ -359,7 +359,7 @@ Filters can be isolated to any level of nesting. In the following example, we li
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-query: airports->{
+query: airports -> {
   where: state = 'CA'
   group_by: county
   aggregate: airport_count
@@ -380,7 +380,7 @@ The output from one stage of a query can be "piped" into another stage using `|`
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "small"}
-query: airports->{
+query: airports -> {
   where: state = 'CA' | 'NY'
   group_by: state
   aggregate: airport_count
@@ -396,7 +396,7 @@ percentage of airports compared to the whole state, taking advantage of the nest
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large", "dataStyles": { "percent_in_county": { "renderer": "percent" }}}
-query: airports->{
+query: airports -> {
   where: state = 'CA' | 'NY'
   group_by: state
   aggregate: airport_count
@@ -404,8 +404,7 @@ query: airports->{
     group_by: county
     aggregate: airport_count
   }
-}
--> {
+} -> {
   top: 10; order_by: 4 desc
   project: [
     by_county.county
@@ -422,16 +421,16 @@ Joins are declared as part of an explore, and link primary and foreign keys.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-explore: airports is table('malloy-data.faa.airports'){
+explore: airports is table('malloy-data.faa.airports') {
   primary_key: code
 }
 
-explore: flights is table('malloy-data.faa.flights'){
+explore: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
   join_one: origin_airport is airports with origin
 }
 
-query: flights->{
+query: flights -> {
   group_by: origin_state is origin_airport.state
   aggregate: flight_count
 }
@@ -448,11 +447,11 @@ Aggregates may be computed with respect to any joined explore, allowing for a wi
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft-> {
+query: aircraft -> {
   aggregate: [
-    -- The average number of seats on models of registered aircraft
+    // The average number of seats on models of registered aircraft
     models_avg_seats is aircraft_models.seats.avg()
-    -- The average number of seats on registered aircraft
+    // The average number of seats on registered aircraft
     aircraft_avg_seats is avg(aircraft_models.seats)
   ]
 }
@@ -467,7 +466,7 @@ and may span multiple lines.
 
 ```malloy
 -- The total number of flight entries
-query: flights-> {
+query: flights -> {
   aggregate: flight_count // Defined simply as `count()`
 }
 
@@ -475,10 +474,9 @@ query: flights-> {
  * A comparison of the total number of flights
  * for each of the tracked carriers.
  */
-query: flights-> {
+query: flights -> {
   group_by: carrier
-  aggregate: flight_count
-  /* total_distance */
+  aggregate: [ flight_count /* , total_distance */ ]
 }
 ```
 

@@ -37,11 +37,11 @@ The easiest, most error proof way to perform a join is with `join_one:/with`. Th
 To join a foreign key of the source explore to the `primary key` of a joined explore, reference the foreign key by name in the `with` clause.
 
 ```malloy
-explore: users is table('malloy-data.ecomm.users'){
+explore: users is table('malloy-data.ecomm.users') {
   primary_key: id
 }
 
-explore: order_items is table('malloy-data.ecomm.order_items'){
+explore: order_items is table('malloy-data.ecomm.order_items') {
   join_one: users with user_id
 }
 ```
@@ -57,7 +57,7 @@ explore: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
 }
 
-explore: flights is table('malloy-data.faa.flights'){
+explore: flights is table('malloy-data.faa.flights') {
   join_one: carriers with carrier
 }
 ```
@@ -69,7 +69,7 @@ explore: airports is table('malloy-data.faa.airports') {
   primary_key: code
 }
 
-explore: flights is table('malloy-data.faa.flights'){
+explore: flights is table('malloy-data.faa.flights') {
   join_one: origin_airport is airports with origin
 }
 ```
@@ -81,8 +81,8 @@ uses `is` to give the join a name.
 
 ```malloy
 
-explore: flights is table('malloy-data.faa.flights'){
-  join_one: carriers is table('malloy-data.faa.carriers'){primary_key: code} with carrier
+explore: flights is table('malloy-data.faa.flights') {
+  join_one: carriers is table('malloy-data.faa.carriers') { primary_key: code } with carrier
 }
 ```
 
@@ -92,7 +92,7 @@ When an explore is joined in, it becomes a nested field within the source explor
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-query: flights->{
+query: flights -> {
   group_by: carriers.nickname
   aggregate: flight_count is count()
 }
@@ -102,7 +102,7 @@ Measures and queries defined in joined explores may be used in addition to dimen
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-query: flights->{
+query: flights -> {
   group_by: destination_code
   aggregate: carriers.carrier_count
 }
@@ -124,14 +124,14 @@ explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
   measure: aircraft_model_count is count()
 }
 
-/* Individual airplanes */
+// Individual airplanes
 explore: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
-/* The airports that the aircraft fly to and from */
+// The airports that the aircraft fly to and from
 explore: airports is table('malloy-data.faa.airports') {
   primary_key: code
   measure: airport_count is count()
@@ -143,7 +143,7 @@ explore: flights is table('malloy-data.faa.flights') {
   join_one: aircraft with tail_num
 }
 
-query: flights->{
+query: flights -> {
   group_by: aircraft.aircraft_models.manufacturer
   aggregate: [
     flight_count is count()
@@ -157,10 +157,10 @@ For more examples and how to reason about aggregation across joins, review the [
 
 ## SQL Joins
 
-Inner join are joins where the the joined table has rows.  The example below, suppose we only want users that have at least one row in the orders table.  The following is the equivalent of a SQL  INNER JOIN.
+Inner join are joins where the the joined table has rows. The example below, suppose we only want users that have at least one row in the orders table. The following is the equivalent of a SQL <code>INNER JOIN</code>.
 
 ```malloy
 explore users is table('users') {
-  join_many: orders is table('orders') on id=orders.user_id and orders.user_id != null
+  join_many: orders is table('orders') on id = orders.user_id and orders.user_id != null
 }
 ```

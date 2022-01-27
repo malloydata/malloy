@@ -9,7 +9,7 @@ Query for best starting words.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words
+query: wordle -> find_words
 ```
 
 
@@ -22,11 +22,12 @@ query: wordle->find_words
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words{
-  where:
-    -- word ~ r'[]'
-    -- and word ~ r'.....'
-     word !~ r'[SAUCE]'
+query: wordle -> find_words {
+  where: [
+    // word ~ r'[]',
+    // word ~ r'.....',
+    word !~ r'[SAUCE]'
+  ]
 }
 ```
 
@@ -42,11 +43,12 @@ query: wordle->find_words{
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words{
-  where:
-    word ~ r'B' and word ~ r'O' and word ~  r'T'
-    and word ~ r'[^B]O[^O][^T].'
-    and word !~ r'[SAUCEY]'
+query: wordle -> find_words {
+  where: [
+    word ~ r'B' and word ~ r'O' and word ~ r'T',
+    word ~ r'[^B]O[^O][^T].',
+    word !~ r'[SAUCEY]'
+  ]
 }
 ```
 
@@ -60,25 +62,24 @@ query: wordle->find_words{
 ### Code For Wordlbot:
 
 ```malloy
--- Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words'){
+// Make a table of 5 letter words
+explore: words is table('malloy-data.malloytest.words') {
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
-    project: word is UPPER(word)
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
   }
 }
 
--- Cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers'){
+// Cross join numbers
+explore: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
--- Build a new table of word and each letter in position
-query: words_and_position is from(words->five_letter_words){
-  -- Cross join is missing at the moment
+// Build a new table of word and each letter in position
+query: words_and_position is from(words -> five_letter_words) {
+  // Cross join is missing at the moment
   join_cross: numbers
-  }
-->{
+} -> {
   group_by: word
   nest: letters is {
     order_by: 2
@@ -89,9 +90,8 @@ query: words_and_position is from(words->five_letter_words){
   }
 }
 
-
--- build a word finder that can generate a score best available guess.
-explore: wordle is from(->words_and_position){
+// Build a word finder that can generate a score best available guess
+explore: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -104,11 +104,9 @@ explore: wordle is from(->words_and_position){
     nest: words_list is {
       group_by: word
     }
-  }
-  ->{
+  } -> {
     group_by: words_list.word
     aggregate: score is word_count.sum()
   }
 }
-
 ```

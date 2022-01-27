@@ -33,15 +33,14 @@ Fields may be referenced by name, and fields in joins or nested structures can b
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-query: flights->{
+query: flights -> {
   where: origin.county != null
   group_by: origin.state
   nest: by_county is {
     group_by: origin.county
     aggregate: flight_count
   }
-}
-->{
+} -> {
   project: by_county.county
   limit: 3
 }
@@ -106,9 +105,11 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-query: flights->{
-  aggregate: distance_2003 is sum(distance){where: dep_time: @2003}
-  aggregate: ca_flights is count(){where: origin.state: 'CA'}
+query: flights -> {
+  aggregate: [
+    distance_2003 is sum(distance) { where: dep_time: @2003 }
+    ca_flights is count() { where: origin.state: 'CA' }
+  ]
 }
 ```
 
@@ -121,7 +122,7 @@ Safe type casting may be accomplished with the `::type` syntax.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-query: flights->{
+query: flights -> {
   aggregate: distance_summary is concat(total_distance::string, ' miles')
 }
 ```
@@ -140,9 +141,9 @@ Pick expressions are also compatible with the [apply operator](#apply-operator) 
 
 ```malloy
 size:
-  pick 'small' when < 10
-  pick 'medium' when < 20
-  else 'large'
+  pick 'small' when < 10
+  pick 'medium' when < 20
+  else 'large'
 ```
 
 Pick can be used to "clean" data, combining similar dirty values into one clean value. In the following example, the `pick` statement collects all the "this actually
@@ -161,8 +162,8 @@ picks an applied value when the condition is met.
 
 ```malloy
 status:
-  pick when 'good' | 'ok' | 'fine' -- leave these alone
-  else null                        -- ignore the rest
+  pick when 'good' | 'ok' | 'fine' // leave these alone
+  else null                        // ignore the rest
 ```
 
 ## Time Expressions
@@ -295,7 +296,7 @@ Values can be applied to [pick expressions](#pick-expressions) to make them more
 
 ```malloy
 size:
-  pick 'small' when < 10
-  pick 'medium' when < 20
-  else 'large'
+  pick 'small' when < 10
+  pick 'medium' when < 20
+  else 'large'
 ```

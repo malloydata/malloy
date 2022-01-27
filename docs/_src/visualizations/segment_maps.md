@@ -45,10 +45,8 @@ and data styles are
 Departing from Chicago
 
 ```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "/inline/e.malloy", "size": "medium", "dataStyles":{"routes_map": {"renderer": "segment_map"}}}
--- Bug: as a main query we only return 50 results, nested we get the whole thing...
--- query: flights{ where: dep_time = @2003-02 and origin.code ='ORD'}->routes_map
-query: flights{ where: dep_time = @2003-02 and origin.code ='ORD'}->{nest:routes_map}
+--! {"isRunnable": true, "runMode": "auto", "source": "/inline/e.malloy", "size": "medium", "pageSize": 100000, "dataStyles":{"routes_map": {"renderer": "segment_map"}}}
+query: flights { where: dep_time = @2003-02 and origin.code = 'ORD' } -> routes_map
 ```
 
 ## Run as a trellis
@@ -56,7 +54,7 @@ By calling the configured map as a nested query, a trellis is formed.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "/inline/e.malloy", "size": "medium", "dataStyles":{"routes_map": {"renderer": "segment_map"}}}
-query: flights{ where: dep_time = @2003-02 and origin.code ='ORD'}->{
+query: flights { where: dep_time = @2003-02 and origin.code = 'ORD' } -> {
   group_by: carrier
   aggregate: flight_count
   nest:routes_map
@@ -67,13 +65,13 @@ query: flights{ where: dep_time = @2003-02 and origin.code ='ORD'}->{
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   group_by: carrier
   aggregate: flight_count
   nest: [
-    ord_segment_map is routes_map {where: origin.code: 'ORD'}
-    sfo_segment_map is routes_map {where: origin.code: 'SFO'}
-    jfk_segment_map is routes_map {where: origin.code: 'JFK'}
+    ord_segment_map is routes_map { where: origin.code: 'ORD' }
+    sfo_segment_map is routes_map { where: origin.code: 'SFO' }
+    jfk_segment_map is routes_map { where: origin.code: 'JFK' }
   ]
 }
 
