@@ -12,6 +12,7 @@
  */
 
 /* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { build } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as fs from "fs";
@@ -35,8 +36,8 @@ export const targetInfo: { [id: string]: string } = {
 
 export const outDir = "dist/";
 
-// This plugin replaces keytar's attempt to load the keytar.node native binary built in node_modules
-// with a raw require function to load from the local filesystem
+// This plugin replaces keytar's attempt to load the keytar.node native binary (built in node_modules
+// on npm install) with a require function to load a .node file from the filesystem
 const keytarReplacerPlugin = {
   name: "keytarReplacer",
   setup(build: any) {
@@ -48,7 +49,7 @@ const keytarReplacerPlugin = {
     });
     build.onLoad(
       { filter: /build\/Release\/keytar.node/, namespace: "keytar-replacer" },
-      (args: any) => {
+      (_args: any) => {
         return {
           contents: `
             try { module.exports = require('./keytar-native.node')}
@@ -61,8 +62,12 @@ const keytarReplacerPlugin = {
 };
 
 export async function doBuild(target?: Target): Promise<void> {
-  // if a target isnt passed, development mode is assumed
   const development = process.env.NODE_ENV == "development";
+
+  if (!development && !target) {
+    console.error("building for production requires a target");
+    process.exit(1);
+  }
 
   fs.rmdirSync(outDir, { recursive: true });
   fs.mkdirSync(outDir);
@@ -78,7 +83,7 @@ export async function doBuild(target?: Target): Promise<void> {
   // the only option is to put a readme file at the root of the package :(
   fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
 
-  if (!development) {
+  if (target) {
     fs.copyFileSync(
       path.join(
         "..",
@@ -87,18 +92,20 @@ export async function doBuild(target?: Target): Promise<void> {
         "github.com",
         "atom",
         "node-keytar",
-        "keytar-v7.7.0-napi-v3-darwin-x64.node"
+        targetInfo[target]
       ),
       path.join(outDir, "keytar-native.node")
     );
   }
 
   // if we're building for production, replace keytar imports using plugin that imports
-  // binary builds of keytar
+  // binary builds of keytar. if we're building for dev, use a .node plugin to
+  // ensure ketyar's node_modules .node file is in the build
   const plugins = development
     ? [nativeNodeModulesPlugin]
     : [keytarReplacerPlugin];
 
+  // build the extension and server
   await build({
     entryPoints: ["./src/extension/extension.ts", "./src/server/server.ts"],
     entryNames: "[name]",
@@ -120,6 +127,7 @@ export async function doBuild(target?: Target): Promise<void> {
       : false,
   });
 
+  // build the webviews
   await build({
     entryPoints: [
       "./src/extension/webviews/query_page/entry.ts",
