@@ -8,7 +8,7 @@ Are they on time?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> airport_dashboard {where: origin.code: 'SJC'}
+query: flights -> airport_dashboard { where: origin.code: 'SJC' }
 ```
 
 
@@ -20,7 +20,7 @@ flying there long?  Increasing or decreasing year by year?  Any seasonality?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> carrier_dashboard {where: carriers.nickname : 'Jetblue'}
+query: flights -> carrier_dashboard { where: carriers.nickname : 'Jetblue' }
 ```
 
 
@@ -44,33 +44,33 @@ query: flights -> kayak {
 You can think of flight data as event data.  The below is a classic map/reduce roll up of the flight data by carrier and day, plane and day, and individual events for each plane.
 
 ```malloy
-  query: sessionize is {
-    group_by: flight_date is dep_time.day
-    group_by: carrier
-    aggregate: daily_flight_count is flight_count
-    nest: per_plane_data is {
-      top: 20
-      group_by: tail_num
-      aggregate: plane_flight_count is flight_count
-      nest: flight_legs is {
-        order_by: 2
-        group_by: [
-          tail_num
-          dep_minute is dep_time.minute
-          origin_code
-          dest_code is destination_code
-          dep_delay
-          arr_delay
-        ]
-      }
+query: sessionize is {
+  group_by: flight_date is dep_time.day
+  group_by: carrier
+  aggregate: daily_flight_count is flight_count
+  nest: per_plane_data is {
+    top: 20
+    group_by: tail_num
+    aggregate: plane_flight_count is flight_count
+    nest: flight_legs is {
+      order_by: 2
+      group_by: [
+        tail_num
+        dep_minute is dep_time.minute
+        origin_code
+        dest_code is destination_code
+        dep_delay
+        arr_delay
+      ]
     }
   }
+}
 ```
 
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights {where: [carrier:'WN', dep_time: @2002-03-03]} -> sessionize
+query: flights { where: [ carrier:'WN', dep_time: @2002-03-03 ] } -> sessionize
 ```
 
 ## The Malloy Model
@@ -110,7 +110,7 @@ explore: aircraft_facts is from(
   }
 ) {
   primary_key: tail_num
-  dimension: lifetime_flights_bucketed is floor(lifetime_flights/1000)*1000
+  dimension: lifetime_flights_bucketed is floor(lifetime_flights / 1000) * 1000
 }
 
 explore: flights is table('malloy-data.faa.flights') {
@@ -129,8 +129,8 @@ explore: flights is table('malloy-data.faa.flights') {
     total_distance is sum(distance)
     seats_for_sale is sum(aircraft.aircraft_models.seats)
     seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
-    -- average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
-    -- average_seats is aircraft.aircraft_models.seats.avg()
+    // average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
+    // average_seats is aircraft.aircraft_models.seats.avg()
   ]
 
   query: measures is {
@@ -142,21 +142,21 @@ explore: flights is table('malloy-data.faa.flights') {
     ]
   }
 
-  -- shows carriers and number of destinations (bar chart)
+  // shows carriers and number of destinations (bar chart)
   query: by_carrier is {
     group_by: carriers.nickname
     aggregate: flight_count
     aggregate: destination_count is destination.count()
   }
 
-  -- shows year over year growth (line chart)
+  // shows year over year growth (line chart)
   query: year_over_year is {
     group_by: dep_month is month(dep_time)
     aggregate: flight_count
     group_by: dep_year is dep_time.year
   }
 
-  -- shows plane manufacturers and frequency of use
+  // shows plane manufacturers and frequency of use
   query: by_manufacturer is {
     top: 5
     group_by: aircraft.aircraft_models.manufacturer
@@ -164,10 +164,10 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 
   query: delay_by_hour_of_day is {
-    where: dep_delay >30
+    where: dep_delay > 30
     group_by: dep_hour is hour(dep_time)
     aggregate: flight_count
-    group_by: delay is FLOOR(dep_delay)/30 * 30
+    group_by: delay is floor(dep_delay) / 30 * 30
   }
 
   query: carriers_by_month is {
@@ -177,11 +177,11 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 
   query: seats_by_distance is {
-    -- seats rounded to 5
-    group_by: seats is floor(aircraft.aircraft_models.seats/5)*5
+    // seats rounded to 5
+    group_by: seats is floor(aircraft.aircraft_models.seats / 5) * 5
     aggregate: flight_count
-    -- distance rounded to 20
-    group_by: distance is floor(distance/20)*20
+    // distance rounded to 20
+    group_by: distance is floor(distance / 20) * 20
   }
 
   query: routes_map is {
@@ -200,13 +200,13 @@ explore: flights is table('malloy-data.faa.flights') {
     group_by: destination.name
   }
 
-  -- explore flights : [origin.code : 'SJC'] | airport_dashboard
+  // query flights { where: origin.code: 'SJC' } -> airport_dashboard
   query: airport_dashboard is {
     top: 10
     group_by: code is destination_code
     group_by: destination is destination.full_name
     aggregate: flight_count
-    nest: [carriers_by_month, routes_map, delay_by_hour_of_day]
+    nest: [ carriers_by_month, routes_map, delay_by_hour_of_day ]
   }
 
   query: plane_usage is {
@@ -214,11 +214,11 @@ explore: flights is table('malloy-data.faa.flights') {
     where: aircraft.aircraft_count > 1
     group_by: aircraft_facts.lifetime_flights_bucketed
     aggregate: [aircraft.aircraft_count, flight_count]
-    nest: [by_manufacturer, by_carrier]
+    nest: [ by_manufacturer, by_carrier ]
   }
 
 
-  -- query: southwest_flights is carrier_dashboard {where: carriers.nickname : 'Southwest'}
+  // query: southwest_flights is carrier_dashboard { where: carriers.nickname : 'Southwest' }
   query: carrier_dashboard is {
     aggregate: destination_count is destination.airport_count
     aggregate: flight_count
@@ -252,8 +252,8 @@ explore: flights is table('malloy-data.faa.flights') {
     ]
   }
 
--- query that you might run for to build a flight search interface
---   explore flights : [origin.code: 'SJC', destination.code:'LAX'|'BUR', dep_time: @2004-01-01] | kayak
+  // query that you might run for to build a flight search interface
+  // query flights { where: [ origin.code: 'SJC', destination.code: 'LAX' | 'BUR', dep_time: @2004-01-01 ] } -> kayak
   query: kayak is {
     nest: carriers is {
       group_by: carriers.nickname
@@ -277,7 +277,7 @@ explore: flights is table('malloy-data.faa.flights') {
     }
   }
 
--- example query that shows how you can build a map reduce job to sessionize flights
+  // example query that shows how you can build a map reduce job to sessionize flights
   query: sessionize is {
     group_by: flight_date is dep_time.day
     group_by: carrier

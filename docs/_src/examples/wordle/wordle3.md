@@ -29,7 +29,6 @@ explore: words_and_letters is from(words->five_letter_words){
       group_by: [
         letter is substr(word, numbers.num, 1)
         position is numbers.num
-
       ]
     }
   }
@@ -38,7 +37,7 @@ explore: words_and_letters is from(words->five_letter_words){
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy", "isHidden":true}
-explore: wordle is from(words_and_letters->words_and_position){
+explore: wordle is from(words_and_letters -> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 }
@@ -52,7 +51,7 @@ surprisingly common.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
-query: wordle->{
+query: wordle -> {
   group_by: [
     letters.letter
     letters.position
@@ -68,7 +67,7 @@ surprisingly common.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
-query: wordle->{
+query: wordle -> {
   group_by: [
     letters.letter
     letters.position
@@ -84,7 +83,7 @@ query: wordle->{
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w4.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(words_and_letters->words_and_position){
+explore: wordle is from(words_and_letters -> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -105,11 +104,12 @@ explore: wordle is from(words_and_letters->words_and_position){
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}
-query: wordle->find_words{
-  where:
-    word ~ r'[Y]'
-    and word ~ r'.O...'
-    and word !~ r'[SLA]'
+query: wordle -> find_words {
+  where: [
+    word ~ r'[Y]',
+    word ~ r'.O...',
+    word !~ r'[SLA]'
+  ]
 }
 ```
 
@@ -120,7 +120,7 @@ We can produce a word score by taking our find word query and mapping back to wo
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}
-query: wordle->find_words->{
+query: wordle -> find_words -> {
   group_by: words_list.word
   aggregate: score is word_count.sum()
 }
@@ -130,7 +130,7 @@ query: wordle->find_words->{
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w5.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(words_and_letters->words_and_position){
+explore: wordle is from(words_and_letters -> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -143,7 +143,7 @@ explore: wordle is from(words_and_letters->words_and_position){
     nest: words_list is {
       group_by: word
     }
-  }->{
+  } -> {
     group_by: words_list.word
     aggregate: score is word_count.sum()
   }
@@ -155,10 +155,11 @@ The score should give us then best pick.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w5.malloy", "showAs":"html"}
-query: wordle->find_words{
-  where:
-    word ~ r'[Y]'
-    and word ~ r'.O...'
-    and word !~ r'[SLA]'
+query: wordle -> find_words {
+  where: [
+    word ~ r'[Y]',
+    word ~ r'.O...',
+    word !~ r'[SLA]'
+  ]
 }
 ```

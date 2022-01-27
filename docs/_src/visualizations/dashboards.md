@@ -14,7 +14,7 @@ This map can also be specified in a data styles file and included in the model.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
-explore: airports is table('malloy-data.faa.airports'){
+explore: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
   query: by_state_and_county is {
     limit: 10
@@ -41,7 +41,7 @@ Pressing the run button, shows the results as JSON.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
-query: airports->by_state_and_county
+query: airports -> by_state_and_county
 ```
 
 
@@ -49,7 +49,7 @@ query: airports->by_state_and_county
 By default, the renderer shows tabular results are rendered as tables.
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
-query: airports->by_state_and_county
+query: airports -> by_state_and_county
 ```
 
 ## Render shows results as a Dashboard
@@ -58,7 +58,7 @@ by tying the field name to a renderer in the styles file.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy", "queryName": "county_dashboard"}
-query: county_dashboard is airports->by_state_and_county
+query: county_dashboard is airports -> by_state_and_county
 ```
 
 ## Charting.
@@ -73,15 +73,13 @@ Data Style:
   "by_fac_type": {
     "renderer": "bar_chart"
   },
-  "by_county: {
+  "by_county": {
     "renderer": "bar_chart"
   }
 }
 ```
 
 ```malloy
---! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy", "dataStyles": {"by_fac_type": {"renderer": "bar_chart"},"by_county": {"renderer": "bar_chart"}}}
--- documtation rendering bug: should be
--- query: county_dahsboard is airports->by_state_and_county
-query: airports->{ nest: county_dashboard is by_state_and_county{limit:10}}
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "queryName": "county_dashboard", "source": "/inline/airports_mini.malloy", "dataStyles": {"by_fac_type": {"renderer": "bar_chart"},"by_county": {"renderer": "bar_chart"}}}
+query: county_dashboard is airports -> by_state_and_county
 ```

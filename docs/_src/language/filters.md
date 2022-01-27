@@ -7,7 +7,7 @@ Filtering which data is used in a query is an incredibly important aspect of dat
 Regardless of the placement of a filter, the syntax looks the same.
 
 ```malloy
-.. source{ where: filter_one, filter_two }
+source { where: [ filter_one, filter_two ] }
 ```
 
 Each filter be any expression of type `boolean`, whether that's a boolean field `is_commercial_flight`, a comparison `distance > 1000`, or any of the other kinds of boolean expressions that Malloy supports. For examples see [the table below](#examples-of-filter-expressions), or for detailed information on the kinds of expressions Malloy supports, see the [Expressions](expressions.md) section.
@@ -28,7 +28,7 @@ When filtering a query's source, the filter applies to the whole query.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-query: flights{where: distance > 1000}->{aggregate: flight_count}
+query: flights { where: distance > 1000 } -> { aggregate: flight_count }
 ```
 
 ### Filtering in a Query Stage
@@ -37,12 +37,12 @@ A filter can also be applied to an individual query stage.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-query: flights->{
+query: flights -> {
   group_by: carrier
   aggregate: flight_count
-}->{
+} -> {
   where: carrier: 'UA' | 'AA'
-  project : [carrier, flight_count]
+  project: [ carrier, flight_count ]
 }
 ```
 
@@ -52,11 +52,11 @@ Any measure can be filtered by adding a where clause.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-query: flights->{
+query: flights -> {
   aggregate: [
-    ca_flights is flight_count{where: origin.state: 'CA'}
-    ny_flights is count(){where: origin.state: 'NY'}
-    avg_km_from_ca is avg(distance/0.621371){where: origin.state='CA'}
+    ca_flights is flight_count { where: origin.state = 'CA' }
+    ny_flights is count() { where: origin.state = 'NY' }
+    avg_km_from_ca is avg(distance / 0.621371) { where: origin.state = 'CA' }
   ]
 }
 ```
@@ -69,20 +69,20 @@ measure and then create that as a percent of total.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
--- add a couple of measures to the `flights` explore
+// add a couple of measures to the `flights` explore
 explore: my_flights is flights {
-  measure: delayed_flights is flight_count {where: dep_delay>30}
-  measure: percent_delayed is delayed_flights/flight_count
+  measure: delayed_flights is flight_count { where: dep_delay > 30 }
+  measure: percent_delayed is delayed_flights / flight_count
 }
 
-query: my_flights->{
+query: my_flights -> {
   aggregate: [
-    ca_flights is flight_count {where: origin.state: 'CA'}
-    ca_delayed_flights is delayed_flights {where: origin.state: 'CA'}
-    ca_percent_delayed is percent_delayed {where: origin.state: 'CA'}
-    ny_flights is flight_count {where: origin.state: 'NY'}
-    ny_delayed_flights is delayed_flights {where: origin.state: 'NY'}
-    ny_percent_delayed is percent_delayed {where: origin.state: 'NY'}
+    ca_flights is flight_count { where: origin.state = 'CA' }
+    ca_delayed_flights is delayed_flights { where: origin.state = 'CA' }
+    ca_percent_delayed is percent_delayed { where: origin.state = 'CA' }
+    ny_flights is flight_count { where: origin.state = 'NY' }
+    ny_delayed_flights is delayed_flights { where: origin.state = 'NY' }
+    ny_percent_delayed is percent_delayed { where: origin.state = 'NY' }
   ]
 }
 ```
@@ -95,22 +95,22 @@ measure and then create that as a percent of total.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
--- add a couple of measures to the `flights` explore
+// add a couple of measures to the `flights` explore
 explore: my_flights is flights {
-  measure: delayed_flights is flight_count {where: dep_delay>30}
+  measure: delayed_flights is flight_count { where: dep_delay > 30 }
   query: delay_stats is {
     aggregate: [
       flight_count
       delayed_flights
-      percent_delayed is delayed_flights/flight_count
+      percent_delayed is delayed_flights / flight_count
     ]
   }
 }
 
-query: my_flights->{
+query: my_flights -> {
   nest: [
-    ca_stats is delay_stats {where: origin.state: 'CA'}
-    ny_stats is delay_stats {where: origin.state: 'NY'}
+    ca_stats is delay_stats { where: origin.state = 'CA' }
+    ny_stats is delay_stats { where: origin.state = 'NY' }
   ]
 }
 ```
