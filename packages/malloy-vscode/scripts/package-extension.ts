@@ -39,22 +39,7 @@ export async function doPackage(
   const nativeKeytarFile = targetInfo[target];
   if (!nativeKeytarFile) throw new Error("Invalid target");
 
-  await doBuild();
-
-  // TODO move into build, pass target into build. this is really part of the build
-  // copy target-specific keytar binary into build
-  fs.copyFileSync(
-    path.join(
-      "..",
-      "..",
-      "third_party",
-      "github.com",
-      "atom",
-      "node-keytar",
-      nativeKeytarFile
-    ),
-    path.join(outDir, "keytar-native")
-  );
+  await doBuild(target);
 
   // get version info from package.json if it isn't passed in
   if (!version) {
