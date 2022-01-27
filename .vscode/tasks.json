@@ -32,7 +32,7 @@
             "regexp": "Building extension"
           },
           "endsPattern": {
-            "regexp": "Extension built (.*?successfully|with .*?error)"
+            "regexp": "Extension built (.*?successfully|with .*?errors)"
           }
         }
       },

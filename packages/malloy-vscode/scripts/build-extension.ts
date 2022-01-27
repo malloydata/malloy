@@ -18,7 +18,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-type Target =
+export type Target =
   | "linux-x64"
   | "linux-arm64"
   | "linux-armhf"
@@ -27,13 +27,13 @@ type Target =
   | "darwin-x64"
   | "darwin-arm64";
 
-const targetInfo: { [id: string]: string } = {
+export const targetInfo: { [id: string]: string } = {
   "linux-x64": "DOES NOT EXIST",
   "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
 };
 
-export const outDir = "dist";
+export const outDir = "dist/";
 
 // This plugin replaces keytar's attempt to load the keytar.node native binary built in node_modules
 // with a raw require function to load from the local filesystem
@@ -62,7 +62,7 @@ const keytarReplacerPlugin = {
 
 export async function doBuild(target?: Target): Promise<void> {
   // if a target isnt passed, development mode is assumed
-  const development = target ? process.env.NODE_ENV == "development" : true;
+  const development = process.env.NODE_ENV == "development";
 
   fs.rmdirSync(outDir, { recursive: true });
   fs.mkdirSync(outDir);
@@ -74,8 +74,9 @@ export async function doBuild(target?: Target): Promise<void> {
       : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
   );
 
-  const copyFiles = ["language.json"];
-  copyFiles.forEach((file) => fs.copyFileSync(file, path.join(outDir, file)));
+  // copy the README.md from the root to this package. vsce does not provide a way to specifiy a readme path in the manifest,
+  // the only option is to put a readme file at the root of the package :(
+  fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
 
   if (!development) {
     fs.copyFileSync(

@@ -11,26 +11,10 @@
  * GNU General Public License for more details.
  */
 
-import { doBuild, outDir } from "./build-extension";
+import { doBuild, outDir, Target, targetInfo } from "./build-extension";
 import * as fs from "fs";
 import * as path from "path";
 import { createVSIX } from "vsce";
-
-// TODO
-type Target =
-  | "linux-x64"
-  | "linux-arm64"
-  | "linux-armhf"
-  | "alpine-x64"
-  | "alpine-arm64"
-  | "darwin-x64"
-  | "darwin-arm64";
-
-const targetInfo: { [id: string]: string } = {
-  "linux-x64": "DOES NOT EXIST",
-  "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
-  "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
-};
 
 export async function doPackage(
   target: Target,
