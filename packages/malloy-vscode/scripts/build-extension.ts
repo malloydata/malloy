@@ -16,18 +16,24 @@ import { build } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as fs from "fs";
 import * as path from "path";
-import { exec } from "child_process";
+import { execSync } from "child_process";
 
 export const outDir = "dist";
 const development = process.env.NODE_ENV == "development";
 
 export async function doBuild(): Promise<void> {
   fs.rmdirSync(outDir, { recursive: true });
+  fs.mkdirSync(outDir);
 
-  exec("yarn licenses generate-disclaimer --prod", (error, stdout, _stderr) => {
-    if (error) throw error;
-    fs.writeFileSync(path.join(outDir, "third_party_notices.txt"), stdout);
-  });
+  fs.writeFileSync(
+    path.join(outDir, "third_party_notices.txt"),
+    development
+      ? "Third party notices are not produced during development builds to speed up the build."
+      : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
+  );
+
+  const copyFiles = ["language.json"];
+  copyFiles.forEach((file) => fs.copyFileSync(file, path.join(outDir, file)));
 
   // if we're in production (packaged as an extension for a specific platform), exclude the
   // node_modules npm package "keytar" as we'll use the native lib we copied in when building
@@ -54,8 +60,6 @@ export async function doBuild(): Promise<void> {
           },
         }
       : false,
-  }).catch((e: Error) => {
-    throw e;
   });
 
   await build({
@@ -81,12 +85,7 @@ export async function doBuild(): Promise<void> {
           },
         }
       : false,
-  }).catch((error: Error) => {
-    throw error;
   });
-
-  const copyFiles = ["language.json"];
-  copyFiles.forEach((file) => fs.copyFileSync(file, path.join(outDir, file)));
 }
 
 const args = process.argv.slice(2);

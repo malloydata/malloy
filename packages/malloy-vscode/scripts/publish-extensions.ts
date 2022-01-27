@@ -16,7 +16,7 @@ import { doBuild, outDir } from "./build-extension";
 import * as semver from "semver";
 import * as fs from "fs";
 import * as path from "path";
-import { createVSIX, publish, ICreateVSIXOptions } from "vsce";
+import { createVSIX, ICreateVSIXOptions } from "vsce";
 
 const args = process.argv.slice(2);
 const version = args[0];
