@@ -123,3 +123,7 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
     }
   }
 }
+
+
+explore: airports2 is table('postgres:malloy-data.faa.flights') {
+}

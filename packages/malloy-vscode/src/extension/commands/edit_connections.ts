@@ -21,10 +21,11 @@ import {
   ConnectionTestStatus,
   WebviewMessageManager,
 } from "../webview_message_manager";
-import { CONNECTION_MANAGER, getConnectionsConfig } from "../state";
+import { CONNECTION_MANAGER } from "../state";
 import { ConnectionBackend, ConnectionConfig } from "../../common";
 import { deletePassword, setPassword } from "keytar";
 import { getDefaultIndex } from "../../common/connection_manager_types";
+import { VSCodeConnectionManager } from "../connection_manager";
 
 export function editConnectionsCommand(): void {
   const panel = vscode.window.createWebviewPanel(
@@ -46,7 +47,7 @@ export function editConnectionsCommand(): void {
     panel
   );
 
-  const connections = getConnectionsConfig();
+  const connections = VSCodeConnectionManager.getConnectionsConfig();
 
   messageManager.postMessage({
     type: ConnectionMessageType.SetConnections,

@@ -24,11 +24,15 @@ import {
 export class ConnectionManager {
   private _connections: FixedConnectionMap;
 
-  constructor(initialConnectionsConfig: ConnectionConfig[]) {
+  constructor(connections: ConnectionConfig[]) {
     this._connections = new FixedConnectionMap(new Map());
-    this.buildConnectionMap(initialConnectionsConfig).then((map) => {
+    this.buildConnectionMap(connections).then((map) => {
       this._connections = map;
     });
+  }
+
+  protected getCurrentRowLimit(): number | undefined {
+    return undefined;
   }
 
   public get connections(): FixedConnectionMap {
@@ -41,7 +45,12 @@ export class ConnectionManager {
     const map = new Map<string, Connection>();
     let defaultName: string | undefined;
     if (connectionsConfig.length === 0) {
-      map.set("bigquery", new BigQueryConnection("bigquery", { pageSize: 20 }));
+      map.set(
+        "bigquery",
+        new BigQueryConnection("bigquery", () => ({
+          pageSize: this.getCurrentRowLimit(),
+        }))
+      );
       defaultName = "bigquery";
     } else {
       for (const connectionConfig of connectionsConfig) {
@@ -72,9 +81,7 @@ export class ConnectionManager {
       case ConnectionBackend.BigQuery:
         return new BigQueryConnection(
           connectionConfig.name,
-          {
-            pageSize: 50,
-          },
+          () => ({ pageSize: this.getCurrentRowLimit() }),
           {
             defaultProject: connectionConfig.projectName,
             serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
@@ -100,7 +107,11 @@ export class ConnectionManager {
             databaseName: connectionConfig.databaseName,
           };
         };
-        return new PostgresConnection(connectionConfig.name, configReader);
+        return new PostgresConnection(
+          connectionConfig.name,
+          () => ({ pageSize: this.getCurrentRowLimit() }),
+          configReader
+        );
       }
     }
   }

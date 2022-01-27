@@ -32,7 +32,7 @@ import {
   runQueryWithEdit,
   showLicensesCommand,
 } from "./commands";
-import { CONNECTION_MANAGER, getConnectionsConfig } from "./state";
+import { CONNECTION_MANAGER } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 
 let client: LanguageClient;
@@ -118,7 +118,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration("malloy.connections")) {
-        await CONNECTION_MANAGER.setConnectionsConfig(getConnectionsConfig());
+        await CONNECTION_MANAGER.onConfigurationUpdated();
         connectionsTree.refresh();
       }
     })
