@@ -90,11 +90,6 @@ export enum QueryMessageType {
   AppReady = "app-ready",
 }
 
-export enum QueryRenderMode {
-  HTML = "html",
-  JSON = "json",
-}
-
 interface QueryMessageStatusCompiling {
   type: QueryMessageType.QueryStatus;
   status: QueryRunStatus.Compiling;
@@ -116,7 +111,6 @@ interface QueryMessageStatusDone {
   status: QueryRunStatus.Done;
   result: ResultJSON;
   styles: DataStyles;
-  mode: QueryRenderMode;
 }
 
 type QueryMessageStatus =

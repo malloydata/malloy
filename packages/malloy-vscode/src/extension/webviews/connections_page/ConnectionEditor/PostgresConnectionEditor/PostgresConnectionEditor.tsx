@@ -11,10 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import React from "react";
+import { TextFieldType } from "@vscode/webview-ui-toolkit";
+import React, { useState } from "react";
 import { PostgresConnectionConfig } from "../../../../../common/connection_manager_types";
 import { TextField } from "../../../components";
-import { VSCodeRadio } from "../../../components/fast";
+import { VSCodeCheckbox, VSCodeRadio } from "../../../components/fast";
 import { Label } from "../Label";
 import { LabelCell } from "../LabelCell";
 
@@ -25,6 +26,7 @@ interface PostgresConnectionEditorProps {
 
 export const PostgresConnectionEditor: React.FC<PostgresConnectionEditorProps> =
   ({ config, setConfig }) => {
+    const [showPassword, setShowPassword] = useState(false);
     return (
       <table>
         <tbody>
@@ -162,22 +164,38 @@ export const PostgresConnectionEditor: React.FC<PostgresConnectionEditorProps> =
                   {config.password !== undefined && ":"}
                 </VSCodeRadio>
               </div>
-              <div>
-                {config.password !== undefined && (
-                  <TextField
-                    value={config.password}
-                    setValue={(password) => {
-                      setConfig({
-                        ...config,
-                        password,
-                      });
-                    }}
-                    placeholder="Optional"
-                  />
-                )}
-              </div>
             </td>
           </tr>
+          {config.password !== undefined && (
+            <tr>
+              <td></td>
+              <td>
+                <TextField
+                  value={config.password}
+                  setValue={(password) => {
+                    setConfig({
+                      ...config,
+                      password,
+                    });
+                  }}
+                  type={
+                    showPassword ? TextFieldType.text : TextFieldType.password
+                  }
+                  placeholder="Optional"
+                />
+              </td>
+              <td style={{ paddingLeft: "10px" }}>
+                <VSCodeCheckbox
+                  checked={showPassword}
+                  onChange={(event) => {
+                    setShowPassword((event.target as any).checked);
+                  }}
+                >
+                  Show Password
+                </VSCodeCheckbox>
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     );

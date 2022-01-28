@@ -11,7 +11,8 @@
  * GNU General Public License for more details.
  */
 
-export { Dialect, DialectFieldList } from "./dialect";
+export { Dialect } from "./dialect";
+export type { DialectFieldList } from "./dialect";
 export { StandardSQLDialect } from "./standardsql";
 export { PostgresDialect } from "./postgres";
 export { getDialect, registerDialect } from "./dialect_map";

@@ -5,7 +5,7 @@
     "outDir": "out",
     "rootDir": "src"
   },
-  "include": ["./src", "node_modules/us-atlas", "./webpack.config.js"],
+  "include": ["./src", "node_modules/us-atlas"],
   "exclude": ["node_modules", ".vscode-test", "out"],
   "references": [
     {

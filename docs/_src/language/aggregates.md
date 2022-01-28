@@ -10,7 +10,7 @@ The `count` aggregate function may be used to count the number of records appear
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   aggregate: flight_count is count()
 }
 ```
@@ -21,7 +21,7 @@ Distinct counts may be used to count the number of distinct values of a particul
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
-query: order_items->{
+query: order_items -> {
   aggregate: order_count is count(distinct order_id)
 }
 ```
@@ -32,7 +32,7 @@ The `sum` function may be used to compute the sum of all records of a particular
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   aggregate: total_distance is sum(distance)
 }
 ```
@@ -43,7 +43,7 @@ The `avg` function may be used to compute the average of all records of a partic
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft->{
+query: aircraft -> {
   aggregate: average_seats is sum(aircraft_models.seats)
 }
 ```
@@ -54,7 +54,7 @@ The `min` function may be used to compute the minimum of all records of a partic
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
-query: order_items->{
+query: order_items -> {
   aggregate: cheapest_price is min(sale_price)
 }
 ```
@@ -65,7 +65,7 @@ The `max` function may be used to compute the maximum of all records of a partic
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   aggregate: longest_distance is max(distance)
 }
 ```
@@ -87,15 +87,15 @@ the average of `aircraft_models.seats`.
 
 ```sql
 SELECT
-    AVG(aircraft_models.seats)
+  AVG(aircraft_models.seats)
 FROM aircraft
 LEFT JOIN aircraft_models
-    ON aircraft.aircraft_model_code = aircraft_models.aircraft_model_code
+  ON aircraft.aircraft_model_code = aircraft_models.aircraft_model_code
 ```
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft->{
+query: aircraft -> {
   aggregate: average_seats is avg(aircraft_models.seats)
 }
 ```
@@ -111,14 +111,14 @@ FROM aircraft_models
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft_models->{
+query: aircraft_models -> {
   aggregate: average_seats is avg(seats)
 }
 ```
 
 However, this isn't actually the number you were interested in, because this measures the average number of seats across _all_ aircraft models, not just the ones with actively-registered aircraft.
 
-Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysists often resort to complicated [fact tables](https://www.zentut.com/data-warehouse/fact-table/) to perform this kind of query.
+Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysts often resort to complicated [fact tables](https://www.zentut.com/data-warehouse/fact-table/) to perform this kind of query.
 
 ### The Solution
 
@@ -127,7 +127,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft->{
+query: aircraft -> {
   aggregate: average_seats is aircraft_models.avg(aircraft_models.seats)
 }
 ```
@@ -140,7 +140,7 @@ The following queries show six ways of calculating the average number of seats.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   aggregate: [
     aircraft_models_avg_seats is aircraft.aircraft_models.seats.avg()
     aircraft_avg_models_seats is aircraft.avg(aircraft.aircraft_models.seats)
@@ -151,7 +151,7 @@ query: flights->{
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft->{
+query: aircraft -> {
   aggregate: [
     models_avg_seats is aircraft_models.seats.avg()
     avg_models_seats is avg(aircraft_models.seats)
@@ -161,7 +161,7 @@ query: aircraft->{
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft_models->{
+query: aircraft_models -> {
   aggregate: avg_seats is avg(seats)
 }
 ```
@@ -179,7 +179,7 @@ This table summarizes the meaning of each of these calculations.
 
 ### Aggregates that Support Locality
 
-The aggregate fuctions that support locality are `count`, `sum`, and `avg`.
+The aggregate functions that support locality are `count`, `sum`, and `avg`.
 
 The `min` and `max` aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once.
 
@@ -189,7 +189,7 @@ Aggregating "on a field," e.g. `aircraft_models.seats.avg()` is exactly equivale
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
-query: aircraft->{
+query: aircraft -> {
   aggregate: [
     avg_on_explore is aircraft_models.avg(aircraft_models.seats)
     avg_on_field is aircraft_models.seats.avg()

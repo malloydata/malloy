@@ -12,7 +12,6 @@
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
-      "outFiles": ["${workspaceFolder}/packages/**/dist/**"],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
       "sourceMaps": true,
@@ -27,7 +26,6 @@
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
       "debugWebviews": true,
-      "outFiles": ["${workspaceFolder}/packages/**/dist/**"],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}",
       "sourceMaps": true,

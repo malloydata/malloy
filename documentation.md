@@ -1,4 +1,4 @@
-## Documentation Develoment
+## Documentation Development
 
 Documentation is a static site built by [Jekyll](https://jekyllrb.com/) with
 some custom preprocessing.

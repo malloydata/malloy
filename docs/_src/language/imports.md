@@ -1,3 +1,6 @@
+
+<!--
+
 # Imports and Exports
 
 Malloy allows for explores to be reused between files, or for a set of explores
@@ -10,22 +13,21 @@ be included in the file's _public namespace_.
 
 Consider a file <code>samples/faa/flights.malloy</code>:
 ```malloy
-explore: airports is table('malloy-data.faa.airports'){}
+explore: airports is table('malloy-data.faa.airports') {
   primary_key: code
   dimension: name is concat(code, ' - ', full_name)
   measure: airport_count is count()
-);
+}
 
-explore: flights is table('malloy-data.faa.flights'){
-  ...
+explore: flights is table('malloy-data.faa.flights') {
   join_one: origin is airports with origin_code
   join_one: destination is airports with destination_code
-  ...
-);
+}
 ```
 
 In this example, `flights` is exported, but `airports` is not, and therefore
 only `flights` is part of the file's public namespace.
+ -->
 
 ## Imports
 
@@ -38,14 +40,14 @@ For example, if you wanted to create a file <code>samples/flights_by_carrier.mal
 ```malloy
 import "faa/flights.malloy"
 
-query: flights->{top: 5; group_by: carrier; aggregate: flight_count}
+query: flights -> { top: 5; group_by: carrier; aggregate: flight_count }
 ```
 
-Because `airports` is not exported, referencing it here would be invalid.
+<!-- Because `airports` is not exported, referencing it here would be invalid. -->
 
 ### Import Locations
 
-Imported files may be specified with relative or absolute URIs.
+Imported files may be specified with relative or absolute URLs.
 
 | Import Statement | Meaning from `"file:///f1/a.malloy"` |
 | ---------------- | --------|
