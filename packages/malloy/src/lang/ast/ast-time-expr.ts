@@ -169,11 +169,17 @@ export class ExprGranularTime extends GranularTime {
         value: exprVal.value,
       };
       if (this.truncate) {
-        tsVal.value = compressExpr(
-          fs
-            .getDialect()
-            .sqlTimestampTrunc(exprVal.value, timeframe, "UTC") as Expr
-        );
+        if (exprVal.dataType === "date") {
+          tsVal.value = compressExpr(
+            fs.getDialect().sqlDateTrunc(exprVal.value, timeframe) as Expr
+          );
+        } else {
+          tsVal.value = compressExpr(
+            fs
+              .getDialect()
+              .sqlTimestampTrunc(exprVal.value, timeframe, "UTC") as Expr
+          );
+        }
       }
       return tsVal;
     }

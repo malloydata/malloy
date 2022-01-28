@@ -341,6 +341,63 @@ expressionModels.forEach((expressionModel, databaseName) => {
     }
   );
 
+  (databaseName === "postgres" ? it.skip : it)(
+    `model: dates named - ${databaseName}`,
+    async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+        query: table('malloytest.alltypes')->{
+          group_by: [
+            t_date,
+            t_date_month is t_date.month,
+            t_date_year is t_date.year,
+            t_timestamp,
+            t_timestamp_date is t_timestamp.day,
+            t_timestamp_hour is t_timestamp.hour,
+            t_timestamp_minute is t_timestamp.minute,
+            t_timestamp_second is t_timestamp.second,
+            t_timestamp_month is t_timestamp.month,
+            t_timestamp_year is t_timestamp.year,
+          ]
+        }
+
+        `
+        )
+        .run();
+      expect(result.data.path(0, "t_date").value).toEqual(
+        new Date("2020-03-02")
+      );
+      expect(result.data.path(0, "t_date_month").value).toEqual(
+        new Date("2020-03-01")
+      );
+      expect(result.data.path(0, "t_date_year").value).toEqual(
+        new Date("2020-01-01")
+      );
+      expect(result.data.path(0, "t_timestamp").value).toEqual(
+        new Date("2020-03-02T12:35:56.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_second").value).toEqual(
+        new Date("2020-03-02T12:35:56.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_minute").value).toEqual(
+        new Date("2020-03-02T12:35:00.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_hour").value).toEqual(
+        new Date("2020-03-02T12:00:00.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_date").value).toEqual(
+        new Date("2020-03-02")
+      );
+      expect(result.data.path(0, "t_timestamp_month").value).toEqual(
+        new Date("2020-03-01")
+      );
+      expect(result.data.path(0, "t_timestamp_year").value).toEqual(
+        new Date("2020-01-01")
+      );
+    }
+  );
+
   it.skip("defines in model", async () => {
     // const result1 = await model.makeQuery(`
     //   define a is ('malloytest.alltypes');
@@ -564,7 +621,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       explore: f is table('malloytest.flights'){
         join_one: a is table('malloytest.aircraft') {
-          join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state 
+          join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state
         } on tail_num = a.tail_num
       }
 
