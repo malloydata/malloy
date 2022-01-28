@@ -276,6 +276,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
   });
 
+  // we need to kill this feature.
   (databaseName === "postgres" ? it.skip : it)(
     `model: dates - ${databaseName}`,
     async () => {
