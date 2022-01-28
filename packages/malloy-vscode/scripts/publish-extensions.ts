@@ -12,16 +12,12 @@
  */
 /* eslint-disable no-console */
 
+import * as semver from "semver";
 import { publishVSIX } from "vsce";
 import { Target, targetKeytarMap } from "./build-extension";
 import { doPackage } from "./package-extension";
 
-async function doPublish(preRelease = false) {
-  // get latest version tag
-
-  // temp
-  const version = "0.0.5";
-
+async function doPublish(version: string, preRelease = false) {
   for (const target in targetKeytarMap) {
     const packagePath = await doPackage(target as Target, version, preRelease);
 
@@ -32,7 +28,26 @@ async function doPublish(preRelease = false) {
     //   target,
     // });
   }
-
-  // bump version, add tag
 }
-doPublish();
+
+const args = process.argv.slice(2);
+
+const version = args[0];
+if (!version)
+  throw new Error(
+    "No version passed to publish script. Call it with a semver version"
+  );
+
+if (!semver.valid(version)) throw new Error(`Invalid semver: ${version}`);
+
+console.log(`Publishing extension version ${version}`);
+
+doPublish(version)
+  .then(() => {
+    console.log("Extensions published successfully");
+  })
+  .catch((error) => {
+    console.error("Extension publishing errors:");
+    console.log(error);
+    process.exit(1);
+  });

@@ -31,11 +31,11 @@ export type Target =
 export type TargetKeytarMap = { [target in Target]: string };
 
 export const targetKeytarMap: TargetKeytarMap = {
-  "linux-x64": "DOES NOT EXIST",
-  "linux-arm64": "DOES NOT EXIST",
-  "linux-armhf": "DOES NOT EXIST",
-  "alpine-x64": "DOES NOT EXIST",
-  "alpine-arm64": "DOES NOT EXIST",
+  "linux-x64": "keytar-v7.7.0-napi-v3-linux-x64.node",
+  "linux-arm64": "keytar-v7.7.0-napi-v3-linux-arm64.node",
+  "linux-armhf": "keytar-v7.7.0-napi-v3-linux-ia32.node",
+  "alpine-x64": "keytar-v7.7.0-napi-v3-linuxmusl-x64.node",
+  "alpine-arm64": "keytar-v7.7.0-napi-v3-linuxmusl-arm64.node",
   "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
 };
@@ -83,6 +83,11 @@ export async function doBuild(target?: Target): Promise<void> {
     development
       ? "Third party notices are not produced during development builds to speed up the build."
       : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
+  );
+
+  fs.writeFileSync(
+    path.join(outDir, "build-sha"),
+    execSync("git rev-parse HEAD")
   );
 
   // copy the README.md from the root to this package. vsce does not provide a way to specifiy a readme path in the "manifest",
@@ -161,7 +166,7 @@ export async function doBuild(target?: Target): Promise<void> {
 
 const args = process.argv.slice(2);
 if (args[0] == "build") {
-  console.log("Building extension");
+  console.log(`Building extension to ${outDir}`);
 
   const target = args[1] ? (args[1] as Target) : undefined;
 
