@@ -38,7 +38,7 @@ export define iowa is (explore 'bigquery-public-data.iowa_liquor_sales.sales'
   total_bottles is sum(bottles_sold)
   price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
   avg_price_per_100ml is price_per_100ml.avg()
-  -- add the query to the model
+  // add the query to the model
   top_sellers_by_revenue is (reduce top 5
     vendor_name
     item_description
@@ -70,7 +70,7 @@ The magic happens when we call a named query in the same way we would use any ot
 query: iowa { where: category_name ~ r'TEQUILA' } -> {
   group_by: vendor_name
   aggregate: [ total_sale_dollars, avg_price_per_100ml ]
-  nest: top_sellers_by_revenue -- entire query is a field
+  nest: top_sellers_by_revenue // entire query is a field
 }
 ```
 

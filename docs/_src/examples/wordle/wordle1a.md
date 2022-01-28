@@ -4,23 +4,23 @@ The query below produces a table with the numbers 1 to 5
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore: numbers is table('malloy-data.malloytest.numbers'){
+explore: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
-query: numbers->{project: num}
+query: numbers -> { project: num }
 ```
 
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden": true}
-explore: words is table('malloy-data.malloytest.words'){
+explore: words is table('malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
-    project: word is UPPER(word)
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
   }
 }
 
-explore: numbers is table('malloy-data.malloytest.numbers'){
+explore: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 ```
@@ -30,12 +30,11 @@ The result is a table with nested data.  Each word contains a sub-table with a l
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w1.malloy", "showAs":"json","dataStyles":{"letters":{"renderer":"list_detail"}}}
--- define the query
-query: words_and_position is from(words->five_letter_words){
-  -- Cross join is missing at the moment
+// define the query
+query: words_and_position is from(words -> five_letter_words) {
+  // cross join is missing at the moment
   join_cross: numbers
-  }
-->{
+} -> {
   group_by: word
   nest: letters is {
     order_by: 2
@@ -46,6 +45,6 @@ query: words_and_position is from(words->five_letter_words){
   }
 }
 
--- run it
-query: ->words_and_position
+// run it
+query: -> words_and_position
 ```

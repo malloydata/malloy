@@ -23,16 +23,16 @@ query: iowa -> {
 Malloy provides a simple way to map all these values, using `pick` expressions.  In the [Malloy Model for this Data Set](source.md), you will find the declaration below.  Each pick expression tests `category_name` for a regular expression.  If it matches, it returns the name pick'ed.
 
 ```malloy
-  category_class is category_name :
-    pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BURBON|RYE)'
-    pick 'VODKAS' when ~ r'VODKA'
-    pick 'RUMS' when ~ r'RUM'
-    pick 'TEQUILAS' when ~ r'TEQUILA'
-    pick 'LIQUEURS' when ~ r'(LIQUE|AMARETTO|TRIPLE SEC)'
-    pick 'BRANDIES' when ~ r'BRAND(I|Y)'
-    pick 'GINS' when ~ r'GIN'
-    pick 'SCHNAPPS' when ~ r'SCHNAP'
-    else 'OTHER'
+category_class is category_name:
+  pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BURBON|RYE)'
+  pick 'VODKAS' when ~ r'VODKA'
+  pick 'RUMS' when ~ r'RUM'
+  pick 'TEQUILAS' when ~ r'TEQUILA'
+  pick 'LIQUEURS' when ~ r'(LIQUE|AMARETTO|TRIPLE SEC)'
+  pick 'BRANDIES' when ~ r'BRAND(I|Y)'
+  pick 'GINS' when ~ r'GIN'
+  pick 'SCHNAPPS' when ~ r'SCHNAP'
+  else 'OTHER'
 ```
 ## Testing the category map
 
@@ -96,10 +96,10 @@ query: iowa -> {
 Looking at the above chart and table we can see that there are a bunch of small values, several big values at 750 and 1000, and then a bunch of larger values.  We can clean this up by bucketing bottle size into three groups using a Malloy `pick` expression that maps these values to strings.
 
 ```malloy
-  bottle_size is bottle_volume_ml:
-    pick 'jumbo (over 1000ml)' when > 1001
-    pick 'liter-ish' when >= 750
-    else 'small or mini (under 750ml)'
+bottle_size is bottle_volume_ml:
+  pick 'jumbo (over 1000ml)' when > 1001
+  pick 'liter-ish' when >= 750
+  else 'small or mini (under 750ml)'
 ```
 Look at the data through the new mapping.
 

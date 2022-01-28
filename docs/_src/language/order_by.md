@@ -13,7 +13,7 @@ important concept in the query.  Because the most recent data is usually the mos
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   group_by: dep_month is dep_time.month
   aggregate: flight_count is count()
 }
@@ -26,7 +26,7 @@ In the following example, Rule 1 doesn't apply, so the default behavior is to so
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   group_by: carrier
   aggregate: flight_count is count()
 }
@@ -40,7 +40,7 @@ In the following example, the results are ordered by `carrier` in reverse alphab
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   order_by: carrier desc
   group_by: carrier
   aggregate: flight_count is count()
@@ -52,7 +52,7 @@ the results are ordered by `carrier` in alphabetical order.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   order_by: carrier
   group_by: carrier
   aggregate: flight_count is count()
@@ -67,7 +67,7 @@ In the example below, the results are limited to 2 rows, which are sorted by `de
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   top: 2
   group_by: dep_month is dep_time.month
   aggregate: flight_count is count()

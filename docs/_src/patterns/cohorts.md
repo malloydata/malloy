@@ -18,20 +18,20 @@ Texas makes up 18% of the total population of Billies.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }
-query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
+query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   where: name = 'Billie'
   aggregate: total_population is `number`.sum()
   nest: main_query is {
     group_by: state
     aggregate: total_population is `number`.sum()
   }
-}->{
+} -> {
   project: [
     main_query.state
     main_query.total_population
-    state_as_percent_of_population is main_query.total_population/total_population * 100.0
+    state_as_percent_of_population is main_query.total_population / total_population * 100.0
   ]
-  order_by: 3 desc
+  order_by: state_as_percent_of_population desc
 }
 ```
 
@@ -40,20 +40,20 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }
-query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
+query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   where: name = 'Billie'
   aggregate: total_population is `number`.sum()
   nest: main_query is {
-    group_by: decade is FLOOR(`year`/10) * 10
+    group_by: decade is floor(`year` / 10) * 10
     aggregate: total_population is `number`.sum()
   }
-}->{
+} -> {
   project: [
     main_query.decade
     main_query.total_population
-    decade_as_percent_of_population is main_query.total_population/total_population * 100.0
+    decade_as_percent_of_population is main_query.total_population / total_population * 100.0
   ]
-  order_by: 3 desc
+  order_by: decade_as_percent_of_population desc
 }
 ```
 
@@ -66,19 +66,19 @@ to measure a little differently.  Instead of looking at a percentage, let's look
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }
-query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
-  where: state= 'CA' and `year` = 1990
+query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+  where: state = 'CA' and `year` = 1990
   aggregate: total_population is `number`.sum()
   nest: main_query is {
     group_by: name
     aggregate: total_population is `number`.sum()
   }
-}->{
+} -> {
   project: [
-  main_query.name
-  main_query.total_population
-  births_per_100k is FLOOR(main_query.total_population/total_population * 100000.0)
+    main_query.name
+    main_query.total_population
+    births_per_100k is FLOOR(main_query.total_population / total_population * 100000.0)
   ]
-  order_by: 3 desc
+  order_by: births_per_100k desc
 }
 ```

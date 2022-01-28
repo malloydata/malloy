@@ -1,24 +1,23 @@
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
-explore: words is table('malloy-data.malloytest.words'){
+explore: words is table('malloy-data.malloytest.words_bigger') {
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
-    project: word is UPPER(word)
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
   }
 }
 
--- Cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers'){
+// cross join numbers
+explore: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
--- Build a new table of word and each letter in position
-query: words_and_position is from(words->five_letter_words){
-  -- Cross join is missing at the moment
+// build a new table of word and each letter in position
+query: words_and_position is from(words -> five_letter_words) {
+  // cross join is missing at the moment
   join_cross: numbers
-  }
-->{
+} -> {
   group_by: word
   nest: letters is {
     order_by: 2
@@ -40,7 +39,7 @@ each row is the letter and position in that row.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(->words_and_position){
+explore: wordle is from(-> words_and_position) {
   measure: word_count is count()
 }
 ```
@@ -49,7 +48,7 @@ explore: wordle is from(->words_and_position){
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
-query: wordle->{aggregate: word_count}
+query: wordle -> { aggregate: word_count }
 ```
 
 ## What are the most common letters if 5 letter words?
@@ -58,11 +57,11 @@ letter more than once.
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
-query: wordle->{
+query: wordle -> {
   group_by: letters.letter
   aggregate: [
   word_count
-      use_count is letters.count()
+    use_count is letters.count()
   ]
 }
 ```
@@ -71,7 +70,7 @@ query: wordle->{
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w2.malloy", "showAs":"html"}
-query: wordle->{
+query: wordle -> {
   group_by: letters.letter
   aggregate: [
     word_count
@@ -89,7 +88,7 @@ We've noticed there are a lots of words that end in 'S' or 'ED' in the dataset, 
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(->words_and_position){
+explore: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 }
@@ -99,5 +98,5 @@ explore: wordle is from(->words_and_position){
 
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w3.malloy", "showAs":"html"}
-query: wordle->{aggregate: word_count}
+query: wordle -> { aggregate: word_count }
 ```

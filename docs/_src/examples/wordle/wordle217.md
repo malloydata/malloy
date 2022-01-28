@@ -1,3 +1,55 @@
+```malloy
+--! {"isModel": true, "modelPath": "/inline/w2.malloy", "isHidden":true}
+// Make a table of 5 letter words
+explore: words is table('malloy-data.malloytest.words') {
+  query: five_letter_words is {
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
+  }
+}
+
+// Cross join numbers
+explore: numbers is table('malloy-data.malloytest.numbers') {
+  where: num <= 5
+}
+
+// Build a new table of word and each letter in position
+query: words_and_position is from(words -> five_letter_words) {
+  // Cross join is missing at the moment
+  join_cross: numbers
+} -> {
+  group_by: word
+  nest: letters is {
+    order_by: 2
+    group_by: [
+      letter is substr(word, numbers.num, 1)
+      position is numbers.num
+    ]
+  }
+}
+
+
+// Build a word finder that can generate a score best available guess
+explore: wordle is from(-> words_and_position) {
+  where: word !~ r'(S|ED)$'
+  measure: word_count is count()
+
+  query: find_words is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+    nest: words_list is {
+      group_by: word
+    }
+  } -> {
+    group_by: words_list.word
+    aggregate: score is word_count.sum()
+  }
+}
+```
+
 # Puzzle #217
 _January 22, 2022_
 
@@ -9,8 +61,8 @@ Wordlebot is written in [Malloy](https://github.com/looker-open-source/malloy/).
 ## Query for the best starting words.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
+query: wordle -> find_words
 ```
 
 Skipping 'SAREE' to avoid duplicates this early in the game, let's go with 'SLATE' again.
@@ -21,11 +73,12 @@ Skipping 'SAREE' to avoid duplicates this early in the game, let's go with 'SLAT
 One green match--not a bad start. Let's find more words ending in E.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query:  wordle->find_words {
-  where:
-    word ~ r'....E'    -- GREEN: E at the end
-    and not word ~ r'[SLAT]'   -- GRAY doesn't have these characters
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
+query: wordle -> find_words {
+  where: [
+    word ~ r'....E',      // GREEN: E at the end
+    not word ~ r'[SLAT]'  // GRAY doesn't have these characters
+  ]
 }
 ```
 
@@ -37,20 +90,21 @@ The 'PRICE' is right, or something...
 That worked nicely for us, we have two green matches and now we need to figure out where 'I' belong(s).
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words {
-  where:
-    word ~ r'I'
-    and word ~ r'..[^I]CE'
-    and word !~ r'[SLATPR]'
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
+query: wordle -> find_words {
+  where: [
+    word ~ r'I',
+    word ~ r'..[^I]CE',
+    word !~ r'[SLATPR]'
+  ]
 }
 ```
 
 Another tie, today with a chance to guess just how into cooking the Wordle creators are. We can use our same letter commonality tie-breaker here; maybe this time we'll look at letter commonality for first position.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-  query: wordle ->{
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
+  query: wordle -> {
     where: letters.position = 1
     group_by: letters.letter
     aggregate: [
@@ -70,11 +124,12 @@ Another tie, today with a chance to guess just how into cooking the Wordle creat
 
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
-query: wordle->find_words {
-  where:
-    word ~ r'.INCE'
-    and word !~ r'[SLATPRM]'
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
+query: wordle -> find_words {
+  where: [
+    word ~ r'.INCE',
+    word !~ r'[SLATPRM]'
+  ]
 }
 ```
 
@@ -88,25 +143,24 @@ There it is, and our solution also happens to describe our reaction after missin
 ### Code For Wordlbot:
 
 ```malloy
--- Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words'){
+// Make a table of 5 letter words
+explore: words is table('malloy-data.malloytest.words') {
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
-    project: word is UPPER(word)
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
   }
 }
 
--- Cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers'){
+// Cross join numbers
+explore: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
--- Build a new table of word and each letter in position
-query: words_and_position is from(words->five_letter_words){
-  -- Cross join is missing at the moment
+// Build a new table of word and each letter in position
+query: words_and_position is from(words->five_letter_words) {
+  // Cross join is missing at the moment
   join_cross: numbers
-  }
-->{
+} -> {
   group_by: word
   nest: letters is {
     order_by: 2
@@ -117,9 +171,8 @@ query: words_and_position is from(words->five_letter_words){
   }
 }
 
-
--- build a word finder that can generate a score best available guess.
-explore: wordle is from(->words_and_position){
+// Build a word finder that can generate a score best available guess
+explore: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -132,11 +185,9 @@ explore: wordle is from(->words_and_position){
     nest: words_list is {
       group_by: word
     }
-  }
-  ->{
+  } -> {
     group_by: words_list.word
     aggregate: score is word_count.sum()
   }
 }
-
 ```
