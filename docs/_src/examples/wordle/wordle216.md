@@ -1,3 +1,55 @@
+```malloy
+--! {"isModel": true, "modelPath": "/inline/w2.malloy", "isHidden":true}
+// Make a table of 5 letter words
+explore: words is table('malloy-data.malloytest.words') {
+  query: five_letter_words is {
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
+  }
+}
+
+// Cross join numbers
+explore: numbers is table('malloy-data.malloytest.numbers') {
+  where: num <= 5
+}
+
+// Build a new table of word and each letter in position
+query: words_and_position is from(words -> five_letter_words) {
+  // Cross join is missing at the moment
+  join_cross: numbers
+} -> {
+  group_by: word
+  nest: letters is {
+    order_by: 2
+    group_by: [
+      letter is substr(word, numbers.num, 1)
+      position is numbers.num
+    ]
+  }
+}
+
+
+// Build a word finder that can generate a score best available guess
+explore: wordle is from(-> words_and_position) {
+  where: word !~ r'(S|ED)$'
+  measure: word_count is count()
+
+  query: find_words is {
+    group_by: [
+      letters.letter
+      letters.position
+    ]
+    aggregate: word_count
+    nest: words_list is {
+      group_by: word
+    }
+  } -> {
+    group_by: words_list.word
+    aggregate: score is word_count.sum()
+  }
+}
+```
+
 # Puzzle #216
 _January 21, 2022_
 
@@ -9,7 +61,7 @@ Wordlebot is written in [Malloy](https://github.com/looker-open-source/malloy/).
 ## Query for the best starting words.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words
 ```
 
@@ -21,7 +73,7 @@ Start with a word without duplicates to get coverage. We'll run with 'SLATE' as 
 Oof--no matches. Now what? We'll query for words that don't contain any of these characters, and rank them by the number of possible space matches.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
   where: word !~ r'[SLATE]'
 }
@@ -35,7 +87,7 @@ query: wordle -> find_words {
 'CRONY' gave us one match and a yellow tile, so we'll query for words with 'R' in the second position, and that contain 'C', but not in the first position.
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
   where: [
     word ~ r'C' and word ~ r'R',
@@ -48,7 +100,7 @@ query: wordle -> find_words {
 Just two words left and at this point it's really a matter of luck--we can take a guess at what we think the creators used, but if we want Malloy to make all the decisions for us, as a somewhat nonsensical tiebreaker, why don't we see which letter appears more often in the dataset overall:
 
 ```malloy
---! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
+--! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> {
   group_by: letters.letter
   aggregate: [
