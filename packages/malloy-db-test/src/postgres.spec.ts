@@ -33,6 +33,11 @@ create table malloytest.pg_times as (
 */
 
 describe("postgres tests", () => {
+  // have at least one test
+  it("stub", () => {
+    expect(1).toEqual(1);
+  });
+
   // it(`raw date tests`, async () => {
   //   const result = await runtime
   //     .loadQuery(
