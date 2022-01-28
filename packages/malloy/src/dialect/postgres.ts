@@ -12,7 +12,15 @@
  */
 
 import { indent } from "../model/utils";
-import { Dialect, DialectFieldList } from "./dialect";
+import {
+  DateTimeframe,
+  Dialect,
+  DialectExpr,
+  DialectFieldList,
+  ExtractDateTimeframe,
+  isDateTimeframe,
+  TimestampTimeframe,
+} from "./dialect";
 
 export class PostgresDialect extends Dialect {
   name = "postgres";
@@ -192,5 +200,56 @@ export class PostgresDialect extends Dialect {
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error("Not implemented Yet");
+  }
+
+  sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr {
+    return [`DATE_TRUNC('${timeframe}', `, expr, `)::date`];
+  }
+
+  sqlTimestampTrunc(
+    expr: unknown,
+    timeframe: TimestampTimeframe,
+    _timezone: string
+  ): DialectExpr {
+    if (timeframe === "date") {
+      return [`(`, expr, `)::date`];
+    } else if (isDateTimeframe(timeframe)) {
+      return [`DATE_TRUNC('${timeframe}', `, expr, `)::date`];
+    } else {
+      return [`DATE_TRUNC('${timeframe}', `, expr, `)`];
+    }
+  }
+
+  sqlExtractDateTimeframe(
+    expr: unknown,
+    timeframe: ExtractDateTimeframe
+  ): DialectExpr {
+    return [`EXTRACT(${timeframe} FROM `, expr, ")"];
+  }
+
+  sqlDateCast(expr: unknown): DialectExpr {
+    return ["(", expr, ")::date"];
+  }
+
+  sqlTimestampCast(expr: unknown): DialectExpr {
+    return ["(", expr, ")::timestamp"];
+  }
+
+  sqlDateAdd(
+    op: "+" | "-",
+    expr: unknown,
+    n: unknown,
+    timeframe: DateTimeframe
+  ): DialectExpr {
+    return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
+  }
+
+  sqlTimestampAdd(
+    op: "+" | "-",
+    expr: unknown,
+    n: unknown,
+    timeframe: DateTimeframe
+  ): DialectExpr {
+    return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
   }
 }

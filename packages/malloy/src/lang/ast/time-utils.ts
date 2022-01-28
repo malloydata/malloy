@@ -11,63 +11,39 @@
  * GNU General Public License for more details.
  */
 
-import { Fragment, TimeTimeframe } from "../../model/malloy_types";
+import { Dialect } from "../../dialect";
+import { Expr, Fragment, TimeTimeframe } from "../../model/malloy_types";
 import { compressExpr, ExprValue, TimeType } from "./ast-types";
 
 export function dateOffset(
+  dialect: Dialect,
   from: Fragment[],
   op: "+" | "-",
   n: Fragment[],
   timeframe: TimeTimeframe
 ): Fragment[] {
-  const add = op === "+" ? "_ADD" : "_SUB";
-  const units = timeframe.toUpperCase();
-  return compressExpr([
-    `DATE${add}(`,
-    ...from,
-    `,INTERVAL `,
-    ...n,
-    ` ${units})`,
-  ]);
+  return compressExpr(dialect.sqlDateAdd(op, from, n, timeframe) as Expr);
 }
 
 export function timestampOffset(
+  dialect: Dialect,
   from: Fragment[],
   op: "+" | "-",
   n: Fragment[],
-  timeframe: TimeTimeframe,
-  fromNotTimestamp = false
+  timeframe: TimeTimeframe
+  // fromNotTimestamp = false
 ): Fragment[] {
-  const useDatetime = ["week", "month", "quarter", "year"].includes(timeframe);
-  const add = op === "+" ? "_ADD" : "_SUB";
-  const units = timeframe.toUpperCase();
-  if (useDatetime) {
-    return compressExpr([
-      `TIMESTAMP(DATETIME${add}(DATETIME(`,
-      ...from,
-      `),INTERVAL `,
-      ...n,
-      ` ${units}))`,
-    ]);
-  }
-  const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", ...from, ")"] : from;
-  return compressExpr([
-    `TIMESTAMP${add}(`,
-    ...typeFrom,
-    `,INTERVAL `,
-    ...n,
-    ` ${units})`,
-  ]);
+  return compressExpr(dialect.sqlTimestampAdd(op, from, n, timeframe) as Expr);
 }
 
-export function toTimestampV(v: ExprValue): ExprValue {
+export function toTimestampV(dialect: Dialect, v: ExprValue): ExprValue {
   if (v.dataType === "timestamp") {
     return v;
   }
   return {
     ...v,
     dataType: "timestamp",
-    value: compressExpr(["TIMESTAMP(", ...v.value, ")"]),
+    value: compressExpr(dialect.sqlTimestampCast(v.value) as Expr),
   };
 }
 
