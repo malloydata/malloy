@@ -203,7 +203,7 @@ export function compressExpr(expr: Expr): Expr {
   // compress all adjacent strings
   const compressValue = [];
   let buildString;
-  for (const fragment of expr) {
+  for (const fragment of expr.flat()) {
     if (typeof fragment === "string") {
       buildString = buildString ? buildString + fragment : fragment;
     } else {
