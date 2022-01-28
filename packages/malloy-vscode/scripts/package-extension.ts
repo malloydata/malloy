@@ -15,11 +15,13 @@
 import { doBuild, outDir, Target } from "./build-extension";
 import * as fs from "fs";
 import * as path from "path";
+import * as semver from "semver";
 import { createVSIX } from "vsce";
 
 export async function doPackage(
   target?: Target,
-  version?: string
+  version?: string,
+  preRelease = false
 ): Promise<string> {
   await doBuild(target);
 
@@ -31,13 +33,17 @@ export async function doPackage(
     version = packageJSON.version;
   }
 
+  if (!semver.valid(version)) throw new Error(`Invalid semver: ${version}`);
+
   const packagePath = path.join(
     outDir,
-    `malloy-vscode-${target}-${version}.vsix`
+    target
+      ? `malloy-vscode-${target}-${version}.vsix`
+      : `malloy-vscode-${version}.vsix`
   );
   await createVSIX({
     githubBranch: "main",
-    preRelease: false,
+    preRelease,
     useYarn: true,
     target,
     packagePath,
@@ -49,13 +55,14 @@ export async function doPackage(
 const args = process.argv.slice(2);
 if (args[0] == "package") {
   const target = args[1] ? (args[1] as Target) : undefined;
+  const version = args[2];
   console.log(
     target
       ? `Packaging extension for ${target}`
       : "Packaging extension with no target specified, using current machine as target"
   );
 
-  doPackage(target)
+  doPackage(target, version)
     .then(() => {
       console.log("Extension packaged successfully");
     })

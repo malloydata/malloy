@@ -67,15 +67,14 @@ const keytarReplacerPlugin = {
   },
 };
 
-// building without a target does a default build of
+// building without a target does a default build using whatever keytar native lib is in node_modules
 export async function doBuild(target?: Target): Promise<void> {
   const development = process.env.NODE_ENV == "development";
 
-  if (target && !targetKeytarMap[target]) {
-    console.error(`Invalid target: ${target}`);
-    process.exit(1);
-  }
+  if (target && !targetKeytarMap[target])
+    throw new Error(`Invalid target: ${target}`);
 
+  // TODO what the heck with not having fs.rm when running via ts-node
   fs.rmdirSync(outDir, { recursive: true });
   fs.mkdirSync(outDir, { recursive: true });
 
@@ -86,7 +85,7 @@ export async function doBuild(target?: Target): Promise<void> {
       : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
   );
 
-  // copy the README.md from the root to this package. vsce does not provide a way to specifiy a readme path in the manifest,
+  // copy the README.md from the root to this package. vsce does not provide a way to specifiy a readme path in the "manifest",
   // the only option is to put a readme file at the root of the package :(
   fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
 

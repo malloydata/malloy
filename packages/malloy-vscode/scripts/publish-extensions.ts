@@ -12,16 +12,27 @@
  */
 /* eslint-disable no-console */
 
-import * as fs from "fs";
-import * as path from "path";
 import { publishVSIX } from "vsce";
+import { Target, targetKeytarMap } from "./build-extension";
+import { doPackage } from "./package-extension";
 
-async function publishExtensions(preRelease?: boolean) {
-  const targets = [["darwin-x64", "keytar-v7.7.0-napi-v3-darwin-x64.node"]];
+async function doPublish(preRelease = false) {
+  // get latest version tag
 
-  for (const [target, filename] of targets) {
-    //
+  // temp
+  const version = "0.0.5";
+
+  for (const target in targetKeytarMap) {
+    const packagePath = await doPackage(target as Target, version, preRelease);
+
+    // await publishVSIX(packagePath, {
+    //   githubBranch: "main",
+    //   preRelease,
+    //   useYarn: true,
+    //   target,
+    // });
   }
-}
 
-publishExtensions();
+  // bump version, add tag
+}
+doPublish();
