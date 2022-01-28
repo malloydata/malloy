@@ -44,7 +44,11 @@ Learn more about the syntax and language features of Malloy in the [Quickstart](
 # Get Started
 GitHub mutes videos by default, so make sure to unmute to hear the walkthrough. 
 
-https://user-images.githubusercontent.com/7178946/150899566-a899200b-8973-406d-83a0-6cae911146ca.mp4
+
+
+https://user-images.githubusercontent.com/7178946/151630430-308e651d-814c-4c18-8522-d2d0edb25ece.mp4
+
+
 
 
 
