@@ -16,6 +16,7 @@ malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineExploreStatement
+  | defineSQLStatement
   | defineQuery
   | importStatement
   ;
@@ -27,6 +28,10 @@ defineExploreStatement
 defineQuery
   : QUERY topLevelQueryDefs  # namedQueries_stub
   | QUERY query              # anonymousQuery
+  ;
+
+defineSQLStatement
+  : SQL sqlStatement
   ;
 
 importStatement
@@ -421,6 +426,14 @@ jsonArray
    | OBRACK CBRACK
    ;
 
+sqlStatement
+  : (sqlExploreNameDef IS)? sqlCommand+
+  ;
+
+sqlCommand: SQL_STRING;
+
+sqlExploreNameDef: id;
+
 JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
 
 fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
@@ -449,6 +462,7 @@ PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
 PROJECT: P R O J E C T SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
+SQL: S Q L SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
 
@@ -579,6 +593,8 @@ fragment Y: [yY] ; fragment Z: [zZ] ;
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
 COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
+
+SQL_STRING: '||' .*? ';;';
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;

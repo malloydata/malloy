@@ -126,7 +126,7 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   ast(): MalloyElement | undefined {
-    const astAsk = this.getASTResponse();
+    const astAsk = this.astStep.step(this);
     if (astAsk.ast) {
       if (this.grammarRule !== "malloyDocument") {
         this.testRoot = new TestRoot(astAsk.ast, this, this.internalModel);

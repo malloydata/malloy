@@ -19,7 +19,7 @@ import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { LogMessage, MessageLogger } from "./parse-log";
 import * as Source from "./source-reference";
-import { ParseMalloy } from "./parse-malloy";
+import { MalloyParseRoot } from "./parse-malloy";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -29,7 +29,7 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyVisitor<ast.MalloyElement>
 {
-  constructor(readonly parse: ParseMalloy, readonly msgLog: MessageLogger) {
+  constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
   }
 
@@ -1047,5 +1047,15 @@ export class MalloyToAST
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
     return this.getFieldExpr(pcx.fieldExpr());
+  }
+
+  visitSqlStatement?(pcx: parse.SqlStatementContext): ast.SQLStatement {
+    const defCx = pcx.sqlExploreNameDef();
+    const commands = pcx.sqlCommand().map((cx) => cx.text);
+    const sqlStmt = new ast.SQLStatement(commands);
+    if (defCx) {
+      sqlStmt.is = this.getIdText(defCx);
+    }
+    return this.astAt(sqlStmt, pcx);
   }
 }

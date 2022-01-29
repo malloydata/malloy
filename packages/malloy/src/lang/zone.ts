@@ -15,11 +15,10 @@ import { Range } from "./source-reference";
 
 export type ZoneData<TValue> = Record<string, TValue>;
 
-type EntryStatus = "present" | "reference";
-type ZoneStatus = EntryStatus | "error" | "none";
+type EntryStatus = "present" | "reference" | "error";
 
 interface AllEntries {
-  status: string;
+  status: EntryStatus;
   firstReference?: Range;
 }
 
@@ -42,18 +41,16 @@ type ZoneEntry<T> = EntryPresent<T> | ReferenceEntry | EntryErrored;
 
 /**
  * A Zone is a symbol table which may contain references to symbols
- * which are not yet defined.
+ * which are not yet defined. This is used by the parser to track
+ * references to objects which it will have to request values from
+ * before the translation can be complete. The API is struictured to
+ * build the repsonse-style interfaces that the translator uses.
  */
 export class Zone<TValue> {
   zone: Map<string, ZoneEntry<TValue>>;
   location: Record<string, Range> = {};
   constructor() {
     this.zone = new Map<string, ZoneEntry<TValue>>();
-  }
-
-  status(str: string): ZoneStatus {
-    const zst = this.zone.get(str);
-    return zst?.status || "none";
   }
 
   get(str: string): TValue | undefined {
@@ -74,17 +71,31 @@ export class Zone<TValue> {
     return { status: "error", message: "import reference failure" };
   }
 
+  /**
+   * Add a symbol and it's definition to the symbol table.
+   * @param str
+   * @param val
+   */
   define(str: string, val: TValue): void {
     this.zone.set(str, { status: "present", value: val });
   }
 
+  /**
+   * Add a symbol to the symbol table.
+   * @param str The symbol
+   * @param loc The location of the reference
+   */
   reference(str: string, loc: Range): void {
-    if (this.status(str) === "none") {
+    const zst = this.zone.get(str);
+    if (zst?.status == undefined) {
       this.zone.set(str, { status: "reference", firstReference: loc });
       this.location[str] = loc;
     }
   }
 
+  /**
+   * @returns A list of all symbols which have references but not definitions
+   */
   getUndefined(): string[] | undefined {
     const allUndefined = [];
     for (const [name, val] of this.zone) {
@@ -95,6 +106,11 @@ export class Zone<TValue> {
     return allUndefined.length > 0 ? allUndefined : undefined;
   }
 
+  /**
+   * Provide values for symbols
+   * @param updateData Symbols and their values
+   * @param errorData Pass on errors encountered during fetch
+   */
   updateFrom(
     updateData: ZoneData<TValue> | undefined,
     errorData: Record<string, string> | undefined

@@ -127,14 +127,15 @@ export abstract class MalloyElement {
     }
   }
 
-  get location(): Source.Range | undefined {
+  get location(): Source.Range {
     if (this.codeLocation) {
       return this.codeLocation;
     }
     if (this.parent) {
       return this.parent.location;
     }
-    return undefined;
+    this.log("Location not set during parse");
+    return { begin: { line: 0 } };
   }
 
   set location(loc: Source.Range | undefined) {
@@ -224,6 +225,20 @@ export abstract class MalloyElement {
       }
     }
     return asString;
+  }
+
+  walk(callBack: (node: MalloyElement) => void): void {
+    callBack(this);
+    for (const kidLabel of Object.keys(this.children)) {
+      const kiddle = this.children[kidLabel];
+      if (kiddle instanceof MalloyElement) {
+        kiddle.walk(callBack);
+      } else {
+        for (const k of kiddle) {
+          k.walk(callBack);
+        }
+      }
+    }
   }
 
   private varInfo(): string {
@@ -1933,5 +1948,17 @@ export class ConstantParameter extends HasParameter {
       name: this.name,
       constant: true,
     };
+  }
+}
+
+export class SQLStatement extends MalloyElement implements DocStatement {
+  elementType = "sqlStatement";
+  is?: string;
+  constructor(readonly stmts: string[]) {
+    super();
+  }
+
+  execute(_doc: Document): void {
+    throw new Error(`NYI`);
   }
 }

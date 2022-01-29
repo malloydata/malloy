@@ -14,6 +14,7 @@
 
 import { ExpressionDef } from "./ast";
 import { StructSpace } from "./field-space";
+import { DataRequestResponse } from "./parse-malloy";
 import { TestTranslator, pretty } from "./test-translator";
 
 const inspectCompile = false;
@@ -41,6 +42,10 @@ class BetaModel extends Testable {
       console.log("QUERIES: ", pretty(compileTo.translated.queryList));
     }
     // All the stuff to ask the ast for a translation is already in TestTranslator
+  }
+
+  unresolved(): DataRequestResponse {
+    return this.importsAndTablesStep.step(this);
   }
 }
 
@@ -580,6 +585,21 @@ describe("expressions", () => {
     `)
     );
   });
+});
+
+describe("sql backdoor", () => {
+  test(
+    "single sql statement",
+    modelOK("sql: users is || SELECT * FROM USERS;;")
+  );
+  test(
+    "multiple sql statements",
+    modelOK(`
+      sql: users is
+        || -- some other sql command ;;
+        || SELECT * FROM USERS;;
+      `)
+  );
 });
 
 describe("error handling", () => {
