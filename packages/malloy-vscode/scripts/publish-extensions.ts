@@ -32,12 +32,11 @@ async function doPublish(version: string) {
   for (const target in targetKeytarMap) {
     const packagePath = await doPackage(target as Target, version, preRelease);
 
-    // await publishVSIX(packagePath, {
-    //   githubBranch: "main",
-    //   preRelease,
-    //   useYarn: true,
-    //   target,
-    // });
+    await publishVSIX(packagePath, {
+      githubBranch: "main",
+      preRelease,
+      useYarn: true,
+    });
   }
 }
 
