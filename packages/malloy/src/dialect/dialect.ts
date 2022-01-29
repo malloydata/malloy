@@ -19,6 +19,36 @@ interface DialectField {
 
 export type DialectFieldList = DialectField[];
 
+const dateTimeframes = ["day", "week", "month", "quarter", "year"];
+export type DateTimeframe = typeof dateTimeframes[number];
+
+const timestampTimeframes = [...dateTimeframes, "hour", "minute", "second"];
+export type TimestampTimeframe = typeof timestampTimeframes[number];
+
+export function isDateTimeframe(t: TimestampTimeframe): t is DateTimeframe {
+  return dateTimeframes.indexOf(t) != -1;
+}
+
+const extractDateTimeframes = [
+  "DAY_OF_WEEK",
+  "DAY",
+  "DAY_OF_YEAR",
+  "WEEK",
+  "MONTH",
+  "QUARTER",
+  "YEAR",
+  "HOUR",
+  "HOURS",
+  "MINUTE",
+  "MINUTES",
+  "SECOND",
+  "SECOND",
+];
+
+export type ExtractDateTimeframe = typeof extractDateTimeframes[number];
+
+export type DialectExpr = (string | unknown)[];
+
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
@@ -92,4 +122,37 @@ export abstract class Dialect {
     return `CAST(DATE(${sqlDateExp}) AS ${this.stringTypeName} )`;
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
+
+  // date truncation
+  abstract sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr;
+
+  // Timestamp truncation
+  abstract sqlTimestampTrunc(
+    expr: unknown,
+    timeframe: TimestampTimeframe,
+    timezone: string
+  ): DialectExpr;
+
+  abstract sqlExtractDateTimeframe(
+    expr: unknown,
+    timeframe: ExtractDateTimeframe
+  ): DialectExpr;
+
+  abstract sqlDateCast(expr: unknown): DialectExpr;
+
+  abstract sqlTimestampCast(expr: unknown): DialectExpr;
+
+  abstract sqlDateAdd(
+    op: "+" | "-",
+    expr: unknown,
+    n: unknown,
+    timeframe: DateTimeframe
+  ): DialectExpr;
+
+  abstract sqlTimestampAdd(
+    op: "+" | "-",
+    expr: unknown,
+    n: unknown,
+    timeframe: DateTimeframe
+  ): DialectExpr;
 }
