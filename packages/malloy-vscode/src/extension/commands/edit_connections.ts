@@ -23,8 +23,8 @@ import {
 } from "../webview_message_manager";
 import { CONNECTION_MANAGER, getConnectionsConfig } from "../state";
 import { ConnectionBackend, ConnectionConfig } from "../../common";
-import { deletePassword, setPassword } from "keytar";
 import { getDefaultIndex } from "../../common/connection_manager_types";
+import { deletePassword, setPassword } from "keytar";
 
 export function editConnectionsCommand(): void {
   const panel = vscode.window.createWebviewPanel(

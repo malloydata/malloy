@@ -14,12 +14,12 @@
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { Connection, FixedConnectionMap } from "@malloydata/malloy";
-import { getPassword } from "keytar";
 import {
   ConnectionBackend,
   ConnectionConfig,
   getDefaultIndex,
 } from "./connection_manager_types";
+import { getPassword } from "keytar";
 
 export class ConnectionManager {
   private _connections: FixedConnectionMap;

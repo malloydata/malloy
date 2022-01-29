@@ -36,6 +36,7 @@ import { CONNECTION_MANAGER, getConnectionsConfig } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 
 let client: LanguageClient;
+export let extensionModeProduction: boolean;
 
 export function activate(context: vscode.ExtensionContext): void {
   // Show Licenses
