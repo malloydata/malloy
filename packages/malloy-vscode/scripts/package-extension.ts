@@ -29,13 +29,6 @@ export async function doPackage(
 ): Promise<string> {
   await doBuild(target);
 
-  const packagePath = path.join(
-    outDir,
-    target
-      ? `malloy-vscode-${target}-${version}.vsix`
-      : `malloy-vscode-${version}.vsix`
-  );
-
   // vsce uses package.json as a manifest, and has no way to pass in a version - it only reads
   // version info from package.json. This is annoying for many reasonas, but particularly for
   // CI & for managing production vs pre-release versions progarmmatically.
@@ -46,6 +39,13 @@ export async function doPackage(
 
   if (!version) version = packageJSON.version; // get version info from package.json if it isn't passed in
   if (!semver.valid(version)) throw new Error(`Invalid semver: ${version}`);
+
+  const packagePath = path.join(
+    outDir,
+    target
+      ? `malloy-vscode-${target}-${version}.vsix`
+      : `malloy-vscode-${version}.vsix`
+  );
 
   fs.copyFileSync("package.json", "package.json.original");
 
