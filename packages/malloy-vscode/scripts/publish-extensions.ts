@@ -24,10 +24,8 @@ async function doPublish(version: string) {
     // ever push production version > 0.0.x
     version = `0.1.${Math.floor(Date.now() / 1000)}`;
     preRelease = true;
-  } else {
-    if (version && !semver.valid(version))
-      throw new Error(`Invalid semver: ${version}`);
-  }
+  } else if (!semver.valid(version))
+    throw new Error(`Invalid semver: ${version}`);
 
   for (const target in targetKeytarMap) {
     const packagePath = await doPackage(target as Target, version, preRelease);
