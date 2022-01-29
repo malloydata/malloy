@@ -15,9 +15,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { build } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
-import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+
+// importing this in normal fashion seems to import an older API?!
+// for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const fs = require("fs");
 
 export type Target =
   | "linux-x64"
@@ -74,8 +78,7 @@ export async function doBuild(target?: Target): Promise<void> {
   if (target && !targetKeytarMap[target])
     throw new Error(`Invalid target: ${target}`);
 
-  // TODO what the heck with not having fs.rm when running via ts-node
-  fs.rmdirSync(outDir, { recursive: true });
+  fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
   fs.writeFileSync(
