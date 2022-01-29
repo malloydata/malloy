@@ -31,6 +31,7 @@ import { exit } from "process";
 
 const DOCS_ROOT_PATH = path.join(__dirname, "../../_src");
 const OUT_PATH = path.join(__dirname, "../../_includes/generated");
+const JS_OUT_PATH = path.join(__dirname, "../../js/generated");
 const OUT_PATH2 = path.join(__dirname, "../../documentation/");
 const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
@@ -39,9 +40,10 @@ const WATCH_ENABLED = process.argv.includes("--watch");
 
 Malloy.db = new BigQueryConnection("docs");
 
-async function compileDoc(
-  file: string
-): Promise<{ errors: { path: string; snippet: string; error: string }[] }> {
+async function compileDoc(file: string): Promise<{
+  errors: { path: string; snippet: string; error: string }[];
+  searchSegments: { path: string; titles: string[]; paragraphs: string[] }[];
+}> {
   const startTime = performance.now();
   const shortPath = file.substring(DOCS_ROOT_PATH.length);
   const shortOutPath = shortPath.replace(/\.md$/, ".html");
@@ -49,7 +51,10 @@ async function compileDoc(
   const outDirPath = path.join(outPath, "..");
   fs.mkdirSync(outDirPath, { recursive: true });
   const markdown = fs.readFileSync(file, "utf8");
-  const { renderedDocument, errors } = await renderDoc(markdown, shortPath);
+  const { renderedDocument, errors, searchSegments } = await renderDoc(
+    markdown,
+    shortPath
+  );
   const headerDoc =
     `---\n` +
     `layout: documentation\n` +
@@ -65,12 +70,19 @@ async function compileDoc(
       performance.now()
     )}.`
   );
-  return { errors: errors.map((error) => ({ ...error, path: shortPath })) };
+  return {
+    errors: errors.map((error) => ({ ...error, path: shortPath })),
+    searchSegments: searchSegments.map((segment) => ({
+      ...segment,
+      path: shortPath,
+    })),
+  };
 }
 
 function rebuildSidebarAndFooters() {
   const tableOfContents = JSON.parse(fs.readFileSync(CONTENTS_PATH, "utf8"))
     .contents as Section[];
+
   const renderedSidebar = renderSidebar(tableOfContents);
   fs.writeFileSync(path.join(OUT_PATH, "toc.html"), renderedSidebar);
   log(`File _includes/toc.html written.`);
@@ -91,6 +103,19 @@ function rebuildSidebarAndFooters() {
   log(`Files _includes/footers/** written.`);
 }
 
+function outputSearchSegmentsFile(
+  searchSegments: { path: string; titles: string[]; paragraphs: string[] }[]
+) {
+  const file = `window.SEARCH_SEGMENTS = ${JSON.stringify(
+    searchSegments,
+    null,
+    2
+  )}`;
+  fs.mkdirSync(JS_OUT_PATH, { recursive: true });
+  fs.writeFileSync(path.join(JS_OUT_PATH, "search_segments.js"), file);
+  log(`File js/generated/search_segments.js written.`);
+}
+
 (async () => {
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);
@@ -106,6 +131,11 @@ function rebuildSidebarAndFooters() {
   const startTime = performance.now();
   const results = await Promise.all(allDocs.map(compileDoc));
   const allErrors = results.map(({ errors }) => errors).flat();
+  const allSegments = results
+    .map(({ searchSegments }) => searchSegments)
+    .flat();
+  // TODO make this update in watch mode
+  outputSearchSegmentsFile(allSegments);
   log(`All docs compiled in ${timeString(startTime, performance.now())}`);
 
   rebuildSidebarAndFooters();

@@ -19,7 +19,6 @@ import {
   TextDocumentSyncKind,
   InitializeResult,
   SemanticTokensBuilder,
-  DidChangeConfigurationNotification,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -66,17 +65,22 @@ connection.onInitialize((params: InitializeParams) => {
     };
   }
 
-  connection.client.register(DidChangeConfigurationNotification.type, {
-    section: "malloy.connections",
-  });
-
   return result;
 });
 
 async function diagnoseDocument(document: TextDocument) {
   if (haveConnectionsBeenSet) {
+    // Necessary to copy the version, because it's mutated in the same document object
+    const versionAtRequestTime = document.version;
     const diagnostics = await getMalloyDiagnostics(documents, document);
-    connection.sendDiagnostics({ uri: document.uri, diagnostics });
+    // Only send diagnostics if the document hasn't changed since this request started
+    if (versionAtRequestTime === document.version) {
+      connection.sendDiagnostics({
+        uri: document.uri,
+        diagnostics,
+        version: document.version,
+      });
+    }
   }
 }
 

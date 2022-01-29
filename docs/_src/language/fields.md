@@ -2,7 +2,7 @@
 
 Fields constitute all kinds of data in Malloy. They
 can represent dimensional attributes sourced directly from
-tables in a database, constant values to be used in later analyis, computed metrics derived from other fields, or even nested structures created from aggregating subqueries.
+tables in a database, constant values to be used in later analysis, computed metrics derived from other fields, or even nested structures created from aggregating subqueries.
 
 ## Defining Fields
 
@@ -12,7 +12,7 @@ explore or a query stage. In either case, they are defined using the `is` keywor
 **In an explore**
 
 ```malloy
-explore users is table('malloy-data.ecomm.users'){
+explore: users is table('malloy-data.ecomm.users') {
   dimension: age_in_dog_years is age * 7
 }
 ```
@@ -20,7 +20,7 @@ explore users is table('malloy-data.ecomm.users'){
 **In a query stage**
 
 ```malloy
-query: users->{
+query: users -> {
   group_by: age_in_dog_years is age * 7
 }
 ```
@@ -35,7 +35,7 @@ subquery." See the [Nesting](nesting.md) section for a
 detailed discussion of nested queries.
 
 ```malloy
-query: flights->{
+query: flights -> {
   group_by: carrier
   nest: by_month is {
     group_by: departure_month is dep_time.month
@@ -46,7 +46,7 @@ query: flights->{
 
 ## Field Names
 
-Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in backticks, e.g. `` `year` is dep_time.year``.
+Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in back ticks, e.g. `` `year` is dep_time.year``.
 
 ## Kinds of Fields
 
@@ -61,7 +61,7 @@ Dimensions are defined using expressions that contain no
 aggregate functions.
 
 ```malloy
-expore users is table('malloy-data.ecomm.users'){
+expore: users is table('malloy-data.ecomm.users') {
   dimension: full_name is concat(first_name, ' ', last_name)
 }
 ```
@@ -70,17 +70,18 @@ Dimensions may be used in both `reduce` and `project`
 queries.
 
 ```malloy
--- Show the top 10 full names by number of occurrances
-query: users->{
+// Show the top 10 full names by number of occurrences
+query: users -> {
   top: 10
   group_by: full_name
-  aggregate: occurances is count()
+  aggregate: occurrences is count()
 }
 
--- Show 10 users' full names
-query: users->{
-  project full_name
-  limit: 10     // top and limit are synonyms
+// Show 10 users' full names
+query: users -> {
+  project: full_name
+  limit: 10 // top and limit are synonyms
+}
 ```
 
 ### Measures
@@ -91,7 +92,7 @@ multiple records.
 Measures may not be used in `project` queries. However, any measures that appear in a `reduce` query stage are "dimensionalized" as part of the query, and are therefore usable as dimensions in subsequent stages.
 
 ```malloy
-query: flights->{
+query: flights -> {
   group_by: carrier
   aggregate: flight_count is count()
 } -> {
@@ -105,7 +106,7 @@ Queries represent a pipelined data transformation including a source and one or 
 their source is implicit.
 
 ```malloy
-explore flights is table('malloy-data.faa.flights'){
+explore: flights is table('malloy-data.faa.flights') {
   query: by_carrier is {
     group_by: carrier
     aggregate: flight_count is count()
@@ -116,9 +117,9 @@ explore flights is table('malloy-data.faa.flights'){
 A named query's pipeline can always begin with another named query.
 
 ```malloy
-explore flights is table('malloy-data.faa.flights'){
+explore: flights is table('malloy-data.faa.flights') {
   ...
-  query: top_carriers is by_carrier->{
+  query: top_carriers is by_carrier -> {
     project: carrier
     limit: 5
   }

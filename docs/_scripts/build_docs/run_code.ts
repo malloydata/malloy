@@ -17,7 +17,7 @@
  * that depend on that model. If `--watch` is enabled, changes to a model file
  * will cause relevant documents to recompile.
  */
-import { DataStyles, HTMLView, JSONView } from "@malloydata/render";
+import { DataStyles, HTMLView } from "@malloydata/render";
 import {
   Malloy,
   Runtime,
@@ -31,6 +31,7 @@ import { promises as fs } from "fs";
 import { performance } from "perf_hooks";
 import { timeString } from "./utils";
 import { log } from "./log";
+import Prism from "prismjs";
 
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
 
@@ -60,7 +61,7 @@ interface RunOptions {
   size?: string;
   pageSize?: number;
   dataStyles: DataStyles;
-  showAs?: "html" | "json";
+  showAs?: "html" | "json" | "sql";
   queryName?: string;
   exploreName?: string;
   isHidden?: boolean;
@@ -215,17 +216,46 @@ export async function runCode(
     ...urlReader.getHackyAccumulatedDataStyles(),
   };
 
-  let result: string;
-  if (options.showAs === "json") {
-    result = await new JSONView().render(queryResult.data);
-  } else {
-    result = await new HTMLView().render(queryResult.data, dataStyles);
-  }
+  const showAs = options.showAs || "html";
+
+  const jsonResult = Prism.highlight(
+    JSON.stringify(queryResult.data.toObject(), null, 2),
+    Prism.languages["json"],
+    "json"
+  );
+  const htmlResult = await new HTMLView().render(queryResult.data, dataStyles);
+  const sqlResult = Prism.highlight(
+    queryResult.sql,
+    Prism.languages["sql"],
+    "sql"
+  );
+
+  const htmlSelected = showAs === "html" ? "selected" : "";
+  const jsonSelected = showAs === "json" ? "selected" : "";
+  const sqlSelected = showAs === "sql" ? "selected" : "";
 
   return `<div class="result-outer ${options.size || "small"}">
-    <div class="result-middle">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" ${htmlSelected} data-result-kind="html">HTML</button>
+        <button class="result-control" ${jsonSelected} data-result-kind="json">JSON</button>
+        <button class="result-control" ${sqlSelected} data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" ${htmlSelected}>
       <div class="result-inner">
-        ${result}
+        ${htmlResult}
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" ${jsonSelected}>
+      <div class="result-inner">
+        <pre>${jsonResult}</pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" ${sqlSelected}>
+      <div class="result-inner">
+        <pre>${sqlResult}</pre>
       </div>
     </div>
   </div>`;

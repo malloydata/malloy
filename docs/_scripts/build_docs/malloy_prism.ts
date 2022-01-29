@@ -41,7 +41,7 @@ export const MALLOY_GRAMMAR = {
   timeframe:
     /\b((year|quarter|month|week|day|hour|minute|second|day_of_year|day_of_month)s?)\b/i,
   keyword:
-    /\b(?:IMPORT|PICK|WHEN|ELSE|TO|FOR|EXPORT|AND|AS|ASC|BY|CROSS|DESC|DEFINE|ENHANCE|FOREIGN|FROM|IS|JOINS|KEY|NOT|NULL|ORDER|ON|OR|REDUCE|ACCEPT|AGGREGATE|DIMENSION|EXCEPT|EXPLORE|GROUP_BY|HAVING|INDEX|JOIN|LIMIT|MEASURE|NEST|ORDER_BY|PRIMARY_KEY|PROJECT|QUERY|RENAME|TOP|WHERE)\b/i,
+    /\b(?:IMPORT|PICK|WHEN|ELSE|TO|FOR|EXPORT|AND|AS|ASC|BY|CROSS|DESC|DEFINE|ENHANCE|FOREIGN|FROM|IS|KEY|NOT|NULL|ORDER|ON|OR|REDUCE|ACCEPT|AGGREGATE|DIMENSION|EXCEPT|EXPLORE|GROUP_BY|HAVING|INDEX|JOIN_ONE|WITH|JOIN_MANY|JOIN_CROSS|LIMIT|MEASURE|NEST|ORDER_BY|PRIMARY_KEY|PROJECT|QUERY|RENAME|TOP|WHERE)\b/i,
   function_keyword: /\b(?:DISTINCT)\b/i,
   function:
     /\b(?:AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|[a-zA-Z]*)(?=\s*\()/i, // Should we highlight user defined functions too?
@@ -51,6 +51,6 @@ export const MALLOY_GRAMMAR = {
   operator:
     /[-+*/=%^~]|&&?|\|\|?|!=?|<(?:=>?|<|>)?|>[>=]?|\b(?:AND|BETWEEN|IN|LIKE|NOT|OR|IS|DIV|REGEXP|RLIKE|SOUNDS LIKE|XOR)\b/i,
   punctuation: /[;[\]()`,.]/,
-  type: /\b((string|number|date|timestamp|boolean)s?)\b/i,
+  type: /\b((string|number|date|timestamp|boolean))\b/i,
   variable: [],
 };

@@ -1,6 +1,6 @@
 # Models
 
-Malloy recognizes modeling as a key aspect of data analyitics and
+Malloy recognizes modeling as a key aspect of data analytics and
 provides tools that allow for modularity and reusability of definitions.
 Whereas in SQL, queries generally define all metrics inline,
 requiring useful snippets to be saved and managed separately, in Malloy,
@@ -14,12 +14,12 @@ used in queries.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}
-explore: flights is table('malloy-data.faa.flights'){
+explore: flights is table('malloy-data.faa.flights') {
   dimension: distance_km is distance / 1.609344
 
   measure: flight_count is count()
 
-  query: by_carrier is  {
+  query: by_carrier is {
     group_by: carrier
     aggregate: flight_count
   }
@@ -32,25 +32,25 @@ See [here](explore.md) for more information on explores.
 ### Using modeled in query.
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights->by_carrier
+query: flights -> by_carrier
 ```
 
 ### Using modeled with a filter.
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights{where: origin: 'SFO'}->by_carrier
+query: flights { where: origin = 'SFO' } -> by_carrier
 ```
 ### Setting a limit on the Query
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights{where: origin: 'SFO'}->by_carrier{limit: 2}
+query: flights { where: origin = 'SFO' } -> by_carrier { limit: 2 }
 ```
 
 
 ### Creating a brand new Query.
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights->{
+query: flights -> {
   group_by: destination
   aggregate: [
     flight_count
@@ -62,13 +62,13 @@ query: flights->{
 ### Putting it all together.
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights->{
+query: flights -> {
   group_by: destination
   aggregate: [
     flight_count
     average_distance_in_km is distance_km.avg()
   ]
-  nest: top_carriers is by_carrier{limit: 2}
+  nest: top_carriers is by_carrier { limit: 2 }
 }
 ```
 See [here](query.md) for more information on queries.

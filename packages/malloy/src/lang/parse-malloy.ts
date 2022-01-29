@@ -19,7 +19,7 @@ import {
   CharStreams,
   CommonTokenStream,
 } from "antlr4ts";
-import { ParseTree } from "antlr4ts/tree";
+import type { ParseTree } from "antlr4ts/tree";
 import {
   Query,
   NamedStructDefs,
@@ -234,9 +234,12 @@ export abstract class MalloyTranslation {
         return this.parseResponse;
       }
     }
-    const source = this.root.importZone.get(this.sourceURL);
+    let source = this.root.importZone.get(this.sourceURL);
     if (!source) {
       return { urls: [this.sourceURL] };
+    }
+    if (source == "") {
+      source = "\n";
     }
 
     const parse = runParser(

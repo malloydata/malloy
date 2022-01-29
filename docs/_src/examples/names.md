@@ -2,12 +2,12 @@
 
 _You can find the complete source code for this model [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/names/names.malloy)._
 
-The Data set consits of name, gender, state and year with the number of people that
+The Data set consists of name, gender, state and year with the number of people that
 were born with that name in that gender, state and year.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": false, "pageSize": 100}
-query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
+query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   top: 10
   project: *
 }
@@ -23,7 +23,7 @@ and `year` are reserved words, we have to quote the names with back-tics.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
+query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   group_by: name
   aggregate: population is `number`.sum()
 }
@@ -44,9 +44,9 @@ Expressions work much the same as they do in SQL.  We can look at population ove
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
+query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   top: 10
-  group_by: decade is FLOOR(`year`/10)*10
+  group_by: decade is floor(`year` / 10) * 10
   aggregate: population is sum(`number`)
 }
 ```
@@ -56,10 +56,9 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013')->{
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "pageSize":20, "size":"large" }
 explore: names is from(
-  table('bigquery-public-data.usa_names.usa_1910_2013')->
-  {
+  table('bigquery-public-data.usa_names.usa_1910_2013') -> {
     group_by: [
-      decade is floor(`year`/10)*10
+      decade is floor(`year` / 10) * 10
       state
       gender
     ]
@@ -69,20 +68,20 @@ explore: names is from(
       aggregate: population is `number`.sum()
     }
   }
-){
-  measure: births_per_100k is FLOOR(by_name.population.sum()/cohort_population.sum() *100000)
+) {
+  measure: births_per_100k is floor(by_name.population.sum() / cohort_population.sum() * 100000)
   measure: total_cohort_population is cohort_population.sum()
-  dimension: name is concat(by_name.name,'')
+  dimension: name is concat(by_name.name, '')
 }
 
-query: names->{
+query: names -> {
   group_by: [
     state
     gender
   ]
   aggregate: total_cohort_population
   nest: names is {
-    where: name : 'Michael'|'Lloyd'|'Olivia'
+    where: name : 'Michael' | 'Lloyd' | 'Olivia'
     group_by: name
     aggregate: population is by_name.population.sum()
     group_by: births_per_100k
@@ -94,7 +93,7 @@ query: names->{
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "names/names.malloy", "isPaginationEnabled": false, "pageSize": 100, "size":"large"}
-query: names-> name_dashboard {where: name ~ 'Mich%'}
+query: names -> name_dashboard { where: name ~ 'Mich%' }
 ```
 
 ## Iconic Names by State and Gender
@@ -102,7 +101,7 @@ Calculate the births per 100K for a name in general and a name within a state. C
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "names/names.malloy", "isPaginationEnabled": false, "pageSize": 100, "size":"large"}
-query: names {where: decade <1970}->{
+query: names { where: decade < 1970 } -> {
   group_by: name
   group_by: gender
   aggregate: births_per_100k
@@ -110,17 +109,16 @@ query: names {where: decade <1970}->{
     group_by: state
     aggregate: births_per_100k
   }
-}
--> {
+} -> {
   where: births_per_100k > 50
   group_by: by_state.state
   nest: by_gender is {
     group_by: gender
     nest: by_name is {
       top: 15
-      order_by: 2 desc
+      order_by: popularity desc
       group_by: name
-      aggregate: popularity is (by_state.births_per_100k - births_per_100k) /births_per_100k
+      aggregate: popularity is (by_state.births_per_100k - births_per_100k) / births_per_100k
     }
   }
 }

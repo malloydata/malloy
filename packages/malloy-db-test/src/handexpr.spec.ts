@@ -547,15 +547,12 @@ export const joinModelAircraftHandStructDef: StructDef = {
     {
       ...aircraftHandBase,
       structRelationship: {
-        type: "condition",
-        joinRelationship: "one_to_many",
-        onExpression: {
-          e: [
-            { type: "field", path: "aircraft_model_code" },
-            "=",
-            { type: "field", path: "aircraft.aircraft_model_code" },
-          ],
-        },
+        type: "many",
+        onExpression: [
+          { type: "field", path: "aircraft_model_code" },
+          "=",
+          { type: "field", path: "aircraft.aircraft_model_code" },
+        ],
       },
     },
   ],
@@ -583,31 +580,12 @@ export const modelAircraftHandStructDef: StructDef = {
     {
       ...aircraftHandBase,
       structRelationship: {
-        type: "condition",
-        joinRelationship: "one_to_many",
-        onExpression: {
-          e: [
-            { type: "field", path: "aircraft_model_code" },
-            "=",
-            { type: "field", path: "aircraft.aircraft_model_code" },
-          ],
-        },
-      },
-    },
-  ],
-};
-
-export const aircraftBModelInner: StructDef = {
-  ...aircraftHandBase,
-  as: "aircraft_modelb_inner",
-  fields: [
-    ...aircraftHandBase.fields,
-    {
-      ...modelB,
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: "aircraft_model_code",
-        joinType: "inner",
+        type: "one",
+        onExpression: [
+          { type: "field", path: "aircraft_model_code" },
+          "=",
+          { type: "field", path: "aircraft.aircraft_model_code" },
+        ],
       },
     },
   ],
@@ -615,10 +593,9 @@ export const aircraftBModelInner: StructDef = {
 
 const joinModel: ModelDef = {
   name: "Hand Coded Join Models",
-  exports: ["model_aircraft", "aircraft_modelb_inner"],
+  exports: ["model_aircraft"],
   contents: {
     model_aircraft: joinModelAircraftHandStructDef,
-    aircraft_modelb_inner: aircraftBModelInner,
   },
 };
 
@@ -654,27 +631,7 @@ it(`hand join symmetric agg - ${databaseName}`, async () => {
     })
     .run();
   // await bqCompile(databaseName, result.sql);
-  // console.log(result.sql);
   // console.log(result.data.value);
   expect(result.data.value[0].total_seats).toBe(452415);
   expect(result.data.value[0].aircraft_count).toBe(62644);
-});
-
-it(`hand join foreign key filtered inner - ${databaseName}`, async () => {
-  const result = await handJoinModel
-    ._loadQueryFromQueryDef({
-      structRef: "aircraft_modelb_inner",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: ["aircraft_models.total_seats", "aircraft_count"],
-        },
-      ],
-    })
-    .run();
-  // await bqCompile(databaseName, result.sql);
-  // console.log(result.sql);
-  // console.log(result.data.value);
-  expect(result.data.value[0].total_seats).toBe(7448);
-  expect(result.data.value[0].aircraft_count).toBe(544);
 });

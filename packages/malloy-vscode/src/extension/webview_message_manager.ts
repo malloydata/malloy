@@ -34,14 +34,14 @@ export class WebviewMessageManager<T> {
   }
 
   private pendingMessages: T[] = [];
-  private panelCanReceiveMessages = false;
+  private panelCanReceiveMessages = true;
   private clientCanReceiveMessages = false;
   private callback: (message: T) => void = () => {
     /* Do nothing by default */
   };
 
   public postMessage(message: T): void {
-    if (this.panelCanReceiveMessages) {
+    if (this.canSendMessages) {
       this.panel.webview.postMessage(message);
     } else {
       this.pendingMessages.push(message);
@@ -90,11 +90,6 @@ export enum QueryMessageType {
   AppReady = "app-ready",
 }
 
-export enum QueryRenderMode {
-  HTML = "html",
-  JSON = "json",
-}
-
 interface QueryMessageStatusCompiling {
   type: QueryMessageType.QueryStatus;
   status: QueryRunStatus.Compiling;
@@ -116,7 +111,6 @@ interface QueryMessageStatusDone {
   status: QueryRunStatus.Done;
   result: ResultJSON;
   styles: DataStyles;
-  mode: QueryRenderMode;
 }
 
 type QueryMessageStatus =

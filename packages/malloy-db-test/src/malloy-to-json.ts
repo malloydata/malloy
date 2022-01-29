@@ -73,7 +73,7 @@ function fullPath(fn: string): string {
   if (fn[0] === "/") {
     return fn;
   }
-  return `${process.env.INIT_CWD}/${fn}`;
+  return `${process.cwd()}/${fn}`;
 }
 
 async function main() {

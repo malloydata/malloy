@@ -7,7 +7,7 @@ Let's suppose we wanted to look flight data but only at only the top 5 carriers 
 ## Carriers by destination produces 1958 rows
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-query: flights->{
+query: flights -> {
   group_by: [
     carriers.nickname
     destination_code
@@ -20,17 +20,17 @@ query: flights->{
 Query to find the most interesting carriers.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-query: flights->{
+query: flights -> {
   top: 5
   group_by: carriers.nickname
   aggregate: flight_count
 }
 ```
 
-## Top 5 Destinstinations
+## Top 5 Destinations
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-query: flights->{
+query: flights -> {
   top: 5
   group_by: destination_code
   aggregate: flight_count
@@ -41,7 +41,7 @@ query: flights->{
 Produces a table with a single row and three columns.  Each column essentially contains a table
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-query: flights->{
+query: flights -> {
   nest: main_query is {
     group_by: [
       carriers.nickname
@@ -55,7 +55,7 @@ query: flights->{
     aggregate: flight_count
   }
   nest: top_destinations is {
-    top:5
+    top: 5
     group_by: destination_code
     aggregate: flight_count
   }
@@ -67,7 +67,7 @@ Project produces a cross join of the tables.  The filter essentially does an inn
 dimensional values that are produce in the filtering queries.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-query: flights->{
+query: flights -> {
   nest: main_query is {
     group_by: [
       carriers.nickname
@@ -85,10 +85,11 @@ query: flights->{
     group_by: destination_code
     aggregate: flight_count
   }
-}->{
-  where:
-    main_query.nickname = top_carriers.nickname and
+} -> {
+  where: [
+    main_query.nickname = top_carriers.nickname,
     main_query.destination_code = top_destinations.destination_code
+  ]
   project: main_query.*
 }
 ```
@@ -96,7 +97,7 @@ query: flights->{
 ## Render the results as a pivot table
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
-query: flights->{
+query: flights -> {
   nest: main_query is {
     group_by: [
       carriers.nickname
@@ -114,7 +115,7 @@ query: flights->{
     group_by: destination_code
     aggregate: flight_count
   }
-}->{
+} -> {
   where:
     main_query.nickname = top_carriers.nickname and
     main_query.destination_code = top_destinations.destination_code

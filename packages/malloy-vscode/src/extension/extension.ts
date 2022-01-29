@@ -32,11 +32,11 @@ import {
   runQueryWithEdit,
   showLicensesCommand,
 } from "./commands";
-import { showResultJSONCommand } from "./commands/show_result_json";
 import { CONNECTION_MANAGER, getConnectionsConfig } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 
 let client: LanguageClient;
+export let extensionModeProduction: boolean;
 
 export function activate(context: vscode.ExtensionContext): void {
   // Show Licenses
@@ -69,14 +69,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(
       "malloy.copyFieldPath",
       copyFieldPathCommand
-    )
-  );
-
-  // Show result JSON
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "malloy.showResultJSON",
-      showResultJSONCommand
     )
   );
 

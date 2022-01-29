@@ -13,6 +13,7 @@
 
 import { DateTime } from "luxon";
 import {
+  Expr,
   Fragment,
   isTimeTimeframe,
   TimeTimeframe,
@@ -100,7 +101,13 @@ abstract class GranularTime extends ExpressionDef {
     }
     const begin = new ExprTime("timestamp", beginAt.value, beginAt.aggregate);
     const timeframe = this.units;
-    const endAt = timestampOffset(beginAt.value, "+", ["1"], timeframe);
+    const endAt = timestampOffset(
+      fs.getDialect(),
+      beginAt.value,
+      "+",
+      ["1"],
+      timeframe
+    );
     const end = new ExprTime("timestamp", endAt, beginAt.aggregate);
     const range = new Range(begin, end);
     return range.apply(fs, op, expr);
@@ -117,11 +124,19 @@ abstract class GranularTime extends ExpressionDef {
         beginAt = {
           ...beginAt,
           dataType: "date",
-          value: compressExpr(["DATE(", ...beginAt.value, ")"]),
+          value: compressExpr(
+            fs.getDialect().sqlDateCast(beginAt.value) as Expr
+          ),
         };
       }
       const begin = new ExprTime("date", beginAt.value, beginAt.aggregate);
-      const endAt = dateOffset(beginAt.value, "+", ["1"], this.units);
+      const endAt = dateOffset(
+        fs.getDialect(),
+        beginAt.value,
+        "+",
+        ["1"],
+        this.units
+      );
       const end = new ExprTime("date", endAt, beginAt.aggregate);
       const range = new Range(begin, end);
       return range.apply(fs, op, expr);
@@ -154,11 +169,17 @@ export class ExprGranularTime extends GranularTime {
         value: exprVal.value,
       };
       if (this.truncate) {
-        tsVal.value = compressExpr([
-          `${tsVal.dataType.toUpperCase()}_TRUNC(`,
-          ...exprVal.value,
-          `,${timeframe.toUpperCase()})`,
-        ]);
+        if (exprVal.dataType === "date") {
+          tsVal.value = compressExpr(
+            fs.getDialect().sqlDateTrunc(exprVal.value, timeframe) as Expr
+          );
+        } else {
+          tsVal.value = compressExpr(
+            fs
+              .getDialect()
+              .sqlTimestampTrunc(exprVal.value, timeframe, "UTC") as Expr
+          );
+        }
       }
       return tsVal;
     }
@@ -337,6 +358,7 @@ export class ExprDuration extends ExpressionDef {
       }
       if (lhs.dataType === "timestamp") {
         const result = timestampOffset(
+          fs.getDialect(),
           lhs.value,
           op,
           num.value,
@@ -354,7 +376,13 @@ export class ExprDuration extends ExpressionDef {
         dataType: "date",
         aggregate: lhs.aggregate || num.aggregate,
         timeframe: resultGranularity,
-        value: dateOffset(lhs.value, op, num.value, this.timeframe),
+        value: dateOffset(
+          fs.getDialect(),
+          lhs.value,
+          op,
+          num.value,
+          this.timeframe
+        ),
       };
     }
     return super.apply(fs, op, left);
@@ -474,7 +502,13 @@ export class ForRange extends ExpressionDef {
     // everything is dates, do date math
     if (checkV.dataType === "date" && rangeType === "date") {
       const rangeStart = this.from;
-      const rangeEndV = dateOffset(checkV.value, "+", nV.value, units);
+      const rangeEndV = dateOffset(
+        fs.getDialect(),
+        checkV.value,
+        "+",
+        nV.value,
+        units
+      );
       const rangeEnd = new ExprTime("date", rangeEndV);
       return new Range(rangeStart, rangeEnd).apply(fs, op, expr);
     }
@@ -485,7 +519,7 @@ export class ForRange extends ExpressionDef {
     if (checkV.dataType === "date") {
       applyTo = new ExprTime(
         "timestamp",
-        toTimestampV(checkV).value,
+        toTimestampV(fs.getDialect(), checkV).value,
         checkV.aggregate
       );
     }
@@ -497,7 +531,7 @@ export class ForRange extends ExpressionDef {
       rangeStart = rangeStart.thisValueToTimestamp(startV);
       from = rangeStart.getExpression(fs).value;
     }
-    const to = timestampOffset(from, "+", nV.value, units);
+    const to = timestampOffset(fs.getDialect(), from, "+", nV.value, units);
     const rangeEnd = new ExprTime("timestamp", to, startV.aggregate);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);

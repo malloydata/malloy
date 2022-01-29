@@ -27,7 +27,7 @@ import {
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
-import { toTimestampV } from "./time-utils";
+// import { toTimestampV } from "./time-utils";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -588,7 +588,9 @@ export class NamedSource extends Mallobj {
             let value: model.Expr | null = pVal.value;
             if (pVal.dataType !== decl.type) {
               if (decl.type === "timestamp" && pVal.dataType === "date") {
-                value = toTimestampV(pVal).value;
+                // @mtoy-googly-moogly : I've stubbed for now as we don't do parameters yet
+                //  not sure how to get to a dialect from here.
+                // value = toTimestampV(getDialect(this.dialect), pVal).value;
               } else {
                 pExpr.log(
                   `Type mismatch for parameter '${pName}', expected '${decl.type}'`
@@ -628,8 +630,19 @@ export class QuerySource extends Mallobj {
   }
 }
 
-export class Join extends MalloyElement {
-  elementType = "join";
+export abstract class Join extends MalloyElement {
+  abstract name: string;
+  abstract structDef(): model.StructDef;
+  needsFixup(): boolean {
+    return false;
+  }
+  fixupJoinOn(_outer: FieldSpace, _inStruct: model.StructDef): void {
+    return;
+  }
+}
+
+export class KeyJoin extends Join {
+  elementType = "joinOnKey";
   constructor(
     readonly name: string,
     readonly source: Mallobj,
@@ -654,6 +667,62 @@ export class Join extends MalloyElement {
       joinStruct.as = this.name;
     }
 
+    return joinStruct;
+  }
+}
+
+type ExpressionJoinType = "many" | "one" | "cross";
+export class ExpressionJoin extends Join {
+  elementType = "joinOnExpr";
+  joinType: ExpressionJoinType = "one";
+  private expr?: ExpressionDef;
+  constructor(readonly name: string, readonly source: Mallobj) {
+    super({ source });
+  }
+
+  needsFixup(): boolean {
+    return this.expr != undefined;
+  }
+
+  set joinOn(joinExpr: ExpressionDef | undefined) {
+    this.expr = joinExpr;
+    this.has({ on: joinExpr });
+  }
+
+  get joinOn(): ExpressionDef | undefined {
+    return this.expr;
+  }
+
+  fixupJoinOn(
+    outer: FieldSpace,
+    inStruct: model.StructDef
+  ): model.Expr | undefined {
+    if (this.expr == undefined) {
+      return;
+    }
+    const exprX = this.expr.getExpression(outer);
+    if (exprX.dataType !== "boolean") {
+      this.log("join conditions must be boolean expressions");
+      return;
+    }
+    const joinRel = inStruct.structRelationship;
+    if (model.isJoinOn(joinRel)) {
+      joinRel.onExpression = compressExpr(exprX.value);
+    }
+  }
+
+  structDef(): model.StructDef {
+    const sourceDef = this.source.structDef();
+    const joinStruct: model.StructDef = {
+      ...sourceDef,
+      structRelationship: { type: this.joinType },
+    };
+    if (sourceDef.structSource.type === "query") {
+      // the name from query does not need to be preserved
+      joinStruct.name = this.name;
+    } else {
+      joinStruct.as = this.name;
+    }
     return joinStruct;
   }
 }
@@ -1508,7 +1577,7 @@ export class PipelineDesc extends MalloyElement {
       return oops();
     }
     if (seedQuery.type !== "query") {
-      this.log(`Illegal eference to '${this.headName}', query expected`);
+      this.log(`Illegal reference to '${this.headName}', query expected`);
       return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);

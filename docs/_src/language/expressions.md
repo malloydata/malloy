@@ -33,15 +33,14 @@ Fields may be referenced by name, and fields in joins or nested structures can b
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-query: flights->{
+query: flights -> {
   where: origin.county != null
   group_by: origin.state
   nest: by_county is {
     group_by: origin.county
     aggregate: flight_count
   }
-}
-->{
+} -> {
   project: by_county.county
   limit: 3
 }
@@ -106,9 +105,11 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-query: flights->{
-  aggregate: distance_2003 is sum(distance){where: dep_time: @2003}
-  aggregate: ca_flights is count(){where: origin.state: 'CA'}
+query: flights -> {
+  aggregate: [
+    distance_2003 is sum(distance) { where: dep_time: @2003 }
+    ca_flights is count() { where: origin.state: 'CA' }
+  ]
 }
 ```
 
@@ -121,7 +122,7 @@ Safe type casting may be accomplished with the `::type` syntax.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
-query: flights->{
+query: flights -> {
   aggregate: distance_summary is concat(total_distance::string, ' miles')
 }
 ```
@@ -140,13 +141,13 @@ Pick expressions are also compatible with the [apply operator](#apply-operator) 
 
 ```malloy
 size:
-  pick 'small' when < 10
-  pick 'medium' when < 20
-  else 'large'
+  pick 'small' when < 10
+  pick 'medium' when < 20
+  else 'large'
 ```
 
 Pick can be used to "clean" data, combining similar dirty values into one clean value. In the following example, the `pick` statement collects all the "this actually
-shiped" statuses, and because there is no `else`, leaves the other
+shipped" statuses, and because there is no `else`, leaves the other
 status values alone.
 
 ```malloy
@@ -161,8 +162,8 @@ picks an applied value when the condition is met.
 
 ```malloy
 status:
-  pick when 'good' | 'ok' | 'fine' -- leave these alone
-  else null                        -- ignore the rest
+  pick when 'good' | 'ok' | 'fine' // leave these alone
+  else null                        // ignore the rest
 ```
 
 ## Time Expressions
@@ -186,7 +187,7 @@ To truncate a time value to a given timeframe, use the `.` operator followed by 
 By way of example, if the value of `time` is `@2021-08-06 00:36`, then the below truncations will produce the results on the right:
 
 
- timeession | result
+truncation | result
  ---- | ----
 `time.minute` | 2021-08-06 00:36
 `time.hour`   | 2021-08-06 00:00
@@ -202,7 +203,7 @@ at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example `time.year`
 would be a range covering the entire year which contains `time`.
 
-This is extremely useful with the [apply operator](#apply-operator), `:`. To see if two events happen in the same calendar year, for example, the boolean expresison in Malloy is `one_time: other_time.year`.
+This is extremely useful with the [apply operator](#apply-operator), `:`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `one_time: other_time.year`.
 
 ### Time Extraction
 
@@ -228,7 +229,7 @@ expression | meaning | result
 <!-- * `@2021-10-24 10:00:00` -->
 <!-- * `now` -->
 
-Time literals are specified in malloy with th `@` character. A literal
+Time literals are specified in malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 
@@ -263,14 +264,13 @@ Partial comparisons, or "partials" are written with a binary comparison operator
 <!-- * `> 5 & < 10` -->
 <!-- * `'CA' | 'NY'` -->
 
-Conditions can be logically combined with the two alternation operators, `&` and `|`. These are different from `and` and `or` in that they operate on conditions which return boolean vlues, rather than boolean values directly.
+Conditions can be logically combined with the two alternation operators, `&` and `|`. These are different from `and` and `or` in that they operate on conditions which return boolean values, rather than boolean values directly.
 
 The _union alternation_ operator `|` represents the logical union of two conditions. An expression like `x | y` can be read "if either `x` or `y`." For example `= 'CA' | = 'NY'` represents the condition "is either CA or NY".
 
 The _conjunction alternation_ operator `&` represents the logical conjunction of two conditions. An expression like "`x & y` can be read "if both `x` and `y`." For example, `> 5 & < 10` represents the condition "is greater than 5 and less than 10".
 
 Values can be used directly with the alternation operators, in which case the operator is assumed to be `=`. For example, `'CA' | 'NY'` is equivalent to `= 'CA' | = 'NY'`.
-
 ### Application
 
 <!-- * `state: 'CA'` -->
@@ -296,7 +296,7 @@ Values can be applied to [pick expressions](#pick-expressions) to make them more
 
 ```malloy
 size:
-  pick 'small' when < 10
-  pick 'medium' when < 20
-  else 'large'
+  pick 'small' when < 10
+  pick 'medium' when < 20
+  else 'large'
 ```

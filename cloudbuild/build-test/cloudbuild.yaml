@@ -6,7 +6,7 @@ steps:
       - -c
       - "wget -O /workspace/cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.386 && chmod +x /workspace/cloud_sql_proxy"
     waitFor: ["-"]
-  - id: run-tests
+  - id: run-script
     name: "nixos/nix"
     entrypoint: sh
     args:

@@ -9,10 +9,22 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="{{ site.baseurl }}/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="{{ site.baseurl }}/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="{{ site.baseurl }}/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         {% include /generated/toc.html %}
+        <script src="{{ site.baseurl }}/js/sidebar_state.js"></script>
         <div class="content">
           <div class="footer">
             {% if page.footer %}
@@ -23,6 +35,7 @@
             {{ content }}
           </div>
         </div>
+        <script src="{{ site.baseurl }}/js/view_toggles.js"></script>
       </div>
     </div>
   </body>

@@ -232,7 +232,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
     explore: f is table('malloytest.flights'){
       primary_key: id2
-      join: a on tail_num
+      join_one: a with tail_num
 
       measure: flight_count is count()
       query: foo is {
