@@ -30,6 +30,9 @@ async function doPublish(version: string) {
   for (const target in targetKeytarMap) {
     const packagePath = await doPackage(target as Target, version, preRelease);
 
+    console.log("HEEEEY");
+    console.log(process.env.VSCE_PAT);
+
     await publishVSIX(packagePath, {
       githubBranch: "main",
       preRelease,
