@@ -1,6 +1,19 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.packages.json",
+  "references": [
+    { "path": "packages/malloy" },
+    { "path": "packages/malloy-db-bigquery" },
+    { "path": "packages/malloy-db-postgres" },
+    { "path": "packages/malloy-db-test" },
+    { "path": "packages/malloy-render" },
+    { "path": "packages/malloy-vscode" }
+  ],
+  "files": [],
+  "include": [],
+  "exclude": ["**/node_modules"],
   "compilerOptions": {
+    "esModuleInterop": true,
+    "downlevelIteration": true,
     "noEmit": true
   }
 }

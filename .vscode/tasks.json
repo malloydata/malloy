@@ -39,7 +39,9 @@
       },
       "isBackground": true,
       "presentation": {
-        "reveal": "never"
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "close": true
       },
       "group": {
         "kind": "build",
@@ -53,7 +55,12 @@
       "problemMatcher": ["$tsc-watch"],
       "group": "build",
       "label": "tsc-typecheck",
-      "runOptions": { "runOn": "folderOpen" }
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": {
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "close": true
+      }
     }
   ]
 }
