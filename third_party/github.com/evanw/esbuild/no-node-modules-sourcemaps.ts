@@ -21,7 +21,6 @@ export const noNodeModulesSourceMaps = {
   setup(build: any): void {
     build.onLoad({ filter: /node_modules/ }, (args: any) => {
       if (args.path.endsWith(".js")) {
-        console.log(args.path);
         return {
           contents:
             fs.readFileSync(args.path, "utf8") +
