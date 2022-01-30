@@ -108,6 +108,8 @@ class HackyDataStylesAccumulator implements URLReader {
   }
 }
 
+let x: boolean = 1;
+
 export function runMalloyQuery(
   query: QuerySpec,
   panelId: string,

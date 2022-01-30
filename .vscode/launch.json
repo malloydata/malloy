@@ -13,7 +13,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
       ],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}",
+      "preLaunchTask": "build-extension-task",
       "sourceMaps": true,
       "console": "integratedTerminal",
       "runtimeArgs": ["--preserve-symlinks"]
@@ -27,7 +27,7 @@
       ],
       "debugWebviews": true,
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}",
+      "preLaunchTask": "build-extension-task",
       "sourceMaps": true,
       "console": "integratedTerminal",
       "runtimeArgs": ["--preserve-symlinks"]

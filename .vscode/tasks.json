@@ -6,6 +6,7 @@
     {
       "type": "npm",
       "script": "vscode-build-extension-dev",
+      "label": "build-extension-task",
       "problemMatcher": {
         "owner": "typescript",
         "source": "ts",
@@ -44,6 +45,15 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "type": "typescript",
+      "tsconfig": "tsconfig.type-checking-only.json",
+      "option": "watch",
+      "problemMatcher": ["$tsc-watch"],
+      "group": "build",
+      "label": "tsc-typecheck",
+      "runOptions": { "runOn": "folderOpen" }
     }
   ]
 }

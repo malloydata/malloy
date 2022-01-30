@@ -13,7 +13,6 @@
   "exclude": ["**/node_modules"],
   "compilerOptions": {
     "esModuleInterop": true,
-    "downlevelIteration": true,
-    "useUnknownInCatchVariables": false
+    "downlevelIteration": true
   }
 }
