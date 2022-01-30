@@ -8,7 +8,8 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "yarn tsc --build"
+    "build": "yarn tsc --build",
+    "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
     "@types/pg": "^8.6.1",
