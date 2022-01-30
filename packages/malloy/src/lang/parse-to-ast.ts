@@ -1050,11 +1050,15 @@ export class MalloyToAST
   }
 
   visitSqlStatement?(pcx: parse.SqlStatementContext): ast.SQLStatement {
-    const defCx = pcx.sqlExploreNameDef();
     const commands = pcx.sqlCommand().map((cx) => cx.text);
     const sqlStmt = new ast.SQLStatement(commands);
+    const defCx = pcx.sqlExploreNameDef();
     if (defCx) {
       sqlStmt.is = this.getIdText(defCx);
+    }
+    const conCx = pcx.connectionName();
+    if (conCx) {
+      sqlStmt.connectionName = this.getIdText(conCx);
     }
     return this.astAt(sqlStmt, pcx);
   }

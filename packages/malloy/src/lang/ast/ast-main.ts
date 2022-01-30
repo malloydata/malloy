@@ -1954,6 +1954,7 @@ export class ConstantParameter extends HasParameter {
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
+  connectionName?: string;
   constructor(readonly stmts: string[]) {
     super();
   }

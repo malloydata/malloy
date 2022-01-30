@@ -427,12 +427,13 @@ jsonArray
    ;
 
 sqlStatement
-  : (sqlExploreNameDef IS)? sqlCommand+
+  : (sqlExploreNameDef IS)? sqlCommand+ (ON connectionName)?
   ;
 
 sqlCommand: SQL_STRING;
 
 sqlExploreNameDef: id;
+connectionName: id;
 
 JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
 
