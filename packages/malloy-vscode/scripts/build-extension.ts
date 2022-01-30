@@ -17,6 +17,7 @@ import { build } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
 import { execSync } from "child_process";
+import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 
 // importing this in normal fashion seems to import an older API?!
 // for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
@@ -116,7 +117,10 @@ export async function doBuild(target?: Target): Promise<void> {
   // binary builds of keytar. if we're building for dev, use a .node plugin to
   // ensure ketyar's node_modules .node file is in the build
   // NOTE: adding any additional npm packages that create native libs will require a different strategy
-  const plugins = target ? [keytarReplacerPlugin] : [nativeNodeModulesPlugin];
+  const extensionPlugins = target
+    ? [keytarReplacerPlugin]
+    : [nativeNodeModulesPlugin];
+  if (development) extensionPlugins.push(noNodeModulesSourceMaps);
 
   // build the extension and server
   await build({
@@ -129,7 +133,7 @@ export async function doBuild(target?: Target): Promise<void> {
     platform: "node",
     external: ["vscode", "pg-native", "./keytar-native.node"],
     loader: { [".png"]: "file", [".svg"]: "file" },
-    plugins,
+    plugins: extensionPlugins,
     watch: development
       ? {
           onRebuild(error, result) {
@@ -156,6 +160,7 @@ export async function doBuild(target?: Target): Promise<void> {
     define: {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
     },
+    plugins: development ? [noNodeModulesSourceMaps] : [],
     watch: development
       ? {
           onRebuild(error, result) {
