@@ -10,6 +10,10 @@
         {
           "title": "Key Features",
           "link": "/features.md"
+        },
+        {
+          "title": "Sample Models",
+          "link": "/samples.md"
         }
       ]
     },

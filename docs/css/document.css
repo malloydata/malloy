@@ -54,6 +54,14 @@ div.header-banner {
   align-items: center;
 }
 
+a.button-link {
+  border-radius: 5px;
+  background-color: #4285f4;
+  color: white;
+  border:1px solid #176af0;
+  padding: 5px 10px;
+}
+
 div.header span.subtitle {
   color: #4285f4;
 }
