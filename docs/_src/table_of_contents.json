@@ -12,6 +12,10 @@
           "link": "/features.md"
         },
         {
+          "title": "Sample Models",
+          "link": "/samples.md"
+        },
+        {
           "title": "Connecting a Database",
           "link": "/connection_instructions.md"
         }
