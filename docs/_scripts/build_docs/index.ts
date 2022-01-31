@@ -145,7 +145,7 @@ function outputSamplesZip(relativePath: string, name: string): Promise<void> {
 async function outputSamplesZips(): Promise<void> {
   log("Zipping samples");
   await Promise.all([
-    outputSamplesZip("/", "samples"),
+    outputSamplesZip("/", "samples.zip"),
     ...fs.readdirSync(SAMPLES_PATH).map((relativePath) => {
       if (fs.statSync(path.join(SAMPLES_PATH, relativePath)).isDirectory()) {
         return outputSamplesZip(relativePath, relativePath + ".zip");
