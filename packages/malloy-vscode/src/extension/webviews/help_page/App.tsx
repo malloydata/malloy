@@ -57,7 +57,7 @@ export const App: React.FC = () => {
         </ButtonLink>
       </Row>
       <Row>
-        <ButtonLink href="https://looker-open-source.github.io/malloy/">
+        <ButtonLink href="https://looker-open-source.github.io/malloy/aux/generated/samples.zip">
           Download Sample Models
         </ButtonLink>
       </Row>
