@@ -1,4 +1,5 @@
 --! styles iowa.styles.json
+
 explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   // dimensions
@@ -125,10 +126,18 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
   }
 }
 
-query: vodka_dashboard is iowa->vendor_dashboard { where: category_class: 'VODKAS' }
+query: vodka_dashboard is iowa->vendor_dashboard {
+  where: category_class: 'VODKAS'
+}
 
-query: tequila_dashboard is iowa->vendor_dashboard { where: category_class: 'TEQUILAS' }
+query: tequila_dashboard is iowa->vendor_dashboard {
+  where: category_class: 'TEQUILAS'
+}
 
-query: luxco_dashboard is iowa->vendor_dashboard { where: vendor_name: ~ r'Luxco' }
+query: luxco_dashboard is iowa->vendor_dashboard {
+  where: vendor_name: ~ r'Luxco'
+}
 
-query: jim_beam_dashboard is iowa->vendor_dashboard { where: vendor_name: ~ r'Jim Beam' }
+query: jim_beam_dashboard is iowa->vendor_dashboard {
+  where: vendor_name: ~ r'Jim Beam'
+}
