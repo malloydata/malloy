@@ -23,8 +23,8 @@ import {
 } from "../webview_message_manager";
 import { CONNECTION_MANAGER, getConnectionsConfig } from "../state";
 import { ConnectionBackend, ConnectionConfig } from "../../common";
-import { deletePassword, setPassword } from "keytar";
 import { getDefaultIndex } from "../../common/connection_manager_types";
+import { deletePassword, setPassword } from "keytar";
 
 export function editConnectionsCommand(): void {
   const panel = vscode.window.createWebviewPanel(
@@ -35,7 +35,7 @@ export function editConnectionsCommand(): void {
   );
 
   const onDiskPath = vscode.Uri.file(
-    path.join(__filename, "..", "connections_webview.js")
+    path.join(__filename, "..", "connections_page.js")
   );
 
   const entrySrc = panel.webview.asWebviewUri(onDiskPath);
@@ -57,9 +57,21 @@ export function editConnectionsCommand(): void {
     switch (message.type) {
       case ConnectionMessageType.SetConnections: {
         const connections = await handleConnectionsPreSave(message.connections);
-        vscode.workspace
-          .getConfiguration("malloy")
-          .update("connections", connections);
+        const malloyConfig = vscode.workspace.getConfiguration("malloy");
+        const hasWorkspaceConfig =
+          malloyConfig.inspect("connections")?.workspaceValue !== undefined;
+        malloyConfig.update(
+          "connections",
+          connections,
+          vscode.ConfigurationTarget.Global
+        );
+        if (hasWorkspaceConfig) {
+          malloyConfig.update(
+            "connections",
+            connections,
+            vscode.ConfigurationTarget.Workspace
+          );
+        }
         messageManager.postMessage({
           type: ConnectionMessageType.SetConnections,
           connections,

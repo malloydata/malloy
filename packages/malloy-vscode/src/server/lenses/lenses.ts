@@ -47,15 +47,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         command: {
           title: "Run",
           command: "malloy.runNamedQuery",
-          arguments: [symbol.name, "json"],
-        },
-      });
-      lenses.push({
-        range: symbol.range.toJSON(),
-        command: {
-          title: "Render",
-          command: "malloy.runNamedQuery",
-          arguments: [symbol.name, "html"],
+          arguments: [symbol.name],
         },
       });
     } else if (symbol.type === "unnamed_query") {
@@ -64,15 +56,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         command: {
           title: "Run",
           command: "malloy.runQueryFile",
-          arguments: [currentUnnamedQueryIndex, "json"],
-        },
-      });
-      lenses.push({
-        range: symbol.range.toJSON(),
-        command: {
-          title: "Render",
-          command: "malloy.runQueryFile",
-          arguments: [currentUnnamedQueryIndex, "html"],
+          arguments: [currentUnnamedQueryIndex],
         },
       });
       currentUnnamedQueryIndex++;
@@ -116,18 +100,6 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
             range: child.range.toJSON(),
             command: {
               title: "Run",
-              command: "malloy.runQuery",
-              arguments: [
-                `query: ${exploreName}->${queryName}`,
-                `${exploreName}->${queryName}`,
-                "json",
-              ],
-            },
-          });
-          lenses.push({
-            range: child.range.toJSON(),
-            command: {
-              title: "Render",
               command: "malloy.runQuery",
               arguments: [
                 `query: ${exploreName}->${queryName}`,

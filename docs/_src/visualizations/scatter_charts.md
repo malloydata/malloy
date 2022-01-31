@@ -14,7 +14,7 @@ Scatter charts compare two numeric values. The data styles for the subsequent ex
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "medium", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   nest: seats_by_distance_scatter_chart is {
     group_by: seats is aircraft.aircraft_models.seats
     group_by: distance is distance
@@ -27,7 +27,7 @@ query: flights->{
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "size": "large", "source": "faa/flights.malloy"}
-query: flights->{
+query: flights -> {
   group_by: origin_code
   nest: seats_by_distance_scatter_chart is {
     group_by: seats is aircraft.aircraft_models.seats

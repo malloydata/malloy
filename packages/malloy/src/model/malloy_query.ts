@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import * as crypto from "crypto";
 import { cloneDeep } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
@@ -58,6 +57,8 @@ import {
 
 import { indent, AndChain } from "./utils";
 import { parseTableURL } from "../malloy";
+import md5 from "md5";
+import { ResultStructMetadataDef } from ".";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -106,10 +107,7 @@ class StageWriter {
   addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName =
-      "scratch." +
-      baseName +
-      crypto.createHash("md5").update(sql).digest("hex");
+    const tableName = "scratch." + baseName + md5(sql);
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }
@@ -577,23 +575,29 @@ class QueryFieldDate extends QueryAtomicField {
     if (!fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      let e = super.generateExpression(resultSet);
+      const exprString = super.generateExpression(resultSet);
+      let exprArray: string[] = [exprString];
       switch (fd.timeframe) {
         case "date":
           break;
         case "year":
         case "month":
         case "week":
-          e = `DATE_TRUNC(${e}, ${fd.timeframe})`;
+          exprArray = this.parent.dialect.sqlDateTrunc(
+            exprString,
+            fd.timeframe
+          ) as string[];
           break;
         case "day_of_month":
         case "day_of_year":
-          e = `EXTRACT(${timeframeBQMap[fd.timeframe]} FROM ${e})`;
+          exprArray = [
+            `EXTRACT(${timeframeBQMap[fd.timeframe]} FROM ${exprString})`,
+          ];
           break;
         default:
-          e = `DATE_TRUNC(${e}, ${fd.timeframe})`;
+          exprArray = [`DATE_TRUNC(${exprString}, ${fd.timeframe})`];
       }
-      return e;
+      return exprArray.join("");
     }
   }
 
@@ -611,34 +615,46 @@ class QueryFieldDate extends QueryAtomicField {
 class QueryFieldTimestamp extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldTimestampDef;
-    if (!fd.timeframe) {
+    if (fd.e || !fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      let e = super.generateExpression(resultSet);
+      const exprString = super.generateExpression(resultSet);
+      let exprArray: string[] = [exprString];
       switch (fd.timeframe) {
         case "year":
         case "month":
         case "week":
-          e = `DATE_TRUNC(DATE(${e}, 'UTC'), ${fd.timeframe})`;
+        case "date":
+          exprArray = this.parent.dialect.sqlTimestampTrunc(
+            exprString,
+            fd.timeframe,
+            "UTC"
+          ) as string[];
           break;
         case "day_of_month":
         case "day_of_year":
         case "hour_of_day":
         case "month_of_year":
-          e = `EXTRACT(${
-            timeframeBQMap[fd.timeframe]
-          } FROM ${e} AT TIME ZONE 'UTC')`;
+          exprArray = [
+            `EXTRACT(${
+              timeframeBQMap[fd.timeframe]
+            } FROM ${exprString} AT TIME ZONE 'UTC')`,
+          ];
           break;
-        case "date":
-          e = `DATE(${e},'UTC')`;
-          break;
+        // case "date":
+        //   e = `DATE(${e},'UTC')`;
+        //   break;
         case "hour":
         case "minute":
         case "second":
-          e = `TIMESTAMP_TRUNC(${e}, ${fd.timeframe}, 'UTC')`;
+          exprArray = this.parent.dialect.sqlTimestampTrunc(
+            exprString,
+            fd.timeframe,
+            "UTC"
+          ) as string[];
           break;
       }
-      return e;
+      return exprArray.join("");
     }
   }
 
@@ -1522,7 +1538,9 @@ class QueryQuery extends QueryField {
   }
 
   // get the source fieldname and filters associated with the field (so we can drill later)
-  getResultMetadata(fi: FieldInstance): ResultMetadataDef | undefined {
+  getResultMetadata(
+    fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
     if (fi instanceof FieldInstanceField) {
       if (fi.fieldUsage.type === "result") {
         const fieldDef = fi.f.fieldDef as FieldAtomicDef;
@@ -1558,8 +1576,16 @@ class QueryQuery extends QueryField {
       const sourceField = fi.turtleDef.name || fi.turtleDef.as;
       const sourceClasses = sourceField ? [sourceField] : [];
       const filterList = fi.firstSegment.filterList;
+      const limit =
+        fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1].limit;
       if (sourceField) {
-        return { sourceField, filterList, sourceClasses, fieldKind: "struct" };
+        return {
+          sourceField,
+          filterList,
+          sourceClasses,
+          fieldKind: "struct",
+          limit,
+        };
       }
     }
     return undefined;

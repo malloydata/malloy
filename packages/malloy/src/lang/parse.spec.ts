@@ -621,4 +621,5 @@ describe("error handling", () => {
       "Circular reference to 'astr' in definition"
     );
   });
+  test("empty document", modelOK("\n"));
 });

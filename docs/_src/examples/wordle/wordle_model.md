@@ -1,24 +1,23 @@
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
--- Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words'){
+// Make a table of 5 letter words
+explore: words is table('malloy-data.malloytest.words') {
   query: five_letter_words is {
-    where: length(word) = 5 and  word ~ r'^[a-z]{5}$'
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is UPPER(word)
   }
 }
 
--- table with numbers 1 to 5
+// table with numbers 1 to 5
 explore: numbers is table('malloy-data.malloytest.numbers'){
   where: num <= 5
 }
 
--- Build a new table of word and each letter in position
-query: words_and_position is from(words->five_letter_words){
-  join_many: numbers -- cross join numbers
-  }
-->{
+// Build a new table of word and each letter in position
+query: words_and_position is from(words -> five_letter_words) {
+  join_many: numbers // cross join numbers
+} -> {
   group_by: word
   nest: letters is {
     order_by: 2
@@ -30,8 +29,8 @@ query: words_and_position is from(words->five_letter_words){
 }
 
 
--- build a word finder that can generate a score best available guess.
-explore: wordle is from(->words_and_position){
+// build a word finder that can generate a score best available guess.
+explore: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -44,11 +43,9 @@ explore: wordle is from(->words_and_position){
     nest: words_list is {
       group_by: word
     }
-  }
-  ->{
+  } -> {
     group_by: words_list.word
     aggregate: score is word_count.sum()
   }
 }
-
 ```

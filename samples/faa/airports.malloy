@@ -1,7 +1,7 @@
---! styles airports.styles.json
+-- --! styles airports.styles.json
 
-explore: airports is table('malloy-data.faa.airports'){
-  measure: airport_count is count(*)
+explore: airports is table('malloy-data.faa.airports') {
+  measure: airport_count is count()
 
   query: by_state is {
     where: state != null
@@ -21,14 +21,15 @@ explore: airports is table('malloy-data.faa.airports'){
     group_by: state
     aggregate: airport_count
     nest: by_fac_type
-    nest: by_county is { top: 5
+    nest: by_county is {
+      top: 5
       group_by: county
       aggregate: airport_count
     }
   }
 
   query: major_airports is {
-    where: major: 'Y'
+    where: major = 'Y'
     group_by: name is concat(state, '-', full_name)
   }
 
@@ -38,7 +39,7 @@ explore: airports is table('malloy-data.faa.airports'){
     aggregate: airport_count
     nest: [
       by_fac_type
-      by_state
+      by_state_shape_map is by_state {}
       major_airports
     ]
   }

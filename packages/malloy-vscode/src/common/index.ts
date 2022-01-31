@@ -12,7 +12,5 @@
  */
 
 export { ConnectionManager } from "./connection_manager";
-export {
-  ConnectionConfig,
-  ConnectionBackend,
-} from "./connection_manager_types";
+export { ConnectionBackend } from "./connection_manager_types";
+export type { ConnectionConfig } from "./connection_manager_types";

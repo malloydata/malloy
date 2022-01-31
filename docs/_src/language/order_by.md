@@ -9,11 +9,11 @@ Often when querying data the amount of data returned to look at is much smaller 
 
 ### Rule 1: Newest first
 If a query stage has a [dimensional](fields.md#dimensions) column that represents a point in time, it is usually the most
-important concept in the query.  Because the most recent data is usally the most relevant, Malloy sorts the newest data first.
+important concept in the query.  Because the most recent data is usually the most relevant, Malloy sorts the newest data first.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   group_by: dep_month is dep_time.month
   aggregate: flight_count is count()
 }
@@ -26,7 +26,7 @@ In the following example, Rule 1 doesn't apply, so the default behavior is to so
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   group_by: carrier
   aggregate: flight_count is count()
 }
@@ -40,7 +40,7 @@ In the following example, the results are ordered by `carrier` in reverse alphab
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   order_by: carrier desc
   group_by: carrier
   aggregate: flight_count is count()
@@ -52,7 +52,7 @@ the results are ordered by `carrier` in alphabetical order.
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   order_by: carrier
   group_by: carrier
   aggregate: flight_count is count()
@@ -63,11 +63,11 @@ query: flights->{
 
 In Malloy, you can limit the number of results returned using a `top: n` or `limit: n`.  Both are provided for readability.
 
-In the exmaple below, the results are limited to 2 rows, which are sorted by `dep_month` with newest results first (due to Rule 1).
+In the example below, the results are limited to 2 rows, which are sorted by `dep_month` with newest results first (due to Rule 1).
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size":"small" }
-query: flights->{
+query: flights -> {
   top: 2
   group_by: dep_month is dep_time.month
   aggregate: flight_count is count()

@@ -35,6 +35,9 @@ class Renderer {
   private readonly path: string;
   private models: Map<string, string>;
   private _errors: { snippet: string; error: string }[] = [];
+  private readonly titleStack: { level: number; title: string }[] = [];
+  public readonly searchSegments: { titles: string[]; paragraphs: string[] }[] =
+    [];
 
   constructor(path: string) {
     this.path = path;
@@ -126,8 +129,25 @@ class Renderer {
     return html;
   }
 
+  private registerTitle(titleHTML: string, level: number) {
+    for (;;) {
+      const lastTitle = this.titleStack[this.titleStack.length - 1];
+      if (lastTitle === undefined || lastTitle.level < level) {
+        break;
+      } else {
+        this.titleStack.pop();
+      }
+    }
+    this.titleStack.push({ level, title: titleHTML });
+    this.searchSegments.push({
+      titles: this.titleStack.map((item) => item.title),
+      paragraphs: [],
+    });
+  }
+
   protected async heading(content: Markdown[], level: 1 | 2 | 3 | 4 | 5 | 6) {
     const text = await this.children(content);
+    this.registerTitle(text, level);
     const escapedText = text.toLowerCase().replace(/[^\w]+/g, "-");
 
     return `
@@ -171,6 +191,10 @@ class Renderer {
 
   protected async paragraph(content: Markdown[]) {
     const text = await this.children(content);
+    const segment = this.searchSegments[this.searchSegments.length - 1];
+    if (segment) {
+      segment.paragraphs.push(text);
+    }
     return "<p>" + text + "</p>\n";
   }
 
@@ -368,6 +392,7 @@ export async function renderDoc(
 ): Promise<{
   renderedDocument: string;
   errors: { snippet: string; error: string }[];
+  searchSegments: { titles: string[]; paragraphs: string[] }[];
 }> {
   const ast = unified().use(remarkParse).use(remarkGfm).parse(text);
   const renderer = new Renderer(path);
@@ -375,5 +400,6 @@ export async function renderDoc(
   return {
     renderedDocument,
     errors: renderer.errors,
+    searchSegments: renderer.searchSegments,
   };
 }

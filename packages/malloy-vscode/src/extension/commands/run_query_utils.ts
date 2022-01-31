@@ -22,7 +22,6 @@ import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
 import {
   QueryMessageType,
-  QueryRenderMode,
   QueryRunStatus,
   WebviewMessageManager,
 } from "../webview_message_manager";
@@ -112,12 +111,8 @@ class HackyDataStylesAccumulator implements URLReader {
 export function runMalloyQuery(
   query: QuerySpec,
   panelId: string,
-  name: string,
-  renderMode: QueryRenderMode = QueryRenderMode.HTML
+  name: string
 ): void {
-  if (renderMode === QueryRenderMode.JSON) {
-    panelId += " Data";
-  }
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -180,7 +175,7 @@ export function runMalloyQuery(
       }
 
       const onDiskPath = vscode.Uri.file(
-        path.join(__filename, "..", "query_webview.js")
+        path.join(__filename, "..", "query_page.js")
       );
 
       const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
@@ -273,7 +268,6 @@ export function runMalloyQuery(
             status: QueryRunStatus.Done,
             result: queryResult.toJSON(),
             styles,
-            mode: renderMode,
           });
           current.result = queryResult;
           progress.report({ increment: 100, message: "Rendering" });

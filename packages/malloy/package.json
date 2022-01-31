@@ -9,19 +9,21 @@
     "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
     "testLang": "yarn test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
-    "malloyc": "ts-node src/lang/test/malloy-to-json.ts",
-    "build": "yarn build-parser && yarn tsc --build"
+    "build": "yarn build-parser && yarn tsc --build",
+    "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",
+    "assert": "^2.0.0",
+    "blueimp-md5": "^2.19.0",
     "lodash": "^4.17.20",
-    "luxon": "^1.26.0"
+    "luxon": "^1.26.0",
+    "url": "^0.11.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^1.26.4",
     "antlr4ts-cli": "^0.5.0-alpha.4",
-    "md5": "^2.3.0",
     "path": "^0.12.7"
   }
 }

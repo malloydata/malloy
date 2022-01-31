@@ -1,10 +1,10 @@
 --! styles the_met.styles.json
 
-explore: met_objects is table('bigquery-public-data.the_met.objects'){
-  -- eliminate some bad data
+explore: met_objects is table('bigquery-public-data.the_met.objects') {
+  // eliminate some bad data
   where: object_begin_date < 2031 & > -8000
 
-  join_one: images is table('bigquery-public-data.the_met.images'){ primary_key: object_id} with object_id
+  join_one: images is table('bigquery-public-data.the_met.images') { primary_key: object_id } with object_id
 
   measure: [
     object_count is count()
@@ -12,15 +12,14 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
   ]
 
   dimension: [
-    object_era is FLOOR(object_begin_date/100)*100
-    image_thumb is REPLACE(images.original_image_url,'original', 'web-thumb')
+    object_era is floor(object_begin_date / 100) * 100
+    image_thumb is replace(images.original_image_url, 'original', 'web-thumb')
   ]
 
   query: by_classification is {
     group_by: classification
     aggregate: object_count
   }
-
 
   query: by_department is {
     group_by: department
@@ -40,7 +39,8 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
     aggregate: object_count
   }
 
-  query: by_object_era is { order_by: 1 desc
+  query: by_object_era is { 
+    order_by: 1 desc
     group_by: object_era
     aggregate: object_count
   }
@@ -59,7 +59,7 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
   }
 
   query: random_image_list is {
-    limit:20
+    limit: 20
     where: image_thumb != null
     group_by: [
       image_thumb
@@ -76,18 +76,19 @@ explore: met_objects is table('bigquery-public-data.the_met.objects'){
       nest: by_country
       nest: by_object_era
       nest: by_classification
-      nest:random_image_list
+      nest: random_image_list
     }
   }
 
   query: department_dashboard is {
-    where: department= 'Photographs' and object_begin_date > 1900
+    where: department = 'Photographs' and object_begin_date > 1900
     aggregate: [
       artist_count is count(distinct artist_display_name)
       object_count
      image_count
     ]
-    nest: by_artist is { limit: 30
+    nest: by_artist is { 
+      limit: 30
       group_by: artist_display_name
       aggregate: object_count
       nest: random_image_list

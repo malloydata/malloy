@@ -13,7 +13,7 @@ the range it will be `>`. If you [apply](apply.md) a range, (for example, `event
 
 ## Range shortcuts
 
-Because grouping and filtering by specific time ranges is such acommon operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts.
+Because grouping and filtering by specific time ranges is such a common operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts.
 
 Malloy supports two time-related types, `timestamp` and `date`.
 Both of these can be used with these techniques, though the exact
@@ -22,7 +22,7 @@ data type (e.g. it would make no sense to attempt to truncate a `date` object by
 
 ## Truncation
 
-To create truncation, use the `.` operator followed by the desired timeframe. 
+To create truncation, use the `.` operator followed by the desired timeframe.
 
 By way of example, if the value of `expr` is `@2021-08-06 00:36`, then the below truncations will produce the results on the right:
 
@@ -45,13 +45,13 @@ at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example `eventDate.year`
 would be a range covering the entire year which contains `eventDate`
 
-This is extremely useful with the [Apply operator](apply.md), `:`. To see if two events happen in the same calendar year, for example, the boolean expresison in Malloy is `oneEvent: otherEvent.year`
+This is extremely useful with the [Apply operator](apply.md), `:`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `oneEvent: otherEvent.year`
 
 ## Extraction
 
 Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call.
 
-The "Result" column uses a value of `2021-08-06 00:55:05` for `expr`. 
+The "Result" column uses a value of `2021-08-06 00:55:05` for `expr`.
 
 expression | meaning | result
 ---- | ---- | ----
@@ -67,7 +67,7 @@ expression | meaning | result
 
 ## Literals
 
-Time literals are specified in malloy with th `@` character. A literal
+Time literals are specified in malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 

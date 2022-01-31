@@ -8,19 +8,19 @@ query: vendor_dashboard is {
     total_sale_dollars
     total_bottles
   ]
-  nest: by_month
-  nest: by_class
-  nest: by_vendor_bar_chart
-  nest: top_sellers_by_revenue
-  nest: most_expensive_products
-  nest: by_vendor_dashboard is {
-    top: 10
-    group_by: vendor_name
-    aggregate: total_sale_dollars
-    nest: by_month
-    nest: top_sellers_by_revenue
-    nest: most_expensive_products
-  }
+  nest: [
+    by_month
+    by_class
+    by_vendor_bar_chart
+    top_sellers_by_revenue
+    most_expensive_products
+    by_vendor_dashboard is {
+      top: 10
+      group_by: vendor_name
+      aggregate: total_sale_dollars
+      nest: [ by_month, top_sellers_by_revenue, most_expensive_products ]
+    }
+  ]
 }
 ```
 

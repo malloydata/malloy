@@ -16,6 +16,7 @@
     "module": "commonjs",
     "esModuleInterop": true,
     "moduleResolution": "node",
+    "isolatedModules": true,
     "target": "es2019",
     "experimentalDecorators": true,
     "sourceMap": true

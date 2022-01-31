@@ -6,7 +6,7 @@ When a named query is nested inside of another query, it produces an aggregating
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy"}
-query: airports->{
+query: airports -> {
   group_by: state
   aggregate: airport_count
   nest: by_facility is {
@@ -22,7 +22,7 @@ Aggregating subqueries can be nested infinitely, meaning that a nested query can
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-query: airports->{
+query: airports -> {
   group_by: state
   aggregate: airport_count
   nest: top_5_counties is {
@@ -43,8 +43,8 @@ Filters can be applied at any level within nested queries.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-query: airports->{
-  where: state: 'CA'|'NY'|'MN'
+query: airports -> {
+  where: state: 'CA' | 'NY' | 'MN'
   group_by: state
   aggregate: airport_count
   nest: top_5_counties is {
@@ -52,7 +52,7 @@ query: airports->{
     group_by: county
     aggregate: airport_count
     nest: major_facilities is {
-      where: major:'Y'
+      where: major = 'Y'
       group_by: name is concat(code, ' - ', full_name)
     }
     nest: by_facility is {

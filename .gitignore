@@ -1,5 +1,6 @@
 # auto-generated docs
 docs/.jekyll-cache/
+docs/js/generated/
 
 # config file
 malloy.json
@@ -43,3 +44,4 @@ out/
 *.iml
 gems/
 .vscode/settings.json
+.vscode/spellright.dict

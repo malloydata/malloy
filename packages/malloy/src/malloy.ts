@@ -1024,6 +1024,10 @@ export class Explore extends Entity {
     return this.structDef.resultMetadata?.filterList || [];
   }
 
+  get limit(): number | undefined {
+    return this.structDef.resultMetadata?.limit;
+  }
+
   public get structDef(): StructDef {
     return this._structDef;
   }
@@ -2183,7 +2187,11 @@ class DataTimestamp extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    return new Date((this._value as unknown as { value: string }).value);
+    if (typeof this._value !== "string") {
+      return new Date((this._value as unknown as { value: string }).value);
+    } else {
+      return new Date(super.value);
+    }
   }
 
   get field(): TimestampField {
@@ -2201,7 +2209,11 @@ class DataDate extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    return new Date((this._value as unknown as { value: string }).value);
+    if (typeof this._value !== "string") {
+      return new Date((this._value as unknown as { value: string }).value);
+    } else {
+      return new Date(super.value);
+    }
   }
 
   get field(): DateField {

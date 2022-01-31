@@ -12,20 +12,15 @@
  */
 
 import * as vscode from "vscode";
-import { QueryRenderMode } from "../webview_message_manager";
 import { runMalloyQuery } from "./run_query_utils";
 
-export function runQueryFileCommand(
-  queryIndex = -1,
-  renderMode: QueryRenderMode = QueryRenderMode.HTML
-): void {
+export function runQueryFileCommand(queryIndex = -1): void {
   const document = vscode.window.activeTextEditor?.document;
   if (document) {
     runMalloyQuery(
       { type: "file", index: queryIndex, file: document },
       document.uri.toString(),
-      document.fileName.split("/").pop() || document.fileName,
-      renderMode
+      document.fileName.split("/").pop() || document.fileName
     );
   }
 }

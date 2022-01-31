@@ -20,8 +20,7 @@ import { readFileSync } from "fs";
 
 CLI TRANSLATION UTILITY
 
-Can be run with "ts-node packages/malloy/src/lang/test malloy-to-json.ts"
-or "yarn malloyc" if you are in packages/malloy
+Can be run with "yarn malloyc"
 
 CURRENTLY HAS TWO MODES
 
@@ -73,7 +72,7 @@ function fullPath(fn: string): string {
   if (fn[0] === "/") {
     return fn;
   }
-  return `${process.env.INIT_CWD}/${fn}`;
+  return `${process.cwd()}/${fn}`;
 }
 
 async function main() {

@@ -1,49 +1,49 @@
 // See https://go.microsoft.com/fwlink/?LinkId=733558
 // for the documentation about the tasks.json format
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "npm",
-			"script": "vscode-webpack-dev",
-			"problemMatcher": {
-				"owner": "typescript",
-				"source": "ts",
-				"severity": "error",
-				"pattern": [
-					{
-						"regexp": "\\[tsl\\] (ERROR|WARNING) in (.*)?\\((\\d+),(\\d+)\\)",
-						"severity": 1,
-						"file": 2,
-						"line": 3,
-						"column": 4
-					},
-					{
-						"regexp": "\\s*TS(\\d+):\\s*(.*)$",
-						"code": 1,
-						"message": 2
-					}
-				],
-				"applyTo": "closedDocuments",
-				"fileLocation": "absolute",
-				"background": {
-					"activeOnStart": true,
-					"beginsPattern": {
-						"regexp": "assets by status"
-					},
-					"endsPattern": {
-						"regexp": "[Cc]ompiled (.*?successfully|with .*?error|with .*?warning)|[Cc]ompilation .*?finished"
-					}
-				}
-			},
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			}
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "vscode-build-extension-dev",
+      "problemMatcher": {
+        "owner": "typescript",
+        "source": "ts",
+        "severity": "error",
+        "pattern": [
+          {
+            "regexp": "\\[tsl\\] (ERROR|WARNING) in (.*)?\\((\\d+),(\\d+)\\)",
+            "severity": 1,
+            "file": 2,
+            "line": 3,
+            "column": 4
+          },
+          {
+            "regexp": "\\s*TS(\\d+):\\s*(.*)$",
+            "code": 1,
+            "message": 2
+          }
+        ],
+        "applyTo": "closedDocuments",
+        "fileLocation": "absolute",
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": {
+            "regexp": "Building extension"
+          },
+          "endsPattern": {
+            "regexp": "Extension built (.*?successfully|with .*?errors)"
+          }
+        }
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "never"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
 }
