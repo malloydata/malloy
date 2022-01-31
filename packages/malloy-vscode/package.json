@@ -158,8 +158,9 @@
     "views": {
       "malloy": [
         {
-          "id": "malloyQuickLinks",
-          "name": "Quick Links"
+          "id": "malloyHelp",
+          "name": "Help",
+          "type": "webview"
         },
         {
           "id": "malloySchema",
@@ -175,10 +176,6 @@
       {
         "view": "malloyConnections",
         "contents": "No configured connections.\n[Edit Connections](command:malloy.editConnections)"
-      },
-      {
-        "view": "malloyQuickLinks",
-        "contents": "[View Documentation](https://looker-open-source.github.io/malloy/documentation)\n[Quick Start Guide](https://looker-open-source.github.io/malloy/documentation/language/basic.html)\n[Download Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)\n[Edit Connections](command:malloy.editConnections)"
       }
     ],
     "configuration": {
