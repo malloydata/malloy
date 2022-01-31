@@ -21,7 +21,7 @@ flight performed by a particular carrier.</p>
           Query for all flights ever made
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">aggregate</span>: flight_count }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -70,7 +70,7 @@ flight performed by a particular carrier.</p>
           Query for Flights By Carrier
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count
 }</pre><div class="result-outer medium">
@@ -271,12 +271,12 @@ flight performed by a particular carrier.</p>
     </div>
   </div>
       <h2>
-        <a id="in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-" class="header-link anchor" href="#in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-">
-          In Malloy, can make both caculations at once with <a href="nesting.html"><em>nested subtables</em></a>.
+        <a id="in-malloy-can-make-both-calculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-" class="header-link anchor" href="#in-malloy-can-make-both-calculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-">
+          In Malloy, can make both calculations at once with <a href="nesting.html"><em>nested subtables</em></a>.
         </a>
       </h2>
     <p>The results are returned as a single row in a table with two columns, <code class="language-malloy">flight_count</code> and <code class="language-malloy">main_query</code>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
@@ -513,17 +513,17 @@ flight performed by a particular carrier.</p>
       </h2>
     <p>Using a pipeline with a <code class="language-malloy"><span class="token keyword">project</span></code> calculation to combine (essentially cross joining) the queries back into a single table.
 We also add an additional column, the percentage of total calculation.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
     <span class="token keyword">aggregate</span>: flight_count
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     main_query<span class="token punctuation">.</span>nickname
     main_query<span class="token punctuation">.</span>flight_count
-    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count<span class="token operator">/</span>flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
+    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count <span class="token operator">/</span> flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
   <span class="token punctuation">]</span>
 }
 </pre><div class="result-outer medium">
@@ -791,16 +791,16 @@ We also add an additional column, the percentage of total calculation.</p>
         </a>
       </h2>
     <p>We can use a wildcard against the nested query to to make this pattern easier to write.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
     <span class="token keyword">aggregate</span>: flight_count
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     main_query<span class="token punctuation">.</span><span class="token operator">*</span>
-    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count<span class="token operator">/</span>flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
+    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count <span class="token operator">/</span> flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer medium">
     <div class="result-controls-bar">

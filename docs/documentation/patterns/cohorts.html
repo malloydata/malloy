@@ -10,31 +10,31 @@ footer: /generated/footers/patterns/cohorts.html
           Cohort Analysis
         </a>
       </h1>
-    <p>One of the most powerful way of understanding what is happening using data is to use <em>cohort analisys</em>.
-Fundementally, cohort analysis is used to group people into sets and to analyse the success,
+    <p>One of the most powerful way of understanding what is happening using data is to use <em>cohort analysis</em>.
+Fundamentally, cohort analysis is used to group people into sets and to analyze the success,
 attributes or characteristics of that group as compared to the population in general.</p>
 <p>To understand this, we're going to use Social Security Administrations birth/name data.</p>
 <p>We have a table with <code class="language-malloy">name</code>, <code class="language-malloy">gender</code>, <code class="language-malloy"><span class="token identifier">`year`</span></code>, <code class="language-malloy">state</code> and the <code class="language-malloy"><span class="token identifier">`number`</span></code> of people born with those
-characterisitics.</p>
-<p>In the simplelist form, a cohort calculation is a <a href="percent_of_total.html">percentage of total calculation</a>.
+characteristics.</p>
+<p>In the simplest form, a cohort calculation is a <a href="percent_of_total.html">percentage of total calculation</a>.
 For example, if we were interested in the name 'Billie' as it relates to location. We could look
 could filter on 'Billie' and look a states as it relates to total population.</p>
 <p>We can see that in the population of the the people named 'Billie', the cohort of the Billies born in
 Texas makes up 18% of the total population of Billies.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: name <span class="token operator">=</span> <span class="token string">'Billie'</span>
   <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: state
     <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     main_query<span class="token punctuation">.</span>state
     main_query<span class="token punctuation">.</span>total_population
-    state_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100.0</span>
+    state_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population <span class="token operator">/</span> total_population <span class="token operator">*</span> <span class="token number">100.0</span>
   <span class="token punctuation">]</span>
-  <span class="token keyword">order_by</span>: <span class="token number">3</span> <span class="token keyword">desc</span>
+  <span class="token keyword">order_by</span>: state_as_percent_of_population <span class="token keyword">desc</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
@@ -278,20 +278,20 @@ Texas makes up 18% of the total population of Billies.</p>
     </div>
   </div><p>We could run this same query, but instead look by decade to see when the Billies where born.
 Using the query below we can see that 26% of all Billies were born in the 1930s.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: name <span class="token operator">=</span> <span class="token string">'Billie'</span>
   <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: decade <span class="token keyword">is</span> <span class="token function">FLOOR</span><span class="token punctuation">(</span><span class="token identifier">`year`</span><span class="token operator">/</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10</span>
+    <span class="token keyword">group_by</span>: decade <span class="token keyword">is</span> <span class="token function">floor</span><span class="token punctuation">(</span><span class="token identifier">`year`</span> <span class="token operator">/</span> <span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10</span>
     <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     main_query<span class="token punctuation">.</span>decade
     main_query<span class="token punctuation">.</span>total_population
-    decade_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100.0</span>
+    decade_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population <span class="token operator">/</span> total_population <span class="token operator">*</span> <span class="token number">100.0</span>
   <span class="token punctuation">]</span>
-  <span class="token keyword">order_by</span>: <span class="token number">3</span> <span class="token keyword">desc</span>
+  <span class="token keyword">order_by</span>: decade_as_percent_of_population <span class="token keyword">desc</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
@@ -428,7 +428,7 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
   <span class="token keyword">SELECT</span>
     group_set<span class="token punctuation">,</span>
     <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token punctuation">(</span>FLOOR<span class="token punctuation">(</span>base<span class="token punctuation">.</span><span class="token keyword">year</span><span class="token operator">/</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10</span> <span class="token keyword">END</span> <span class="token keyword">as</span> decade__1<span class="token punctuation">,</span>
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token punctuation">(</span>floor<span class="token punctuation">(</span>base<span class="token punctuation">.</span><span class="token keyword">year</span><span class="token operator">/</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10</span> <span class="token keyword">END</span> <span class="token keyword">as</span> decade__1<span class="token punctuation">,</span>
     <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__1
   <span class="token keyword">FROM</span> <span class="token punctuation">`</span>bigquery<span class="token operator">-</span><span class="token keyword">public</span><span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>usa_names<span class="token punctuation">.</span>usa_1910_2013<span class="token punctuation">`</span> <span class="token keyword">as</span> base
   <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
@@ -459,23 +459,23 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
         </a>
       </h2>
     <p>In the above example, the population was <em>People named Billie</em> and we used <em>state</em> or <em>year</em> for our cohort (grouping).
-Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our popuation.
+Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our population.
 Let's limit our population to California in 1990 and look at the most cohorts (people with a given name).  We are also going
 to measure a little differently.  Instead of looking at a percentage, let's look at births per 100,000 people.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span><span class="token operator">-</span><span class="token operator">></span>{
-  <span class="token keyword">where</span>: state<span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token keyword">and</span> <span class="token identifier">`year`</span> <span class="token operator">=</span> <span class="token number">1990</span>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token keyword">and</span> <span class="token identifier">`year`</span> <span class="token operator">=</span> <span class="token number">1990</span>
   <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: name
     <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
-  main_query<span class="token punctuation">.</span>name
-  main_query<span class="token punctuation">.</span>total_population
-  births_per_100k <span class="token keyword">is</span> <span class="token function">FLOOR</span><span class="token punctuation">(</span>main_query<span class="token punctuation">.</span>total_population<span class="token operator">/</span>total_population <span class="token operator">*</span> <span class="token number">100000.0</span><span class="token punctuation">)</span>
+    main_query<span class="token punctuation">.</span>name
+    main_query<span class="token punctuation">.</span>total_population
+    births_per_100k <span class="token keyword">is</span> <span class="token function">FLOOR</span><span class="token punctuation">(</span>main_query<span class="token punctuation">.</span>total_population <span class="token operator">/</span> total_population <span class="token operator">*</span> <span class="token number">100000.0</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
-  <span class="token keyword">order_by</span>: <span class="token number">3</span> <span class="token keyword">desc</span>
+  <span class="token keyword">order_by</span>: births_per_100k <span class="token keyword">desc</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>

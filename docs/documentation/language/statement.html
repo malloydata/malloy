@@ -10,7 +10,7 @@ footer: /generated/footers/language/statement.html
           Models
         </a>
       </h1>
-    <p>Malloy recognizes modeling as a key aspect of data analyitics and
+    <p>Malloy recognizes modeling as a key aspect of data analytics and
 provides tools that allow for modularity and reusability of definitions.
 Whereas in SQL, queries generally define all metrics inline,
 requiring useful snippets to be saved and managed separately, in Malloy,
@@ -24,12 +24,12 @@ modeled <em>explore</em>.</p>
       </h2>
     <p>A Malloy model file can contain several <em>explores</em>, which define fields that can be
 used in queries.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
   <span class="token keyword">dimension</span>: distance_km <span class="token keyword">is</span> distance <span class="token operator">/</span> <span class="token number">1.609344</span>
 
   <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
-  <span class="token keyword">query</span>: by_carrier <span class="token keyword">is</span>  {
+  <span class="token keyword">query</span>: by_carrier <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carrier
     <span class="token keyword">aggregate</span>: flight_count
   }
@@ -46,7 +46,7 @@ used in queries.</p>
           Using modeled in query.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> by_carrier</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -128,7 +128,7 @@ used in queries.</p>
           Using modeled with a filter.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: origin <span class="token operator">=</span> <span class="token string">'SFO'</span> } <span class="token operator">-</span><span class="token operator">></span> by_carrier</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -212,7 +212,7 @@ used in queries.</p>
           Setting a limit on the Query
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: origin: <span class="token string">'SFO'</span>}<span class="token operator">-</span><span class="token operator">></span>by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: origin <span class="token operator">=</span> <span class="token string">'SFO'</span> } <span class="token operator">-</span><span class="token operator">></span> by_carrier { <span class="token keyword">limit</span>: <span class="token number">2</span> }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -275,7 +275,7 @@ used in queries.</p>
           Creating a brand new Query.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: destination
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     flight_count
@@ -332,7 +332,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">2036343</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">480.7323051917168</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">480.7323051917169</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ATL"</span><span class="token punctuation">,</span>
@@ -347,7 +347,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"LAX"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1300241</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">631.2922437299275</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">631.2922437299273</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"PHX"</span><span class="token punctuation">,</span>
@@ -375,13 +375,13 @@ used in queries.</p>
           Putting it all together.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: destination
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     flight_count
     average_distance_in_km <span class="token keyword">is</span> distance_km<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
-  <span class="token keyword">nest</span>: top_carriers <span class="token keyword">is</span> by_carrier{<span class="token keyword">limit</span>: <span class="token number">2</span>}
+  <span class="token keyword">nest</span>: top_carriers <span class="token keyword">is</span> by_carrier { <span class="token keyword">limit</span>: <span class="token number">2</span> }
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
@@ -519,7 +519,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">2036343</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">480.73230519171983</span><span class="token punctuation">,</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">480.7323051917193</span><span class="token punctuation">,</span>
     <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
@@ -534,7 +534,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ATL"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1963535</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">403.98744415851644</span><span class="token punctuation">,</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">403.98744415851627</span><span class="token punctuation">,</span>
     <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
@@ -549,7 +549,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1812062</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">490.6444686103787</span><span class="token punctuation">,</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">490.6444686103773</span><span class="token punctuation">,</span>
     <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
@@ -564,7 +564,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"LAX"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1300241</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">631.2922437299286</span><span class="token punctuation">,</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">631.2922437299294</span><span class="token punctuation">,</span>
     <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
@@ -579,7 +579,7 @@ used in queries.</p>
   <span class="token punctuation">{</span>
     <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"PHX"</span><span class="token punctuation">,</span>
     <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1059054</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">554.5763958814892</span><span class="token punctuation">,</span>
+    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">554.5763958814887</span><span class="token punctuation">,</span>
     <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"HP"</span><span class="token punctuation">,</span>

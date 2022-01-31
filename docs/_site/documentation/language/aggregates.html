@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -330,7 +347,7 @@
       <a href="nesting.html"><img src="/malloy/img/previous.svg" alt="previous"/>Nested Queries</a>
     </div>
     <div class="item">
-      <a href="imports.html">Imports and Exports<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="imports.html">Imports<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
   </div>
             
@@ -356,7 +373,7 @@
         </a>
       </h3>
     <p>The <code class="language-malloy">count</code> aggregate function may be used to count the number of records appearing in an explore.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -408,7 +425,7 @@
         </a>
       </h3>
     <p>Distinct counts may be used to count the number of distinct values of a particular field within an explore.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: order_items <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -460,7 +477,7 @@
         </a>
       </h3>
     <p>The <code class="language-malloy">sum</code> function may be used to compute the sum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: total_distance <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -512,7 +529,7 @@
         </a>
       </h3>
     <p>The <code class="language-malloy">avg</code> function may be used to compute the average of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -565,7 +582,7 @@
         </a>
       </h3>
     <p>The <code class="language-malloy">min</code> function may be used to compute the minimum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: order_items<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: order_items <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: cheapest_price <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>sale_price<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -617,7 +634,7 @@
         </a>
       </h3>
     <p>The <code class="language-malloy">max</code> function may be used to compute the maximum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: longest_distance <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -683,10 +700,10 @@ on all registered aircraft.</p>
 <p>To do this, you would start with the <code class="language-malloy">aircraft</code> table and join in <code class="language-malloy">aircraft_models</code> to get access to the number of seats, then take
 the average of <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats</code>.</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span>
-    <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
+  <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 <span class="token keyword">FROM</span> aircraft
 <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> aircraft_models
-    <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -735,7 +752,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
   </div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
 <p>To do this, you might decide to start with the <code class="language-malloy">aircraft_models</code> table instead.</p>
 <pre class="language-sql"><span class="token keyword">SELECT</span> <span class="token function">AVG</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
-<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -781,7 +798,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
       </div>
     </div>
   </div><p>However, this isn't actually the number you were interested in, because this measures the average number of seats across <em>all</em> aircraft models, not just the ones with actively-registered aircraft.</p>
-<p>Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysists often resort to complicated <a href="https://www.zentut.com/data-warehouse/fact-table/">fact tables</a> to perform this kind of query.</p>
+<p>Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysts often resort to complicated <a href="https://www.zentut.com/data-warehouse/fact-table/">fact tables</a> to perform this kind of query.</p>
 
       <h3>
         <a id="the-solution" class="header-link anchor" href="#the-solution">
@@ -790,7 +807,7 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
       </h3>
     <p>Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class="language-malloy">average_seats</code> is computed with respect to <code class="language-malloy">aircraft_models</code>,
 yielding the the average number of seats on aircraft models of aircraft listed in the <code class="language-malloy">aircraft</code> table.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -852,7 +869,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
         </a>
       </h3>
     <p>The following queries show six ways of calculating the average number of seats.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     aircraft_models_avg_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     aircraft_avg_models_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
@@ -893,7 +910,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
   <span class="token punctuation">{</span>
     <span class="token property">"aircraft_models_avg_seats"</span><span class="token operator">:</span> <span class="token number">108.4267515923567</span><span class="token punctuation">,</span>
     <span class="token property">"aircraft_avg_models_seats"</span><span class="token operator">:</span> <span class="token number">142.71036061820263</span><span class="token punctuation">,</span>
-    <span class="token property">"avg_aircraft_models_seats"</span><span class="token operator">:</span> <span class="token number">134.4140245524059</span>
+    <span class="token property">"avg_aircraft_models_seats"</span><span class="token operator">:</span> <span class="token number">134.41402455240592</span>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span></pre>
       </div>
@@ -927,7 +944,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 </pre>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
     avg_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
@@ -988,7 +1005,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 </pre>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models<span class="token operator">-</span><span class="token operator">></span>{
+  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
 }</pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -1084,7 +1101,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
           Aggregates that Support Locality
         </a>
       </h3>
-    <p>The aggregate fuctions that support locality are <code class="language-malloy">count</code>, <code class="language-malloy">sum</code>, and <code class="language-malloy">avg</code>.</p>
+    <p>The aggregate functions that support locality are <code class="language-malloy">count</code>, <code class="language-malloy">sum</code>, and <code class="language-malloy">avg</code>.</p>
 <p>The <code class="language-malloy">min</code> and <code class="language-malloy">max</code> aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once.</p>
 
       <h3>
@@ -1093,7 +1110,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
         </a>
       </h3>
     <p>Aggregating "on a field," e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy">avg</code> and <code class="language-malloy">sum</code>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
     avg_on_explore <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
     avg_on_field <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>

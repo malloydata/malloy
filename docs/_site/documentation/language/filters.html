@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -342,7 +359,7 @@
           Filters
         </a>
       </h1>
-    <p>Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individal filters.</p>
+    <p>Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individual filters.</p>
 
       <h2>
         <a id="filter-syntax" class="header-link anchor" href="#filter-syntax">
@@ -350,8 +367,8 @@
         </a>
       </h2>
     <p>Regardless of the placement of a filter, the syntax looks the same.</p>
-<pre class="language-malloy"><span class="token punctuation">.</span><span class="token punctuation">.</span> source{ <span class="token keyword">where</span>: filter_one<span class="token punctuation">,</span> filter_two }</pre><p>Each filter be any expression of type <code class="language-malloy"><span class="token type">boolean</span></code>, whether that's a boolean field <code class="language-malloy">is_commercial_flight</code>, a comparison <code class="language-malloy">distance <span class="token operator">></span> <span class="token number">1000</span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
-<p>Logically, the comma-seperated list of filters are <code class="language-malloy"><span class="token keyword">and</span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
+<pre class="language-malloy">source { <span class="token keyword">where</span>: <span class="token punctuation">[</span> filter_one<span class="token punctuation">,</span> filter_two <span class="token punctuation">]</span> }</pre><p>Each filter be any expression of type <code class="language-malloy"><span class="token type">boolean</span></code>, whether that's a boolean field <code class="language-malloy">is_commercial_flight</code>, a comparison <code class="language-malloy">distance <span class="token operator">></span> <span class="token number">1000</span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
+<p>Logically, the comma-separated list of filters are <code class="language-malloy"><span class="token keyword">and</span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
 <!--
 TODO "see where vs having for more information on how Malloy generates SQL for filters"
 -->
@@ -368,7 +385,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights{<span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>}<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer large">
+<pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span> } <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">aggregate</span>: flight_count }</pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -419,12 +436,12 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>A filter can also be applied to an individual query stage.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: carrier
   <span class="token keyword">aggregate</span>: flight_count
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">where</span>: carrier: <span class="token string">'UA'</span> <span class="token operator">|</span> <span class="token string">'AA'</span>
-  <span class="token keyword">project</span> : <span class="token punctuation">[</span>carrier<span class="token punctuation">,</span> flight_count<span class="token punctuation">]</span>
+  <span class="token keyword">project</span>: <span class="token punctuation">[</span> carrier<span class="token punctuation">,</span> flight_count <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
@@ -494,11 +511,11 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>Any measure can be filtered by adding a where clause.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    ca_flights <span class="token keyword">is</span> flight_count{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
-    ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
-    avg_km_from_ca <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>distance<span class="token operator">/</span><span class="token number">0.621371</span><span class="token punctuation">)</span>{<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span>}
+    ca_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
+    ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
+    avg_km_from_ca <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>distance <span class="token operator">/</span> <span class="token number">0.621371</span><span class="token punctuation">)</span> { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
     <div class="result-controls-bar">
@@ -535,7 +552,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
   <span class="token punctuation">{</span>
     <span class="token property">"ca_flights"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
     <span class="token property">"ny_flights"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
-    <span class="token property">"avg_km_from_ca"</span><span class="token operator">:</span> <span class="token number">1385.1741412354318</span>
+    <span class="token property">"avg_km_from_ca"</span><span class="token operator">:</span> <span class="token number">1385.1741412354852</span>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span></pre>
       </div>
@@ -554,26 +571,26 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
   </div>
       <h3>
-        <a id="filtering-complex-meausre" class="header-link anchor" href="#filtering-complex-meausre">
-          Filtering Complex Meausre
+        <a id="filtering-complex-measure" class="header-link anchor" href="#filtering-complex-measure">
+          Filtering Complex Measure
         </a>
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy"><span class="token comment">-- add a couple of measures to the `flights` explore</span>
+<pre class="language-malloy"><span class="token comment">// add a couple of measures to the `flights` explore</span>
 <span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
-  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: dep_delay<span class="token operator">></span><span class="token number">30</span>}
-  <span class="token keyword">measure</span>: percent_delayed <span class="token keyword">is</span> delayed_flights<span class="token operator">/</span>flight_count
+  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: dep_delay <span class="token operator">></span> <span class="token number">30</span> }
+  <span class="token keyword">measure</span>: percent_delayed <span class="token keyword">is</span> delayed_flights <span class="token operator">/</span> flight_count
 }
 
-<span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>{
+<span class="token keyword">query</span>: my_flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    ca_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
-    ca_delayed_flights <span class="token keyword">is</span> delayed_flights {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
-    ca_percent_delayed <span class="token keyword">is</span> percent_delayed {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
-    ny_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
-    ny_delayed_flights <span class="token keyword">is</span> delayed_flights {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
-    ny_percent_delayed <span class="token keyword">is</span> percent_delayed {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+    ca_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
+    ca_delayed_flights <span class="token keyword">is</span> delayed_flights { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
+    ca_percent_delayed <span class="token keyword">is</span> percent_delayed { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
+    ny_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
+    ny_delayed_flights <span class="token keyword">is</span> delayed_flights { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
+    ny_percent_delayed <span class="token keyword">is</span> percent_delayed { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
     <div class="result-controls-bar">
@@ -651,22 +668,22 @@ measure and then create that as a percent of total.</p>
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy"><span class="token comment">-- add a couple of measures to the `flights` explore</span>
+<pre class="language-malloy"><span class="token comment">// add a couple of measures to the `flights` explore</span>
 <span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
-  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count {<span class="token keyword">where</span>: dep_delay<span class="token operator">></span><span class="token number">30</span>}
+  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: dep_delay <span class="token operator">></span> <span class="token number">30</span> }
   <span class="token keyword">query</span>: delay_stats <span class="token keyword">is</span> {
     <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
       flight_count
       delayed_flights
-      percent_delayed <span class="token keyword">is</span> delayed_flights<span class="token operator">/</span>flight_count
+      percent_delayed <span class="token keyword">is</span> delayed_flights <span class="token operator">/</span> flight_count
     <span class="token punctuation">]</span>
   }
 }
 
-<span class="token keyword">query</span>: my_flights<span class="token operator">-</span><span class="token operator">></span>{
+<span class="token keyword">query</span>: my_flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">nest</span>: <span class="token punctuation">[</span>
-    ca_stats <span class="token keyword">is</span> delay_stats {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'CA'</span>}
-    ny_stats <span class="token keyword">is</span> delay_stats {<span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state: <span class="token string">'NY'</span>}
+    ca_stats <span class="token keyword">is</span> delay_stats { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
+    ny_stats <span class="token keyword">is</span> delay_stats { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">
     <div class="result-controls-bar">

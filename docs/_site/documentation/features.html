@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -330,7 +347,7 @@
       <a href="index.html"><img src="/malloy/img/previous.svg" alt="previous"/>The Tao of Malloy</a>
     </div>
     <div class="item">
-      <a href="language/overview.html">Introduction<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="connection_instructions.html">Connecting a Database<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
   </div>
             
@@ -366,8 +383,8 @@ applied.  <a href="language/time-ranges.html">Time calculations</a> are powerful
           Reusable Aggregates
         </a>
       </h3>
-    <p>In a Malloy Data Model, an agggreate computation need only be defined once (for example revenue).  Once defined, it can be used
-in any query at any level of granulatity or dimensionality. Malloy retains enough information in the data graph
+    <p>In a Malloy Data Model, an aggregate computation need only be defined once (for example revenue).  Once defined, it can be used
+in any query at any level of granularity or dimensionality. Malloy retains enough information in the data graph
 to perform this calculation no matter how you ask for it. Reusable Aggregates help improve accuracy.</p>
 
       <h3>
@@ -384,7 +401,7 @@ mapping values, bucketing results and data cleanup.</p>
         </a>
       </h3>
     <p>SQL's <code>SELECT</code> statement flattens the namespace into a wide table. Malloy retains the graph relationship
-of data lets you access and correctly perform comutations and any place in the graph.</p>
+of data lets you access and correctly perform computations and any place in the graph.</p>
 
       <h3>
         <a id="reusable-queries" class="header-link anchor" href="#reusable-queries">
@@ -396,8 +413,8 @@ queries are always accurate.  Think of a Malloy model as a data function library
 Queries can also be used to create <a href="nesting.html">nested subtables</a> in other queries.</p>
 
       <h3>
-        <a id="aggregating-subueries" class="header-link anchor" href="#aggregating-subueries">
-          Aggregating Subueries
+        <a id="aggregating-subqueries" class="header-link anchor" href="#aggregating-subqueries">
+          Aggregating Subqueries
         </a>
       </h3>
     <p>Malloy easily produces nested results.  Entire dashboards can be fetched in a single query.

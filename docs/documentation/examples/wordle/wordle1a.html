@@ -11,10 +11,10 @@ footer: /generated/footers/examples/wordle/wordle1a.html
         </a>
       </h1>
     <p>The query below produces a table with the numbers 1 to 5</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span> {
   <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
 }
-<span class="token keyword">query</span>: numbers<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">project</span>: num}</pre><div class="result-outer small">
+<span class="token keyword">query</span>: numbers <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">project</span>: num }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -79,17 +79,16 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     </div>
   </div>
       <h2>
-        <a id="cross-join-these-two-tables-to-produce-letter-posiitioning-" class="header-link anchor" href="#cross-join-these-two-tables-to-produce-letter-posiitioning-">
-          Cross join these two tables to produce letter posiitioning.
+        <a id="cross-join-these-two-tables-to-produce-letter-positioning-" class="header-link anchor" href="#cross-join-these-two-tables-to-produce-letter-positioning-">
+          Cross join these two tables to produce letter positioning.
         </a>
       </h2>
-    <p>The result is a table with nested data.  Each word contans a sub-table with a letter in each position.</p>
-<pre class="language-malloy"><span class="token comment">-- define the query</span>
-<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
-  <span class="token comment">-- Cross join is missing at the moment</span>
+    <p>The result is a table with nested data.  Each word contains a sub-table with a letter in each position.</p>
+<pre class="language-malloy"><span class="token comment">// define the query</span>
+<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words <span class="token operator">-</span><span class="token operator">></span> five_letter_words<span class="token punctuation">)</span> {
+  <span class="token comment">// cross join is missing at the moment</span>
   <span class="token keyword">join_cross</span>: numbers
-  }
-<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: word
   <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
     <span class="token keyword">order_by</span>: <span class="token number">2</span>
@@ -100,8 +99,8 @@ footer: /generated/footers/examples/wordle/wordle1a.html
   }
 }
 
-<span class="token comment">-- run it</span>
-<span class="token keyword">query</span>: <span class="token operator">-</span><span class="token operator">></span>words_and_position</pre><div class="result-outer large">
+<span class="token comment">// run it</span>
+<span class="token keyword">query</span>: <span class="token operator">-</span><span class="token operator">></span> words_and_position</pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -126,6 +125,15 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABACK</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), A (3), C (4), K (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABAFT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), A (3), F (4), T (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABASE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), A (3), S (4), E (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABASH</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), A (3), S (4), H (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABATE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), A (3), T (4), E (5)</span></td>
 </tr>
@@ -134,6 +142,9 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABBOT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), B (3), O (4), T (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABEAM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), E (3), A (4), M (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABETS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), E (3), T (4), S (5)</span></td>
@@ -162,6 +173,12 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABUSE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), U (3), S (4), E (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABUTS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), U (3), T (4), S (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABUZZ</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), U (3), Z (4), Z (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ABYSS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), B (2), Y (3), S (4), S (5)</span></td>
 </tr>
@@ -171,11 +188,17 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ACHES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), C (2), H (3), E (4), S (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ACHOO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), C (2), H (3), O (4), O (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ACIDS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), C (2), I (3), D (4), S (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ACING</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), C (2), I (3), N (4), G (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ACMES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), C (2), M (3), E (4), S (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ACORN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), C (2), O (3), R (4), N (5)</span></td>
@@ -204,8 +227,23 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADDED</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), D (3), E (4), D (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADDER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), D (3), E (4), R (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADDLE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), D (3), L (4), E (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADEPT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), E (3), P (4), T (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADIEU</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), I (3), E (4), U (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADMAN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), M (3), A (4), N (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADMEN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), M (3), E (4), N (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADMIT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), M (3), I (4), T (5)</span></td>
@@ -225,20 +263,44 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADULT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), U (3), L (4), T (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ADZES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), D (2), Z (3), E (4), S (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AEGIS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), E (2), G (3), I (4), S (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AEONS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), E (2), O (3), N (4), S (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AERIE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), E (2), R (3), I (4), E (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AFFIX</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), F (2), F (3), I (4), X (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AFIRE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), F (2), I (3), R (4), E (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AFOOT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), F (2), O (3), O (4), T (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AFOUL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), F (2), O (3), U (4), L (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AFTER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), F (2), T (3), E (4), R (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGAIN</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), A (3), I (4), N (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGAPE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), A (3), P (4), E (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGATE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), A (3), T (4), E (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGAVE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), A (3), V (4), E (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGENT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), E (3), N (4), T (5)</span></td>
@@ -248,6 +310,9 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGING</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), I (3), N (4), G (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGISM</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), I (3), S (4), M (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AGLOW</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), G (2), L (3), O (4), W (5)</span></td>
@@ -284,6 +349,9 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALBUM</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), B (3), U (4), M (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALDER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), D (3), E (4), R (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALERT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), E (3), R (4), T (5)</span></td>
@@ -327,8 +395,14 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALLOY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), L (3), O (4), Y (5)</span></td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALOES</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), O (3), E (4), S (5)</span></td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALOFT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), O (3), F (4), T (5)</span></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALOHA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), O (3), H (4), A (5)</span></td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALONE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), O (3), N (4), E (5)</span></td>
@@ -344,81 +418,6 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALPHA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), P (3), H (4), A (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALTAR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), T (3), A (4), R (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALTER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), T (3), E (4), R (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALTHO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), T (3), H (4), O (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ALTOS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), L (2), T (3), O (4), S (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMASS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), A (3), S (4), S (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMAZE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), A (3), Z (4), E (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMBER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), B (3), E (4), R (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMBLE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), B (3), L (4), E (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMEBA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), E (3), B (4), A (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMEER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), E (3), E (4), R (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMEND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), E (3), N (4), D (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMIRS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), I (3), R (4), S (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMISS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), I (3), S (4), S (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMONG</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), O (3), N (4), G (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMPLE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), P (3), L (4), E (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMPLY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), P (3), L (4), Y (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMUCK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), U (3), C (4), K (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMUSE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), M (2), U (3), S (4), E (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANGEL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), G (3), E (4), L (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANGER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), G (3), E (4), R (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANGLE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), G (3), L (4), E (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANGRY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), G (3), R (4), Y (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANGST</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), G (3), S (4), T (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANKLE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), K (3), L (4), E (5)</span></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ANNEX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>A (1), N (2), N (3), E (4), X (5)</span></td>
 </tr>
 
 		</tbody>
@@ -474,6 +473,81 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"K"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABAFT"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"F"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABASE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABASH"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"H"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -549,6 +623,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABEAM"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -779,6 +878,56 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABUTS"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABUZZ"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Z"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Z"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ABYSS"</span><span class="token punctuation">,</span>
     <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
@@ -854,6 +1003,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACHOO"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"C"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"H"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACIDS"</span><span class="token punctuation">,</span>
     <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
@@ -899,6 +1073,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ACMES"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"C"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -1129,6 +1328,56 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADDER"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADDLE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADEPT"</span><span class="token punctuation">,</span>
     <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
@@ -1149,6 +1398,81 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADIEU"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADMAN"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADMEN"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -1304,6 +1628,56 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ADZES"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Z"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AEGIS"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AEONS"</span><span class="token punctuation">,</span>
     <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
@@ -1324,6 +1698,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AERIE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -1354,6 +1753,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFIRE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"F"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFOOT"</span><span class="token punctuation">,</span>
     <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
@@ -1374,6 +1798,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AFOUL"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"F"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -1424,6 +1873,81 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGAPE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGATE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGAVE"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"V"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -1499,6 +2023,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AGISM"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -1799,6 +2348,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALDER"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -2154,6 +2728,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALOES"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALOFT"</span><span class="token punctuation">,</span>
     <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
@@ -2174,6 +2773,31 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALOHA"</span><span class="token punctuation">,</span>
+    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"H"</span><span class="token punctuation">,</span>
+        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -2302,631 +2926,6 @@ footer: /generated/footers/examples/wordle/wordle1a.html
         <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTAR"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTER"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTHO"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"H"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ALTOS"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMASS"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMAZE"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Z"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMBER"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMBLE"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMEBA"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"B"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMEER"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMEND"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"D"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMIRS"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMISS"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"I"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMONG"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"O"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMPLE"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMPLY"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"P"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Y"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMUCK"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"C"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"K"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"AMUSE"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"M"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"U"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGEL"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGER"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGLE"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGRY"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"R"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"Y"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANGST"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"G"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"S"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"T"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANKLE"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"K"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"L"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"ANNEX"</span><span class="token punctuation">,</span>
-    <span class="token property">"letters"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">1</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"N"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"E"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">4</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"letter"</span><span class="token operator">:</span> <span class="token string">"X"</span><span class="token punctuation">,</span>
-        <span class="token property">"position"</span><span class="token operator">:</span> <span class="token number">5</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
   <span class="token punctuation">}</span>
 <span class="token punctuation">]</span></pre>
       </div>
@@ -2935,8 +2934,8 @@ footer: /generated/footers/examples/wordle/wordle1a.html
       <div class="result-inner">
         <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
   <span class="token keyword">SELECT</span> 
-     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words<span class="token punctuation">`</span> <span class="token keyword">as</span> words
+     upper<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words_bigger<span class="token punctuation">`</span> <span class="token keyword">as</span> words
   <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span>
 <span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>

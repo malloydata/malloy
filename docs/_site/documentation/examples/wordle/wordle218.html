@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -344,7 +361,7 @@
       </h1>
     <p><em>January 23, 2022</em></p>
 <p><a href="wordle217.html">⬅️ Previous Puzzle</a>   |   <a href="wordle5.html">↩️ All Solved Puzzles</a>  |  <a href="wordle219.html">➡️ Next Puzzle</a></p>
-<p>Wordlebot is writen in <a href="https://github.com/looker-open-source/malloy/">Malloy</a>. Read about <a href="wordle.html">How Wordlebot is constructed</a> (only 50 lines of code) and a good example of using data to solve interesting problems.</p>
+<p>Wordlebot is written in <a href="https://github.com/looker-open-source/malloy/">Malloy</a>. Read about <a href="wordle.html">How Wordlebot is constructed</a> (only 50 lines of code) and a good example of using data to solve interesting problems.</p>
 <p>Today was a bit of a kerfuffle.  It turns out that the word list we were using was too small and missing the
 word we were searching for.  We found a larger dictionary and uploaded and re-ran.</p>
 
@@ -353,7 +370,7 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
           Query for the best starting words.
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: wordle <span class="token operator">-</span><span class="token operator">></span> find_words</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -384,10 +401,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SORER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,686</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SANER</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SOAPY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,682</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SOAPY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SANER</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,682</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SONNY</td>
@@ -480,16 +497,16 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SASSY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,580</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABER</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,578</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABLE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,578</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABRE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,571</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,578</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CRANE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,571</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SABRE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,571</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEIZE</td>
@@ -540,10 +557,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPINE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,539</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLIDE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLAVE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,538</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLAVE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLIDE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,538</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SURLY</td>
@@ -570,10 +587,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COVEY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,527</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BOGEY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POISE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,526</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">POISE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BOGEY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,526</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SERGE</td>
@@ -597,10 +614,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CARET</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,519</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RAINY</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPACE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,518</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPACE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RAINY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,518</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHAPE</td>
@@ -621,10 +638,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BRINE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,512</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STONE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PUREE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,512</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PUREE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STONE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,512</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CRATE</td>
@@ -633,16 +650,16 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SILLY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,506</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHADY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,505</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SLANT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,505</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPATE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,504</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHADY</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,505</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCALE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,504</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPATE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,504</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CRIER</td>
@@ -651,10 +668,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CORNY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,502</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHAVE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CRONE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,501</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CRONE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SHAVE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,501</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">FAIRY</td>
@@ -697,11 +714,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1686</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SANER"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SOAPY"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1682</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SOAPY"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SANER"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1682</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -825,19 +842,19 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1580</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SABER"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1578</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SABLE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1578</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SABRE"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1571</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SABER"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1578</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRANE"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1571</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SABRE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1571</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -905,11 +922,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1539</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLIDE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLAVE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1538</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLAVE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLIDE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1538</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -945,11 +962,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1527</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BOGEY"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"POISE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1526</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"POISE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"BOGEY"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1526</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -981,11 +998,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1519</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"RAINY"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SPACE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1518</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SPACE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"RAINY"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1518</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -1013,11 +1030,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1512</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"STONE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PUREE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1512</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"PUREE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"STONE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1512</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -1029,19 +1046,19 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1506</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SHADY"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1505</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SLANT"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1505</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SPATE"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1504</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SHADY"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1505</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SCALE"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1504</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SPATE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1504</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -1053,11 +1070,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1502</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SHAVE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRONE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1501</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CRONE"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"SHAVE"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">1501</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -1087,7 +1104,7 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
       <div class="result-inner">
         <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
   <span class="token keyword">SELECT</span> 
-     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+     upper<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
   <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words_bigger<span class="token punctuation">`</span> <span class="token keyword">as</span> words
   <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span>
@@ -1160,7 +1177,7 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
         </a>
       </h2>
     <p>'C' as yellow in the 4th position.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words {
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle <span class="token operator">-</span><span class="token operator">></span> find_words {
   <span class="token keyword">where</span>:
     word <span class="token operator">~</span> <span class="token regular_expression">r'C'</span>
     <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'...[^C].'</span>
@@ -1214,29 +1231,26 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COYLY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">76</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHIMP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHINK</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHINO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHIMP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">COMFY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">75</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLINK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">73</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHILD</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">73</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CYNIC</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLINK</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">73</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLING</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">72</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CYNIC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">73</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHILL</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">72</td>
@@ -1245,6 +1259,9 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">72</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CHOMP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">72</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CLING</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">72</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CRIMP</td>
@@ -1398,6 +1415,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">76</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHIMP"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">75</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHINK"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">75</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
@@ -1406,28 +1427,20 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">75</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHIMP"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">75</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"COMFY"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">75</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLINK"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">73</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHILD"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">73</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CYNIC"</span><span class="token punctuation">,</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLINK"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">73</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
-    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLING"</span><span class="token punctuation">,</span>
-    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">72</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CYNIC"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">73</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHILL"</span><span class="token punctuation">,</span>
@@ -1439,6 +1452,10 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CHOMP"</span><span class="token punctuation">,</span>
+    <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">72</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"word"</span><span class="token operator">:</span> <span class="token string">"CLING"</span><span class="token punctuation">,</span>
     <span class="token property">"score"</span><span class="token operator">:</span> <span class="token number">72</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
@@ -1584,7 +1601,7 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
       <div class="result-inner">
         <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
   <span class="token keyword">SELECT</span> 
-     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+     upper<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
   <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words_bigger<span class="token punctuation">`</span> <span class="token keyword">as</span> words
   <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span>
@@ -1657,7 +1674,7 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
         </a>
       </h2>
     <p>In three.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: wordle<span class="token operator">-</span><span class="token operator">></span>find_words {
+<pre class="language-malloy"><span class="token keyword">query</span>: wordle <span class="token operator">-</span><span class="token operator">></span> find_words {
   <span class="token keyword">where</span>:
     word <span class="token operator">~</span> <span class="token regular_expression">r'C'</span> <span class="token keyword">and</span> word <span class="token operator">~</span><span class="token regular_expression">r'I'</span> <span class="token keyword">and</span> word <span class="token operator">~</span><span class="token regular_expression">r'R'</span>
     <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'C..[^CI][^R]'</span>
@@ -1703,7 +1720,7 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
       <div class="result-inner">
         <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
   <span class="token keyword">SELECT</span> 
-     UPPER<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
+     upper<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span> <span class="token keyword">as</span> word
   <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>malloytest<span class="token punctuation">.</span>words_bigger<span class="token punctuation">`</span> <span class="token keyword">as</span> words
   <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>length<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>REGEXP_CONTAINS<span class="token punctuation">(</span>words<span class="token punctuation">.</span>word<span class="token punctuation">,</span>r<span class="token string">'^[a-z]{5}$'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
 <span class="token punctuation">)</span>
@@ -1775,25 +1792,24 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
           Code For Wordlbot:
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token comment">-- Make a table of 5 letter words</span>
-<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words_bigger'</span><span class="token punctuation">)</span>{
+    <pre class="language-malloy"><span class="token comment">// Make a table of 5 letter words</span>
+<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span> {
   <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {
-    <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span>  word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
-    <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">UPPER</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
+    <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
+    <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">upper</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
   }
 }
 
-<span class="token comment">-- Cross join numbers</span>
-<span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
+<span class="token comment">// Cross join numbers</span>
+<span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span> {
   <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
 }
 
-<span class="token comment">-- Build a new table of word and each letter in position</span>
-<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
-  <span class="token comment">-- Cross join is missing at the moment</span>
-  <span class="token keyword">join_many</span>: numbers
-  }
-<span class="token operator">-</span><span class="token operator">></span>{
+<span class="token comment">// Build a new table of word and each letter in position</span>
+<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span> {
+  <span class="token comment">// Cross join is missing at the moment</span>
+  <span class="token keyword">join_cross</span>: numbers
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: word
   <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
     <span class="token keyword">order_by</span>: <span class="token number">2</span>
@@ -1804,9 +1820,8 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
   }
 }
 
-
-<span class="token comment">-- build a word finder that can generate a score best available guess.</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+<span class="token comment">// Build a word finder that can generate a score best available guess</span>
+<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token operator">></span> words_and_position<span class="token punctuation">)</span> {
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
   <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
@@ -1819,13 +1834,11 @@ word we were searching for.  We found a larger dictionary and uploaded and re-ra
     <span class="token keyword">nest</span>: words_list <span class="token keyword">is</span> {
       <span class="token keyword">group_by</span>: word
     }
-  }
-  <span class="token operator">-</span><span class="token operator">></span>{
+  } <span class="token operator">-</span><span class="token operator">></span> {
     <span class="token keyword">group_by</span>: words_list<span class="token punctuation">.</span>word
     <span class="token keyword">aggregate</span>: score <span class="token keyword">is</span> word_count<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   }
-}
-</pre></div>
+}</pre></div>
           </div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>

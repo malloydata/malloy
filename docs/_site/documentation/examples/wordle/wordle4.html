@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -343,25 +360,24 @@
         </a>
       </h1>
     <p>Final Data Model - Goto <a href="wordle5.html">Solve Puzzles</a></p>
-<pre class="language-malloy"><span class="token comment">-- Make a table of 5 letter words</span>
-<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span>{
+<pre class="language-malloy"><span class="token comment">// Make a table of 5 letter words</span>
+<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words_bigger'</span><span class="token punctuation">)</span> {
   <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {
-    <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span>  word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
-    <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">UPPER</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
+    <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
+    <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">upper</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
   }
 }
 
-<span class="token comment">-- Cross join numbers</span>
-<span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
+<span class="token comment">// Cross join numbers</span>
+<span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span> {
   <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
 }
 
-<span class="token comment">-- Build a new table of word and each letter in position</span>
-<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words<span class="token operator">-</span><span class="token operator">></span>five_letter_words<span class="token punctuation">)</span>{
-  <span class="token comment">-- Cross join is missing at the moment</span>
+<span class="token comment">// Build a new table of word and each letter in position</span>
+<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words <span class="token operator">-</span><span class="token operator">></span> five_letter_words<span class="token punctuation">)</span> {
+  <span class="token comment">// Cross join is missing at the moment</span>
   <span class="token keyword">join_cross</span>: numbers
-  }
-<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: word
   <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
     <span class="token keyword">order_by</span>: <span class="token number">2</span>
@@ -373,8 +389,8 @@
 }
 
 
-<span class="token comment">-- build a word finder that can generate a score best available guess.</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token operator">></span>words_and_position<span class="token punctuation">)</span>{
+<span class="token comment">// Build a word finder that can generate a score best available guess</span>
+<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token operator">></span> words_and_position<span class="token punctuation">)</span> {
   <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
   <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
 
@@ -387,13 +403,11 @@
     <span class="token keyword">nest</span>: words_list <span class="token keyword">is</span> {
       <span class="token keyword">group_by</span>: word
     }
-  }
-  <span class="token operator">-</span><span class="token operator">></span>{
+  } <span class="token operator">-</span><span class="token operator">></span> {
     <span class="token keyword">group_by</span>: words_list<span class="token punctuation">.</span>word
     <span class="token keyword">aggregate</span>: score <span class="token keyword">is</span> word_count<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   }
-}
-</pre></div>
+}</pre></div>
           </div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>

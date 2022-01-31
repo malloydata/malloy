@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -343,7 +360,7 @@
         </a>
       </h1>
     <p><strong>TLDR:</strong> <em>This step builds a couple of useful derivations, <code class="language-malloy">category_class</code> and <code class="language-malloy">bottle_size</code>.  There as 68 different <code class="language-malloy">category_name</code>s in this data set, we reduce that to 9.  There are 34 <em>liter sizes</em>, we make a new dimension, <code class="language-malloy">bottle_size</code> that only has 3 possible values.</em></p>
-<p>Our previous analysis of price per mL brings to mind quetsions around bottle size. How many different sizes do bottles come in?  Are there standards and uncommon ones?  Do vendors specialize in different bottle sizes?</p>
+<p>Our previous analysis of price per mL brings to mind questions around bottle size. How many different sizes do bottles come in?  Are there standards and uncommon ones?  Do vendors specialize in different bottle sizes?</p>
 
       <h2>
         <a id="building-em-category_class-em-a-simplified-version-of-em-category_name-em-" class="header-link anchor" href="#building-em-category_class-em-a-simplified-version-of-em-category_name-em-">
@@ -646,25 +663,25 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,875</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOLIDAY VAP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">48</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IOWA DISTILLERY WHISKIES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">124</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HOLIDAY VAP</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">48</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JAPANESE WHISKY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">286</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SLOE GINS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,254</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DELISTED / SPECIAL ORDER ITEMS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN SLOE GINS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,254</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
@@ -674,25 +691,25 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,099</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CINNAMON SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,235</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TROPICAL FRUIT SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,644</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CINNAMON SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,235</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMERICAN ALCOHOL</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24,351</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROOT BEER SCHNAPPS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,615</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BUTTERSCOTCH SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,865</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ROOT BEER SCHNAPPS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,615</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PEACH BRANDIES</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
@@ -706,17 +723,17 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,216</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RASPBERRY SCHNAPPS</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREME DE ALMOND</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,207</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,631</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LOW PROOF VODKA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,565</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CREME DE ALMOND</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RASPBERRY SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,631</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,207</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DARK CREME DE CACAO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
@@ -762,25 +779,25 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,441</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAWBERRY SCHNAPPS</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMARETTO - IMPORTED</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,853</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GRAPE SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,044</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HIGH PROOF BEER - AMERICAN</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STRAWBERRY SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AMARETTO - IMPORTED</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">102</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,853</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SPEARMINT SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,928</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HIGH PROOF BEER - AMERICAN</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IMPORTED VODKA - CHERRY</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
@@ -1135,14 +1152,14 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">28875</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"HOLIDAY VAP"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">19</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">48</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"IOWA DISTILLERY WHISKIES"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">19</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">124</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"HOLIDAY VAP"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">19</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">48</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"JAPANESE WHISKY"</span><span class="token punctuation">,</span>
@@ -1150,14 +1167,14 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">286</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"AMERICAN SLOE GINS"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">17</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">11254</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"DELISTED / SPECIAL ORDER ITEMS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">17</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">64</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"AMERICAN SLOE GINS"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">17</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">11254</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"PEACH SCHNAPPS"</span><span class="token punctuation">,</span>
@@ -1170,14 +1187,14 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">33099</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"CINNAMON SCHNAPPS"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">14</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">34235</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"TROPICAL FRUIT SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">14</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">10644</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"CINNAMON SCHNAPPS"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">14</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">34235</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"AMERICAN ALCOHOL"</span><span class="token punctuation">,</span>
@@ -1185,14 +1202,14 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">24351</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"ROOT BEER SCHNAPPS"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">12</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13615</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"BUTTERSCOTCH SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">12</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">33865</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"ROOT BEER SCHNAPPS"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">12</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13615</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"PEACH BRANDIES"</span><span class="token punctuation">,</span>
@@ -1210,9 +1227,9 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13216</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"RASPBERRY SCHNAPPS"</span><span class="token punctuation">,</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"CREME DE ALMOND"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">7</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13207</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1631</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"LOW PROOF VODKA"</span><span class="token punctuation">,</span>
@@ -1220,9 +1237,9 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1565</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"CREME DE ALMOND"</span><span class="token punctuation">,</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"RASPBERRY SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">7</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1631</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13207</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"DARK CREME DE CACAO"</span><span class="token punctuation">,</span>
@@ -1280,9 +1297,9 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1441</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"STRAWBERRY SCHNAPPS"</span><span class="token punctuation">,</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"AMARETTO - IMPORTED"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">11853</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">102</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"GRAPE SCHNAPPS"</span><span class="token punctuation">,</span>
@@ -1290,19 +1307,19 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13044</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"HIGH PROOF BEER - AMERICAN"</span><span class="token punctuation">,</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"STRAWBERRY SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">32</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"AMARETTO - IMPORTED"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">102</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">11853</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"SPEARMINT SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">2928</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"HIGH PROOF BEER - AMERICAN"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">32</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"IMPORTED VODKA - CHERRY"</span><span class="token punctuation">,</span>
@@ -1346,16 +1363,16 @@
       </div>
     </div>
   </div><p>Malloy provides a simple way to map all these values, using <code class="language-malloy"><span class="token keyword">pick</span></code> expressions.  In the <a href="source.html">Malloy Model for this Data Set</a>, you will find the declaration below.  Each pick expression tests <code class="language-malloy">category_name</code> for a regular expression.  If it matches, it returns the name pick'ed.</p>
-<pre class="language-malloy">  category_class <span class="token keyword">is</span> category_name :
-    <span class="token keyword">pick</span> <span class="token string">'WHISKIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(WHISK|SCOTCH|BURBON|RYE)'</span>
-    <span class="token keyword">pick</span> <span class="token string">'VODKAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'VODKA'</span>
-    <span class="token keyword">pick</span> <span class="token string">'RUMS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'RUM'</span>
-    <span class="token keyword">pick</span> <span class="token string">'TEQUILAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span>
-    <span class="token keyword">pick</span> <span class="token string">'LIQUEURS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(LIQUE|AMARETTO|TRIPLE SEC)'</span>
-    <span class="token keyword">pick</span> <span class="token string">'BRANDIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'BRAND(I|Y)'</span>
-    <span class="token keyword">pick</span> <span class="token string">'GINS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'GIN'</span>
-    <span class="token keyword">pick</span> <span class="token string">'SCHNAPPS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'SCHNAP'</span>
-    <span class="token keyword">else</span> <span class="token string">'OTHER'</span></pre>
+<pre class="language-malloy">category_class <span class="token keyword">is</span> category_name:
+  <span class="token keyword">pick</span> <span class="token string">'WHISKIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(WHISK|SCOTCH|BURBON|RYE)'</span>
+  <span class="token keyword">pick</span> <span class="token string">'VODKAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'VODKA'</span>
+  <span class="token keyword">pick</span> <span class="token string">'RUMS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'RUM'</span>
+  <span class="token keyword">pick</span> <span class="token string">'TEQUILAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span>
+  <span class="token keyword">pick</span> <span class="token string">'LIQUEURS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(LIQUE|AMARETTO|TRIPLE SEC)'</span>
+  <span class="token keyword">pick</span> <span class="token string">'BRANDIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'BRAND(I|Y)'</span>
+  <span class="token keyword">pick</span> <span class="token string">'GINS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'GIN'</span>
+  <span class="token keyword">pick</span> <span class="token string">'SCHNAPPS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'SCHNAP'</span>
+  <span class="token keyword">else</span> <span class="token string">'OTHER'</span></pre>
       <h2>
         <a id="testing-the-category-map" class="header-link anchor" href="#testing-the-category-map">
           Testing the category map
@@ -1423,7 +1440,7 @@
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SCHNAPPS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">308</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>AMERICAN SCHNAPPS, PEPPERMINT SCHNAPPS, MISCELLANEOUS SCHNAPPS, IMPORTED SCHNAPPS, PEACH SCHNAPPS, APPLE SCHNAPPS, TROPICAL FRUIT SCHNAPPS, CINNAMON SCHNAPPS, ROOT BEER SCHNAPPS, RASPBERRY SCHNAPPS, SCHNAPPS - IMPORTED, WATERMELON SCHNAPPS, GRAPE SCHNAPPS, STRAWBERRY SCHNAPPS, SPEARMINT SCHNAPPS</span></td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; "><span>AMERICAN SCHNAPPS, PEPPERMINT SCHNAPPS, MISCELLANEOUS SCHNAPPS, IMPORTED SCHNAPPS, PEACH SCHNAPPS, APPLE SCHNAPPS, CINNAMON SCHNAPPS, TROPICAL FRUIT SCHNAPPS, ROOT BEER SCHNAPPS, RASPBERRY SCHNAPPS, SCHNAPPS - IMPORTED, WATERMELON SCHNAPPS, GRAPE SCHNAPPS, STRAWBERRY SCHNAPPS, SPEARMINT SCHNAPPS</span></td>
 </tr>
 
 		</tbody>
@@ -1858,11 +1875,11 @@
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">14</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"TROPICAL FRUIT SCHNAPPS"</span><span class="token punctuation">,</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"CINNAMON SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">14</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"CINNAMON SCHNAPPS"</span><span class="token punctuation">,</span>
+        <span class="token property">"category_name"</span><span class="token operator">:</span> <span class="token string">"TROPICAL FRUIT SCHNAPPS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">14</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
@@ -1967,9 +1984,9 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Black Velvet</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">81,499,220.48</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,637,044</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.015</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">74,528,489.9</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,976,789</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.014</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Fireball Cinnamon Whiskey</td>
@@ -1979,21 +1996,21 @@
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Brown-Forman Corporation</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jack Daniels Old #7 Black Lbl</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">60,953,623.95</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,376,400</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.783</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">56,597,538.17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,214,537</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.771</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam Brands</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jim Beam</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39,276,942.12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,451,476</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.007</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Canadian Whisky</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,168,056.11</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,557,591</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.899</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">39,838,646.76</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,755,494</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.077</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">38,588,143.88</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,465,480</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.896</td>
 </tr>
 
 		</tbody>
@@ -2020,27 +2037,27 @@
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hawkeye Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44,864,861.53</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,451,433</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,907,835.89</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,024,717</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.655</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Absolut Swedish Vodka 80 Prf</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,389,845.89</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,620,577</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.206</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">30,690,878.49</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,535,137</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.209</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Grey Goose Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,840,924.18</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,201,105</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.518</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26,137,008.4</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,118,660</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.515</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Laird And Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Five O'clock Vodka</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,848,319.46</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,332,876</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.666</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,541,444.82</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,110,313</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.665</td>
 </tr>
 
 		</tbody>
@@ -2061,15 +2078,15 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Spiced Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64,662,060.47</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,672,656</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.737</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">59,553,217.74</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,378,853</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.734</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Captain Morgan Original Spiced</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,679,359.62</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,973,865</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.775</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,356,477.62</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,940,141</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.773</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Heaven Hill Brands</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Admiral Nelson Spiced Rum</td>
@@ -2079,15 +2096,15 @@
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Malibu Coconut Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22,082,449.75</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,541,710</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.503</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,700,228.21</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,446,883</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.502</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi Superior Rum</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20,821,889.93</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,485,961</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.508</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,896,065.3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,417,576</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.505</td>
 </tr>
 
 		</tbody>
@@ -2108,33 +2125,33 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Sidney Frank Importing Co.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,750,030.71</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,753,542</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.482</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,111,536.57</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,662,734</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.481</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MHW Ltd</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumchata</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,176,197.63</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">960,250</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.521</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,021,802.07</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">902,865</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.522</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bailey's Original Irish Cream</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,226,981.77</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">454,766</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.524</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,191,409.04</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">453,184</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.525</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Mast-Jagermeister US, Inc</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jagermeister Liqueur</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,800,039.2</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">470,355</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.54</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kahlua Coffee Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,154,795.65</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">457,825</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.358</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Baileys Original Irish Cream</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,615,704.52</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">335,243</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.773</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,309,871.45</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">415,719</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.353</td>
 </tr>
 
 		</tbody>
@@ -2155,33 +2172,33 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado Tequila</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,693,815.9</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,260,239</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.026</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18,621,489.68</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,192,026</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.022</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">The Patron Spirits Company</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Tequila Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17,306,484.67</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">420,903</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.384</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,019,804.17</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">389,702</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.377</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Juarez Tequila Gold</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,625,256.95</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">906,853</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.159</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,902,994.66</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">840,016</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.151</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Patron Silver</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,899,332.5</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">196,210</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.685</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Silver</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,733,870.59</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">442,511</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.113</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Especial Reposado</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,590,008.93</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">430,687</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.111</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,488,902.05</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">427,789</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.114</td>
 </tr>
 
 		</tbody>
@@ -2202,33 +2219,33 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Authentic Lime Margarita</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,314,862.18</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">699,009</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.752</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,052,592.07</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">676,374</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.75</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Everclear Alcohol</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,979,485.24</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">302,403</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.752</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,672,319.74</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">279,650</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.748</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tortilla Gold Dss</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,229,716.52</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">470,790</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.684</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Proximo</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose Cuervo Golden Margarita</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,338,526.12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">216,758</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.955</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,187,730.67</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">207,227</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.954</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Juarez Gold Dss</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,269,183.22</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">447,143</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.736</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Crown Royal Peach</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,234,198.74</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">131,791</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.284</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,040,755.64</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">416,093</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.734</td>
 </tr>
 
 		</tbody>
@@ -2249,32 +2266,32 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,097,269.66</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,950,364</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.21</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,110,282.62</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,849,271</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.209</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MOET HENNESSY USA</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy VS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,673,132.12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">742,356</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.42</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,660,119.16</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">843,449</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.397</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Moet Hennessy USA, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Hennessy Vs Cognac</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,019,539.19</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">464,756</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.744</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,914,576.44</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">428,131</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.725</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA INC</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">REMY COINTREAU USA         .</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Remy Martin VSOP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,897,599.84</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">635,109</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.966</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,550,266.95</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">355,726</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.986</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Constellation Wine Company, Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paul Masson Grande Amber Brandy</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,962,597.82</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,478,702</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,507,263.67</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,384,175</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.319</td>
 </tr>
 
@@ -2302,9 +2319,9 @@
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumple Minze Peppermint Schnapps Liqueur</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12,097,216.26</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">570,171</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.533</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">11,359,232.59</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">536,208</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.532</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAZERAC COMPANY  INC</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Dr McGillicuddys Cherry</td>
@@ -2318,11 +2335,11 @@
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">477,959</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.232</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Luxco-St Louis</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Paramount Peppermint Schnapps</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,325,908.39</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">651,102</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.716</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Rumple Minze Peppermint Schnapps Liqueur</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,214,189.01</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">193,873</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.554</td>
 </tr>
 
 		</tbody>
@@ -2343,27 +2360,27 @@
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Diageo Americas</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tanqueray Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,531,625.65</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">718,067</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.403</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15,732,441.53</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">684,348</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.401</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Pernod Ricard USA/Austin Nichols</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Seagrams Extra Dry Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,388,071.36</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,550,730</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.29</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,952,234.07</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,462,058</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.289</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bacardi U.S.A., Inc.</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Bombay Sapphire Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,239,120.06</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">292,885</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.579</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,899,004.06</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">278,659</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.58</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DIAGEO AMERICAS</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Tanqueray Gin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,157,567.18</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">175,935</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.472</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,956,751.3</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">209,654</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.469</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">E & J Gallo Winery</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">New Amsterdam Gin</td>
@@ -2385,370 +2402,370 @@
         <pre><span class="token punctuation">[</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"WHISKIES"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">1162259256.8098342</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">1162259256.8098435</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Constellation Wine Company, Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Black Velvet"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">81499220.47999933</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">7637044</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.0147570094798524</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">74528489.89999957</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">6976789</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.013634848014176</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"SAZERAC COMPANY  INC"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Fireball Cinnamon Whiskey"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">71459394.99000202</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">71459394.99000078</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">9365005</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.6637709713032165</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.663770971303216</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Brown-Forman Corporation"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jack Daniels Old #7 Black Lbl"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">60953623.95000057</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">2376400</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.782911013770945</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">56597538.17000027</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">2214537</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.770873595060111</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Jim Beam Brands"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jim Beam"</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">39276942.12000014</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">2451476</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.0074409598552347</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Crown Royal Canadian Whisky"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">41168056.10999958</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1557591</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.8987071796933686</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Crown Royal"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">39838646.760000035</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1755494</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">3.077048787085094</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">38588143.87999964</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1465480</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.8957893867594993</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"VODKAS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">749549856.6301163</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">749549856.6301523</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"FIFTH GENERATION INC"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Titos Handmade Vodka"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">101647763.3000034</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">101647763.30000316</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">5318082</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.8950456587004387</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.8950456587004396</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Luxco-St Louis"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Hawkeye Vodka"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">44864861.53000261</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">6451433</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.6549414229709921</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">41907835.89000215</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">6024717</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.6550166976860492</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Pernod Ricard USA/Austin Nichols"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Absolut Swedish Vodka 80 Prf"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">32389845.8899992</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1620577</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.2055833833085465</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">30690878.489999324</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1535137</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.2090665014605304</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Bacardi U.S.A., Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Grey Goose Vodka"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">27840924.179999948</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1201105</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">3.5180883368379257</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">26137008.399999976</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1118660</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">3.514762108799564</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Laird And Company"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Five O'clock Vodka"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">19848319.45999899</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">3332876</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.6655539965205837</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">18541444.81999913</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">3110313</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.665271028864576</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"RUMS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">374572039.25001115</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">374572039.25001574</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Captain Morgan Spiced Rum"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">64662060.47000017</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">3672656</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.7374061533089311</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">59553217.74</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">3378853</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.7344743260615585</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Captain Morgan Original Spiced"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">28679359.61999977</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1973865</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.7751866728272272</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">28356477.619999766</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1940141</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.7733945337335917</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Heaven Hill Brands"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Admiral Nelson Spiced Rum"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">23683369.349999476</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">23683369.34999948</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">2068662</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.071316964653277</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.0713169646532774</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Pernod Ricard USA/Austin Nichols"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Malibu Coconut Rum"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">22082449.749999993</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1541710</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.5029810994724933</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">20700228.21000006</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1446883</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.5018646408252372</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Bacardi U.S.A., Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Bacardi Superior Rum"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">20821889.929999862</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1485961</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.5080854956320109</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">19896065.299999844</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1417576</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.5047467118632436</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"LIQUEURS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">222039865.01999</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">222039865.01999658</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Sidney Frank Importing Co."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jagermeister Liqueur"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">32750030.709999513</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1753542</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.4815215326100715</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">31111536.569999535</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1662734</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.480890114238207</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"MHW Ltd"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Rumchata"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">19176197.630000032</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">960250</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.5212294487198577</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">18021802.070000026</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">902865</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.521536025793445</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Bailey's Original Irish Cream"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">10226981.77000004</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">454766</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.5242488562850056</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">10191409.040000038</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">453184</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.5247166057075274</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Mast-Jagermeister US, Inc"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jagermeister Liqueur"</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">8800039.199999988</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">470355</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.53979206496773</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Pernod Ricard USA/Austin Nichols"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Kahlua Coffee Liqueur"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">9154795.650000075</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">457825</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.358085152592461</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Baileys Original Irish Cream"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">7615704.520000018</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">335243</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.773098935924239</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">8309871.450000064</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">415719</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.3532963660903725</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"TEQUILAS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">195319413.9499936</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">195319413.94999513</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Proximo"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jose Cuervo Especial Reposado Tequila"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">19693815.900000103</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1260239</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.025988312125143</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">18621489.680000108</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1192026</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.0218087830965605</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"The Patron Spirits Company"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Patron Tequila Silver"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">17306484.670000013</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">420903</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">5.383665833103067</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">16019804.17000001</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">389702</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">5.3773824706694295</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Luxco-St Louis"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Juarez Tequila Gold"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">9625256.949999996</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">906853</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.159263959756879</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">8902994.660000002</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">840016</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.1514529615619833</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Bacardi U.S.A., Inc."</span><span class="token punctuation">,</span>
+        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Patron Silver"</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">6899332.5</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">196210</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">5.68532949253527</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Proximo"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jose Cuervo Especial Silver"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">6733870.590000052</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">442511</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.113028231777451</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Proximo"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jose Cuervo Especial Reposado"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">6590008.930000036</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">430687</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.1106647098727866</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">6488902.05000005</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">427789</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.1139630808205636</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"OTHER"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">153303948.64999792</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">153303948.64999843</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Proximo"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jose Cuervo Authentic Lime Margarita"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">8314862.179999986</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">699009</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.7515322299185647</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">8052592.069999993</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">676374</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.7504092563096425</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Luxco-St Louis"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Everclear Alcohol"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3979485.2399999886</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">302403</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.7515561663054515</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3672319.7399999886</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">279650</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.7476403336049247</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"SAZERAC COMPANY  INC"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Tortilla Gold Dss"</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3229716.520000001</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">470790</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.6843458186101297</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Proximo"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Jose Cuervo Golden Margarita"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3338526.120000011</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">216758</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.954742587185845</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3187730.670000011</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">207227</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.9537691077579137</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Luxco-St Louis"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Juarez Gold Dss"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3269183.219999997</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">447143</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.7360416785206257</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Crown Royal Peach"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3234198.7399999886</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">131791</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">3.2838336741649625</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">3040755.639999997</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">416093</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.7339325722983256</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"BRANDIES"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">145357554.34999785</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">145357554.34999615</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Moet Hennessy USA, Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Hennessy VS"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">28097269.660000116</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1950364</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">4.209827440285321</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">27110282.620000143</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1849271</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">4.20947299163623</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"MOET HENNESSY USA"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Hennessy VS"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">12673132.120000135</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">742356</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">4.4203606779245845</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">13660119.160000151</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">843449</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">4.396868545529417</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Moet Hennessy USA, Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Hennessy Vs Cognac"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">12019539.190000055</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">464756</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">3.7440144948797798</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">10914576.440000052</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">428131</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">3.724519103143757</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"REMY COINTREAU USA INC"</span><span class="token punctuation">,</span>
+        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"REMY COINTREAU USA         ."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Remy Martin VSOP"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">9897599.840000091</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">635109</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">4.966080889675777</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">5550266.9500000095</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">355726</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">4.985820370954565</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Constellation Wine Company, Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Paul Masson Grande Amber Brandy"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">5962597.819999976</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1478702</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.3193100805059916</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">5507263.669999967</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1384175</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.318813167698638</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"SCHNAPPS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">107208696.34000039</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">107208696.34000017</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"SAZERAC COMPANY  INC"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Dr. Mcgillicuddy's Cherry Schnapps"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">14795719.789999982</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">14795719.790000012</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">922438</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.6406184566480568</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.6406184566480566</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Rumple Minze Peppermint Schnapps Liqueur"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">12097216.26</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">570171</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.533269288722785</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">11359232.589999998</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">536208</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.5317467770073243</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"SAZERAC COMPANY  INC"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Dr McGillicuddys Cherry"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">7134290.890000045</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">7134290.890000041</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">444030</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.6314655258660218</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.6314655258660222</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Jim Beam Brands"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Dekuyper Luscious Peachtree"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">5307477.82000001</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">5307477.820000007</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">477959</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.2319188193379265</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.231918819337927</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Luxco-St Louis"</span><span class="token punctuation">,</span>
-        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Paramount Peppermint Schnapps"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">4325908.390000004</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">651102</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">0.7163799992256324</span>
+        <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"DIAGEO AMERICAS"</span><span class="token punctuation">,</span>
+        <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Rumple Minze Peppermint Schnapps Liqueur"</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">4214189.009999989</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">193873</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.553734691212952</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"category_class"</span><span class="token operator">:</span> <span class="token string">"GINS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">80814247.00999042</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">80814247.00999077</span><span class="token punctuation">,</span>
     <span class="token property">"top_sellers_by_revenue"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Diageo Americas"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Tanqueray Gin"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">16531625.650000012</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">718067</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.4033295497884013</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">15732441.530000024</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">684348</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.401092238616887</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Pernod Ricard USA/Austin Nichols"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Seagrams Extra Dry Gin"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">8388071.360000075</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1550730</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.2900707027811897</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">7952234.070000074</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">1462058</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.2889269635311862</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"Bacardi U.S.A., Inc."</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Bombay Sapphire Gin"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">7239120.060000012</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">292885</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.579420740540632</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">6899004.06000001</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">278659</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.5802235280722168</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"DIAGEO AMERICAS"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"Tanqueray Gin"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">4157567.180000005</span><span class="token punctuation">,</span>
-        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">175935</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.4720111744123336</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">4956751.300000005</span><span class="token punctuation">,</span>
+        <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">209654</span><span class="token punctuation">,</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">2.468591483994209</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"vendor_name"</span><span class="token operator">:</span> <span class="token string">"E &amp; J Gallo Winery"</span><span class="token punctuation">,</span>
         <span class="token property">"item_description"</span><span class="token operator">:</span> <span class="token string">"New Amsterdam Gin"</span><span class="token punctuation">,</span>
-        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">4139474.2899999944</span><span class="token punctuation">,</span>
+        <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">4139474.2899999954</span><span class="token punctuation">,</span>
         <span class="token property">"total_bottles"</span><span class="token operator">:</span> <span class="token number">406830</span><span class="token punctuation">,</span>
-        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.413467456982793</span>
+        <span class="token property">"avg_price_per_100ml"</span><span class="token operator">:</span> <span class="token number">1.4134674569827932</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
   <span class="token punctuation">}</span>
@@ -2766,7 +2783,7 @@
     <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> iowa<span class="token punctuation">.</span>item_description <span class="token keyword">END</span> <span class="token keyword">as</span> item_description__1<span class="token punctuation">,</span>
     <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>iowa<span class="token punctuation">.</span>sale_dollars<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_sale_dollars__1<span class="token punctuation">,</span>
     <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>iowa<span class="token punctuation">.</span>bottles_sold<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_bottles__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">AVG</span><span class="token punctuation">(</span><span class="token punctuation">(</span>iowa<span class="token punctuation">.</span>state_bottle_retail<span class="token operator">/</span><span class="token punctuation">(</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span>iowa<span class="token punctuation">.</span>bottle_volume_ml<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">100</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> avg_price_per_100ml__1
+    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">AVG</span><span class="token punctuation">(</span><span class="token punctuation">(</span>iowa<span class="token punctuation">.</span>state_bottle_retail<span class="token operator">/</span><span class="token punctuation">(</span><span class="token keyword">nullif</span><span class="token punctuation">(</span>iowa<span class="token punctuation">.</span>bottle_volume_ml<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">100</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> avg_price_per_100ml__1
   <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>iowa_liquor_sales<span class="token punctuation">.</span>sales_deduped<span class="token punctuation">`</span> <span class="token keyword">as</span> iowa
   <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
   <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">4</span><span class="token punctuation">,</span><span class="token number">5</span>
@@ -2946,10 +2963,10 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">425</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">378,000</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,500</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,500</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">378,000</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,000</td>
@@ -2970,28 +2987,28 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">355</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,508</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9,000</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">180,000</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,580</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">189,000</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">225,000</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,580</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 
@@ -3174,11 +3191,11 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">26</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">378000</span><span class="token punctuation">,</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">31500</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">24</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">31500</span><span class="token punctuation">,</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">378000</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">24</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
@@ -3206,23 +3223,23 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">7</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">9000</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">3</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">1508</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">3</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">189000</span><span class="token punctuation">,</span>
-        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">2</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">9000</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">3</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">180000</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">2</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">7580</span><span class="token punctuation">,</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">189000</span><span class="token punctuation">,</span>
+        <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">12</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
@@ -3230,11 +3247,11 @@
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">12</span><span class="token punctuation">,</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">15</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">15</span><span class="token punctuation">,</span>
+        <span class="token property">"bottle_volume_ml"</span><span class="token operator">:</span> <span class="token number">7580</span><span class="token punctuation">,</span>
         <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">1</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -3528,10 +3545,10 @@
         </a>
       </h2>
     <p>Looking at the above chart and table we can see that there are a bunch of small values, several big values at 750 and 1000, and then a bunch of larger values.  We can clean this up by bucketing bottle size into three groups using a Malloy <code class="language-malloy"><span class="token keyword">pick</span></code> expression that maps these values to strings.</p>
-<pre class="language-malloy">  bottle_size <span class="token keyword">is</span> bottle_volume_ml:
-    <span class="token keyword">pick</span> <span class="token string">'jumbo (over 1000ml)'</span> <span class="token keyword">when</span> <span class="token operator">></span> <span class="token number">1001</span>
-    <span class="token keyword">pick</span> <span class="token string">'liter-ish'</span> <span class="token keyword">when</span> <span class="token operator">>=</span> <span class="token number">750</span>
-    <span class="token keyword">else</span> <span class="token string">'small or mini (under 750ml)'</span></pre><p>Look at the data through the new mapping.</p>
+<pre class="language-malloy">bottle_size <span class="token keyword">is</span> bottle_volume_ml:
+  <span class="token keyword">pick</span> <span class="token string">'jumbo (over 1000ml)'</span> <span class="token keyword">when</span> <span class="token operator">></span> <span class="token number">1001</span>
+  <span class="token keyword">pick</span> <span class="token string">'liter-ish'</span> <span class="token keyword">when</span> <span class="token operator">>=</span> <span class="token number">750</span>
+  <span class="token keyword">else</span> <span class="token string">'small or mini (under 750ml)'</span></pre><p>Look at the data through the new mapping.</p>
 <pre class="language-malloy"><span class="token keyword">query</span>: iowa <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: bottle_size
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> total_sale_dollars<span class="token punctuation">,</span> line_item_count<span class="token punctuation">,</span> item_count <span class="token punctuation">]</span>
@@ -3558,12 +3575,12 @@
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">jumbo (over 1000ml)</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">832,050,629.37</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">832,050,629.369</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,692,836</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,008</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">liter-ish</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,013,383,211.852</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,013,383,211.851</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,268,959</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,867</td>
 </tr>
@@ -3582,19 +3599,19 @@
         <pre><span class="token punctuation">[</span>
   <span class="token punctuation">{</span>
     <span class="token property">"bottle_size"</span><span class="token operator">:</span> <span class="token string">"jumbo (over 1000ml)"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">832050629.3700202</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">832050629.3694878</span><span class="token punctuation">,</span>
     <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">4692836</span><span class="token punctuation">,</span>
     <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">1008</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"bottle_size"</span><span class="token operator">:</span> <span class="token string">"liter-ish"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">2013383211.8519442</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">2013383211.8512912</span><span class="token punctuation">,</span>
     <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">13268959</span><span class="token punctuation">,</span>
     <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">7867</span>
   <span class="token punctuation">}</span><span class="token punctuation">,</span>
   <span class="token punctuation">{</span>
     <span class="token property">"bottle_size"</span><span class="token operator">:</span> <span class="token string">"small or mini (under 750ml)"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">344991036.80029917</span><span class="token punctuation">,</span>
+    <span class="token property">"total_sale_dollars"</span><span class="token operator">:</span> <span class="token number">344991036.800288</span><span class="token punctuation">,</span>
     <span class="token property">"line_item_count"</span><span class="token operator">:</span> <span class="token number">5010455</span><span class="token punctuation">,</span>
     <span class="token property">"item_count"</span><span class="token operator">:</span> <span class="token number">2060</span>
   <span class="token punctuation">}</span>

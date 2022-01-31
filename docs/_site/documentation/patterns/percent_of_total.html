@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -353,7 +370,7 @@ flight performed by a particular carrier.</p>
           Query for all flights ever made
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">aggregate</span>: flight_count}</pre><div class="result-outer small">
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">aggregate</span>: flight_count }</pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -402,7 +419,7 @@ flight performed by a particular carrier.</p>
           Query for Flights By Carrier
         </a>
       </h2>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
   <span class="token keyword">aggregate</span>: flight_count
 }</pre><div class="result-outer medium">
@@ -603,12 +620,12 @@ flight performed by a particular carrier.</p>
     </div>
   </div>
       <h2>
-        <a id="in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-" class="header-link anchor" href="#in-malloy-can-make-both-caculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-">
-          In Malloy, can make both caculations at once with <a href="nesting.html"><em>nested subtables</em></a>.
+        <a id="in-malloy-can-make-both-calculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-" class="header-link anchor" href="#in-malloy-can-make-both-calculations-at-once-with-a-href-nesting-html-em-nested-subtables-em-a-">
+          In Malloy, can make both calculations at once with <a href="nesting.html"><em>nested subtables</em></a>.
         </a>
       </h2>
     <p>The results are returned as a single row in a table with two columns, <code class="language-malloy">flight_count</code> and <code class="language-malloy">main_query</code>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
@@ -845,17 +862,17 @@ flight performed by a particular carrier.</p>
       </h2>
     <p>Using a pipeline with a <code class="language-malloy"><span class="token keyword">project</span></code> calculation to combine (essentially cross joining) the queries back into a single table.
 We also add an additional column, the percentage of total calculation.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
     <span class="token keyword">aggregate</span>: flight_count
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     main_query<span class="token punctuation">.</span>nickname
     main_query<span class="token punctuation">.</span>flight_count
-    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count<span class="token operator">/</span>flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
+    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count <span class="token operator">/</span> flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
   <span class="token punctuation">]</span>
 }
 </pre><div class="result-outer medium">
@@ -1123,16 +1140,16 @@ We also add an additional column, the percentage of total calculation.</p>
         </a>
       </h2>
     <p>We can use a wildcard against the nested query to to make this pattern easier to write.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">aggregate</span>: flight_count
   <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
     <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
     <span class="token keyword">aggregate</span>: flight_count
   }
-}<span class="token operator">-</span><span class="token operator">></span>{
+} <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">project</span>: <span class="token punctuation">[</span>
     main_query<span class="token punctuation">.</span><span class="token operator">*</span>
-    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count<span class="token operator">/</span>flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
+    flight_count_as_a_percent_of_total <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>flight_count <span class="token operator">/</span> flight_count <span class="token operator">*</span> <span class="token number">100.0</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer medium">
     <div class="result-controls-bar">

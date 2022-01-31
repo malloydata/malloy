@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -356,7 +373,7 @@ mostly scalar, with a few notable exceptions.</p>
           Numbers
         </a>
       </h3>
-    <p>All numbers in Malloy are of type <code class="language-malloy"><span class="token type">number</span></code>, including BiqQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.</p>
+    <p>All numbers in Malloy are of type <code class="language-malloy"><span class="token type">number</span></code>, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.</p>
 <p>Literal <code class="language-malloy"><span class="token type">number</span></code>s consist of one or more digits optionally followed
 by a decimal point <code class="language-malloy"><span class="token punctuation">.</span></code> and more digits, e.g. <code class="language-malloy"><span class="token number">42</span></code> or <code class="language-malloy"><span class="token number">3.14</span></code>.</p>
 <p>Negative numbers are represented using the unary minus
@@ -383,7 +400,7 @@ bases, numbers with thousand separators, exponential notation, etc.) are legal.<
 <code class="language-malloy"><span class="token timeframe">week</span></code>, or <code class="language-malloy"><span class="token timeframe">day</span></code>, and for <code class="language-malloy"><span class="token type">timestamp</span></code>s only, additionally
 <code class="language-malloy"><span class="token timeframe">hour</span></code>, <code class="language-malloy"><span class="token timeframe">minute</span></code>, or <code class="language-malloy"><span class="token timeframe">second</span></code>.</p>
 <p>Literals for <code class="language-malloy"><span class="token type">date</span></code> and <code class="language-malloy"><span class="token type">timestamp</span></code> are preceded by the <code class="language-malloy"><span class="token date">@</span></code> character, e.g. <code class="language-malloy"><span class="token date">@2003</span></code> or <code class="language-malloy"><span class="token date">@1983-11-23 10:00:10</span></code>. For all
-variations of time literals and informaition about their interaction with comparison operators, see the <a href="time-ranges.html#literals">Time Ranges</a> section.</p>
+variations of time literals and information about their interaction with comparison operators, see the <a href="time-ranges.html#literals">Time Ranges</a> section.</p>
 
       <h3>
         <a id="booleans" class="header-link anchor" href="#booleans">

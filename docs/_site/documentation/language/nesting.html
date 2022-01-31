@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -344,7 +361,7 @@
       </h1>
     <p>Nested queries, more formally known as "aggregating subqueries" are queries included in other queries. A nested query produces a subtable per row in the query in which it is embedded. In Malloy, queries can be named and referenced in other queries. The technical term "aggregating subquery" is a bit of a mouthful, so we more often refer to it as a "nested query."</p>
 <p>When a named query is nested inside of another query, it produces an aggregating subquery and the results include a nested subtable.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: airports <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
   <span class="token keyword">nest</span>: by_facility <span class="token keyword">is</span> {
@@ -454,13 +471,13 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BALLOONPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
 
@@ -521,10 +538,10 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 
@@ -616,15 +633,15 @@
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">6</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"GLIDERPORT"</span><span class="token punctuation">,</span>
-        <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">2</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"STOLPORT"</span><span class="token punctuation">,</span>
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">2</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
         <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"BALLOONPORT"</span><span class="token punctuation">,</span>
+        <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">2</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"GLIDERPORT"</span><span class="token punctuation">,</span>
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">2</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -680,11 +697,11 @@
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">10</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"GLIDERPORT"</span><span class="token punctuation">,</span>
+        <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"STOLPORT"</span><span class="token punctuation">,</span>
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">3</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"STOLPORT"</span><span class="token punctuation">,</span>
+        <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"GLIDERPORT"</span><span class="token punctuation">,</span>
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">3</span>
       <span class="token punctuation">}</span>
     <span class="token punctuation">]</span>
@@ -722,7 +739,7 @@
         </a>
       </h2>
     <p>Aggregating subqueries can be nested infinitely, meaning that a nested query can contain another nested query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
+<pre class="language-malloy"><span class="token keyword">query</span>: airports <span class="token operator">-</span><span class="token operator">></span> {
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
   <span class="token keyword">nest</span>: top_5_counties <span class="token keyword">is</span> {
@@ -1096,7 +1113,7 @@
 		</tbody>
 	</table></td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LEE</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WINNEBAGO</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">24</td>
 <td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -1107,13 +1124,10 @@
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">9</td>
 </tr>
 
 		</tbody>
@@ -1292,10 +1306,10 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GLIDERPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 
@@ -1641,20 +1655,16 @@
         <span class="token punctuation">]</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"LEE"</span><span class="token punctuation">,</span>
+        <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"WINNEBAGO"</span><span class="token punctuation">,</span>
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">24</span><span class="token punctuation">,</span>
         <span class="token property">"by_facility"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
           <span class="token punctuation">{</span>
             <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"AIRPORT"</span><span class="token punctuation">,</span>
-            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">18</span>
+            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">15</span>
           <span class="token punctuation">}</span><span class="token punctuation">,</span>
           <span class="token punctuation">{</span>
             <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"HELIPORT"</span><span class="token punctuation">,</span>
-            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">5</span>
-          <span class="token punctuation">}</span><span class="token punctuation">,</span>
-          <span class="token punctuation">{</span>
-            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"ULTRALIGHT"</span><span class="token punctuation">,</span>
-            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">9</span>
           <span class="token punctuation">}</span>
         <span class="token punctuation">]</span>
       <span class="token punctuation">}</span>
@@ -1789,11 +1799,11 @@
             <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">2</span>
           <span class="token punctuation">}</span><span class="token punctuation">,</span>
           <span class="token punctuation">{</span>
-            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"GLIDERPORT"</span><span class="token punctuation">,</span>
+            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"STOLPORT"</span><span class="token punctuation">,</span>
             <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
           <span class="token punctuation">}</span><span class="token punctuation">,</span>
           <span class="token punctuation">{</span>
-            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"STOLPORT"</span><span class="token punctuation">,</span>
+            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"GLIDERPORT"</span><span class="token punctuation">,</span>
             <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
           <span class="token punctuation">}</span>
         <span class="token punctuation">]</span>
@@ -1910,8 +1920,8 @@
         </a>
       </h2>
     <p>Filters can be applied at any level within nested queries.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: airports<span class="token operator">-</span><span class="token operator">></span>{
-  <span class="token keyword">where</span>: state: <span class="token string">'CA'</span><span class="token operator">|</span><span class="token string">'NY'</span><span class="token operator">|</span><span class="token string">'MN'</span>
+<pre class="language-malloy"><span class="token keyword">query</span>: airports <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">where</span>: state: <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token string">'NY'</span> <span class="token operator">|</span> <span class="token string">'MN'</span>
   <span class="token keyword">group_by</span>: state
   <span class="token keyword">aggregate</span>: airport_count
   <span class="token keyword">nest</span>: top_5_counties <span class="token keyword">is</span> {
@@ -1919,7 +1929,7 @@
     <span class="token keyword">group_by</span>: county
     <span class="token keyword">aggregate</span>: airport_count
     <span class="token keyword">nest</span>: major_facilities <span class="token keyword">is</span> {
-      <span class="token keyword">where</span>: major:<span class="token string">'Y'</span>
+      <span class="token keyword">where</span>: major <span class="token operator">=</span> <span class="token string">'Y'</span>
       <span class="token keyword">group_by</span>: name <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
     }
     <span class="token keyword">nest</span>: by_facility <span class="token keyword">is</span> {
@@ -2398,36 +2408,6 @@
 		</tbody>
 	</table></td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAKOTA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-      </tr>
-		</thead>
-		<tbody>
-			
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CROW WING</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
 <td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
@@ -2454,14 +2434,44 @@
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6</td>
 </tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+</tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">STOLPORT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ULTRALIGHT</td>
 <td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HELIPORT</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1</td>
+
+		</tbody>
+	</table></td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DAKOTA</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">17</td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
+      </tr>
+		</thead>
+		<tbody>
+			
+		</tbody>
+	</table></td>
+<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
+		<thead>
+			<tr>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">fac_&#8203;type</th>
+<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">airport_&#8203;count</th>
+      </tr>
+		</thead>
+		<tbody>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRPORT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">14</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SEAPLANE BASE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3</td>
 </tr>
 
 		</tbody>
@@ -2786,21 +2796,6 @@
         <span class="token punctuation">]</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>
       <span class="token punctuation">{</span>
-        <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"DAKOTA"</span><span class="token punctuation">,</span>
-        <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">17</span><span class="token punctuation">,</span>
-        <span class="token property">"major_facilities"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
-        <span class="token property">"by_facility"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-          <span class="token punctuation">{</span>
-            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"AIRPORT"</span><span class="token punctuation">,</span>
-            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">14</span>
-          <span class="token punctuation">}</span><span class="token punctuation">,</span>
-          <span class="token punctuation">{</span>
-            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"SEAPLANE BASE"</span><span class="token punctuation">,</span>
-            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">3</span>
-          <span class="token punctuation">}</span>
-        <span class="token punctuation">]</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
         <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"CROW WING"</span><span class="token punctuation">,</span>
         <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">17</span><span class="token punctuation">,</span>
         <span class="token property">"major_facilities"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
@@ -2814,16 +2809,31 @@
             <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">6</span>
           <span class="token punctuation">}</span><span class="token punctuation">,</span>
           <span class="token punctuation">{</span>
+            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"HELIPORT"</span><span class="token punctuation">,</span>
+            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+          <span class="token punctuation">}</span><span class="token punctuation">,</span>
+          <span class="token punctuation">{</span>
             <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"STOLPORT"</span><span class="token punctuation">,</span>
             <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
           <span class="token punctuation">}</span><span class="token punctuation">,</span>
           <span class="token punctuation">{</span>
             <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"ULTRALIGHT"</span><span class="token punctuation">,</span>
             <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token property">"county"</span><span class="token operator">:</span> <span class="token string">"DAKOTA"</span><span class="token punctuation">,</span>
+        <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">17</span><span class="token punctuation">,</span>
+        <span class="token property">"major_facilities"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        <span class="token property">"by_facility"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token punctuation">{</span>
+            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"AIRPORT"</span><span class="token punctuation">,</span>
+            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">14</span>
           <span class="token punctuation">}</span><span class="token punctuation">,</span>
           <span class="token punctuation">{</span>
-            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"HELIPORT"</span><span class="token punctuation">,</span>
-            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">1</span>
+            <span class="token property">"fac_type"</span><span class="token operator">:</span> <span class="token string">"SEAPLANE BASE"</span><span class="token punctuation">,</span>
+            <span class="token property">"airport_count"</span><span class="token operator">:</span> <span class="token number">3</span>
           <span class="token punctuation">}</span>
         <span class="token punctuation">]</span>
       <span class="token punctuation">}</span><span class="token punctuation">,</span>

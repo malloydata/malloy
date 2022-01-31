@@ -12,21 +12,21 @@ footer: /generated/footers/patterns/foreign_sums.html
       </h1>
     <p>Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model.
 <code class="language-malloy">aircraft_model</code> has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree.</p>
-<pre class="language-malloy"><span class="token comment">-- join 3 tables, flights, aircraft and aircraft models.</span>
-<span class="token comment">-- 'flights' is individual flights</span>
-<span class="token comment">-- 'aircraft' is the plane that made the flight</span>
-<span class="token comment">-- 'aircraft_models' is data about the kind of aircraft</span>
+<pre class="language-malloy"><span class="token comment">// join 3 tables, flights, aircraft and aircraft models.</span>
+<span class="token comment">// `flights` is individual flights</span>
+<span class="token comment">// `aircraft` is the plane that made the flight</span>
+<span class="token comment">// `aircraft_models` is data about the kind of aircraft</span>
 
-<span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: aircraft_model_code
 }
 
-<span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: tail_num
   <span class="token keyword">join_one</span>: aircraft_models <span class="token keyword">with</span> aircraft_model_code
 }
 
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
   <span class="token keyword">join_one</span>: aircraft <span class="token keyword">with</span> tail_num
 }
 
@@ -34,17 +34,17 @@ footer: /generated/footers/patterns/foreign_sums.html
   <span class="token keyword">where</span>: dep_time <span class="token operator">=</span> <span class="token date">@2003-01</span>
   <span class="token keyword">group_by</span>: carrier
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    <span class="token comment">-- number of flights</span>
-    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
-    <span class="token comment">-- number of planes</span>
+    <span class="token comment">// number of flights</span>
+    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// number of planes</span>
     aircraft_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    <span class="token comment">-- number of different aircraft_models</span>
+    <span class="token comment">// number of different aircraft_models</span>
     aircraft_model_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    <span class="token comment">-- count each seat once for each flight.</span>
+    <span class="token comment">// count each seat once for each flight.</span>
     seats_for_sale <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-    <span class="token comment">-- count the seat once for each plane</span>
+    <span class="token comment">// count the seat once for each plane</span>
     seats_on_all_planes <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-    <span class="token comment">-- average number of seats on each model by model</span>
+    <span class="token comment">// average number of seats on each model by model</span>
     average_seats_per_model <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">

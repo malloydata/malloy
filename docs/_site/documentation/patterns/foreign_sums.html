@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item '>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -344,21 +361,21 @@
       </h1>
     <p>Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model.
 <code class="language-malloy">aircraft_model</code> has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree.</p>
-<pre class="language-malloy"><span class="token comment">-- join 3 tables, flights, aircraft and aircraft models.</span>
-<span class="token comment">-- 'flights' is individual flights</span>
-<span class="token comment">-- 'aircraft' is the plane that made the flight</span>
-<span class="token comment">-- 'aircraft_models' is data about the kind of aircraft</span>
+<pre class="language-malloy"><span class="token comment">// join 3 tables, flights, aircraft and aircraft models.</span>
+<span class="token comment">// `flights` is individual flights</span>
+<span class="token comment">// `aircraft` is the plane that made the flight</span>
+<span class="token comment">// `aircraft_models` is data about the kind of aircraft</span>
 
-<span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: aircraft_model_code
 }
 
-<span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span> {
   <span class="token keyword">primary_key</span>: tail_num
   <span class="token keyword">join_one</span>: aircraft_models <span class="token keyword">with</span> aircraft_model_code
 }
 
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
   <span class="token keyword">join_one</span>: aircraft <span class="token keyword">with</span> tail_num
 }
 
@@ -366,17 +383,17 @@
   <span class="token keyword">where</span>: dep_time <span class="token operator">=</span> <span class="token date">@2003-01</span>
   <span class="token keyword">group_by</span>: carrier
   <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    <span class="token comment">-- number of flights</span>
-    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span>
-    <span class="token comment">-- number of planes</span>
+    <span class="token comment">// number of flights</span>
+    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// number of planes</span>
     aircraft_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    <span class="token comment">-- number of different aircraft_models</span>
+    <span class="token comment">// number of different aircraft_models</span>
     aircraft_model_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    <span class="token comment">-- count each seat once for each flight.</span>
+    <span class="token comment">// count each seat once for each flight.</span>
     seats_for_sale <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-    <span class="token comment">-- count the seat once for each plane</span>
+    <span class="token comment">// count the seat once for each plane</span>
     seats_on_all_planes <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-    <span class="token comment">-- average number of seats on each model by model</span>
+    <span class="token comment">// average number of seats on each model by model</span>
     average_seats_per_model <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
   <span class="token punctuation">]</span>
 }</pre><div class="result-outer large">

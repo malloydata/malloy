@@ -9,7 +9,18 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
         <div class="sidebar" id="sidebar">
@@ -27,6 +38,12 @@
               <a href="/malloy/documentation/features.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
               </a>
             </div>
           </div>
@@ -116,7 +133,7 @@
 <div class='sidebar-item active'>
               <a href="/malloy/documentation/language/imports.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Imports and Exports
+                Imports
               </a>
             </div>
           </div>
@@ -236,7 +253,7 @@
           </div>
       </div>
 <div>
-        <div id=iowa_liquor - an analysis class="sidebar-section-title collapsed">Iowa Liquor - An Analysis<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -278,7 +295,7 @@
           </div>
       </div>
 <div>
-        <div id=wordle_- a perfect solver class="sidebar-section-title collapsed">Wordle - A Perfect Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
@@ -336,37 +353,35 @@
             
           </div>
           <div class="document-outer">
-            <div class="document">
-      <h1>
-        <a id="imports-and-exports" class="header-link anchor" href="#imports-and-exports">
-          Imports and Exports
-        </a>
-      </h1>
-    <p>Malloy allows for explores to be reused between files, or for a set of explores
-to simply be split up among multiple files by using <code class="language-malloy"><span class="token keyword">import</span></code> and <code class="language-malloy"><span class="token keyword">export</span></code>.</p>
+            <div class="document"><!--
 
-      <h2>
-        <a id="exports" class="header-link anchor" href="#exports">
-          Exports
-        </a>
-      </h2>
-    <p>Before an explore definition, the <code class="language-malloy"><span class="token keyword">export</span></code> keyword means that the explore should
-be included in the file's <em>public namespace</em>.</p>
-<p>Consider a file <code>samples/faa/flights.malloy</code>:</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span>{}
-  <span class="token keyword">primary_key</span>: code
-  <span class="token keyword">dimension</span>: name <span class="token keyword">is</span> <span class="token function">concat</span><span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
-  <span class="token keyword">measure</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
+# Imports and Exports
 
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>{
-  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-  <span class="token keyword">join_one</span>: origin <span class="token keyword">is</span> airports <span class="token keyword">with</span> origin_code
-  <span class="token keyword">join_one</span>: destination <span class="token keyword">is</span> airports <span class="token keyword">with</span> destination_code
-  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>In this example, <code class="language-malloy">flights</code> is exported, but <code class="language-malloy">airports</code> is not, and therefore
-only <code class="language-malloy">flights</code> is part of the file's public namespace.</p>
+Malloy allows for explores to be reused between files, or for a set of explores
+to simply be split up among multiple files by using `import` and `export`.
 
+## Exports
+
+Before an explore definition, the `export` keyword means that the explore should
+be included in the file's _public namespace_.
+
+Consider a file <code>samples/faa/flights.malloy</code>:
+```malloy
+explore: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+  dimension: name is concat(code, ' - ', full_name)
+  measure: airport_count is count()
+}
+
+explore: flights is table('malloy-data.faa.flights') {
+  join_one: origin is airports with origin_code
+  join_one: destination is airports with destination_code
+}
+```
+
+In this example, `flights` is exported, but `airports` is not, and therefore
+only `flights` is part of the file's public namespace.
+ -->
       <h2>
         <a id="imports" class="header-link anchor" href="#imports">
           Imports
@@ -378,14 +393,13 @@ exported explores from another file using <code class="language-malloy"><span cl
 <code class="language-malloy">flights</code> explore, you could write:</p>
 <pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
 
-<span class="token keyword">query</span>: flights<span class="token operator">-</span><span class="token operator">></span>{<span class="token keyword">top</span>: <span class="token number">5</span><span class="token punctuation">;</span> <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count}</pre><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
-
+<span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">top</span>: <span class="token number">5</span><span class="token punctuation">;</span> <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count }</pre><!-- Because `airports` is not exported, referencing it here would be invalid. -->
       <h3>
         <a id="import-locations" class="header-link anchor" href="#import-locations">
           Import Locations
         </a>
       </h3>
-    <p>Imported files may be specified with relative or absolute URIs.</p>
+    <p>Imported files may be specified with relative or absolute URLs.</p>
 <table>
 <thead>
 <tr>
