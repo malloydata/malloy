@@ -1,6 +1,6 @@
 # Sample Models
 
-Code snippets will appear throughout the Malloy documentation, many of which rely on a number of sample models based on public datasets.
+Code snippets will appear throughout the Malloy documentation, many of which rely on a number of sample models based on publicly available datasets.
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/samples.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
@@ -9,7 +9,7 @@ Code snippets will appear throughout the Malloy documentation, many of which rel
 
 ## FAA
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin at ex nisi. Curabitur fermentum in lorem vel rhoncus. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec sollicitudin massa purus, pellentesque pharetra quam bibendum nec. Proin lacinia, nunc vitae sollicitudin porta, nisl leo cursus nibh, sit amet bibendum nisi dui et orci. Pellentesque egestas sollicitudin consequat. Etiam ac nulla vehicula, feugiat neque non, lobortis orci. Aliquam erat volutpat. Nunc facilisis massa sit amet dolor rhoncus tincidunt. Donec scelerisque dignissim est et porttitor. Morbi pulvinar orci quis egestas sodales. Duis aliquam ut arcu in dapibus. Vestibulum gravida lacus orci, sed vehicula lorem fermentum vitae. Duis vitae volutpat massa. Proin maximus ante sem, eu sollicitudin mauris vulputate eu. Aenean rhoncus volutpat elementum.
+This set of models points at a publicly available FAA flights dataset including information on flights, airports, aircrafts and aircraft models from 2000 to 2005. A wide variety of patterns and features are used in this model and any of our examples in documentation are based on this dataset, so it's a great place to start as you get to know Malloy.
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/faa.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
@@ -18,7 +18,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin at ex nisi. Curab
 
 ## Iowa Liquor
 
-Aliquam erat augue, vulputate non rhoncus quis, tempus quis dolor. Nunc tempus mauris eget sem dapibus aliquet. Ut ultricies arcu enim, in gravida libero viverra quis. Ut ultricies non eros id commodo. Duis libero est, finibus ut rhoncus ut, interdum ac ipsum. Vestibulum vestibulum, turpis vitae scelerisque venenatis, diam neque dignissim augue, sed dictum elit justo vel augue. Integer auctor magna sit amet leo tempus, varius scelerisque arcu vehicula. Maecenas venenatis vehicula vestibulum. In sagittis venenatis neque ut aliquet. Pellentesque gravida sem vitae turpis scelerisque, a hendrerit sem convallis.
+Liquor sales in Iowa are state-controlled, with all liquor wholesale run by the state. All purchases and sales of liquor that stores make are a matter of public record. A walkthrough of exploring and modeling this dataset can be found [here](examples/iowa/iowa.md); this makes a great introduction to Malloy.
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/iowa.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
@@ -27,7 +27,7 @@ Aliquam erat augue, vulputate non rhoncus quis, tempus quis dolor. Nunc tempus m
 
 ## Ecommerce
 
-Donec aliquam mauris risus, vel aliquam risus dictum at. Nam nulla velit, rutrum at lorem id, tempor lacinia arcu. Morbi rutrum sagittis faucibus. Pellentesque non hendrerit purus. Maecenas rutrum sollicitudin laoreet. Praesent non dolor finibus, vestibulum enim at, ultrices tortor. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nam pulvinar nunc at fringilla vestibulum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris elit lorem, aliquam non fermentum sed, semper id mi. Donec a augue quis dui molestie facilisis. Duis sodales porttitor arcu et tincidunt. Proin eu ante sit amet ante imperdiet commodo non vitae ipsum. Nulla vehicula nulla eu pretium tempor. Nullam turpis quam, sagittis in urna id, accumsan convallis justo.
+This model points to a dataset for a fictitious ecommerce business. It has a  clean and typical schema for a transactional dataset. It also includes an example of an interesting brand affinity analysis (people who buy x also buy y).
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/ecommerce.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
@@ -36,7 +36,7 @@ Donec aliquam mauris risus, vel aliquam risus dictum at. Nam nulla velit, rutrum
 
 ## GA Sessions
 
-Morbi iaculis magna a eros semper maximus. Aenean lobortis sem vel dignissim consequat. Suspendisse sed augue quis enim vestibulum facilisis. Donec blandit elit nec scelerisque aliquet. Fusce id tempus sapien. In vestibulum egestas metus quis porttitor. Maecenas quis tellus eget diam cursus porta. In blandit justo lectus, vel interdum sapien facilisis in. Donec finibus massa et augue sodales facilisis. Pellentesque et tortor at quam cursus vestibulum vitae eu erat. Nam non pellentesque massa. Etiam in auctor nisi. Ut pulvinar rutrum ante. Aliquam eleifend eget justo et molestie.
+Malloy is ideally suited to working with nested data, and this is the place to see why. See how easily data at any level of nesting can be accessed and aggregated without needlessly complex queries or use of CTEs.
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/ga_sessions.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
@@ -45,16 +45,16 @@ Morbi iaculis magna a eros semper maximus. Aenean lobortis sem vel dignissim con
 
 ## Hacker News
 
-Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. In et luctus quam. Curabitur mollis nibh a est dapibus, placerat vehicula neque semper. Praesent condimentum ultricies metus, id porta lacus suscipit sed. Praesent nec diam ornare, venenatis tellus a, condimentum nunc. Aenean vel dictum arcu. Quisque auctor hendrerit magna, non tincidunt tellus porta a. Cras accumsan quam sem, eu tempor nunc tempus a. Maecenas rutrum diam diam.
+This is just a fun dataset. Includes examples of using regular expressions to parse data, [pick](language/expressions#pick-expressions) (Malloy's improvement upon CASE statements), and [imports](language/imports.md) to spin off a specific analysis of posts about FAANG companies.
 
-<a class="button-link" href="{{ site.baseurl }}/aux/generated/ecommerce.zip">
+<a class="button-link" href="{{ site.baseurl }}/aux/generated/hackernews.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
-    Download Ecommerce Model
+    Download Hacker News Model
 </a>
 
 ## Names
 
-Aliquam erat augue, vulputate non rhoncus quis, tempus quis dolor. Nunc tempus mauris eget sem dapibus aliquet. Ut ultricies arcu enim, in gravida libero viverra quis. Ut ultricies non eros id commodo. Duis libero est, finibus ut rhoncus ut, interdum ac ipsum. Vestibulum vestibulum, turpis vitae scelerisque venenatis, diam neque dignissim augue, sed dictum elit justo vel augue. Integer auctor magna sit amet leo tempus, varius scelerisque arcu vehicula. Maecenas venenatis vehicula vestibulum. In sagittis venenatis neque ut aliquet. Pellentesque gravida sem vitae turpis scelerisque, a hendrerit sem convallis.
+A look at baby names in the United States by gender, state, and year, since 1910. Includes an example of cohorting names by aggregating safely across different levels of nesting.
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/names.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
@@ -63,16 +63,16 @@ Aliquam erat augue, vulputate non rhoncus quis, tempus quis dolor. Nunc tempus m
 
 ## The Met
 
-Morbi iaculis magna a eros semper maximus. Aenean lobortis sem vel dignissim consequat. Suspendisse sed augue quis enim vestibulum facilisis. Donec blandit elit nec scelerisque aliquet. Fusce id tempus sapien. In vestibulum egestas metus quis porttitor. Maecenas quis tellus eget diam cursus porta. In blandit justo lectus, vel interdum sapien facilisis in. Donec finibus massa et augue sodales facilisis. Pellentesque et tortor at quam cursus vestibulum vitae eu erat. Nam non pellentesque massa. Etiam in auctor nisi. Ut pulvinar rutrum ante. Aliquam eleifend eget justo et molestie.
+Looks at a catalog of over 200,000 public domain items from The Met (The Metropolitan Museum of Art). The catalog includes metadata about each piece of art, along with an image or images of the artifact.
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/the_met.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
     Download The Met Model
 </a>
 
-## Wordle
+## Wordlebot
 
-Donec aliquam mauris risus, vel aliquam risus dictum at. Nam nulla velit, rutrum at lorem id, tempor lacinia arcu. Morbi rutrum sagittis faucibus. Pellentesque non hendrerit purus. Maecenas rutrum sollicitudin laoreet. Praesent non dolor finibus, vestibulum enim at, ultrices tortor. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nam pulvinar nunc at fringilla vestibulum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Mauris elit lorem, aliquam non fermentum sed, semper id mi. Donec a augue quis dui molestie facilisis. Duis sodales porttitor arcu et tincidunt. Proin eu ante sit amet ante imperdiet commodo non vitae ipsum. Nulla vehicula nulla eu pretium tempor. Nullam turpis quam, sagittis in urna id, accumsan convallis justo.
+Let Wordlebot solve Wordle for you (or if you're like us, see if it can beat you after you've played!). This is an example of an advanced analysis to solve a tricky problem. We have a walkthrough and examples of how we used the model to solve Wordle puzzles available [here](examples/wordle/wordle.md).
 
 <a class="button-link" href="{{ site.baseurl }}/aux/generated/wordle.zip">
     <img class="download-icon" src="{{ site.baseurl }}/img/download.svg" alt="download"/>
