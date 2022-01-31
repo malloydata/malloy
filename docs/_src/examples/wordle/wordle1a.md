@@ -13,7 +13,7 @@ query: numbers -> { project: num }
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden": true}
-explore: words is table('malloy-data.malloytest.words'){
+explore: words is table('malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)

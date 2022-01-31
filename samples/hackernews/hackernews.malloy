@@ -11,17 +11,18 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
 
   measure: [
     post_count is count()
-    good_post_count is post_count {where: is_good}
-    percent_good is FLOOR(good_post_count /post_count * 100)
+    good_post_count is post_count { where: is_good }
+    percent_good is floor(good_post_count / post_count * 100)
   ]
 
   dimension: [
-    post_time is CAST(TIMESTAMP_SECONDS(`time`) as timestamp)
-    site is REGEXP_EXTRACT(
-        REGEXP_EXTRACT(url, '^http://([^\\/]*)\\/'),
-          '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$')
+    post_time is timestamp_seconds(`time`)::timestamp
+    site is regexp_extract(
+      regexp_extract(url, '^http://([^\\/]*)\\/'),
+      '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$'
+    )
 
-    score_class is IFNULL(score,0):
+    score_class is ifnull(score, 0):
       pick 'blah' when < 5
       pick 'hmmm' when < 10
       pick 'oooh' when < 100
@@ -100,7 +101,7 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
 
   query: poster_dashboard is {
     top: 20
-    where: [poster != null, post_type = 'story']
+    where: [ poster != null, post_type = 'story' ]
     group_by: poster
     aggregate: [
       post_count
@@ -114,12 +115,12 @@ explore: stories is table('bigquery-public-data.hacker_news.full') {
     nest: by_sites is {
       top: 10
       group_by: site
-      aggregate: [post_count, percent_good]
+      aggregate: [ post_count, percent_good ]
     }
     nest: best_stories is {
       top: 10
       order_by: score desc
-      group_by: [post_time, title, score, site]
+      group_by: [ post_time, title, score, site ]
     }
   }
 }

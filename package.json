@@ -28,7 +28,9 @@
     "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
     "vscode-build-extension-dev": "yarn workspace malloy-vscode build-extension-dev",
-    "third-party-licenses": "ts-node scripts/third_party_licenses"
+    "vscode-publish-extensions": "yarn workspace malloy-vscode publish-extensions",
+    "third-party-licenses": "ts-node scripts/third_party_licenses",
+    "malloyc": "ts-node scripts/malloy-to-json"
   },
   "resolutions": {},
   "devDependencies": {

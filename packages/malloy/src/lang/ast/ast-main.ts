@@ -27,7 +27,7 @@ import {
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
-import { toTimestampV } from "./time-utils";
+// import { toTimestampV } from "./time-utils";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -588,7 +588,9 @@ export class NamedSource extends Mallobj {
             let value: model.Expr | null = pVal.value;
             if (pVal.dataType !== decl.type) {
               if (decl.type === "timestamp" && pVal.dataType === "date") {
-                value = toTimestampV(pVal).value;
+                // @mtoy-googly-moogly : I've stubbed for now as we don't do parameters yet
+                //  not sure how to get to a dialect from here.
+                // value = toTimestampV(getDialect(this.dialect), pVal).value;
               } else {
                 pExpr.log(
                   `Type mismatch for parameter '${pName}', expected '${decl.type}'`

@@ -1,0 +1,14 @@
+steps:
+  - id: deploy-marketplace
+    name: "nixos/nix"
+    entrypoint: sh
+    args:
+      - -c
+      - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
+    timeout: "1600s"
+    secretEnv: ["VSCE_PAT"]
+timeout: "1600s"
+availableSecrets:
+  secretManager:
+    - versionName: projects/malloy-303216/secrets/marketplace-prerelease-CI/versions/latest
+      env: "VSCE_PAT"

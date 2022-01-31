@@ -41,6 +41,15 @@ ORDER BY flight_count desc         -- malloy automatically orders by the first a
 
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
+# Get Started
+GitHub mutes videos by default, so make sure to unmute to hear the walkthrough. 
+
+
+
+https://user-images.githubusercontent.com/7178946/151630430-308e651d-814c-4c18-8522-d2d0edb25ece.mp4
+
+
+
 
 
 # Installing the Extension

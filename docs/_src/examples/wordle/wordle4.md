@@ -5,7 +5,7 @@ Final Data Model - Goto [Solve Puzzles](wordle5.md)
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy"}
 // Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words') {
+explore: words is table('malloy-data.malloytest.words_bigger') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
