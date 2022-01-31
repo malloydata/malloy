@@ -52,6 +52,11 @@ export const App: React.FC = () => {
         </ButtonLink>
       </Row>
       <Row>
+        <ButtonLink href="https://looker-open-source.github.io/malloy/documentation/language/basic.html">
+          Quick Start Guide
+        </ButtonLink>
+      </Row>
+      <Row>
         <ButtonLink href="https://looker-open-source.github.io/malloy/">
           Download Sample Models
         </ButtonLink>
@@ -104,4 +109,6 @@ const Row = styled.div`
   justify-content: center;
   gap: 5px;
   width: 100%;
+
+  // TODO make the elements move to the left when the panel becomes "wide", to match the default list views
 `;
