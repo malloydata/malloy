@@ -34,6 +34,7 @@ async function doPublish(version: string) {
       githubBranch: "main",
       preRelease,
       useYarn: true,
+      pat: process.env.VSCE_PAT,
     });
   }
 }
