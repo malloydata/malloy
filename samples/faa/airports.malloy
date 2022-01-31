@@ -39,7 +39,7 @@ explore: airports is table('malloy-data.faa.airports') {
     aggregate: airport_count
     nest: [
       by_fac_type
-      by_state
+      by_state_shape_map is by_state {}
       major_airports
     ]
   }
