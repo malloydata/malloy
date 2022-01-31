@@ -13,6 +13,7 @@
 
 import path from "path";
 import fs from "fs";
+import archiver from "archiver";
 import { Malloy } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { performance } from "perf_hooks";
@@ -35,6 +36,7 @@ const JS_OUT_PATH = path.join(__dirname, "../../js/generated");
 const OUT_PATH2 = path.join(__dirname, "../../documentation/");
 const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
+const AUX_OUT_PATH = path.join(__dirname, "../../aux/generated");
 
 const WATCH_ENABLED = process.argv.includes("--watch");
 
@@ -116,7 +118,44 @@ function outputSearchSegmentsFile(
   log(`File js/generated/search_segments.js written.`);
 }
 
+function outputSamplesZip(relativePath: string, name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const archive = archiver("zip");
+      fs.mkdirSync(AUX_OUT_PATH, { recursive: true });
+      const output = fs.createWriteStream(path.join(AUX_OUT_PATH, name));
+      output.on("close", () => {
+        log(`File aux/${name} written.`);
+        resolve();
+      });
+      archive.on("error", (error) => {
+        log(error.message);
+        reject(error);
+      });
+      archive.pipe(output);
+      archive.directory(path.join(SAMPLES_PATH, relativePath), false);
+      archive.finalize();
+    } catch (error) {
+      log(error);
+      reject(error);
+    }
+  });
+}
+
+async function outputSamplesZips(): Promise<void> {
+  log("Zipping samples");
+  await Promise.all([
+    outputSamplesZip("/", "samples.zip"),
+    ...fs.readdirSync(SAMPLES_PATH).map((relativePath) => {
+      if (fs.statSync(path.join(SAMPLES_PATH, relativePath)).isDirectory()) {
+        return outputSamplesZip(relativePath, relativePath + ".zip");
+      }
+    }),
+  ]);
+}
+
 (async () => {
+  await outputSamplesZips();
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);
   const staticFiles = allFiles.filter((file) => !isMarkdown(file));
@@ -163,6 +202,7 @@ function outputSearchSegmentsFile(
         const fullPath = path.join(DOCS_ROOT_PATH, doc);
         compileDoc(fullPath);
       }
+      outputSamplesZips();
     });
     watchDebounced(CONTENTS_PATH, (type) => {
       log(`Table of contents ${type}d. Recompiling...`);

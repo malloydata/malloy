@@ -176,6 +176,11 @@
     "configuration": {
       "title": "Malloy",
       "properties": {
+        "malloy.rowLimit": {
+          "type": "number",
+          "description": "Maximum number of top-level rows to fetch when running queries.",
+          "default": 50
+        },
         "malloy.connections": {
           "type": "array",
           "items": {

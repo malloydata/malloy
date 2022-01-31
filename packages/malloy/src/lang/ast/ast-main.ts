@@ -298,6 +298,7 @@ export class ListOf<ET extends MalloyElement> extends MalloyElement {
 
 export class Unimplemented extends MalloyElement {
   elementType = "unimplemented";
+  reported = false;
 }
 
 function getStructFieldDef(
@@ -947,12 +948,22 @@ export type QueryItem =
 export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("groupBy", members);
+    for (const el of members) {
+      if (el instanceof ExprFieldDecl) {
+        el.isMeasure = false;
+      }
+    }
   }
 }
 
 export class Aggregate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("aggregate", members);
+    for (const el of members) {
+      if (el instanceof ExprFieldDecl) {
+        el.isMeasure = true;
+      }
+    }
   }
 }
 

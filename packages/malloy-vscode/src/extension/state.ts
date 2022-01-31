@@ -12,21 +12,14 @@
  */
 
 import { TextDocument, WebviewPanel } from "vscode";
-import * as vscode from "vscode";
-import { ConnectionConfig, ConnectionManager } from "../common";
 import { Result } from "@malloydata/malloy";
 import {
   QueryPanelMessage,
   WebviewMessageManager,
 } from "./webview_message_manager";
+import { VSCodeConnectionManager } from "./connection_manager";
 
-export function getConnectionsConfig(): ConnectionConfig[] {
-  return vscode.workspace
-    .getConfiguration("malloy")
-    .get("connections") as ConnectionConfig[];
-}
-
-export const CONNECTION_MANAGER = new ConnectionManager(getConnectionsConfig());
+export const CONNECTION_MANAGER = new VSCodeConnectionManager();
 
 export interface RunState {
   cancel: () => void;

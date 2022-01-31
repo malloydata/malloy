@@ -72,6 +72,7 @@ export interface NamedObject extends AliasedName, LineNumber {
   type: string;
 }
 
+// result metadata for a field
 export interface ResultMetadataDef {
   sourceField: string;
   sourceExpression?: string;
@@ -80,8 +81,17 @@ export interface ResultMetadataDef {
   fieldKind: "measure" | "dimension" | "struct";
 }
 
+// struct specific metadta
+export interface ResultStructMetadataDef extends ResultMetadataDef {
+  limit?: number;
+}
+
 export interface ResultMetadata {
   resultMetadata?: ResultMetadataDef;
+}
+
+export interface ResultStructMetadata {
+  resultMetadata?: ResultStructMetadataDef;
 }
 
 export interface FilterFragment {
@@ -434,7 +444,7 @@ export type StructSource =
 //  the relationshipo is implied
 
 /** struct that is intrinsic to the table */
-export interface StructDef extends NamedObject, ResultMetadata, Filtered {
+export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   type: "struct";
   structSource: StructSource;
   structRelationship: StructRelationship;

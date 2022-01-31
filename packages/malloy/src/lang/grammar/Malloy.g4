@@ -190,22 +190,6 @@ exploreQueryDef
   : exploreQueryNameDef IS pipelineFromName
   ;
 
-groupByStatement
-  : GROUP_BY groupByList
-  ;
-
-groupByList
-  : OBRACK (groupByEntry COMMA?)* CBRACK
-  | groupByEntry
-  ;
-
-dimensionDef: fieldDef;
-
-groupByEntry
-  : fieldPath
-  | dimensionDef
-  ;
-
 queryStatement
   : groupByStatement
   | projectStatement
@@ -217,6 +201,23 @@ queryStatement
   | whereStatement
   | havingStatement
   | nestStatement
+  ;
+
+groupByStatement
+  : GROUP_BY queryFieldList
+  ;
+
+queryFieldList
+  : OBRACK (queryFieldEntry COMMA?)* CBRACK
+  | queryFieldEntry
+  ;
+
+dimensionDef: fieldDef;
+
+queryFieldEntry
+  : fieldPath      # queryFieldRef
+  | dimensionDef   # queryFieldDef
+  | fieldExpr      # queryFieldNameless
   ;
 
 nestStatement
@@ -234,17 +235,7 @@ nestEntry
   ;
 
 aggregateStatement
-  : AGGREGATE aggregateList
-  ;
-
-aggregateEntry
-  : fieldPath
-  | measureDef
-  ;
-
-aggregateList
-  : OBRACK (aggregateEntry COMMA?)* CBRACK
-  | aggregateEntry
+  : AGGREGATE queryFieldList
   ;
 
 projectStatement
