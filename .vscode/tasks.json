@@ -50,11 +50,11 @@
     },
     {
       "type": "typescript",
-      "tsconfig": "tsconfig.type-checking-only.json",
+      "tsconfig": "tsconfig.compile-no-emit.json",
       "option": "watch",
       "problemMatcher": ["$tsc-watch"],
       "group": "build",
-      "label": "tsc-typecheck",
+      "label": "tsc-compile-watch",
       "runOptions": { "runOn": "folderOpen" },
       "presentation": {
         "reveal": "silent",
