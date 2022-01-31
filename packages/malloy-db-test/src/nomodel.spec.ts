@@ -216,4 +216,60 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].left_sum).toBe(19701);
     expect(result.data.value[0].right_sum).toBe(1560);
   });
+
+  it(`limit - provided`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const result = await runtime
+      .loadQuery(
+        `
+      query: table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: c is count()
+        limit: 3
+      }
+      `
+      )
+      .run();
+    expect(result.resultExplore.limit).toBe(3);
+  });
+
+  it(`limit - not provided`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const result = await runtime
+      .loadQuery(
+        `
+      query: table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: c is count()
+      }
+      `
+      )
+      .run();
+    expect(result.resultExplore.limit).toBe(undefined);
+  });
+
+  it(`limit pipeline - provided`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const result = await runtime
+      .loadQuery(
+        `
+      query: table('malloytest.state_facts') -> {
+        project: state
+        limit: 10
+      }
+      -> {
+        project: state
+        limit: 3
+      }
+      `
+      )
+      .run();
+    expect(result.resultExplore.limit).toBe(3);
+  });
 });

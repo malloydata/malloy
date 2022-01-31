@@ -1024,6 +1024,10 @@ export class Explore extends Entity {
     return this.structDef.resultMetadata?.filterList || [];
   }
 
+  get limit(): number | undefined {
+    return this.structDef.resultMetadata?.limit;
+  }
+
   public get structDef(): StructDef {
     return this._structDef;
   }

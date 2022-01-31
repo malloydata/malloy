@@ -58,6 +58,7 @@ import {
 import { indent, AndChain } from "./utils";
 import { parseTableURL } from "../malloy";
 import md5 from "md5";
+import { ResultStructMetadataDef } from ".";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1537,7 +1538,9 @@ class QueryQuery extends QueryField {
   }
 
   // get the source fieldname and filters associated with the field (so we can drill later)
-  getResultMetadata(fi: FieldInstance): ResultMetadataDef | undefined {
+  getResultMetadata(
+    fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
     if (fi instanceof FieldInstanceField) {
       if (fi.fieldUsage.type === "result") {
         const fieldDef = fi.f.fieldDef as FieldAtomicDef;
@@ -1573,8 +1576,16 @@ class QueryQuery extends QueryField {
       const sourceField = fi.turtleDef.name || fi.turtleDef.as;
       const sourceClasses = sourceField ? [sourceField] : [];
       const filterList = fi.firstSegment.filterList;
+      const limit =
+        fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1].limit;
       if (sourceField) {
-        return { sourceField, filterList, sourceClasses, fieldKind: "struct" };
+        return {
+          sourceField,
+          filterList,
+          sourceClasses,
+          fieldKind: "struct",
+          limit,
+        };
       }
     }
     return undefined;
