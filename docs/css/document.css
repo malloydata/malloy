@@ -54,7 +54,7 @@ div.header-banner {
   align-items: center;
 }
 
-a.button-link {
+a.button {
   border-radius: 5px;
   background-color: #4285f4;
   color: white;
@@ -591,4 +591,15 @@ div.document .result-middle[data-result-kind="json"] pre {
   color: #505050;
   font-size: 16px;
   background-color: #fbfbfb;
+}
+
+div.document img.download-icon {
+  height: 15px;
+  width: 15px;
+}
+
+a.button-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }

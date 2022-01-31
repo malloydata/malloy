@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="11px" height="10px" viewBox="0 0 11 10" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>download</title>
+    <g id="icons" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Artboard" transform="translate(-5.000000, -121.000000)" fill-rule="nonzero">
+            <g id="download" transform="translate(5.819016, 121.000648)">
+                <path d="M8.41595804,0 L1.05199475,0 C0.47339764,0 0,0.473398 0,1.051995 L0,8.415958 C0,8.994555 0.47339764,9.467953 1.05199475,9.467953 L8.41595804,9.467953 C8.99455515,9.467953 9.46795279,8.994555 9.46795279,8.415958 L9.46795279,1.051995 C9.46795279,0.473398 8.99455515,0 8.41595804,0 Z" id="sectioin-path" fill="#4285F4"></path>
+                <path d="M5.25997339,1.51332104 L5.25942221,6.14832104 L6.62581333,4.78277169 L7.36968542,5.52664378 L4.76613124,8.13019797 L4.74942221,8.11332104 L4.73397639,8.13019797 L2.13042221,5.52664378 L2.8742943,4.78277169 L4.20742221,6.11632104 L4.20797939,1.51332104 L5.25997339,1.51332104 Z" id="sectioin" fill="#FFFFFF"></path>
+            </g>
+        </g>
+    </g>
+</svg>
