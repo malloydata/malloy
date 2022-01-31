@@ -1,6 +1,6 @@
 <div class="sidebar" id="sidebar">
     <div>
-        <div id=getting_started class="sidebar-section-title {% unless /documentation/,/documentation/features.html,/documentation/connection_instructions.html contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <div id=getting_started class="sidebar-section-title {% unless /documentation/,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
@@ -13,6 +13,12 @@
               <a href="{{ site.baseurl }}/documentation/features.html">
                 <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
                 Key Features
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/samples.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/samples.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Sample Models
               </a>
             </div>
 <div class='sidebar-item {% if page.url == "/documentation/connection_instructions.html" %}active{% endif %}'>
