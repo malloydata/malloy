@@ -245,7 +245,35 @@
           "description": "Connections for Malloy to use to access data when compiling and querying."
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "malloy-quickstart",
+        "title": "Quick Start",
+        "description": "Quickly get up to speed with Malloy.",
+        "steps": [
+          {
+            "id": "download-samples",
+            "title": "Download the Sample Models",
+            "description": "Code snippets will appear throughout the Malloy documentation, many of which rely on a number of sample models based on public datasets.\n[Download All Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)",
+            "media": { "markdown": "media/sample-models.md" }
+          },
+          {
+            "id": "check-out-samples",
+            "title": "Explore the Malloy Documentation",
+            "description": "Malloy documentation is super cool!\n[Visit Documentation](https://looker-open-source.github.io/malloy/documentation/language/basic.html)",
+            "media": { "markdown": "media/docs.md" }
+          },
+          {
+            "id": "configure-connections",
+            "title": "Set Up Connections",
+            "description": "Need connections\n[Edit Connections](command:malloy.editConnections)",
+            "media": { "markdown": "media/connections.md" },
+            "completionEvents": ["onSettingChanged:malloy.connections"]
+          }
+        ]
+      }
+    ]
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
