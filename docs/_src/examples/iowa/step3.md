@@ -2,7 +2,7 @@
 
 **TLDR:** *This step builds a couple of useful derivations, `category_class` and `bottle_size`.  There as 68 different `category_name`s in this data set, we reduce that to 9.  There are 34 *liter sizes*, we make a new dimension, `bottle_size` that only has 3 possible values.*
 
-Our previous analysis of price per mL brings to mind quetsions around bottle size. How many different sizes do bottles come in?  Are there standards and uncommon ones?  Do vendors specialize in different bottle sizes?
+Our previous analysis of price per mL brings to mind questions around bottle size. How many different sizes do bottles come in?  Are there standards and uncommon ones?  Do vendors specialize in different bottle sizes?
 
 
 ## Building *category_class*, a simplified version of *category_name*
@@ -23,16 +23,16 @@ query: iowa -> {
 Malloy provides a simple way to map all these values, using `pick` expressions.  In the [Malloy Model for this Data Set](source.md), you will find the declaration below.  Each pick expression tests `category_name` for a regular expression.  If it matches, it returns the name pick'ed.
 
 ```malloy
-  category_class is category_name :
-    pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BURBON|RYE)'
-    pick 'VODKAS' when ~ r'VODKA'
-    pick 'RUMS' when ~ r'RUM'
-    pick 'TEQUILAS' when ~ r'TEQUILA'
-    pick 'LIQUEURS' when ~ r'(LIQUE|AMARETTO|TRIPLE SEC)'
-    pick 'BRANDIES' when ~ r'BRAND(I|Y)'
-    pick 'GINS' when ~ r'GIN'
-    pick 'SCHNAPPS' when ~ r'SCHNAP'
-    else 'OTHER'
+category_class is category_name:
+  pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BURBON|RYE)'
+  pick 'VODKAS' when ~ r'VODKA'
+  pick 'RUMS' when ~ r'RUM'
+  pick 'TEQUILAS' when ~ r'TEQUILA'
+  pick 'LIQUEURS' when ~ r'(LIQUE|AMARETTO|TRIPLE SEC)'
+  pick 'BRANDIES' when ~ r'BRAND(I|Y)'
+  pick 'GINS' when ~ r'GIN'
+  pick 'SCHNAPPS' when ~ r'SCHNAP'
+  else 'OTHER'
 ```
 ## Testing the category map
 
@@ -96,10 +96,10 @@ query: iowa -> {
 Looking at the above chart and table we can see that there are a bunch of small values, several big values at 750 and 1000, and then a bunch of larger values.  We can clean this up by bucketing bottle size into three groups using a Malloy `pick` expression that maps these values to strings.
 
 ```malloy
-  bottle_size is bottle_volume_ml:
-    pick 'jumbo (over 1000ml)' when > 1001
-    pick 'liter-ish' when >= 750
-    else 'small or mini (under 750ml)'
+bottle_size is bottle_volume_ml:
+  pick 'jumbo (over 1000ml)' when > 1001
+  pick 'liter-ish' when >= 750
+  else 'small or mini (under 750ml)'
 ```
 Look at the data through the new mapping.
 

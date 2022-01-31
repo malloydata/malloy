@@ -5,8 +5,8 @@ _You can find the complete source code for this model [here](https://github.com/
 Start by defining an explore based on a query.
 
 ```malloy
-explore: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801'){
-  dimension: start_time is cast(timestamp_seconds(visitStartTime) as timestamp)
+explore: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {
+  dimension: start_time is timestamp_seconds(visitStartTime)::timestamp
   measure: [
     user_count is count(distinct fullVisitorId)
     session_count is count()
@@ -14,7 +14,7 @@ explore: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_se
     total_hits is totals.hits.sum()
     total_page_views is totals.pageviews.sum()
     total_productRevenue is hits.product.productRevenue.sum()
-    sold_count is hits.count() {? hits.product.productQuantity : >0}
+    sold_count is hits.count() { where: hits.product.productQuantity > 0 }
   ]
 }
 ```
@@ -47,16 +47,15 @@ We can then add a few named queries to the model to easily access or reference e
 ## Putting it all together
 
 ```malloy
---! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large"}
+--! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large", "queryName": "sessions_dashboard"}
 query: sessions_dashboard is ga_sessions -> {
   nest: [
     by_region
-    , by_device
-    , by_source
-    , by_category is {
-        group_by: category is hits.product.v2ProductCategory
-        aggregate: total_productRevenue
-        aggregate: sold_count
+    by_device
+    by_source
+    by_category is {
+      group_by: category is hits.product.v2ProductCategory
+      aggregate: [ total_productRevenue, sold_count ]
     }
   ]
 }

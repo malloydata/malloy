@@ -14,15 +14,14 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { URL, Runtime, URLReader } from "@malloy-lang/malloy";
-import { DataStyles } from "@malloy-lang/render";
-import { CONNECTION_MAP, MALLOY_EXTENSION_STATE, RunState } from "../state";
+import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
+import { URL, Runtime, URLReader } from "@malloydata/malloy";
+import { DataStyles } from "@malloydata/render";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
 import {
   QueryMessageType,
-  QueryRenderMode,
   QueryRunStatus,
   WebviewMessageManager,
 } from "../webview_message_manager";
@@ -112,12 +111,8 @@ class HackyDataStylesAccumulator implements URLReader {
 export function runMalloyQuery(
   query: QuerySpec,
   panelId: string,
-  name: string,
-  renderMode: QueryRenderMode = QueryRenderMode.HTML
+  name: string
 ): void {
-  if (renderMode === QueryRenderMode.JSON) {
-    panelId += " Data";
-  }
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -156,12 +151,14 @@ export function runMalloyQuery(
         };
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
         previous.cancel();
-        previous.panel.reveal();
+        if (!previous.panel.visible) {
+          previous.panel.reveal(vscode.ViewColumn.Beside, true);
+        }
       } else {
         const panel = vscode.window.createWebviewPanel(
           "malloyQuery",
           name,
-          vscode.ViewColumn.Two,
+          { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
           { enableScripts: true, retainContextWhenHidden: true }
         );
         current = {
@@ -174,12 +171,11 @@ export function runMalloyQuery(
         current.panel.iconPath = vscode.Uri.parse(
           path.join(__filename, "..", turtleIcon)
         );
-        current.panel.title = name;
         MALLOY_EXTENSION_STATE.setRunState(panelId, current);
       }
 
       const onDiskPath = vscode.Uri.file(
-        path.join(__filename, "..", "query_webview.js")
+        path.join(__filename, "..", "query_page.js")
       );
 
       const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
@@ -200,7 +196,7 @@ export function runMalloyQuery(
 
       const vscodeFiles = new VSCodeURLReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
-      const runtime = new Runtime(files, CONNECTION_MAP);
+      const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
 
       return (async () => {
         try {
@@ -224,6 +220,10 @@ export function runMalloyQuery(
             queryMaterializer = runtime.loadQueryByName(
               URL.fromString("file://" + query.file.uri.fsPath),
               query.name
+            );
+          } else if (query.index === -1) {
+            queryMaterializer = runtime.loadQuery(
+              URL.fromString("file://" + query.file.uri.fsPath)
             );
           } else {
             queryMaterializer = runtime.loadQueryByIndex(
@@ -268,10 +268,9 @@ export function runMalloyQuery(
             status: QueryRunStatus.Done,
             result: queryResult.toJSON(),
             styles,
-            mode: renderMode,
           });
           current.result = queryResult;
-          progress.report({ increment: 80, message: "Rendering" });
+          progress.report({ increment: 100, message: "Rendering" });
 
           const allEnd = performance.now();
           logTime("Total", allBegin, allEnd);

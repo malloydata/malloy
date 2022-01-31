@@ -12,7 +12,7 @@
  */
 
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { HighlightType, Malloy } from "@malloy-lang/malloy";
+import { HighlightType, Malloy } from "@malloydata/malloy";
 import {
   SemanticTokens,
   SemanticTokensBuilder,
@@ -92,7 +92,7 @@ function mapTypes(type: string) {
     case HighlightType.Type:
       return "type";
     case HighlightType.Keyword.Is:
-    case HighlightType.Keyword.Join:
+    case HighlightType.Keyword.With:
     case HighlightType.Keyword.On:
     case HighlightType.Keyword.Desc:
     case HighlightType.Keyword.Asc:
@@ -138,7 +138,9 @@ function mapTypes(type: string) {
     case HighlightType.Property.GroupBy:
     case HighlightType.Property.Having:
     case HighlightType.Property.Index:
-    case HighlightType.Property.Join:
+    case HighlightType.Property.JoinOne:
+    case HighlightType.Property.JoinMany:
+    case HighlightType.Property.JoinCross:
     case HighlightType.Property.Limit:
     case HighlightType.Property.Measure:
     case HighlightType.Property.Nest:

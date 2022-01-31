@@ -1,12 +1,13 @@
 --! styles iowa.styles.json
+
 explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
-  -- dimensions
+  // dimensions
   dimension: [
     gross_margin is 100 * (state_bottle_retail - state_bottle_cost) / nullif(state_bottle_retail, 0)
-    price_per_100ml is state_bottle_retail/NULLIF(bottle_volume_ml,0)*100
+    price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
 
-    category_class is category_name :
+    category_class is category_name:
       pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BOURBON|RYE)'
       pick 'VODKAS' when ~ r'VODKA'
       pick 'RUMS' when ~ r'RUM'
@@ -23,7 +24,7 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       else 'small or mini (under 750ml)'
   ]
 
-  -- measures
+  // measures
   measure: [
     total_sale_dollars is sale_dollars.sum()
     item_count is count(distinct item_number)
@@ -32,7 +33,7 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
     avg_price_per_100ml is price_per_100ml.avg()
   ]
 
-  -- turtles
+  // queries
   query: by_month is {
     order_by: 1
     group_by: purchase_month is `date`.week
@@ -125,10 +126,18 @@ explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
   }
 }
 
-query: vodka_dashboard is iowa->vendor_dashboard {? category_class: 'VODKAS'}
+query: vodka_dashboard is iowa->vendor_dashboard {
+  where: category_class: 'VODKAS'
+}
 
-query: tequila_dashboard is iowa->vendor_dashboard {? category_class: 'TEQUILAS'}
+query: tequila_dashboard is iowa->vendor_dashboard {
+  where: category_class: 'TEQUILAS'
+}
 
-query: luxco_dashboard is iowa->vendor_dashboard {? vendor_name: ~ r'Luxco'}
+query: luxco_dashboard is iowa->vendor_dashboard {
+  where: vendor_name: ~ r'Luxco'
+}
 
-query: jim_beam_dashboard is iowa->vendor_dashboard {? vendor_name: ~ r'Jim Beam'}
+query: jim_beam_dashboard is iowa->vendor_dashboard {
+  where: vendor_name: ~ r'Jim Beam'
+}

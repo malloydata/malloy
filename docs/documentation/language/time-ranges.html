@@ -31,7 +31,7 @@ the range it will be <code class="language-malloy"><span class="token operator">
           Range shortcuts
         </a>
       </h2>
-    <p>Because grouping and filtering by specific time ranges is such acommon operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts.</p>
+    <p>Because grouping and filtering by specific time ranges is such a common operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts.</p>
 <p>Malloy supports two time-related types, <code class="language-malloy"><span class="token type">timestamp</span></code> and <code class="language-malloy"><span class="token type">date</span></code>.
 Both of these can be used with these techniques, though the exact
 truncations or extractions available will vary depending on the
@@ -101,11 +101,11 @@ data type (e.g. it would make no sense to attempt to truncate a <code class="lan
         </a>
       </h3>
     <p>A truncation made this way (unlike a truncation make in SQL with
-<code class="language-malloy">TIMESTAMP_TRUNC<span class="token punctuation">(</span><span class="token punctuation">)</span></code>) can also function as a range. The range begins
+<code class="language-malloy">TIMESTAMP_TRUNC<span class="token function"></span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>) can also function as a range. The range begins
 at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example <code class="language-malloy">eventDate<span class="token punctuation">.</span><span class="token timeframe">year</span></code>
 would be a range covering the entire year which contains <code class="language-malloy">eventDate</code></p>
-<p>This is extremely useful with the <a href="apply.html">Apply operator</a>, <code class="language-malloy">:</code>. To see if two events happen in the same calendar year, for example, the boolean expresison in Malloy is <code class="language-malloy">oneEvent: otherEvent<span class="token punctuation">.</span><span class="token timeframe">year</span></code></p>
+<p>This is extremely useful with the <a href="apply.html">Apply operator</a>, <code class="language-malloy">:</code>. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is <code class="language-malloy">oneEvent: otherEvent<span class="token punctuation">.</span><span class="token timeframe">year</span></code></p>
 
       <h2>
         <a id="extraction" class="header-link anchor" href="#extraction">
@@ -141,7 +141,7 @@ would be a range covering the entire year which contains <code class="language-m
 </tr>
 
 <tr>
-<td><code class="language-malloy">day_of_week<span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
+<td><code class="language-malloy">day_of_week<span class="token function"></span><span class="token punctuation">(</span>expr<span class="token punctuation">)</span></code></td>
 
 <td>day of week 1-7</td>
 
@@ -194,7 +194,7 @@ would be a range covering the entire year which contains <code class="language-m
           Literals
         </a>
       </h2>
-    <p>Time literals are specified in malloy with th <code class="language-malloy"><span class="token date">@</span></code> character. A literal
+    <p>Time literals are specified in malloy with the <code class="language-malloy"><span class="token date">@</span></code> character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.</p>
 <p>For example the year <code class="language-malloy"><span class="token date">@2003</span></code> can be used with <code class="language-malloy">eventTime : <span class="token date">@2003</span></code> to test if the

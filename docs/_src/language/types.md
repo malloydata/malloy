@@ -7,7 +7,7 @@ mostly scalar, with a few notable exceptions.
 
 ### Numbers
 
-All numbers in Malloy are of type `number`, including BiqQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.
+All numbers in Malloy are of type `number`, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.
 
 Literal `number`s consist of one or more digits optionally followed
 by a decimal point `.` and more digits, e.g. `42` or `3.14`.
@@ -34,7 +34,7 @@ _timeframe_, which can be `year`, `quarter`, `month`,
 `hour`, `minute`, or `second`.
 
 Literals for `date` and `timestamp` are preceded by the `@` character, e.g. `@2003` or `@1983-11-23 10:00:10`. For all
-variations of time literals and informaition about their interaction with comparison operators, see the [Time Ranges](time-ranges.html#literals) section.
+variations of time literals and information about their interaction with comparison operators, see the [Time Ranges](time-ranges.html#literals) section.
 
 ### Booleans
 

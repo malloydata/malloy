@@ -17,3 +17,4 @@ export { runQueryWithEdit } from "./run_turtle_with_filters";
 export { copyFieldPathCommand } from "./copy_field_path";
 export { runNamedQuery } from "./run_named_query";
 export { showLicensesCommand } from "./show_licenses";
+export { editConnectionsCommand } from "./edit_connections";

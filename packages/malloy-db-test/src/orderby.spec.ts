@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import * as malloy from "@malloy-lang/malloy";
+import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
@@ -232,7 +232,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
     explore: f is table('malloytest.flights'){
       primary_key: id2
-      join: a on tail_num
+      join_one: a with tail_num
 
       measure: flight_count is count()
       query: foo is {

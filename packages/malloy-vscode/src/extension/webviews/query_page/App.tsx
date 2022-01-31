@@ -1,29 +1,30 @@
 /*
  * Copyright 2021 Google LLC
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  */
 
-import { Result } from "@malloy-lang/malloy";
-import { HTMLView, JSONView } from "@malloy-lang/render";
+import { Result } from "@malloydata/malloy";
+import { HTMLView } from "@malloydata/render";
 import React, { useEffect, useState } from "react";
+import styled from "styled-components";
 import {
   QueryMessageType,
   QueryPanelMessage,
-  QueryRenderMode,
   QueryRunStatus,
 } from "../../webview_message_manager";
 import { Spinner } from "../components";
+import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
+import Prism from "prismjs";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-sql";
 
 enum Status {
   Ready = "ready",
@@ -37,8 +38,11 @@ enum Status {
 
 export const App: React.FC = () => {
   const [status, setStatus] = useState<Status>(Status.Ready);
-  const [rendered, setRendered] = useState("");
+  const [html, setHTML] = useState("");
+  const [json, setJSON] = useState("");
+  const [sql, setSQL] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
+  const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -55,18 +59,26 @@ export const App: React.FC = () => {
           if (message.status === QueryRunStatus.Done) {
             setStatus(Status.Rendering);
             setTimeout(async () => {
-              const result = Result.fromJSON(message.result).data;
-              const rendered = await (message.mode === QueryRenderMode.HTML
-                ? new HTMLView().render(result, message.styles)
-                : new JSONView().render(result));
+              const result = Result.fromJSON(message.result);
+              const data = result.data;
+              setJSON(JSON.stringify(data.toObject(), null, 2));
+              setSQL(
+                Prism.highlight(result.sql, Prism.languages["sql"], "sql")
+              );
+              const rendered = await new HTMLView().render(
+                data,
+                message.styles
+              );
               setStatus(Status.Displaying);
               setTimeout(() => {
-                setRendered(rendered);
+                setHTML(rendered);
                 setStatus(Status.Done);
               }, 0);
             }, 0);
           } else {
-            setRendered("");
+            setHTML("");
+            setJSON("");
+            setSQL("");
             switch (message.status) {
               case QueryRunStatus.Compiling:
                 setStatus(Status.Compiling);
@@ -83,7 +95,14 @@ export const App: React.FC = () => {
   });
 
   return (
-    <div style={{ height: "100%" }}>
+    <div
+      style={{
+        height: "100%",
+        margin: "0",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {[
         Status.Compiling,
         Status.Running,
@@ -94,10 +113,30 @@ export const App: React.FC = () => {
       ) : (
         ""
       )}
-      <div
-        dangerouslySetInnerHTML={{ __html: rendered }}
-        style={{ padding: "10px" }}
-      ></div>
+      {!error && <ResultKindToggle kind={resultKind} setKind={setResultKind} />}
+      {!error && resultKind === ResultKind.HTML && (
+        <Scroll>
+          <div
+            dangerouslySetInnerHTML={{ __html: html }}
+            style={{ margin: "10px" }}
+          />
+        </Scroll>
+      )}
+      {!error && resultKind === ResultKind.JSON && (
+        <Scroll>
+          <PrismContainer style={{ margin: "10px" }}>{json}</PrismContainer>
+        </Scroll>
+      )}
+      {!error && resultKind === ResultKind.SQL && (
+        <Scroll>
+          <PrismContainer style={{ margin: "10px" }}>
+            <div
+              dangerouslySetInnerHTML={{ __html: sql }}
+              style={{ margin: "10px" }}
+            />
+          </PrismContainer>
+        </Scroll>
+      )}
       {error && <div>{error}</div>}
     </div>
   );
@@ -115,3 +154,59 @@ function getStatusLabel(status: Status) {
       return "Displaying";
   }
 }
+
+const Scroll = styled.div`
+  height: 100%;
+  overflow: auto;
+`;
+
+const PrismContainer = styled.pre`
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+  font-size: 14px;
+  color: #333388;
+
+  span.token.keyword {
+    color: #af00db;
+  }
+
+  span.token.comment {
+    color: #4f984f;
+  }
+
+  span.token.function,
+  span.token.function_keyword {
+    color: #795e26;
+  }
+
+  span.token.string {
+    color: #ca4c4c;
+  }
+
+  span.token.regular_expression {
+    color: #88194d;
+  }
+
+  span.token.operator,
+  span.token.punctuation {
+    color: #505050;
+  }
+
+  span.token.number {
+    color: #09866a;
+  }
+
+  span.token.type,
+  span.token.timeframe {
+    color: #0070c1;
+  }
+
+  span.token.date {
+    color: #09866a;
+    /* color: #8730b3; */
+  }
+
+  span.token.property {
+    color: #b98f13;
+  }
+`;

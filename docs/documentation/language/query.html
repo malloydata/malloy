@@ -11,8 +11,8 @@ footer: /generated/footers/language/query.html
         </a>
       </h1>
     <p>The basic syntax for a query in Malloy consists of a source
-and a "pipeline" of one or more <em>stages</em> seperated by a vertical bar (or "pipe"). The shape of the data defined in the original explore is transformed by each stage.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span> carrier<span class="token punctuation">,</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre>
+and a "pipeline" of one or more <em>stages</em> separated by <code class="language-malloy"><span class="token operator">-</span><span class="token operator">></span></code>. The shape of the data defined in the original explore is transformed by each stage.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> }</pre>
       <h2>
         <a id="sources" class="header-link anchor" href="#sources">
           Sources
@@ -20,39 +20,51 @@ and a "pipeline" of one or more <em>stages</em> seperated by a vertical bar (or 
       </h2>
     <p>The source of a query can be a table, an <a href="explore.html">explore</a>, or a <a href="statement.html#queries">named query</a>.</p>
 <p><strong>A query against a table</strong></p>
-<pre class="language-malloy"><span class="token string">'malloy-data.faa.flights'</span> <span class="token operator">|</span> <span class="token keyword">reduce</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><p><strong>A query against an explore</strong></p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span> total_distance <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span></pre><p><strong>A query starting from another query</strong></p>
-<pre class="language-malloy">flights_by_carrier <span class="token operator">|</span> <span class="token keyword">project</span> carrier <span class="token keyword">limit</span> <span class="token number">10</span></pre><p>When a query is defined as part of an explore or inside
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> }</pre><p><strong>A query against an explore</strong></p>
+<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> }</pre><p><strong>A query starting from another query</strong></p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights_by_carrier <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}
+
+<span class="token keyword">query</span>: <span class="token operator">-</span><span class="token operator">></span> flights_by_carrier <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">project</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">2</span> }</pre><p>When a query is defined as part of an explore or nested inside
 another query stage, the source is implicit.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  dep_year <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">year</span>
-  by_carrier <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">reduce</span>
-    carrier<span class="token punctuation">,</span>
-    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token punctuation">)</span></pre>
+<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: dep_year <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">year</span>
+  <span class="token keyword">nest</span>: by_carrier <span class="token keyword">is</span> {
+    <span class="token keyword">group_by</span>: carrier
+    <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  }
+}</pre>
       <h2>
         <a id="pipelines" class="header-link anchor" href="#pipelines">
           Pipelines
         </a>
       </h2>
     <p>A pipeline transforms the shape of an explore, and is made up of a series of stages.</p>
-<p>A typical stage is either a <code class="language-malloy"><span class="token keyword">reduce</span></code>, <code class="language-malloy"><span class="token keyword">project</span></code>, or <code class="language-malloy"><span class="token keyword">index</span></code> transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  : <span class="token punctuation">[</span> distance <span class="token operator">></span> <span class="token number">1000</span> <span class="token punctuation">]</span>            <span class="token comment">-- Filters</span>
-  <span class="token keyword">top</span> <span class="token number">2</span> <span class="token keyword">order</span> <span class="token keyword">by</span> flight_count <span class="token keyword">desc</span> <span class="token comment">-- Ordering/limiting</span>
-  carrier<span class="token punctuation">,</span> flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment">-- Fields</span></pre><p>A reference to a <a href="nesting.html">named query</a> (which defines its own pipeline) can be the first stage in a pipleline.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> by_carrier</pre>
+<p>A typical stage is has either <code class="language-malloy"><span class="token keyword">group_by</span></code>/<code class="language-malloy"><span class="token keyword">aggregate</span></code> or <code class="language-malloy"><span class="token keyword">project</span></code>, or <code class="language-malloy"><span class="token keyword">index</span></code> transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>      <span class="token comment">// Filters</span>
+  <span class="token keyword">top</span>: <span class="token number">2</span>
+  <span class="token keyword">order_by</span>: flight_count <span class="token keyword">desc</span> <span class="token comment">// Ordering/limiting</span>
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><p>A reference to a <a href="nesting.html">named query</a> (which defines its own pipeline) can be the first stage in a pipeline.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> by_carrier</pre>
       <h3>
         <a id="fields" class="header-link anchor" href="#fields">
           Fields
         </a>
       </h3>
-    <p>In a query stage, fields (dimensions, measures, or nested
+    <p>In a query stage, fields (dimensions, measures, or
 queries) may be specified either by referencing an existing
 name or defining them inline.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  carrier
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><p>When referencing existing fields, wildcard expressions <code class="language-malloy"><span class="token operator">*</span></code>, <code class="language-malloy"><span class="token operator">*</span><span class="token operator">*</span></code>, and <code class="language-malloy">some_join<span class="token punctuation">.</span><span class="token operator">*</span></code> may be used.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><p>When referencing existing fields, wildcard expressions <code class="language-malloy"><span class="token operator">*</span></code>, <code class="language-malloy"><span class="token operator">*</span><span class="token operator">*</span></code>, and <code class="language-malloy">some_join<span class="token punctuation">.</span><span class="token operator">*</span></code> may be used.</p>
 <!-- TODO explain what these all do. --><p>See the <a href="fields.html">Fields</a> section for more information
 about the different kinds of fields and how they can be
 defined.</p>
@@ -64,9 +76,16 @@ defined.</p>
       </h3>
     <p>Filters specified at the top level of query stage apply to
 the whole stage.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span> : <span class="token punctuation">[</span> distance <span class="token operator">></span> <span class="token number">1000</span> <span class="token punctuation">]</span>
-  distance
-  flight_count</pre><p>Filters may also be applied to a <a href="">query's source</a>, an <a href="explore.html#filtering-explores">entire explore</a>, or to a <a href="expressions.html">measure</a>.</p>
+<p>At the query level</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span> } <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: distance
+  <span class="token keyword">aggregate</span>: flight_count
+}</pre><p>or in the stage.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span>
+  <span class="token keyword">group_by</span>: distance
+  <span class="token keyword">aggregate</span>: flight_count
+}</pre><p>Filters may also be applied to a <a href="">query's source</a>, an <a href="explore.html#filtering-explores">entire explore</a>, or to a <a href="expressions.html">measure</a>.</p>
 <!-- TODO: improve link for filtering a measure. --><p>See the <a href="filters.html">Filters</a> section for more information.</p>
 
       <h3>
@@ -76,7 +95,9 @@ the whole stage.</p>
       </h3>
     <p>Query stages may also include ordering and limiting
 specifications.</p>
-<pre class="language-malloy">flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">10</span>
-  carrier
-  flight_count</pre><p>For detailed information on ordering and limiting, see the <a href="order_by.html">Ordering and Limiting</a> section.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">top</span>: <span class="token number">10</span>
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count
+}</pre><p>For detailed information on ordering and limiting, see the <a href="order_by.html">Ordering and Limiting</a> section.</p>
 </div>

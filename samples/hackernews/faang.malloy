@@ -2,8 +2,8 @@
 
 import "hackernews.malloy"
 
--- analysis about FAANG (Facebook Apple Amazon Netflix and Google)
--- a resonable threshold for interesting stories is about 10
+// analysis about FAANG (Facebook Apple Amazon Netflix and Google)
+// a resonable threshold for interesting stories is about 10
 
 explore: faang_analysis is stories {
 
@@ -18,19 +18,20 @@ explore: faang_analysis is stories {
   ]
 
   query: apple_dashboard is term_dashboard {
-    where: [faang = 'Apple', score >= threshold]
+    where: [ faang = 'Apple', score >= threshold ]
   }
 
   query: google_dashboard is term_dashboard {
-    where: [faang = 'Google', score >= threshold]
+    where: [ faang = 'Google', score >= threshold ]
   }
 
   query: faang_stories is stories {
-    where: [faang != 'OTHER', score >= threshold]
+    where: [ faang != 'OTHER', score >= threshold ]
   }
 
   query: faang_dashboard is {
-    where: [faang != 'OTHER',
+    where: [
+      faang != 'OTHER',
       score >= threshold,
       post_type = 'story'
     ]
@@ -39,13 +40,12 @@ explore: faang_analysis is stories {
       aggregate: post_count
       group_by: faang
     }
-    nest: facebook is top_sites {? faang = 'Facebook'}
-    nest: apple is top_sites {? faang = 'Apple'}
-    nest: amazon is top_sites {? faang = 'Amazon'}
-    nest: netflix is top_sites {? faang = 'Netflix'}
-    nest: google is top_sites {? faang = 'Google'}
+    nest: facebook is top_sites { where: faang = 'Facebook' }
+    nest: apple is top_sites { where: faang = 'Apple' }
+    nest: amazon is top_sites { where: faang = 'Amazon' }
+    nest: netflix is top_sites { where: faang = 'Netflix' }
+    nest: google is top_sites { where: faang = 'Google' }
   }
 
-  query: poster_dashboard2 is poster_dashboard {? faang != 'OTHER'}
-
+  query: poster_dashboard2 is poster_dashboard { where: faang != 'OTHER' }
 }

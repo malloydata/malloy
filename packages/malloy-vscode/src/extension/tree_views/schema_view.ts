@@ -21,7 +21,7 @@ import {
   Field,
   QueryField,
   AtomicField,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import numberIcon from "../../media/number.svg";
 import numberAggregateIcon from "../../media/number-aggregate.svg";
 import booleanIcon from "../../media/boolean.svg";
@@ -32,7 +32,7 @@ import stringIcon from "../../media/string.svg";
 import oneToManyIcon from "../../media/one_to_many.svg";
 import manyToOneIcon from "../../media/many_to_one.svg";
 import oneToOneIcon from "../../media/one_to_one.svg";
-import { CONNECTION_MAP, MALLOY_EXTENSION_STATE } from "../state";
+import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "../state";
 import { VSCodeURLReader } from "../utils";
 
 export class SchemaProvider
@@ -116,7 +116,7 @@ async function getStructs(
   const uri = URL.fromString("file://" + document.uri.fsPath);
   const files = new VSCodeURLReader();
   try {
-    const runtime = new Runtime(files, CONNECTION_MAP);
+    const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
     const model = await runtime.getModel(uri);
 
     return Object.values(model.explores).sort(exploresByName);

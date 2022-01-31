@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { TestTranslator } from "../jest-factories";
+import { TestTranslator } from "../test-translator";
 import { DocumentSymbol } from "./document-symbol-walker";
 
 class MalloyExplore {
@@ -227,7 +227,7 @@ test.skip("turtle children turtles are included", () => {
 test.skip("joins are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
-      " join: a is b on c\n" +
+      " join_one: a is b with c\n" +
       "}"
   );
   expect(doc.symbols).toMatchObject([
@@ -249,7 +249,7 @@ test.skip("joins are included", () => {
 test.skip("join ons in join section are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
-      " join: a on b\n" +
+      " join_one: a with b\n" +
       "}"
   );
   expect(doc.symbols).toMatchObject([
@@ -271,7 +271,7 @@ test.skip("join ons in join section are included", () => {
 test.skip("join sources in join section are included", () => {
   const doc = new MalloyExplore(
     "explore: flights is table('my.table.flights') {\n" +
-      " join: a is b on c\n" +
+      " join_one: a is b with c\n" +
       "}"
   );
   expect(doc.symbols).toMatchObject([

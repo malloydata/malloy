@@ -21,8 +21,8 @@ import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { runCode } from "./run_code";
 import { log } from "./log";
-import { Malloy } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { Malloy } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
 
 Malloy.db = new BigQueryConnection("docs");
 
@@ -34,6 +34,10 @@ class Renderer {
   // The path where the document being rendered exists.
   private readonly path: string;
   private models: Map<string, string>;
+  private _errors: { snippet: string; error: string }[] = [];
+  private readonly titleStack: { level: number; title: string }[] = [];
+  public readonly searchSegments: { titles: string[]; paragraphs: string[] }[] =
+    [];
 
   constructor(path: string) {
     this.path = path;
@@ -50,6 +54,7 @@ class Renderer {
     escaped: boolean
   ) {
     const lang = (infostring || "").trim();
+    let showCode = code;
 
     const grammar =
       lang === "malloy"
@@ -65,32 +70,43 @@ class Renderer {
             const options = JSON.parse(
               code.split("\n")[0].substring("--! ".length).trim()
             );
-            code = code.split("\n").slice(1).join("\n");
+            showCode = showCode.split("\n").slice(1).join("\n");
             if (options.isHidden) {
               hidden = true;
             }
             if (options.isRunnable) {
-              result = await runCode(code, this.path, options, this.models);
+              result = await runCode(showCode, this.path, options, this.models);
             } else if (options.isModel) {
-              this.setModel(options.modelPath, code);
+              let modelCode = showCode;
+              if (options.source) {
+                const prefix = this.models.get(options.source);
+                if (prefix === undefined) {
+                  throw new Error(`can't find source ${options.source}`);
+                }
+                modelCode = prefix + "\n" + showCode;
+              }
+              this.setModel(options.modelPath, modelCode);
             }
           } catch (error) {
             log(`  !! Error: ${error.toString()}`);
             result = `<div class="error">Error: ${error.toString()}</div>`;
+            this._errors.push({ snippet: code, error: error.message });
           }
         }
       }
 
-      const highlighted = Prism.highlight(code, grammar, lang);
+      const highlighted = Prism.highlight(showCode, grammar, lang);
       const codeBlock = `<pre class="language-${lang}">${highlighted}</pre>`;
       return `${hidden ? "" : codeBlock}${result}`;
     }
 
-    code = code.replace(/\n$/, "") + "\n";
+    showCode = showCode.replace(/\n$/, "") + "\n";
 
     if (!lang) {
       return (
-        "<pre><code>" + (escaped ? code : escape(code)) + "</code></pre>\n"
+        "<pre><code>" +
+        (escaped ? showCode : escape(showCode)) +
+        "</code></pre>\n"
       );
     }
 
@@ -99,7 +115,7 @@ class Renderer {
       "language-" +
       escape(lang) +
       '">' +
-      (escaped ? code : escape(code)) +
+      (escaped ? showCode : escape(showCode)) +
       "</code></pre>\n"
     );
   }
@@ -113,8 +129,25 @@ class Renderer {
     return html;
   }
 
+  private registerTitle(titleHTML: string, level: number) {
+    for (;;) {
+      const lastTitle = this.titleStack[this.titleStack.length - 1];
+      if (lastTitle === undefined || lastTitle.level < level) {
+        break;
+      } else {
+        this.titleStack.pop();
+      }
+    }
+    this.titleStack.push({ level, title: titleHTML });
+    this.searchSegments.push({
+      titles: this.titleStack.map((item) => item.title),
+      paragraphs: [],
+    });
+  }
+
   protected async heading(content: Markdown[], level: 1 | 2 | 3 | 4 | 5 | 6) {
     const text = await this.children(content);
+    this.registerTitle(text, level);
     const escapedText = text.toLowerCase().replace(/[^\w]+/g, "-");
 
     return `
@@ -158,6 +191,10 @@ class Renderer {
 
   protected async paragraph(content: Markdown[]) {
     const text = await this.children(content);
+    const segment = this.searchSegments[this.searchSegments.length - 1];
+    if (segment) {
+      segment.paragraphs.push(text);
+    }
     return "<p>" + text + "</p>\n";
   }
 
@@ -343,9 +380,26 @@ class Renderer {
         throw new Error(`Unexpected markdown node type.`);
     }
   }
+
+  get errors() {
+    return this._errors;
+  }
 }
 
-export async function renderDoc(text: string, path: string): Promise<string> {
+export async function renderDoc(
+  text: string,
+  path: string
+): Promise<{
+  renderedDocument: string;
+  errors: { snippet: string; error: string }[];
+  searchSegments: { titles: string[]; paragraphs: string[] }[];
+}> {
   const ast = unified().use(remarkParse).use(remarkGfm).parse(text);
-  return new Renderer(path).render(ast as unknown as Markdown);
+  const renderer = new Renderer(path);
+  const renderedDocument = await renderer.render(ast as unknown as Markdown);
+  return {
+    renderedDocument,
+    errors: renderer.errors,
+    searchSegments: renderer.searchSegments,
+  };
 }

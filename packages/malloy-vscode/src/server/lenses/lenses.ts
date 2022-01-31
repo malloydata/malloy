@@ -12,7 +12,7 @@
  */
 
 import { CodeLens } from "vscode-languageserver/node";
-import { Malloy } from "@malloy-lang/malloy";
+import { Malloy } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 // const explain = `
@@ -47,15 +47,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         command: {
           title: "Run",
           command: "malloy.runNamedQuery",
-          arguments: [symbol.name, "json"],
-        },
-      });
-      lenses.push({
-        range: symbol.range.toJSON(),
-        command: {
-          title: "Render",
-          command: "malloy.runNamedQuery",
-          arguments: [symbol.name, "html"],
+          arguments: [symbol.name],
         },
       });
     } else if (symbol.type === "unnamed_query") {
@@ -65,14 +57,6 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
           title: "Run",
           command: "malloy.runQueryFile",
           arguments: [currentUnnamedQueryIndex],
-        },
-      });
-      lenses.push({
-        range: symbol.range.toJSON(),
-        command: {
-          title: "Render",
-          command: "malloy.runQueryFile",
-          arguments: [currentUnnamedQueryIndex, "html"],
         },
       });
       currentUnnamedQueryIndex++;
@@ -116,18 +100,6 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
             range: child.range.toJSON(),
             command: {
               title: "Run",
-              command: "malloy.runQuery",
-              arguments: [
-                `query: ${exploreName}->${queryName}`,
-                `${exploreName}->${queryName}`,
-                "json",
-              ],
-            },
-          });
-          lenses.push({
-            range: child.range.toJSON(),
-            command: {
-              title: "Render",
               command: "malloy.runQuery",
               arguments: [
                 `query: ${exploreName}->${queryName}`,

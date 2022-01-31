@@ -9,252 +9,336 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
     <div>
-        <div class="sidebar-section-title">Getting Started</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/index.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              The Tao of Malloy
-            </a>
-          </div>
+        <div id=getting_started class="sidebar-section-title collapsed">Getting Started<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/index.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/features.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Key Features
-            </a>
+              <a href="/malloy/documentation/features.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Language Reference</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/overview.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Introduction
-            </a>
-          </div>
+        <div id=language_reference class="sidebar-section-title collapsed">Language Reference<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/language/overview.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/basic.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Malloy Quickstart
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/basic.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/statement.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Models
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/statement.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explores
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/explore.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Explores
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/query.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Queries
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/query.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/fields.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Fields
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/fields.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/types.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Types
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/types.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Expressions
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/expressions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/order_by.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Ordering and Limiting
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/order_by.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/join.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Joins
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/join.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filters.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filters
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/filters.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/nesting.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nested Queries
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/nesting.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/aggregates.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Aggregates
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/aggregates.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
 <div class='sidebar-item active'>
-            <a href="/malloy/documentation/language/imports.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Imports and Exports
-            </a>
+              <a href="/malloy/documentation/language/imports.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Common Patterns</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/yoy.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Year Over Year Analysis
-            </a>
-          </div>
+        <div id=common_patterns class="sidebar-section-title collapsed">Common Patterns<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/yoy.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/foreign_sums.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Foreign Sums and Averages
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/foreign_sums.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/percent_of_total.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Percent of Total
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/percent_of_total.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/cohorts.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Cohort Analysis
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/cohorts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/pivot_limits.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Pivot Limits
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/pivot_limits.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/sessionize.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Sessionized Data
-            </a>
+              <a href="/malloy/documentation/patterns/sessionize.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Visualizations</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/bar_charts.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Bar Charts
-            </a>
-          </div>
+        <div id=rendering_results class="sidebar-section-title collapsed">Rendering Results<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/dashboards.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/charts_line_chart.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Line Charts
-            </a>
-          </div>
+              <a href="/malloy/documentation/visualizations/bar_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/shape_maps.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Shape Maps
-            </a>
-          </div>
+              <a href="/malloy/documentation/visualizations/charts_line_chart.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/segment_maps.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Segment Maps
-            </a>
-          </div>
+              <a href="/malloy/documentation/visualizations/shape_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/scatter_charts.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Scatter Charts
-            </a>
+              <a href="/malloy/documentation/visualizations/segment_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/scatter_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Examples</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/ecommerce.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              eCommerce Analysis
-            </a>
-          </div>
+        <div id=examples class="sidebar-section-title collapsed">Examples<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ecommerce.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/faa.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              NTSB Flight Database
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/faa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/names.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              The Name Game
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/names.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/ga_sessions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Google Analytics GA360
-            </a>
+              <a href="/malloy/documentation/examples/ga_sessions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Iowa Liquor - An Analysis</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/iowa.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              About the Data Set
-            </a>
-          </div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/iowa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/source.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              The Malloy Data Model
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step2.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basic Calculations
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/step2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step2a.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Analysis: Products and Brands
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/step2a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step3.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Bucketing and Mapping
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/step3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step6.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Dashboards
-            </a>
+              <a href="/malloy/documentation/examples/iowa/step6.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle1a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle4.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle5.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
           </div>
       </div>
 
   </div>
+        <script src="/malloy/js/sidebar_state.js"></script>
         <div class="content">
           <div class="footer">
             
@@ -269,36 +353,35 @@
             
           </div>
           <div class="document-outer">
-            <div class="document">
-      <h1>
-        <a id="imports-and-exports" class="header-link anchor" href="#imports-and-exports">
-          Imports and Exports
-        </a>
-      </h1>
-    <p>Malloy allows for explores to be reused between files, or for a set of explores
-to simply be split up among multiple files by using <code class="language-malloy"><span class="token keyword">import</span></code> and <code class="language-malloy"><span class="token keyword">export</span></code>.</p>
+            <div class="document"><!--
 
-      <h2>
-        <a id="exports" class="header-link anchor" href="#exports">
-          Exports
-        </a>
-      </h2>
-    <p>Before an explore definition, the <code class="language-malloy"><span class="token keyword">export</span></code> keyword means that the explore should
-be included in the file's <em>public namespace</em>.</p>
-<p>Consider a file <code>samples/faa/flights.malloy</code>:</p>
-<pre class="language-malloy"><span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
-  name <span class="token keyword">is</span> concat<span class="token punctuation">(</span>code<span class="token punctuation">,</span> <span class="token string">' - '</span><span class="token punctuation">,</span> full_name<span class="token punctuation">)</span>
-  airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
+# Imports and Exports
 
-<span class="token keyword">export</span> <span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  origin <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin_code
-  destination <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> destination_code
-  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>In this example, <code class="language-malloy">flights</code> is exported, but <code class="language-malloy">airports</code> is not, and therefore
-only <code class="language-malloy">flights</code> is part of the file's public namespace.</p>
+Malloy allows for explores to be reused between files, or for a set of explores
+to simply be split up among multiple files by using `import` and `export`.
 
+## Exports
+
+Before an explore definition, the `export` keyword means that the explore should
+be included in the file's _public namespace_.
+
+Consider a file <code>samples/faa/flights.malloy</code>:
+```malloy
+explore: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+  dimension: name is concat(code, ' - ', full_name)
+  measure: airport_count is count()
+}
+
+explore: flights is table('malloy-data.faa.flights') {
+  join_one: origin is airports with origin_code
+  join_one: destination is airports with destination_code
+}
+```
+
+In this example, `flights` is exported, but `airports` is not, and therefore
+only `flights` is part of the file's public namespace.
+ -->
       <h2>
         <a id="imports" class="header-link anchor" href="#imports">
           Imports
@@ -310,14 +393,13 @@ exported explores from another file using <code class="language-malloy"><span cl
 <code class="language-malloy">flights</code> explore, you could write:</p>
 <pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
 
-flights <span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">5</span> carrier<span class="token punctuation">,</span> flight_count</pre><p>Because <code class="language-malloy">airports</code> is not exported, referencing it here would be invalid.</p>
-
+<span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">top</span>: <span class="token number">5</span><span class="token punctuation">;</span> <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count }</pre><!-- Because `airports` is not exported, referencing it here would be invalid. -->
       <h3>
         <a id="import-locations" class="header-link anchor" href="#import-locations">
           Import Locations
         </a>
       </h3>
-    <p>Imported files may be specified with relative or absolute URIs.</p>
+    <p>Imported files may be specified with relative or absolute URLs.</p>
 <table>
 <thead>
 <tr>
@@ -365,6 +447,7 @@ flights <span class="token operator">|</span> <span class="token keyword">reduce
 </div>
           </div>
         </div>
+        <script src="/malloy/js/view_toggles.js"></script>
       </div>
     </div>
   </body>

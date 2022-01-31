@@ -21,25 +21,66 @@ import {
   QueryData,
   PooledConnection,
   parseTableURL,
-} from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   "character varying": "string",
   name: "string",
   text: "string",
+  date: "date",
   integer: "number",
   bigint: "number",
   "double precision": "number",
-  "timestamp without time zone": "timestamp", // maybe not right
+  "timestamp without time zone": "timestamp", // maybe not
+  oid: "string",
+  boolean: "boolean",
+  // ARRAY: "string",
+  "timestamp with time zone": "timestamp",
+  timestamp: "timestamp",
+  '"char"': "string",
+  smallint: "number",
+  xid: "string",
+  real: "number",
+  interval: "string",
+  inet: "string",
+  regtype: "string",
+  numeric: "number",
+  bytea: "string",
+  pg_ndistinct: "number",
 };
+
+interface PostgresConnectionConfiguration {
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  databaseName?: string;
+}
+
+type PostgresConnectionConfigurationReader =
+  | PostgresConnectionConfiguration
+  | (() => Promise<PostgresConnectionConfiguration>);
 
 export class PostgresConnection extends Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private configReader: PostgresConnectionConfigurationReader;
 
-  constructor(name: string) {
+  constructor(
+    name: string,
+    configReader: PostgresConnectionConfigurationReader = {}
+  ) {
     super(name);
+    this.configReader = configReader;
+  }
+
+  private async readConfig(): Promise<PostgresConnectionConfiguration> {
+    if (this.configReader instanceof Function) {
+      return this.configReader();
+    } else {
+      return this.configReader;
+    }
   }
 
   get dialectName(): string {
@@ -71,7 +112,14 @@ export class PostgresConnection extends Connection {
     _rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
-    const client = new Client();
+    const config = await this.readConfig();
+    const client = new Client({
+      user: config.username,
+      password: config.password,
+      database: config.databaseName,
+      port: config.port,
+      host: config.host,
+    });
     await client.connect();
 
     let result = await client.query(sqlCommand);
@@ -133,6 +181,10 @@ export class PostgresConnection extends Connection {
   public async executeSQLRaw(query: string): Promise<QueryData> {
     const queryData = await this.runPostgresQuery(query, 1000, 0, false);
     return queryData.rows;
+  }
+
+  public async test(): Promise<void> {
+    await this.executeSQLRaw("SELECT 1");
   }
 
   public async runSQL(

@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import * as crypto from "crypto";
-import { cloneDeep, upperCase } from "lodash";
+import { cloneDeep } from "lodash";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import {
@@ -53,10 +52,13 @@ import {
   isValueParameter,
   JoinRelationship,
   isPhysical,
+  isAnyJoin,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
 import { parseTableURL } from "../malloy";
+import md5 from "md5";
+import { ResultStructMetadataDef } from ".";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -105,10 +107,7 @@ class StageWriter {
   addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName =
-      "scratch." +
-      baseName +
-      crypto.createHash("md5").update(sql).digest("hex");
+    const tableName = "scratch." + baseName + md5(sql);
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }
@@ -576,23 +575,29 @@ class QueryFieldDate extends QueryAtomicField {
     if (!fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      let e = super.generateExpression(resultSet);
+      const exprString = super.generateExpression(resultSet);
+      let exprArray: string[] = [exprString];
       switch (fd.timeframe) {
         case "date":
           break;
         case "year":
         case "month":
         case "week":
-          e = `DATE_TRUNC(${e}, ${fd.timeframe})`;
+          exprArray = this.parent.dialect.sqlDateTrunc(
+            exprString,
+            fd.timeframe
+          ) as string[];
           break;
         case "day_of_month":
         case "day_of_year":
-          e = `EXTRACT(${timeframeBQMap[fd.timeframe]} FROM ${e})`;
+          exprArray = [
+            `EXTRACT(${timeframeBQMap[fd.timeframe]} FROM ${exprString})`,
+          ];
           break;
         default:
-          e = `DATE_TRUNC(${e}, ${fd.timeframe})`;
+          exprArray = [`DATE_TRUNC(${exprString}, ${fd.timeframe})`];
       }
-      return e;
+      return exprArray.join("");
     }
   }
 
@@ -610,34 +615,46 @@ class QueryFieldDate extends QueryAtomicField {
 class QueryFieldTimestamp extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldTimestampDef;
-    if (!fd.timeframe) {
+    if (fd.e || !fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      let e = super.generateExpression(resultSet);
+      const exprString = super.generateExpression(resultSet);
+      let exprArray: string[] = [exprString];
       switch (fd.timeframe) {
         case "year":
         case "month":
         case "week":
-          e = `DATE_TRUNC(DATE(${e}, 'UTC'), ${fd.timeframe})`;
+        case "date":
+          exprArray = this.parent.dialect.sqlTimestampTrunc(
+            exprString,
+            fd.timeframe,
+            "UTC"
+          ) as string[];
           break;
         case "day_of_month":
         case "day_of_year":
         case "hour_of_day":
         case "month_of_year":
-          e = `EXTRACT(${
-            timeframeBQMap[fd.timeframe]
-          } FROM ${e} AT TIME ZONE 'UTC')`;
+          exprArray = [
+            `EXTRACT(${
+              timeframeBQMap[fd.timeframe]
+            } FROM ${exprString} AT TIME ZONE 'UTC')`,
+          ];
           break;
-        case "date":
-          e = `DATE(${e},'UTC')`;
-          break;
+        // case "date":
+        //   e = `DATE(${e},'UTC')`;
+        //   break;
         case "hour":
         case "minute":
         case "second":
-          e = `TIMESTAMP_TRUNC(${e}, ${fd.timeframe}, 'UTC')`;
+          exprArray = this.parent.dialect.sqlTimestampTrunc(
+            exprString,
+            fd.timeframe,
+            "UTC"
+          ) as string[];
           break;
       }
-      return e;
+      return exprArray.join("");
     }
   }
 
@@ -987,12 +1004,13 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
     let leafiest;
     for (const [name, join] of this.joins) {
       // first join is by default the
-      if (leafiest === undefined) {
+      const relationship = join.parentRelationship();
+      if (relationship === "many_to_many") {
+        // everything must be calculated with symmetric aggregates
+        leafiest = "0never";
+      } else if (leafiest === undefined) {
         leafiest = name;
-      } else if (
-        join.parentRelationship() === "one_to_many" ||
-        join.parentRelationship() === "many_to_many"
-      ) {
+      } else if (join.parentRelationship() === "one_to_many") {
         // check up the parent relationship until you find
         //  the current leafiest node.  If it isn't in the direct path
         //  we need symmetric aggregate for everything.
@@ -1002,7 +1020,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
           leafiest = name;
         } else {
           // we have more than on one_to_many join chain, all bets are off.
-          leafiest = "we'll never find this so everything will be symmetric";
+          leafiest = "0never";
         }
       }
     }
@@ -1075,22 +1093,24 @@ class JoinInstance {
   parentRelationship(): "root" | JoinRelationship {
     if (this.queryStruct.parent === undefined) {
       return "root";
-    } else if (
-      this.queryStruct.fieldDef.structRelationship.type === "foreignKey"
-    ) {
-      return "many_to_one";
-    } else if (this.queryStruct.fieldDef.structRelationship.type === "nested") {
-      return "one_to_many";
-    } else if (this.queryStruct.fieldDef.structRelationship.type === "inline") {
-      return "one_to_one";
-    } else if (
-      this.queryStruct.fieldDef.structRelationship.type === "condition"
-    ) {
-      return this.queryStruct.fieldDef.structRelationship.joinRelationship;
     }
-    throw new Error(
-      `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
-    );
+    switch (this.queryStruct.fieldDef.structRelationship.type) {
+      case "foreignKey":
+      case "one":
+        return "many_to_one";
+      case "cross":
+        return "many_to_many";
+      case "many":
+        return "one_to_many";
+      case "nested":
+        return "one_to_many";
+      case "inline":
+        return "one_to_one";
+      default:
+        throw new Error(
+          `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
+        );
+    }
   }
 
   // postgres unnest needs to know the names of the physical fields.
@@ -1381,12 +1401,14 @@ class QueryQuery extends QueryField {
         for (const filterCond of expr.filterList) {
           this.addDependantExpr(resultStruct, context, filterCond.expression);
         }
-      } else if (isAsymmetricFragment(expr)) {
-        if (expr.structPath) {
-          this.addDependantPath(resultStruct, context, expr.structPath, true);
-        } else {
-          // we are doing a sum in the root.  It may need symetric aggregates
-          resultStruct.addStructToJoin(context, true);
+      } else if (isAggregateFragment(expr)) {
+        if (isAsymmetricFragment(expr)) {
+          if (expr.structPath) {
+            this.addDependantPath(resultStruct, context, expr.structPath, true);
+          } else {
+            // we are doing a sum in the root.  It may need symetric aggregates
+            resultStruct.addStructToJoin(context, true);
+          }
         }
         this.addDependantExpr(resultStruct, context, expr.e);
       }
@@ -1516,7 +1538,9 @@ class QueryQuery extends QueryField {
   }
 
   // get the source fieldname and filters associated with the field (so we can drill later)
-  getResultMetadata(fi: FieldInstance): ResultMetadataDef | undefined {
+  getResultMetadata(
+    fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
     if (fi instanceof FieldInstanceField) {
       if (fi.fieldUsage.type === "result") {
         const fieldDef = fi.f.fieldDef as FieldAtomicDef;
@@ -1552,8 +1576,16 @@ class QueryQuery extends QueryField {
       const sourceField = fi.turtleDef.name || fi.turtleDef.as;
       const sourceClasses = sourceField ? [sourceField] : [];
       const filterList = fi.firstSegment.filterList;
+      const limit =
+        fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1].limit;
       if (sourceField) {
-        return { sourceField, filterList, sourceClasses, fieldKind: "struct" };
+        return {
+          sourceField,
+          filterList,
+          sourceClasses,
+          fieldKind: "struct",
+          limit,
+        };
       }
     }
     return undefined;
@@ -1695,11 +1727,11 @@ class QueryQuery extends QueryField {
     let s = "";
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
-    const structSQL = qs.structSourceSQL(stageWriter);
-    if (
-      structRelationship.type === "foreignKey" ||
-      structRelationship.type === "condition"
-    ) {
+    let structSQL = qs.structSourceSQL(stageWriter);
+    if (isAnyJoin(structRelationship)) {
+      if (ji.makeUniqueKey) {
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+      }
       let onCondition = "";
       if (qs.parent === undefined) {
         throw new Error("Expected joined struct to have a parent.");
@@ -1717,16 +1749,17 @@ class QueryQuery extends QueryField {
         const fkSQL = fkDim.generateExpression(this.rootResult);
         const pkSQL = pkDim.generateExpression(this.rootResult);
         onCondition = `${fkSQL} = ${pkSQL}`;
-      } else {
-        // type == "conditionOn"
+      } else if (structRelationship.onExpression) {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
             name: "ignoreme",
-            e: structRelationship.onExpression.e,
+            e: structRelationship.onExpression,
           },
           qs.parent
         ).generateExpression(this.rootResult);
+      } else {
+        onCondition = "1=1";
       }
       let filters = "";
       let conditions = undefined;
@@ -1739,9 +1772,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `${upperCase(
-          structRelationship.joinType || "left"
-        )} JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
@@ -1803,7 +1834,6 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
-        // structSQL = `(SELECT row_number() OVER() as __distinct_key, * FROM ${structSQL})`;
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;

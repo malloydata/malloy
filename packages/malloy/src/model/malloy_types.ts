@@ -72,6 +72,7 @@ export interface NamedObject extends AliasedName, LineNumber {
   type: string;
 }
 
+// result metadata for a field
 export interface ResultMetadataDef {
   sourceField: string;
   sourceExpression?: string;
@@ -80,8 +81,17 @@ export interface ResultMetadataDef {
   fieldKind: "measure" | "dimension" | "struct";
 }
 
+// struct specific metadta
+export interface ResultStructMetadataDef extends ResultMetadataDef {
+  limit?: number;
+}
+
 export interface ResultMetadata {
   resultMetadata?: ResultMetadataDef;
+}
+
+export interface ResultStructMetadata {
+  resultMetadata?: ResultStructMetadataDef;
 }
 
 export interface FilterFragment {
@@ -389,7 +399,6 @@ export interface TurtleDef extends NamedObject, Pipeline {
   type: "turtle";
 }
 
-type JoinType = "left" | "right" | "inner" | "outer";
 export type JoinRelationship =
   | "one_to_one"
   | "one_to_many"
@@ -399,21 +408,27 @@ export type JoinRelationship =
 export interface JoinForeignKey {
   type: "foreignKey";
   foreignKey: FieldRef;
-  joinType?: JoinType;
 }
 
-export interface JoinCondition {
-  type: "condition";
-  onExpression: Expression; // must be a boolean expression
-  joinType?: JoinType;
-  joinRelationship: JoinRelationship;
+export interface JoinOn {
+  type: "one" | "many" | "cross";
+  onExpression?: Expr;
+}
+
+export function isJoinOn(sr: StructRelationship): sr is JoinOn {
+  return ["one", "many", "cross"].includes(sr.type);
+}
+export function isAnyJoin(
+  sr: StructRelationship
+): sr is JoinOn | JoinForeignKey {
+  return isJoinOn(sr) || sr.type == "foreignKey";
 }
 
 /** types of joins. */
 export type StructRelationship =
   | { type: "basetable"; connectionName: string }
   | JoinForeignKey
-  | JoinCondition
+  | JoinOn
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
 
@@ -429,7 +444,7 @@ export type StructSource =
 //  the relationshipo is implied
 
 /** struct that is intrinsic to the table */
-export interface StructDef extends NamedObject, ResultMetadata, Filtered {
+export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   type: "struct";
   structSource: StructSource;
   structRelationship: StructRelationship;

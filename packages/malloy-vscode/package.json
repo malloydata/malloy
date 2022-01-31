@@ -1,12 +1,21 @@
 {
   "name": "malloy-vscode",
-  "publisher": "malloy-lang",
+  "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "engines": {
-    "vscode": "^1.56.0"
+    "vscode": "^1.63.0"
   },
+  "scripts": {
+    "build": "tsc --build && yarn build-extension",
+    "test": "jest --config=../../jest.config.js",
+    "build-extension": "ts-node scripts/build-extension build",
+    "build-extension-dev": "NODE_ENV=development ts-node scripts/build-extension build",
+    "package-extension": "ts-node scripts/package-extension package",
+    "publish-extensions": "ts-node scripts/publish-extensions"
+  },
+  "icon": "img/logo.png",
   "license": "GPL-2.0",
   "categories": [
     "Programming Languages",
@@ -15,9 +24,21 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:malloy.runQueryFile",
     "onCommand:malloy.showLicenses",
-    "onLanguage:malloy"
+    "onCommand:malloy.runQueryFile",
+    "onCommand:malloy.runQuery",
+    "onCommand:malloy.runNamedQuery",
+    "onCommand:malloy.runTurtleFromSchema",
+    "onCommand:malloy.runTurtleWithFilters",
+    "onCommand:malloy.copyFieldPath",
+    "onCommand:malloy.refreshSchema",
+    "onCommand:malloy.editConnections",
+    "onLanguage:malloy",
+    "workspaceContains:**/.malloy",
+    "onView:malloyConnections",
+    "onView:malloySchema",
+    "onWebviewPanel:malloyQuery",
+    "onWebviewPanel:malloyConnections"
   ],
   "main": "./dist/extension",
   "configurationDefaults": {
@@ -30,50 +51,73 @@
     "url": "https://github.com/looker-open-source/malloy"
   },
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "malloy",
+          "title": "Malloy",
+          "icon": "img/logo.png"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "malloy.showLicenses",
-        "title": "Malloy: Show Licenses"
+        "title": "Show Licenses",
+        "category": "Malloy"
       },
       {
         "command": "malloy.runQueryFile",
-        "title": "Run Malloy Query File"
+        "title": "Run Query File",
+        "category": "Malloy"
       },
       {
         "command": "malloy.runQuery",
-        "title": "Run Malloy Query"
+        "title": "Run Query",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.runNamedQuery",
-        "title": "Run Named Malloy Query"
+        "title": "Run Named Query",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.runTurtleFromSchema",
-        "title": "Run Turtle From Schema",
+        "title": "Run Query From Schema",
+        "category": "Malloy",
         "icon": {
-          "light": "src/media/play.svg",
-          "dark": "src/media/play.svg"
-        }
+          "light": "img/play.svg",
+          "dark": "img/play.svg"
+        },
+        "enablement": "view == malloySchema && viewItem == query"
       },
       {
         "command": "malloy.runTurtleWithFilters",
-        "title": "Run Malloy Query With Filters"
+        "title": "Run Query With Filters",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.copyFieldPath",
-        "title": "Copy Field Path"
+        "title": "Copy Field Path",
+        "category": "Malloy",
+        "enablement": "false"
       },
       {
         "command": "malloy.refreshSchema",
         "title": "Refresh Schema",
+        "category": "Malloy",
         "icon": {
-          "light": "src/media/refresh.svg",
-          "dark": "src/media/refresh.svg"
+          "light": "img/refresh.svg",
+          "dark": "img/refresh.svg"
         }
       },
       {
-        "command": "malloy.showResultJSON",
-        "title": "Show Result JSON"
+        "command": "malloy.editConnections",
+        "title": "Edit Connections",
+        "category": "Malloy"
       }
     ],
     "menus": {
@@ -81,6 +125,11 @@
         {
           "command": "malloy.refreshSchema",
           "when": "view == malloySchema",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.editConnections",
+          "when": "view == malloyConnections",
           "group": "navigation"
         }
       ],
@@ -107,30 +156,108 @@
       }
     ],
     "views": {
-      "explorer": [
+      "malloy": [
         {
           "id": "malloySchema",
           "name": "Schema"
+        },
+        {
+          "id": "malloyConnections",
+          "name": "Connections"
         }
       ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "malloyConnections",
+        "contents": "No configured connections.\n[Edit Connections](command:malloy.editConnections)"
+      }
+    ],
+    "configuration": {
+      "title": "Malloy",
+      "properties": {
+        "malloy.connections": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "postgres"
+                  },
+                  "host": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": "number"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "databaseName": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "bigquery"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "projectName": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "serviceAccountKeyPath": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Connections for Malloy to use to access data when compiling and querying."
+        }
+      }
     }
   },
-  "scripts": {
-    "vscode:prepublish": "yarn licenses generate-disclaimer --prod > third_party_notices.txt && webpack --mode production",
-    "webpack": "webpack --mode development",
-    "webpack-dev": "webpack --mode development --watch",
-    "build": "yarn tsc --build && yarn package",
-    "pretest": "yarn run package",
-    "test": "echo 'no tests for vscode yet'",
-    "package": "yarn vsce package --yarn --githubBranch=main"
-  },
   "dependencies": {
-    "@malloy-lang/db-bigquery": "*",
-    "@malloy-lang/db-postgres": "*",
-    "@malloy-lang/malloy": "*",
-    "@malloy-lang/render": "*",
+    "@malloydata/db-bigquery": "*",
+    "@malloydata/db-postgres": "*",
+    "@malloydata/malloy": "*",
+    "@malloydata/render": "*",
+    "@microsoft/fast-react-wrapper": "^0.1.21",
     "@observablehq/plot": "^0.1.0",
+    "@vscode/webview-ui-toolkit": "^0.8.5",
+    "keytar": "7.7.0",
     "react": "^17.0.2",
+    "react-is": "^16.8.0",
     "styled-components": "^5.3.3",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
@@ -140,27 +267,25 @@
     "vscode-languageserver-textdocument": "^1.0.1"
   },
   "devDependencies": {
-    "@types/copy-webpack-plugin": "^8.0.1",
     "@types/glob": "^7.1.3",
     "@types/jsdom": "^16.2.11",
     "@types/mocha": "^8.2.2",
     "@types/node": "^12.19.8",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
+    "@types/semver": "^7.3.9",
     "@types/styled-components": "^5.1.19",
+    "@types/uuid": "^8.3.4",
     "@types/vscode": "1.56.0",
     "@types/vscode-webview": "^1.57.0",
-    "copy-webpack-plugin": "^9.0.1",
-    "file-loader": "^6.2.0",
+    "esbuild": "^0.14.13",
     "glob": "^7.1.7",
     "mocha": "^9.0.0",
     "react-dom": "^17.0.2",
-    "source-map-loader": "^3.0.0",
-    "ts-loader": "^9.2.3",
+    "semver": "^7.3.5",
+    "uuid": "^8.3.2",
     "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
-    "vscode-webview": "^1.0.1-beta.1",
-    "webpack": "^5.41.1",
-    "webpack-cli": "^4.7.2"
+    "vscode-webview": "^1.0.1-beta.1"
   }
 }

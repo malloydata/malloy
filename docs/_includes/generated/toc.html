@@ -1,242 +1,314 @@
-<div class="sidebar">
+<div class="sidebar" id="sidebar">
     <div>
-        <div class="sidebar-section-title">Getting Started</div>
-        <div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/index.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              The Tao of Malloy
-            </a>
-          </div>
+        <div id=getting_started class="sidebar-section-title {% unless /documentation/,/documentation/features.html,/documentation/connection_instructions.html contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/index.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/features.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/features.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Key Features
-            </a>
+              <a href="{{ site.baseurl }}/documentation/features.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/connection_instructions.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/connection_instructions.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Language Reference</div>
-        <div class='sidebar-item {% if page.url == "/documentation/language/overview.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/overview.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Introduction
-            </a>
-          </div>
+        <div id=language_reference class="sidebar-section-title {% unless /documentation/language/overview.html,/documentation/language/basic.html,/documentation/language/statement.html,/documentation/language/explore.html,/documentation/language/query.html,/documentation/language/fields.html,/documentation/language/types.html,/documentation/language/expressions.html,/documentation/language/order_by.html,/documentation/language/join.html,/documentation/language/filters.html,/documentation/language/nesting.html,/documentation/language/aggregates.html,/documentation/language/imports.html contains page.url)} %}collapsed{% endunless %}">Language Reference<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/language/overview.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/language/overview.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/basic.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/basic.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Malloy Quickstart
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/basic.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/statement.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/statement.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Models
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/statement.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/explore.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/explore.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Explores
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/explore.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Explores
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/query.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/query.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Queries
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/query.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/fields.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/fields.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Fields
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/fields.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/types.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/types.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Types
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/types.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/expressions.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/expressions.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Expressions
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/expressions.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/order_by.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/order_by.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Ordering and Limiting
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/order_by.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/join.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/join.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Joins
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/join.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/filters.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/filters.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Filters
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/filters.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/nesting.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/nesting.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Nested Queries
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/nesting.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/aggregates.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/aggregates.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Aggregates
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/language/aggregates.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/imports.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/language/imports.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Imports and Exports
-            </a>
+              <a href="{{ site.baseurl }}/documentation/language/imports.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Common Patterns</div>
-        <div class='sidebar-item {% if page.url == "/documentation/patterns/yoy.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/patterns/yoy.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Year Over Year Analysis
-            </a>
-          </div>
+        <div id=common_patterns class="sidebar-section-title {% unless /documentation/patterns/yoy.html,/documentation/patterns/foreign_sums.html,/documentation/patterns/percent_of_total.html,/documentation/patterns/cohorts.html,/documentation/patterns/pivot_limits.html,/documentation/patterns/sessionize.html contains page.url)} %}collapsed{% endunless %}">Common Patterns<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/patterns/yoy.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/patterns/yoy.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/patterns/foreign_sums.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/patterns/foreign_sums.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Foreign Sums and Averages
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/patterns/foreign_sums.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/patterns/percent_of_total.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/patterns/percent_of_total.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Percent of Total
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/patterns/percent_of_total.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/patterns/cohorts.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/patterns/cohorts.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Cohort Analysis
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/patterns/cohorts.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/patterns/pivot_limits.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/patterns/pivot_limits.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Pivot Limits
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/patterns/pivot_limits.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/patterns/sessionize.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/patterns/sessionize.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Sessionized Data
-            </a>
+              <a href="{{ site.baseurl }}/documentation/patterns/sessionize.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Visualizations</div>
-        <div class='sidebar-item {% if page.url == "/documentation/visualizations/bar_charts.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/visualizations/bar_charts.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Bar Charts
-            </a>
-          </div>
+        <div id=rendering_results class="sidebar-section-title {% unless /documentation/visualizations/dashboards.html,/documentation/visualizations/bar_charts.html,/documentation/visualizations/charts_line_chart.html,/documentation/visualizations/shape_maps.html,/documentation/visualizations/segment_maps.html,/documentation/visualizations/scatter_charts.html contains page.url)} %}collapsed{% endunless %}">Rendering Results<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/visualizations/dashboards.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/visualizations/dashboards.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/visualizations/bar_charts.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/visualizations/bar_charts.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/visualizations/charts_line_chart.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/visualizations/charts_line_chart.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Line Charts
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/visualizations/charts_line_chart.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/visualizations/shape_maps.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/visualizations/shape_maps.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Shape Maps
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/visualizations/shape_maps.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/visualizations/segment_maps.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/visualizations/segment_maps.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Segment Maps
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/visualizations/segment_maps.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/visualizations/scatter_charts.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/visualizations/scatter_charts.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Scatter Charts
-            </a>
+              <a href="{{ site.baseurl }}/documentation/visualizations/scatter_charts.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Examples</div>
-        <div class='sidebar-item {% if page.url == "/documentation/examples/ecommerce.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/ecommerce.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              eCommerce Analysis
-            </a>
-          </div>
+        <div id=examples class="sidebar-section-title {% unless /documentation/examples/ecommerce.html,/documentation/examples/faa.html,/documentation/examples/names.html,/documentation/examples/ga_sessions.html contains page.url)} %}collapsed{% endunless %}">Examples<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/examples/ecommerce.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/ecommerce.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/faa.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/faa.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              NTSB Flight Database
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/examples/faa.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/names.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/names.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              The Name Game
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/examples/names.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/ga_sessions.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/ga_sessions.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Google Analytics GA360
-            </a>
+              <a href="{{ site.baseurl }}/documentation/examples/ga_sessions.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Iowa Liquor - An Analysis</div>
-        <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/iowa.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/iowa/iowa.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              About the Data Set
-            </a>
-          </div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title {% unless /documentation/examples/iowa/iowa.html,/documentation/examples/iowa/source.html,/documentation/examples/iowa/step2.html,/documentation/examples/iowa/step2a.html,/documentation/examples/iowa/step3.html,/documentation/examples/iowa/step6.html contains page.url)} %}collapsed{% endunless %}">Walkthrough: Iowa Liquor<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/iowa.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/iowa/iowa.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/source.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/iowa/source.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              The Malloy Data Model
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/examples/iowa/source.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/step2.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/iowa/step2.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Basic Calculations
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/examples/iowa/step2.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/step2a.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/iowa/step2a.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Analysis: Products and Brands
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/examples/iowa/step2a.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/step3.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/iowa/step3.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Bucketing and Mapping
-            </a>
-          </div>
+              <a href="{{ site.baseurl }}/documentation/examples/iowa/step3.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/iowa/step6.html" %}active{% endif %}'>
-            <a href="{{ site.baseurl }}/documentation/examples/iowa/step6.html">
-              <img src="{{ site.baseurl }}/img/docs-page.svg" alt="document"/>
-              Dashboards
-            </a>
+              <a href="{{ site.baseurl }}/documentation/examples/iowa/step6.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title {% unless /documentation/examples/wordle/wordle.html,/documentation/examples/wordle/wordle1a.html,/documentation/examples/wordle/wordle2.html,/documentation/examples/wordle/wordle3.html,/documentation/examples/wordle/wordle4.html,/documentation/examples/wordle/wordle5.html contains page.url)} %}collapsed{% endunless %}">Walkthrough: Wordle Solver<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item {% if page.url == "/documentation/examples/wordle/wordle.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/wordle/wordle.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/examples/wordle/wordle1a.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/wordle/wordle1a.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/examples/wordle/wordle2.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/wordle/wordle2.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/examples/wordle/wordle3.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/wordle/wordle3.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/examples/wordle/wordle4.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/wordle/wordle4.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/examples/wordle/wordle5.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/examples/wordle/wordle5.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
           </div>
       </div>
 

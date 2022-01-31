@@ -35,6 +35,7 @@ import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
+  JoinSpaceField,
   ExpressionFieldFromAst,
   QueryField,
   QueryFieldAST,
@@ -183,9 +184,8 @@ export class NewFieldSpace extends StructSpace {
     const edited = new NewFieldSpace(from);
     if (choose) {
       const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      const stars = choose.refs.list.filter((f) => f instanceof Wildcard);
-      if (stars.length > 0) {
-        throw new Error("Wildcards not allowed in accept/except");
+      for (const s of choose.refs.list.filter((f) => f instanceof Wildcard)) {
+        s.log("Wildcards not allowed in accept/except");
       }
       const oldMap = edited.entries();
       edited.dropEntries();
@@ -239,17 +239,20 @@ export class NewFieldSpace extends StructSpace {
         const name = def.name;
         this.setEntry(name, new QueryFieldAST(this, def, name));
       } else if (def instanceof RenameField) {
+        if (def.oldName === def.newName) {
+          def.log("Can't rename field to itself");
+          continue;
+        }
         const oldValue = this.entry(def.oldName);
         if (oldValue instanceof SpaceField) {
           oldValue.rename(def.newName);
           this.setEntry(def.newName, oldValue);
           this.dropEntry(def.oldName);
         } else {
-          throw new Error(`Can't rename '${def.oldName}', no such field`);
+          def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        const joining = def.structDef();
-        this.setEntry(def.name, new StructSpaceField(joining));
+        this.setEntry(def.name, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${elseType}'`
@@ -269,6 +272,7 @@ export class NewFieldSpace extends StructSpace {
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
       const turtles: [string, SpaceField][] = [];
+      const fixupJoins: [Join, model.StructDef][] = [];
       for (const [name, spaceEntry] of this.entries()) {
         if (spaceEntry instanceof StructSpaceField) {
           joins.push([name, spaceEntry]);
@@ -282,15 +286,25 @@ export class NewFieldSpace extends StructSpace {
       }
       const reorderFields = [...fields, ...joins, ...turtles];
       for (const [fieldName, field] of reorderFields) {
-        const fieldDef = field.fieldDef();
-        if (fieldDef) {
-          this.final.fields.push(fieldDef);
+        if (field instanceof JoinSpaceField && field.join.needsFixup()) {
+          const joinStruct = field.join.structDef();
+          this.final.fields.push(joinStruct);
+          fixupJoins.push([field.join, joinStruct]);
         } else {
-          throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+          const fieldDef = field.fieldDef();
+          if (fieldDef) {
+            this.final.fields.push(fieldDef);
+          } else {
+            throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+          }
         }
       }
       if (Object.entries(parameters).length > 0) {
         this.final.parameters = parameters;
+      }
+      // If we have join expressions, we need to now go back and fill them in
+      for (const [join, missingOn] of fixupJoins) {
+        join.fixupJoinOn(this, missingOn);
       }
     }
     return this.final;
@@ -328,7 +342,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * StructDef, and it is a mistake to ever call this. Feels wrong.
    */
   structDef(): model.StructDef {
-    throw new Error("Can't get StructDef for pipe member");
+    throw new Error("INTERNAL ERROR: StructDef for pipe member requested");
   }
 
   addQueryItems(...qiList: QueryItem[]): void {
@@ -348,7 +362,6 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        // TODO should not allow measures ????
         this.addReference(member.name);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
@@ -444,5 +457,29 @@ export class IndexFieldSpace extends QueryFieldSpace {
       }
     }
     return seg;
+  }
+}
+
+/**
+ * Used to detect references to fields in the statement which defines them
+ */
+export class CircleSpace implements FieldSpace {
+  foundCircle = false;
+  constructor(readonly realFS: FieldSpace, readonly circular: ExprFieldDecl) {}
+  structDef(): model.StructDef {
+    return this.realFS.structDef();
+  }
+  emptyStructDef(): model.StructDef {
+    return this.realFS.emptyStructDef();
+  }
+  findEntry(symbol: string): SpaceEntry | undefined {
+    if (symbol === this.circular.defineName) {
+      this.foundCircle = true;
+      return undefined;
+    }
+    return this.realFS.findEntry(symbol);
+  }
+  getDialect(): Dialect {
+    return this.realFS.getDialect();
   }
 }

@@ -38,7 +38,7 @@ export define iowa is (explore 'bigquery-public-data.iowa_liquor_sales.sales'
   total_bottles is sum(bottles_sold)
   price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
   avg_price_per_100ml is price_per_100ml.avg()
-  -- add the query to the model
+  // add the query to the model
   top_sellers_by_revenue is (reduce top 5
     vendor_name
     item_description
@@ -70,7 +70,7 @@ The magic happens when we call a named query in the same way we would use any ot
 query: iowa { where: category_name ~ r'TEQUILA' } -> {
   group_by: vendor_name
   aggregate: [ total_sale_dollars, avg_price_per_100ml ]
-  nest: top_sellers_by_revenue -- entire query is a field
+  nest: top_sellers_by_revenue // entire query is a field
 }
 ```
 
@@ -79,7 +79,7 @@ These nested subtables allow us to view both the high-level information of "who 
 ## Bucketing the data
 The `price_per_100ml` calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket `price_per_100ml` into even dollar amounts, and nest our `top_sellers_by_revenue` query to create a subtable for each bucket.
 
-At the top we see our lowest cost options at under $1/mL, with the more pricey bevarages appearing as we scroll down.
+At the top we see our lowest cost options at under $1/mL, with the more pricey beverages appearing as we scroll down.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}

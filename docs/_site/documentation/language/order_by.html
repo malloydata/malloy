@@ -9,252 +9,336 @@
   <body>
     <div class="top">
       <div class="header">
-        <img src="/malloy/img/logo.png" alt="malloy logo"/>Malloy <span class="subtitle">Documentation</span>
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
       </div>
       <div class="main">
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
     <div>
-        <div class="sidebar-section-title">Getting Started</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/index.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              The Tao of Malloy
-            </a>
-          </div>
+        <div id=getting_started class="sidebar-section-title collapsed">Getting Started<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/index.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/features.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Key Features
-            </a>
+              <a href="/malloy/documentation/features.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Language Reference</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/overview.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Introduction
-            </a>
-          </div>
+        <div id=language_reference class="sidebar-section-title collapsed">Language Reference<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/language/overview.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/basic.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Malloy Quickstart
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/basic.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/statement.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Models
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/statement.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/explore.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Explores
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/explore.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Explores
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/query.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Queries
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/query.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/fields.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Fields
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/fields.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/types.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Types
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/types.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/expressions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Expressions
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/expressions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
 <div class='sidebar-item active'>
-            <a href="/malloy/documentation/language/order_by.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Ordering and Limiting
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/order_by.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/join.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Joins
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/join.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/filters.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Filters
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/filters.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/nesting.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Nested Queries
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/nesting.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/aggregates.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Aggregates
-            </a>
-          </div>
+              <a href="/malloy/documentation/language/aggregates.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/language/imports.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Imports and Exports
-            </a>
+              <a href="/malloy/documentation/language/imports.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Common Patterns</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/yoy.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Year Over Year Analysis
-            </a>
-          </div>
+        <div id=common_patterns class="sidebar-section-title collapsed">Common Patterns<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/yoy.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/foreign_sums.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Foreign Sums and Averages
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/foreign_sums.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/percent_of_total.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Percent of Total
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/percent_of_total.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/cohorts.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Cohort Analysis
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/cohorts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/pivot_limits.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Pivot Limits
-            </a>
-          </div>
+              <a href="/malloy/documentation/patterns/pivot_limits.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/patterns/sessionize.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Sessionized Data
-            </a>
+              <a href="/malloy/documentation/patterns/sessionize.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Visualizations</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/bar_charts.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Bar Charts
-            </a>
-          </div>
+        <div id=rendering_results class="sidebar-section-title collapsed">Rendering Results<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/dashboards.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/charts_line_chart.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Line Charts
-            </a>
-          </div>
+              <a href="/malloy/documentation/visualizations/bar_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/shape_maps.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Shape Maps
-            </a>
-          </div>
+              <a href="/malloy/documentation/visualizations/charts_line_chart.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/segment_maps.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Segment Maps
-            </a>
-          </div>
+              <a href="/malloy/documentation/visualizations/shape_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/visualizations/scatter_charts.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Scatter Charts
-            </a>
+              <a href="/malloy/documentation/visualizations/segment_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/scatter_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Examples</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/ecommerce.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              eCommerce Analysis
-            </a>
-          </div>
+        <div id=examples class="sidebar-section-title collapsed">Examples<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ecommerce.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/faa.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              NTSB Flight Database
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/faa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/names.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              The Name Game
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/names.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/ga_sessions.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Google Analytics GA360
-            </a>
+              <a href="/malloy/documentation/examples/ga_sessions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
           </div>
       </div>
 <div>
-        <div class="sidebar-section-title">Iowa Liquor - An Analysis</div>
-        <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/iowa.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              About the Data Set
-            </a>
-          </div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/iowa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/source.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              The Malloy Data Model
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step2.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Basic Calculations
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/step2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step2a.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Analysis: Products and Brands
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/step2a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step3.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Bucketing and Mapping
-            </a>
-          </div>
+              <a href="/malloy/documentation/examples/iowa/step3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
 <div class='sidebar-item '>
-            <a href="/malloy/documentation/examples/iowa/step6.html">
-              <img src="/malloy/img/docs-page.svg" alt="document"/>
-              Dashboards
-            </a>
+              <a href="/malloy/documentation/examples/iowa/step6.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle1a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle4.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle5.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
           </div>
       </div>
 
   </div>
+        <script src="/malloy/js/sidebar_state.js"></script>
         <div class="content">
           <div class="footer">
             
@@ -290,12 +374,20 @@
         </a>
       </h3>
     <p>If a query stage has a <a href="fields.html#dimensions">dimensional</a> column that represents a point in time, it is usually the most
-important concept in the query.  Because the most recent data is usally the most relevant, Malloy sorts the newest data first.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-    <div class="result-middle">
+important concept in the query.  Because the most recent data is usually the most relevant, Malloy sorts the newest data first.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -306,23 +398,70 @@ important concept in the query.  Because the most recent data is usally the most
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,770</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">572,227</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-11</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,533</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">566,014</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-10</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,083</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">592,650</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-09</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,100</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">574,212</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-08</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,415</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">630,566</td>
 </tr>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-12-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">572227</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-11-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">566014</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-10-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">592650</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-09-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">574212</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-08-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">630566</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   DATE_TRUNC<span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>dep_time<span class="token punctuation">,</span> <span class="token string">'UTC'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">MONTH</span><span class="token punctuation">)</span> <span class="token keyword">as</span> dep_month<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -332,12 +471,20 @@ important concept in the query.  Because the most recent data is usally the most
         </a>
       </h3>
     <p>If there is a <a href="fields.html#measures">measure</a> involved, Malloy sorts larger values first.</p>
-<p>In the following example, Rule 1 doesn't apply, so the default behavior is to sort by the measure <code class="language-malloy">flight_count</code> with the largest values first.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  carrier
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-    <div class="result-middle">
+<p>In the following example, Rule 1 doesn't apply, so the default behavior is to sort by first aggregate, <code class="language-malloy">flight_count</code> with the largest values first.</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -348,23 +495,60 @@ important concept in the query.  Because the most recent data is usally the most
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
 </tr>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5775777</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"US"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3205810</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -375,11 +559,20 @@ important concept in the query.  Because the most recent data is usally the most
       </h2>
     <p>You can be explicit about result ordering by using the <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code> clause.</p>
 <p>In the following example, the results are ordered by <code class="language-malloy">carrier</code> in reverse alphabetical order.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> carrier <span class="token keyword">desc</span>
-  carrier
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-    <div class="result-middle">
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">order_by</span>: carrier <span class="token keyword">desc</span>
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -390,32 +583,78 @@ important concept in the query.  Because the most recent data is usally the most
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TZ</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,033</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">188,769</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">RU</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,074</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TW</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">511,824</td>
 </tr>
 
 		</tbody>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5775777</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"US"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3205810</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"TZ"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">188769</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"TW"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">511824</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>Like in SQL, Malloy's <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code> always defaults to ascending order when <code class="language-malloy"><span class="token keyword">desc</span></code> is omitted. This is true for any column of any type. In the example below,
 the results are ordered by <code class="language-malloy">carrier</code> in alphabetical order.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">order</span> <span class="token keyword">by</span> carrier
-  carrier
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-    <div class="result-middle">
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">order_by</span>: carrier
+  <span class="token keyword">group_by</span>: carrier
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -426,23 +665,60 @@ the results are ordered by <code class="language-malloy">carrier</code> in alpha
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AQ</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">64,834</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,453</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">956,492</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">B6</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,842</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">267,963</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,139</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,130</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,994,049</td>
 </tr>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AQ"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">64834</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AS"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">956492</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"B6"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">267963</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"CO"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1994049</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">ASC</span>
+</pre>
       </div>
     </div>
   </div>
@@ -451,13 +727,22 @@ the results are ordered by <code class="language-malloy">carrier</code> in alpha
           Limiting
         </a>
       </h2>
-    <p>In Malloy, you can limit the number of results returned using a <code class="language-malloy"><span class="token keyword">top</span> n</code> clause on a <code class="language-malloy"><span class="token keyword">reduce</span></code> or <code class="language-malloy"><span class="token keyword">project</span></code> statement.</p>
-<p>In the exmaple below, the results are limited to 2 rows, which are sorted by <code class="language-malloy">dep_month</code> with newest results first (due to Rule 1).</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">2</span>
-  dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-    <div class="result-middle">
+    <p>In Malloy, you can limit the number of results returned using a <code class="language-malloy"><span class="token keyword">top</span>: n</code> or <code class="language-malloy"><span class="token keyword">limit</span>: n</code>.  Both are provided for readability.</p>
+<p>In the example below, the results are limited to 2 rows, which are sorted by <code class="language-malloy">dep_month</code> with newest results first (due to Rule 1).</p>
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">top</span>: <span class="token number">2</span>
+  <span class="token keyword">group_by</span>: dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -468,45 +753,50 @@ the results are ordered by <code class="language-malloy">carrier</code> in alpha
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-12</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,770</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">572,227</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-11</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,533</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">566,014</td>
 </tr>
 
 		</tbody>
 	</table>
       </div>
     </div>
-  </div><p>Explicitly-ordered results (with <code class="language-malloy"><span class="token keyword">order</span> <span class="token keyword">by</span></code>) can be limited with <code class="language-malloy"><span class="token keyword">top</span> n</code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span> <span class="token keyword">top</span> <span class="token number">2</span> <span class="token keyword">order</span> <span class="token keyword">by</span> flight_count <span class="token keyword">desc</span>
-  dep_month <span class="token keyword">is</span> dep_time<span class="token punctuation">.</span><span class="token timeframe">month</span>
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer small">
-    <div class="result-middle">
+    <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">dep_&#8203;month</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2005-08</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,415</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">2004-10</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,228</td>
-</tr>
-
-		</tbody>
-	</table>
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-12-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">572227</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"dep_month"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"2005-11-01"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">566014</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   DATE_TRUNC<span class="token punctuation">(</span><span class="token keyword">DATE</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>dep_time<span class="token punctuation">,</span> <span class="token string">'UTC'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">MONTH</span><span class="token punctuation">)</span> <span class="token keyword">as</span> dep_month<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
+<span class="token keyword">LIMIT</span> <span class="token number">2</span>
+</pre>
       </div>
     </div>
   </div></div>
           </div>
         </div>
+        <script src="/malloy/js/view_toggles.js"></script>
       </div>
     </div>
   </body>

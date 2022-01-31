@@ -10,7 +10,20 @@ footer: /generated/footers/language/join.html
           Joins
         </a>
       </h1>
-    <p>Currently, all joins in Malloy are left outer joins, and must be between the primary key of one table and a foreign key in the <a href="explore.html">explore</a> being joined to.</p>
+    <p>Joins in malloy are different than SQL joins.  When two explores are joined,
+Malloy retains the graph nature of the the data relationships. This is unlike
+SQL, which flattens them all into a single table space.</p>
+<p><a href="aggregates.html">Aggregate calculations</a> use this graph to deduce
+a locality of computation, so they always work regardless of join pattern.</p>
+<p>In Malloy syntaxes for join are:</p>
+<pre class="language-malloy"><span class="token keyword">join_one</span>: <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>name<span class="token operator">></span> <span class="token punctuation">[</span><span class="token keyword">is</span> <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>exp<span class="token operator">></span><span class="token punctuation">]</span> <span class="token keyword">with</span> <span class="token operator">&lt;</span>foreign_key<span class="token operator">></span>
+<span class="token keyword">join_one</span>: <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>name<span class="token operator">></span> <span class="token punctuation">[</span><span class="token keyword">is</span> <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>exp<span class="token operator">></span><span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token keyword">on</span> <span class="token operator">&lt;</span><span class="token type">boolean</span> expression<span class="token operator">></span><span class="token punctuation">]</span>
+<span class="token keyword">join_many</span>: <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>name<span class="token operator">></span> <span class="token punctuation">[</span><span class="token keyword">is</span> <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>exp<span class="token operator">></span><span class="token punctuation">]</span> <span class="token keyword">on</span> <span class="token operator">&lt;</span><span class="token type">boolean</span> expression<span class="token operator">></span>
+<span class="token keyword">join_cross</span>: <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>name<span class="token operator">></span> <span class="token punctuation">[</span><span class="token keyword">is</span> <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">-</span>exp<span class="token operator">></span><span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token keyword">on</span> <span class="token operator">&lt;</span><span class="token type">boolean</span> expression<span class="token operator">></span><span class="token punctuation">]</span></pre><p><code class="language-malloy"><span class="token keyword">join_one</span>:</code> - the table we are joining has one row for each row in the source table.</p>
+<p><code class="language-malloy"><span class="token keyword">join_many</span>:</code> - the table we are joining has many rows for each row in the source table</p>
+<p><code class="language-malloy"><span class="token keyword">join_cross</span>:</code> - the join is a cross product and there will be many rows in each side of the join.</p>
+<p>Malloy's joins are left outer joins by default.
+Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).</p>
 
       <h2>
         <a id="join-types" class="header-link anchor" href="#join-types">
@@ -23,56 +36,68 @@ footer: /generated/footers/language/join.html
           Foreign Key to Primary Key
         </a>
       </h3>
-    <p>To join a foreign key of the source explore to the <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> of a joined explore, reference the foreign key by name in the <code class="language-malloy"><span class="token keyword">on</span></code> clause.</p>
-<pre class="language-malloy">order_items <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.ecomm.order_items'</span>
-  order_items <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> user_id
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
-      <h3>
-        <a id="primary-key-to-foreign-key" class="header-link anchor" href="#primary-key-to-foreign-key">
-          Primary Key to Foreign Key
-        </a>
-      </h3>
-    <p>To join the <code class="language-malloy"><span class="token keyword">primary</span> <span class="token keyword">key</span></code> of the source explore to a foreign key on a joined explore, reference the field from the joined explore in the <code class="language-malloy"><span class="token keyword">on</span></code> clause.</p>
-<pre class="language-malloy">users <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.ecomm.users'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> id
-  order_items <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> order_items<span class="token punctuation">.</span>user_id
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+    <p>The easiest, most error proof way to perform a join is with <code class="language-malloy"><span class="token keyword">join_one</span>:<span class="token operator">/</span><span class="token keyword">with</span></code>. The basic syntax is:</p>
+<p><code class="language-malloy"><span class="token keyword">join_one</span>: <span class="token operator">&lt;</span><span class="token keyword">explore</span><span class="token operator">></span> <span class="token keyword">with</span> <span class="token operator">&lt;</span>foreign_key<span class="token operator">></span></code></p>
+<p>To join a foreign key of the source explore to the <code class="language-malloy">primary <span class="token keyword">key</span></code> of a joined explore, reference the foreign key by name in the <code class="language-malloy"><span class="token keyword">with</span></code> clause.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span>: users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">primary_key</span>: id
+}
+
+<span class="token keyword">explore</span>: order_items <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.order_items'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">join_one</span>: users <span class="token keyword">with</span> user_id
+}</pre>
       <h2>
         <a id="naming-joined-explores" class="header-link anchor" href="#naming-joined-explores">
           Naming Joined Explores
         </a>
       </h2>
-    <p>To preserve the name of the explore being joined in, use <code class="language-malloy"><span class="token keyword">join</span> <span class="token keyword">on</span></code>.</p>
-<pre class="language-malloy">flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> id2
-  carriers <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> carrier
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre><p>To give the joined explore a different name within the source explore, specify the name of the explore being joined in between <code class="language-malloy"><span class="token keyword">join</span></code> and <code class="language-malloy"><span class="token keyword">on</span></code>.</p>
-<pre class="language-malloy">flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> id2
-  origin_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+    <p>If no name is specified with <code class="language-malloy"><span class="token keyword">is</span></code>, the name of the join will be the name of the
+explore being joined.</p>
+<pre class="language-malloy">
+<span class="token keyword">explore</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">primary_key</span>: code
+}
+
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">join_one</span>: carriers <span class="token keyword">with</span> carrier
+}</pre><p>To give the joined explore a different name within the source explore, use <code class="language-malloy"><span class="token keyword">is</span></code> to specify the name of the explore.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">primary_key</span>: code
+}
+
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">join_one</span>: origin_airport <span class="token keyword">is</span> airports <span class="token keyword">with</span> origin
+}</pre>
       <h2>
         <a id="inlining-joins" class="header-link anchor" href="#inlining-joins">
           Inlining Joins
         </a>
       </h2>
-    <p>Explores do not need to be named before they are used in a join.</p>
-<pre class="language-malloy">order_items <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.ecomm.order_items'</span>
-  users <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token punctuation">(</span><span class="token string">'malloy-data.ecomm.users'</span>
-    <span class="token keyword">primary</span> <span class="token keyword">key</span> id
-  <span class="token punctuation">)</span> <span class="token keyword">on</span> user_id
-<span class="token punctuation">)</span><span class="token punctuation">;</span></pre>
+    <p>Explores do not need to be named before they are used in a join. if the join
+uses <code class="language-malloy"><span class="token keyword">is</span></code> to give the join a name.</p>
+<pre class="language-malloy">
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">join_one</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span> { <span class="token keyword">primary_key</span>: code } <span class="token keyword">with</span> carrier
+}</pre>
       <h2>
         <a id="using-fields-in-joined-explores" class="header-link anchor" href="#using-fields-in-joined-explores">
           Using Fields in Joined Explores
         </a>
       </h2>
     <p>When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class="language-malloy"><span class="token punctuation">.</span></code>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  carriers<span class="token punctuation">.</span>nickname
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
-    <div class="result-middle">
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
+  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}</pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -83,31 +108,77 @@ footer: /generated/footers/language/join.html
 		</thead>
 		<tbody>
 			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">88,751</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,683</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Delta</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">34,577</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Northwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">33,580</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">United</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,757</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">USAir</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
 </tr>
 
 		</tbody>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"Southwest"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5775777</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"Delta"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"American"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"United"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"USAir"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3205810</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   carriers_0<span class="token punctuation">.</span>nickname <span class="token keyword">as</span> nickname<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>carriers<span class="token punctuation">`</span> <span class="token keyword">AS</span> carriers_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>carrier <span class="token operator">=</span> carriers_0<span class="token punctuation">.</span>code
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>Measures and queries defined in joined explores may be used in addition to dimensions.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span> flights
-<span class="token operator">|</span> <span class="token keyword">reduce</span>
-  destination_code
-  carriers<span class="token punctuation">.</span>carrier_count</pre><div class="result-outer large">
-    <div class="result-middle">
+<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: destination_code
+  <span class="token keyword">aggregate</span>: carriers<span class="token punctuation">.</span>carrier_count
+}</pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
@@ -117,24 +188,62 @@ footer: /generated/footers/language/join.html
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IAH</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IND</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
 </tr>
 <tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PIT</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SFO</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+</tr>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
 </tr>
 
 		</tbody>
 	</table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination_code"</span><span class="token operator">:</span> <span class="token string">"LAS"</span><span class="token punctuation">,</span>
+    <span class="token property">"carrier_count"</span><span class="token operator">:</span> <span class="token number">19</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination_code"</span><span class="token operator">:</span> <span class="token string">"LAX"</span><span class="token punctuation">,</span>
+    <span class="token property">"carrier_count"</span><span class="token operator">:</span> <span class="token number">19</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination_code"</span><span class="token operator">:</span> <span class="token string">"PIT"</span><span class="token punctuation">,</span>
+    <span class="token property">"carrier_count"</span><span class="token operator">:</span> <span class="token number">18</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination_code"</span><span class="token operator">:</span> <span class="token string">"SFO"</span><span class="token punctuation">,</span>
+    <span class="token property">"carrier_count"</span><span class="token operator">:</span> <span class="token number">18</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"destination_code"</span><span class="token operator">:</span> <span class="token string">"PHX"</span><span class="token punctuation">,</span>
+    <span class="token property">"carrier_count"</span><span class="token operator">:</span> <span class="token number">18</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   flights<span class="token punctuation">.</span>destination <span class="token keyword">as</span> destination_code<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> carriers_0<span class="token punctuation">.</span>code<span class="token punctuation">)</span> <span class="token keyword">as</span> carrier_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>carriers<span class="token punctuation">`</span> <span class="token keyword">AS</span> carriers_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>carrier <span class="token operator">=</span> carriers_0<span class="token punctuation">.</span>code
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
       </div>
     </div>
   </div>
@@ -143,79 +252,152 @@ footer: /generated/footers/language/join.html
           Join Example
         </a>
       </h2>
-    <p>This example demonstrates the definition of several different joins in a model and their use in a query.</p>
-<pre class="language-malloy"><span class="token comment">/* Data about particular kinds of aircraft */</span>
-<span class="token keyword">define</span> aircraft_models <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft_models'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> aircraft_model_code
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <p>This example demonstrates the definition of several different joins in a model and their use in a query.
+Entire subtrees of data can be joined.  In the example below, <code class="language-malloy">aircraft</code> joins <code class="language-malloy">aircraft_models</code>.  <code class="language-malloy">flights</code>
+joins aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
+retained.</p>
+<p><code class="language-malloy"><span class="token keyword">group_by</span>: aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>manufacturer</code></p>
+<pre class="language-malloy"><span class="token keyword">explore</span>: aircraft_models <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft_models'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">primary_key</span>: aircraft_model_code
+  <span class="token keyword">measure</span>: aircraft_model_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}
 
-<span class="token comment">/* Individual airplanes */</span>
-<span class="token keyword">define</span> aircraft <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.aircraft'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> tail_num
-  aircraft_models <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> aircraft_model_code
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// Individual airplanes</span>
+<span class="token keyword">explore</span>: aircraft <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.aircraft'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">primary_key</span>: tail_num
+  <span class="token keyword">measure</span>: aircraft_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">join_one</span>: aircraft_models <span class="token keyword">with</span> aircraft_model_code
+}
 
-<span class="token comment">/* The airports that the aircraft fly to and from */</span>
-<span class="token keyword">define</span> airports <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.airports'</span>
-  <span class="token keyword">primary</span> <span class="token keyword">key</span> code
-<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// The airports that the aircraft fly to and from</span>
+<span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">primary_key</span>: code
+  <span class="token keyword">measure</span>: airport_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+}
 
-<span class="token comment">/* Each individual flight */</span>
-<span class="token keyword">define</span> flights <span class="token keyword">is</span> <span class="token punctuation">(</span><span class="token keyword">explore</span> <span class="token string">'malloy-data.faa.flights'</span>
-    aircraft <span class="token keyword">is</span> <span class="token keyword">join</span> <span class="token keyword">on</span> tail_num
-    origin_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> origin
-    destination_airport <span class="token keyword">is</span> <span class="token keyword">join</span> airports <span class="token keyword">on</span> destination
-  <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">join_one</span>: origin_airport <span class="token keyword">is</span> airports <span class="token keyword">with</span> origin
+  <span class="token keyword">join_one</span>: destination_airport <span class="token keyword">is</span> airports <span class="token keyword">with</span> destination
+  <span class="token keyword">join_one</span>: aircraft <span class="token keyword">with</span> tail_num
+}
 
-<span class="token keyword">explore</span> flights : <span class="token punctuation">[</span>
-  dep_time : <span class="token date">@2003-01</span><span class="token punctuation">,</span>
-  origin_airport<span class="token punctuation">.</span>code : <span class="token string">'SJC'</span>
-<span class="token punctuation">]</span> <span class="token operator">|</span> <span class="token keyword">reduce</span>
-  destination_code <span class="token keyword">is</span> destination_airport<span class="token punctuation">.</span>code
-  flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  aircraft_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  aircraft_model_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span></pre><div class="result-outer large">
-    <div class="result-middle">
+<span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
+  <span class="token keyword">group_by</span>: aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>manufacturer
+  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
+    flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    aircraft_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    aircraft_model_count <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span><span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+}</pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
         <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
 		<thead>
 			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination_&#8203;code</th>
+				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">manufacturer</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;count</th>
 <th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;model_&#8203;count</th>
       </tr>
 		</thead>
 		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">799</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">250</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">20</td>
+			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">BOEING</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16,020,923</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,403</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">120</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SAN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">415</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">204</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">null</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,773,031</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">SNA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">403</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">105</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">16</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">EMBRAER</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,174,815</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">602</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">336</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">205</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">36</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MCDONNELL DOUGLAS</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,047,321</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">470</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10</td>
 </tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">311</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">83</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5</td>
+<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AIRBUS INDUSTRIE</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,780,924</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">407</td>
+<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">12</td>
 </tr>
 
 		</tbody>
 	</table>
       </div>
     </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"manufacturer"</span><span class="token operator">:</span> <span class="token string">"BOEING"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">16020923</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_count"</span><span class="token operator">:</span> <span class="token number">2403</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_model_count"</span><span class="token operator">:</span> <span class="token number">120</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"manufacturer"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5773031</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_count"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_model_count"</span><span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"manufacturer"</span><span class="token operator">:</span> <span class="token string">"EMBRAER"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3174815</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_count"</span><span class="token operator">:</span> <span class="token number">602</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_model_count"</span><span class="token operator">:</span> <span class="token number">12</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"manufacturer"</span><span class="token operator">:</span> <span class="token string">"MCDONNELL DOUGLAS"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3047321</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_count"</span><span class="token operator">:</span> <span class="token number">470</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_model_count"</span><span class="token operator">:</span> <span class="token number">10</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"manufacturer"</span><span class="token operator">:</span> <span class="token string">"AIRBUS INDUSTRIE"</span><span class="token punctuation">,</span>
+    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">2780924</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_count"</span><span class="token operator">:</span> <span class="token number">407</span><span class="token punctuation">,</span>
+    <span class="token property">"aircraft_model_count"</span><span class="token operator">:</span> <span class="token number">12</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><span class="token keyword">SELECT</span> 
+   aircraft_models_0<span class="token punctuation">.</span>manufacturer <span class="token keyword">as</span> manufacturer<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_0<span class="token punctuation">.</span>tail_num<span class="token punctuation">)</span> <span class="token keyword">as</span> aircraft_count<span class="token punctuation">,</span>
+   <span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code<span class="token punctuation">)</span> <span class="token keyword">as</span> aircraft_model_count
+<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>tail_num <span class="token operator">=</span> aircraft_0<span class="token punctuation">.</span>tail_num
+<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft_0<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
+<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
+</pre>
+      </div>
+    </div>
   </div><p>For more examples and how to reason about aggregation across joins, review the <a href="aggregates.html">Aggregates</a> section.</p>
-</div>
+
+      <h2>
+        <a id="sql-joins" class="header-link anchor" href="#sql-joins">
+          SQL Joins
+        </a>
+      </h2>
+    <p>Inner join are joins where the the joined table has rows. The example below, suppose we only want users that have at least one row in the orders table. The following is the equivalent of a SQL <code>INNER JOIN</code>.</p>
+<pre class="language-malloy"><span class="token keyword">explore</span> users <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'users'</span><span class="token punctuation">)</span> {
+  <span class="token keyword">join_many</span>: orders <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'orders'</span><span class="token punctuation">)</span> <span class="token keyword">on</span> id <span class="token operator">=</span> orders<span class="token punctuation">.</span>user_id <span class="token keyword">and</span> orders<span class="token punctuation">.</span>user_id <span class="token operator">!=</span> <span class="token keyword">null</span>
+}</pre></div>

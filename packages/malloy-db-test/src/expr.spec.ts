@@ -14,7 +14,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import * as malloy from "@malloy-lang/malloy";
+import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
@@ -38,7 +38,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
 
 explore: aircraft is table('malloytest.aircraft'){
   primary_key: tail_num
-  join: aircraft_models on aircraft_model_code
+  join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count(*)
   query: by_manufacturer is {
     top: 5
@@ -276,6 +276,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
   });
 
+  // we need to kill this feature.
   (databaseName === "postgres" ? it.skip : it)(
     `model: dates - ${databaseName}`,
     async () => {
@@ -338,6 +339,63 @@ expressionModels.forEach((expressionModel, databaseName) => {
       );
       expect(result.data.path(0, "t_timestamp_day_of_year").value).toEqual(62);
       expect(result.data.path(0, "t_timestamp_day_of_month").value).toEqual(2);
+    }
+  );
+
+  (databaseName === "postgres" ? it.skip : it)(
+    `model: dates named - ${databaseName}`,
+    async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+        query: table('malloytest.alltypes')->{
+          group_by: [
+            t_date,
+            t_date_month is t_date.month,
+            t_date_year is t_date.year,
+            t_timestamp,
+            t_timestamp_date is t_timestamp.day,
+            t_timestamp_hour is t_timestamp.hour,
+            t_timestamp_minute is t_timestamp.minute,
+            t_timestamp_second is t_timestamp.second,
+            t_timestamp_month is t_timestamp.month,
+            t_timestamp_year is t_timestamp.year,
+          ]
+        }
+
+        `
+        )
+        .run();
+      expect(result.data.path(0, "t_date").value).toEqual(
+        new Date("2020-03-02")
+      );
+      expect(result.data.path(0, "t_date_month").value).toEqual(
+        new Date("2020-03-01")
+      );
+      expect(result.data.path(0, "t_date_year").value).toEqual(
+        new Date("2020-01-01")
+      );
+      expect(result.data.path(0, "t_timestamp").value).toEqual(
+        new Date("2020-03-02T12:35:56.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_second").value).toEqual(
+        new Date("2020-03-02T12:35:56.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_minute").value).toEqual(
+        new Date("2020-03-02T12:35:00.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_hour").value).toEqual(
+        new Date("2020-03-02T12:00:00.000Z")
+      );
+      expect(result.data.path(0, "t_timestamp_date").value).toEqual(
+        new Date("2020-03-02")
+      );
+      expect(result.data.path(0, "t_timestamp_month").value).toEqual(
+        new Date("2020-03-01")
+      );
+      expect(result.data.path(0, "t_timestamp_year").value).toEqual(
+        new Date("2020-01-01")
+      );
     }
   );
 
@@ -437,20 +495,19 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-  define a is('malloytest.aircraft'
-    primary key tail_num
-    aircraft_count is count()
-  );
-  export define am is ('malloytest.aircraft_models'
-    primary key aircraft_model_code
-    a is join on a.aircraft_model_code
+  explore: a is table('malloytest.aircraft') {
+    primary_key: tail_num
+    measure: aircraft_count is count()
+  }
+  query: table('malloytest.aircraft_models') {
+    primary_key: aircraft_model_code
+    join_many: a on a.aircraft_model_code
 
-    some_measures is (reduce
-      am_count is count()
-      a.aircraft_count
-    )
-  );
-  am | some_measures
+    some_measures is {
+      aggregate: am_count is count()
+      aggregate: a.aircraft_count
+    }
+  } -> some_measure
     `
       )
       .run();
@@ -468,7 +525,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     }
 
     explore: aircraft2 is table('malloytest.aircraft'){
-      join: model is a_models on aircraft_model_code
+      join_one: model is a_models with aircraft_model_code
       measure: aircraft_count is count()
     }
 
@@ -506,11 +563,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
           where: bo_models.seats > 200
           primary_key: aircraft_model_code
           measure: b_count is count()
-          join: bo_models on aircraft_model_code
+          join_one: bo_models with aircraft_model_code
         }
 
     explore: models is table('malloytest.aircraft_models') {
-      join: b_models on aircraft_model_code
+      join_one: b_models with aircraft_model_code
       measure: model_count is count()
     }
 
@@ -564,10 +621,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
       explore: f is table('malloytest.flights'){
-        join: a is table('malloytest.aircraft') {
-          primary_key: tail_num
-          join: state_facts is table('malloytest.state_facts'){primary_key: state} on state
-        } on tail_num
+        join_one: a is table('malloytest.aircraft') {
+          join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state
+        } on tail_num = a.tail_num
       }
 
       query: f-> {

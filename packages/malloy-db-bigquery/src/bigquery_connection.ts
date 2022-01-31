@@ -32,9 +32,9 @@ import {
   FieldTypeDef,
   NamedStructDefs,
   Connection,
-} from "@malloy-lang/malloy";
-import { parseTableURL } from "@malloy-lang/malloy";
-import { PooledConnection } from "@malloy-lang/malloy";
+} from "@malloydata/malloy";
+import { parseTableURL } from "@malloydata/malloy";
+import { PooledConnection } from "@malloydata/malloy";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -49,6 +49,12 @@ export interface BigQueryManagerOptions {
 export interface BigQueryQueryOptions {
   pageSize: number;
   rowIndex: number;
+}
+
+interface BigQueryConnectionConfiguration {
+  defaultProject?: string;
+  serviceAccountKeyPath?: string;
+  location?: string;
 }
 
 type QueryOptionsReader =
@@ -100,6 +106,8 @@ export class BigQueryConnection extends Connection {
 
   private queryOptions?: QueryOptionsReader;
 
+  private config: BigQueryConnectionConfiguration;
+
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
     STRING: { type: "string" },
@@ -122,19 +130,21 @@ export class BigQueryConnection extends Connection {
   constructor(
     name: string,
     queryOptions?: QueryOptionsReader,
-    defaultProject: string | undefined = undefined
+    config: BigQueryConnectionConfiguration = {}
   ) {
     super(name);
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
+      keyFilename: config.serviceAccountKeyPath,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
     // we want to use the tables API
     this.projectId = this.bigQuery.projectId;
-    this.defaultProject = defaultProject || this.bigQuery.projectId;
+    this.defaultProject = config.defaultProject || this.bigQuery.projectId;
 
     this.queryOptions = queryOptions;
+    this.config = config;
   }
 
   get dialectName(): string {
@@ -212,7 +222,7 @@ export class BigQueryConnection extends Connection {
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
-        location: "US",
+        location: this.config.location || "US",
         query: sqlCommand,
         dryRun: true,
       });
@@ -276,6 +286,10 @@ export class BigQueryConnection extends Connection {
   public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
     const result = await this.runBigQueryJob(sqlCommand);
     return result[0];
+  }
+
+  public async test(): Promise<void> {
+    await this.dryRunSQLQuery("SELECT 1");
   }
 
   /*

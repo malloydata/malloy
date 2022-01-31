@@ -13,7 +13,13 @@
 
 import * as model from "../model/malloy_types";
 import { FieldSpace, StructSpace, NewFieldSpace } from "./field-space";
-import { FieldValueType, ExprFieldDecl, TurtleDecl, HasParameter } from "./ast";
+import {
+  FieldValueType,
+  ExprFieldDecl,
+  TurtleDecl,
+  HasParameter,
+  Join,
+} from "./ast";
 
 // "Space Fields" are a field in a field space
 
@@ -131,6 +137,12 @@ export class StructSpaceField extends SpaceField {
   }
 }
 
+export class JoinSpaceField extends StructSpaceField {
+  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
+    super(join.structDef());
+  }
+}
+
 export class ColumnSpaceField extends SpaceField {
   constructor(protected def: model.FieldTypeDef) {
     super();
@@ -244,7 +256,7 @@ export class FANSPaceField extends SpaceField {
     }
     const fieldTypeInfo = fromField.type();
     const fieldType = fieldTypeInfo.type;
-    // TODO starting to feel like this should me a method call on a spaceentry
+    // TODO starting to feel like this should be a method call on a spaceentry
     if (model.isAtomicFieldType(fieldType)) {
       if (fromField instanceof SpaceParam) {
         return {
@@ -326,7 +338,7 @@ export class ExpressionFieldFromAst extends SpaceField {
   }
 
   queryFieldDef(): model.QueryFieldDef {
-    return this.fieldDef();
+    return this.exprDef.queryFieldDef(this.space, this.name);
   }
 
   type(): FieldType {

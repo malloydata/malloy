@@ -12,7 +12,19 @@
  */
 
 import { indent } from "../model/utils";
-import { Dialect, DialectFieldList } from "./dialect";
+import {
+  DateTimeframe,
+  Dialect,
+  DialectExpr,
+  DialectFieldList,
+  ExtractDateTimeframe,
+  isDateTimeframe,
+  TimestampTimeframe,
+} from "./dialect";
+
+const timeTruncMap: { [key: string]: string } = {
+  date: "day",
+};
 
 export class StandardSQLDialect extends Dialect {
   name = "standardsql";
@@ -248,5 +260,78 @@ ${indent(sql)}
     return this.keywords.indexOf(identifier.toUpperCase()) > 0
       ? "`" + identifier + "`"
       : identifier;
+  }
+
+  static mapTimeframe(timeframe: TimestampTimeframe): string {
+    const t = timeTruncMap[timeframe];
+    return (t || timeframe).toUpperCase();
+  }
+
+  sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr {
+    const units = StandardSQLDialect.mapTimeframe(timeframe);
+    return [`DATE_TRUNC(`, expr, `, ${units})`];
+  }
+
+  sqlTimestampTrunc(
+    expr: unknown,
+    timeframe: TimestampTimeframe,
+    timezone: string
+  ): DialectExpr {
+    const units = StandardSQLDialect.mapTimeframe(timeframe);
+    if (isDateTimeframe(timeframe)) {
+      return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
+    } else {
+      return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
+    }
+  }
+
+  sqlExtractDateTimeframe(
+    expr: unknown,
+    timeframe: ExtractDateTimeframe
+  ): DialectExpr {
+    return [`EXTRACT(${timeframe} FROM `, expr, ")"];
+  }
+
+  sqlDateCast(expr: unknown): DialectExpr {
+    return ["DATE(", expr, ")"];
+  }
+
+  sqlTimestampCast(expr: unknown): DialectExpr {
+    return ["TIMESTAMP(", expr, ")"];
+  }
+
+  sqlDateAdd(
+    op: "+" | "-",
+    expr: unknown,
+    n: unknown,
+    timeframe: DateTimeframe
+  ): DialectExpr {
+    const add = op === "+" ? "_ADD" : "_SUB";
+    const units = StandardSQLDialect.mapTimeframe(timeframe);
+    return [`DATE${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
+  }
+
+  sqlTimestampAdd(
+    op: "+" | "-",
+    expr: unknown,
+    n: unknown,
+    timeframe: DateTimeframe
+  ): DialectExpr {
+    const useDatetime = ["week", "month", "quarter", "year"].includes(
+      timeframe
+    );
+    const add = op === "+" ? "_ADD" : "_SUB";
+    const units = StandardSQLDialect.mapTimeframe(timeframe);
+    if (useDatetime) {
+      return [
+        `TIMESTAMP(DATETIME${add}(DATETIME(`,
+        expr,
+        `),INTERVAL `,
+        n,
+        ` ${units}))`,
+      ];
+    }
+    // const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", expr, ")"] : expr;
+    return [`TIMESTAMP${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
   }
 }

@@ -12,4 +12,4 @@
  */
 
 export { HTMLView, JSONView } from "./html/html_view";
-export { DataStyles } from "./data_styles";
+export type { DataStyles } from "./data_styles";

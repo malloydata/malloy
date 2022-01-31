@@ -30,11 +30,12 @@ import {
   getMalloyHighlights,
 } from "./highlights";
 import { getMalloyLenses } from "./lenses";
+import { CONNECTION_MANAGER } from "./connections";
 
 const connection = createConnection(ProposedFeatures.all);
 
 const documents = new TextDocuments(TextDocument);
-
+let haveConnectionsBeenSet = false;
 connection.onInitialize((params: InitializeParams) => {
   const capabilities = params.capabilities;
 
@@ -67,9 +68,24 @@ connection.onInitialize((params: InitializeParams) => {
   return result;
 });
 
+async function diagnoseDocument(document: TextDocument) {
+  if (haveConnectionsBeenSet) {
+    // Necessary to copy the version, because it's mutated in the same document object
+    const versionAtRequestTime = document.version;
+    const diagnostics = await getMalloyDiagnostics(documents, document);
+    // Only send diagnostics if the document hasn't changed since this request started
+    if (versionAtRequestTime === document.version) {
+      connection.sendDiagnostics({
+        uri: document.uri,
+        diagnostics,
+        version: document.version,
+      });
+    }
+  }
+}
+
 documents.onDidChangeContent(async (change) => {
-  const diagnostics = await getMalloyDiagnostics(documents, change.document);
-  connection.sendDiagnostics({ uri: change.document.uri, diagnostics });
+  await diagnoseDocument(change.document);
 });
 
 connection.onDocumentSymbol((handler) => {
@@ -87,6 +103,14 @@ connection.languages.semanticTokens.on((handler) => {
 connection.onCodeLens((handler) => {
   const document = documents.get(handler.textDocument.uri);
   return document ? getMalloyLenses(document) : [];
+});
+
+connection.onDidChangeConfiguration(async (change) => {
+  await CONNECTION_MANAGER.setConnectionsConfig(
+    change.settings.malloy.connections
+  );
+  haveConnectionsBeenSet = true;
+  documents.all().forEach(diagnoseDocument);
 });
 
 documents.listen(connection);

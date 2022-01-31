@@ -1,18 +1,18 @@
 # Filters
 
-Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individal filters.
+Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individual filters.
 
 ## Filter Syntax
 
 Regardless of the placement of a filter, the syntax looks the same.
 
 ```malloy
-source : [ filter_one, filter_two ]
+source { where: [ filter_one, filter_two ] }
 ```
 
 Each filter be any expression of type `boolean`, whether that's a boolean field `is_commercial_flight`, a comparison `distance > 1000`, or any of the other kinds of boolean expressions that Malloy supports. For examples see [the table below](#examples-of-filter-expressions), or for detailed information on the kinds of expressions Malloy supports, see the [Expressions](expressions.md) section.
 
-Logically, the comma-seperated list of filters are `and`ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.
+Logically, the comma-separated list of filters are `and`ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.
 
 <!--
 TODO "see where vs having for more information on how Malloy generates SQL for filters"
@@ -28,33 +28,91 @@ When filtering a query's source, the filter applies to the whole query.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-explore flights : [distance > 1000]
-| reduce flight_count
+query: flights { where: distance > 1000 } -> { aggregate: flight_count }
 ```
 
-### Filtering a Query Stage
+### Filtering in a Query Stage
 
 A filter can also be applied to an individual query stage.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-explore flights
-| reduce carrier, flight_count
-| project : [carrier: 'UA' | 'AA']
-  carrier
-  flight_count
+query: flights -> {
+  group_by: carrier
+  aggregate: flight_count
+} -> {
+  where: carrier: 'UA' | 'AA'
+  project: [ carrier, flight_count ]
+}
 ```
 
-### Filtering a Field
+### Filtering Aggregate Calculations
 
-Individual fields or expressions may also be filtered. These expressions must be measures or nested queries—dimensions can not be filtered.
+Any measure can be filtered by adding a where clause.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-explore flights
-| reduce
-  ca_flights is flight_count : [origin.state: 'CA']
-  ny_flights is count() : [origin.state: 'NY']
+query: flights -> {
+  aggregate: [
+    ca_flights is flight_count { where: origin.state = 'CA' }
+    ny_flights is count() { where: origin.state = 'NY' }
+    avg_km_from_ca is avg(distance / 0.621371) { where: origin.state = 'CA' }
+  ]
+}
+```
+
+### Filtering Complex Measure
+
+Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.
+
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
+// add a couple of measures to the `flights` explore
+explore: my_flights is flights {
+  measure: delayed_flights is flight_count { where: dep_delay > 30 }
+  measure: percent_delayed is delayed_flights / flight_count
+}
+
+query: my_flights -> {
+  aggregate: [
+    ca_flights is flight_count { where: origin.state = 'CA' }
+    ca_delayed_flights is delayed_flights { where: origin.state = 'CA' }
+    ca_percent_delayed is percent_delayed { where: origin.state = 'CA' }
+    ny_flights is flight_count { where: origin.state = 'NY' }
+    ny_delayed_flights is delayed_flights { where: origin.state = 'NY' }
+    ny_percent_delayed is percent_delayed { where: origin.state = 'NY' }
+  ]
+}
+```
+
+### Filtering Nested Queries
+
+Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.
+
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
+// add a couple of measures to the `flights` explore
+explore: my_flights is flights {
+  measure: delayed_flights is flight_count { where: dep_delay > 30 }
+  query: delay_stats is {
+    aggregate: [
+      flight_count
+      delayed_flights
+      percent_delayed is delayed_flights / flight_count
+    ]
+  }
+}
+
+query: my_flights -> {
+  nest: [
+    ca_stats is delay_stats { where: origin.state = 'CA' }
+    ny_stats is delay_stats { where: origin.state = 'NY' }
+  ]
+}
 ```
 
 ## Common Patterns in Filters

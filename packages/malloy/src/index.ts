@@ -12,7 +12,7 @@
  */
 
 // TODO tighten up exports
-export {
+export type {
   // Currently needed only by tests
   ModelDef,
   Fragment,
@@ -30,14 +30,15 @@ export {
 export {
   // Neede for VSCode extension
   HighlightType,
-  LogMessage,
   // Needed for tests only
   MalloyTranslator,
-  TranslateResponse,
 } from "./lang";
+export type { LogMessage, TranslateResponse } from "./lang";
 export {
   Malloy,
   Runtime,
+  ConnectionRuntime,
+  SingleConnectionRuntime,
   EmptyURLReader,
   InMemoryURLReader,
   FixedConnectionMap,
@@ -65,6 +66,9 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
+  QueryMaterializer,
+  PreparedResultMaterializer,
+  ExploreMaterializer,
 } from "./malloy";
 export type {
   URLReader,
@@ -78,5 +82,6 @@ export type {
   ModelURL,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
-export { Connection, PooledConnection } from "./connection";
+export { Connection } from "./connection";
+export type { PooledConnection } from "./connection";
 export type { Loggable } from "./malloy";

@@ -13,8 +13,8 @@
 
 import path from "path";
 import fs from "fs";
-import { Malloy } from "@malloy-lang/malloy";
-import { BigQueryConnection } from "@malloy-lang/db-bigquery";
+import { Malloy } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { performance } from "perf_hooks";
 import { renderDoc } from "./render_document";
 import { renderFooter, renderSidebar, Section } from "./page";
@@ -27,9 +27,11 @@ import {
 } from "./utils";
 import { DEPENDENCIES } from "./run_code";
 import { log } from "./log";
+import { exit } from "process";
 
 const DOCS_ROOT_PATH = path.join(__dirname, "../../_src");
 const OUT_PATH = path.join(__dirname, "../../_includes/generated");
+const JS_OUT_PATH = path.join(__dirname, "../../js/generated");
 const OUT_PATH2 = path.join(__dirname, "../../documentation/");
 const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
@@ -38,7 +40,10 @@ const WATCH_ENABLED = process.argv.includes("--watch");
 
 Malloy.db = new BigQueryConnection("docs");
 
-async function compileDoc(file: string) {
+async function compileDoc(file: string): Promise<{
+  errors: { path: string; snippet: string; error: string }[];
+  searchSegments: { path: string; titles: string[]; paragraphs: string[] }[];
+}> {
   const startTime = performance.now();
   const shortPath = file.substring(DOCS_ROOT_PATH.length);
   const shortOutPath = shortPath.replace(/\.md$/, ".html");
@@ -46,14 +51,17 @@ async function compileDoc(file: string) {
   const outDirPath = path.join(outPath, "..");
   fs.mkdirSync(outDirPath, { recursive: true });
   const markdown = fs.readFileSync(file, "utf8");
-  const renderedDoc = await renderDoc(markdown, shortPath);
+  const { renderedDocument, errors, searchSegments } = await renderDoc(
+    markdown,
+    shortPath
+  );
   const headerDoc =
     `---\n` +
     `layout: documentation\n` +
     `title: Malloy Documentation\n` +
     `footer: ${path.join("/generated/footers", shortOutPath)}\n` +
     `---\n\n` +
-    renderedDoc;
+    renderedDocument;
   fs.mkdirSync(path.join(OUT_PATH2, shortOutPath, ".."), { recursive: true });
   fs.writeFileSync(path.join(OUT_PATH2, shortOutPath), headerDoc);
   log(
@@ -62,11 +70,19 @@ async function compileDoc(file: string) {
       performance.now()
     )}.`
   );
+  return {
+    errors: errors.map((error) => ({ ...error, path: shortPath })),
+    searchSegments: searchSegments.map((segment) => ({
+      ...segment,
+      path: shortPath,
+    })),
+  };
 }
 
 function rebuildSidebarAndFooters() {
   const tableOfContents = JSON.parse(fs.readFileSync(CONTENTS_PATH, "utf8"))
     .contents as Section[];
+
   const renderedSidebar = renderSidebar(tableOfContents);
   fs.writeFileSync(path.join(OUT_PATH, "toc.html"), renderedSidebar);
   log(`File _includes/toc.html written.`);
@@ -87,6 +103,19 @@ function rebuildSidebarAndFooters() {
   log(`Files _includes/footers/** written.`);
 }
 
+function outputSearchSegmentsFile(
+  searchSegments: { path: string; titles: string[]; paragraphs: string[] }[]
+) {
+  const file = `window.SEARCH_SEGMENTS = ${JSON.stringify(
+    searchSegments,
+    null,
+    2
+  )}`;
+  fs.mkdirSync(JS_OUT_PATH, { recursive: true });
+  fs.writeFileSync(path.join(JS_OUT_PATH, "search_segments.js"), file);
+  log(`File js/generated/search_segments.js written.`);
+}
+
 (async () => {
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);
@@ -100,7 +129,13 @@ function rebuildSidebarAndFooters() {
     fs.copyFileSync(file, destination);
   }
   const startTime = performance.now();
-  await Promise.all(allDocs.map(compileDoc));
+  const results = await Promise.all(allDocs.map(compileDoc));
+  const allErrors = results.map(({ errors }) => errors).flat();
+  const allSegments = results
+    .map(({ searchSegments }) => searchSegments)
+    .flat();
+  // TODO make this update in watch mode
+  outputSearchSegmentsFile(allSegments);
   log(`All docs compiled in ${timeString(startTime, performance.now())}`);
 
   rebuildSidebarAndFooters();
@@ -133,5 +168,20 @@ function rebuildSidebarAndFooters() {
       log(`Table of contents ${type}d. Recompiling...`);
       rebuildSidebarAndFooters();
     });
+  } else {
+    if (allErrors.length > 0) {
+      log(
+        `Failure: ${allErrors.length} example snippet${
+          allErrors.length === 1 ? "" : "s"
+        } had errors`
+      );
+      allErrors.forEach((error) => {
+        log(`Error in file ${error.path}: ${error.error}`);
+        log("```");
+        log(error.snippet);
+        log("```");
+      });
+      exit(1);
+    }
   }
 })();
