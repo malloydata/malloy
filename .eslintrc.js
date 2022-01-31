@@ -30,6 +30,9 @@ module.exports = {
     "packages/malloy/src/lang/lib/Malloy",
   ],
   parser: "@typescript-eslint/parser",
+  parserOptions: {
+    warnOnUnsupportedTypeScriptVersion: false,
+  },
   plugins: ["@typescript-eslint", "prettier"],
   rules: {
     "no-console": "warn",
