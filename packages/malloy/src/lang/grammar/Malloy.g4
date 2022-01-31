@@ -433,7 +433,7 @@ sqlStatement
 sqlCommand: SQL_STRING;
 
 sqlExploreNameDef: id;
-connectionName: id;
+connectionName: JSON_STRING;
 
 JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
 

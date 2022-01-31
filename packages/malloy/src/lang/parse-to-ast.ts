@@ -1049,7 +1049,7 @@ export class MalloyToAST
     return this.getFieldExpr(pcx.fieldExpr());
   }
 
-  visitSqlStatement?(pcx: parse.SqlStatementContext): ast.SQLStatement {
+  visitSqlStatement(pcx: parse.SqlStatementContext): ast.SQLStatement {
     const commands = pcx.sqlCommand().map((cx) => cx.text);
     const sqlStmt = new ast.SQLStatement(commands);
     const defCx = pcx.sqlExploreNameDef();

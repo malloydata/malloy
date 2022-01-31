@@ -598,6 +598,7 @@ describe("sql backdoor", () => {
       sql: users is
         || -- some other sql command ;;
         || SELECT * FROM USERS;;
+        on "bigquery"
       `)
   );
 });
