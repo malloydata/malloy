@@ -30,7 +30,7 @@ if [ ! -r $target ]; then
 fi
 
 if [ "$oldmd5" != "$newmd5" ]; then
-  antlr4ts -o $lib Malloy.g4 && echo $newmd5 > $digest
+  antlr4ts -visitor -o $lib Malloy.g4 && echo $newmd5 > $digest
 else
   echo "ANTLR parser $target is up to date"
 fi
