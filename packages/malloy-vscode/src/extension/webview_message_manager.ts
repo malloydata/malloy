@@ -13,24 +13,26 @@
 
 import { ResultJSON } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
-import { WebviewPanel } from "vscode";
+import { WebviewPanel, WebviewView } from "vscode";
 import { ConnectionConfig } from "../common";
 
 export class WebviewMessageManager<T> {
-  constructor(private panel: WebviewPanel) {
+  constructor(private panel: WebviewPanel | WebviewView) {
     this.panel.webview.onDidReceiveMessage((message: T) => {
       if (!this.clientCanReceiveMessages) {
         this.onClientCanReceiveMessages();
       }
       this.callback(message);
     });
-    this.panel.onDidChangeViewState(() => {
-      if (this.panelCanReceiveMessages && !this.panel.visible) {
-        this.panelCanReceiveMessages = false;
-      } else if (!this.panelCanReceiveMessages && this.panel.visible) {
-        this.onPanelCanReceiveMessages();
-      }
-    });
+    if ("onDidChangeViewState" in this.panel) {
+      this.panel.onDidChangeViewState(() => {
+        if (this.panelCanReceiveMessages && !this.panel.visible) {
+          this.panelCanReceiveMessages = false;
+        } else if (!this.panelCanReceiveMessages && this.panel.visible) {
+          this.onPanelCanReceiveMessages();
+        }
+      });
+    }
   }
 
   private pendingMessages: T[] = [];
@@ -198,3 +200,18 @@ export type ConnectionPanelMessage =
   | ConnectionMessageSetConnections
   | ConnectionMessageTest
   | ConnectionMessageServiceAccountKeyRequest;
+
+export enum HelpMessageType {
+  AppReady = "app-ready",
+  EditConnections = "edit-connections",
+}
+
+interface HelpMessageAppReady {
+  type: HelpMessageType.AppReady;
+}
+
+interface HelpMessageEditConnections {
+  type: HelpMessageType.EditConnections;
+}
+
+export type HelpPanelMessage = HelpMessageAppReady | HelpMessageEditConnections;

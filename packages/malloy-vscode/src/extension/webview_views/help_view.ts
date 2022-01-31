@@ -14,6 +14,11 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { getWebviewHtml } from "../webviews";
+import {
+  HelpMessageType,
+  HelpPanelMessage,
+  WebviewMessageManager,
+} from "../webview_message_manager";
 
 export class HelpViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
@@ -38,6 +43,16 @@ export class HelpViewProvider implements vscode.WebviewViewProvider {
     const entrySrc = webviewView.webview.asWebviewUri(onDiskPath);
 
     webviewView.webview.html = getWebviewHtml(entrySrc.toString());
+
+    const messageManager = new WebviewMessageManager<HelpPanelMessage>(
+      webviewView
+    );
+
+    messageManager.onReceiveMessage((message) => {
+      if (message.type === HelpMessageType.EditConnections) {
+        vscode.commands.executeCommand("malloy.editConnections");
+      }
+    });
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
