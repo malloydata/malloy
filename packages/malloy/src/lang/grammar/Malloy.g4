@@ -217,7 +217,7 @@ dimensionDef: fieldDef;
 queryFieldEntry
   : fieldPath      # queryFieldRef
   | dimensionDef   # queryFieldDef
-  | fieldExpr      # queryFieldNameless
+  // | fieldExpr      # queryFieldNameless
   ;
 
 nestStatement

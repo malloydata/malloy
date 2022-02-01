@@ -526,14 +526,14 @@ export class MalloyToAST
     return this.astAt(this.visitFieldPath(refCx), refCx);
   }
 
-  visitQueryFieldNameless(
-    pcx: parse.QueryFieldNamelessContext
-  ): ast.MalloyElement {
-    this.contextError(pcx, `Expressions in queries must have names`);
-    const noItem = new ast.Unimplemented();
-    noItem.reported = true;
-    return noItem;
-  }
+  // visitQueryFieldNameless(
+  //   pcx: parse.QueryFieldNamelessContext
+  // ): ast.MalloyElement {
+  //   this.contextError(pcx, `Expressions in queries must have names`);
+  //   const noItem = new ast.Unimplemented();
+  //   noItem.reported = true;
+  //   return noItem;
+  // }
 
   protected getQueryItems(pcx: parse.QueryFieldListContext): ast.QueryItem[] {
     const itemList = pcx.queryFieldEntry().map((e) => this.visit(e));
