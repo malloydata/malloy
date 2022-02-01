@@ -129,6 +129,21 @@ export class MalloyToAST
     return eps;
   }
 
+  protected onlyQueryRefs(els: ast.MalloyElement[]): ast.QueryItem[] {
+    const eps: ast.QueryItem[] = [];
+    for (const el of els) {
+      if (el instanceof ast.FieldName || el instanceof ast.ExprFieldDecl) {
+        eps.push(el);
+      } else {
+        const reported = el instanceof ast.Unimplemented && el.reported;
+        if (!reported) {
+          this.astError(el, `Expected query field, not '${el.elementType}'`);
+        }
+      }
+    }
+    return eps;
+  }
+
   protected getNumber(term: ParseTree): number {
     return Number.parseInt(term.text);
   }
@@ -500,44 +515,37 @@ export class MalloyToAST
     return this.astAt(new ast.FieldName(this.getFieldPath(pcx)), pcx);
   }
 
-  visitGroupByEntry(pcx: parse.GroupByEntryContext): ast.QueryItem {
-    const defCx = pcx.dimensionDef()?.fieldDef();
-    if (defCx) {
-      const dim = this.visitFieldDef(defCx);
-      dim.isMeasure = false;
-      return this.astAt(dim, defCx);
-    }
+  visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
+    const defCx = pcx.dimensionDef().fieldDef();
+    const dim = this.visitFieldDef(defCx);
+    return this.astAt(dim, defCx);
+  }
+
+  visitQueryFieldRef(pcx: parse.QueryFieldRefContext): ast.QueryItem {
     const refCx = pcx.fieldPath();
-    if (refCx) {
-      return this.astAt(this.visitFieldPath(refCx), refCx);
-    }
-    throw this.internalError(pcx, "query item was not a ref or a def");
+    return this.astAt(this.visitFieldPath(refCx), refCx);
   }
 
-  visitGroupByList(pcx: parse.GroupByListContext): ast.GroupBy {
-    const groupBy = pcx.groupByEntry().map((cx) => this.visitGroupByEntry(cx));
-    return new ast.GroupBy(groupBy);
+  // visitQueryFieldNameless(
+  //   pcx: parse.QueryFieldNamelessContext
+  // ): ast.MalloyElement {
+  //   this.contextError(pcx, `Expressions in queries must have names`);
+  //   const noItem = new ast.Unimplemented();
+  //   noItem.reported = true;
+  //   return noItem;
+  // }
+
+  protected getQueryItems(pcx: parse.QueryFieldListContext): ast.QueryItem[] {
+    const itemList = pcx.queryFieldEntry().map((e) => this.visit(e));
+    return this.onlyQueryRefs(itemList);
   }
 
-  visitAggregateEntry(pcx: parse.AggregateEntryContext): ast.QueryItem {
-    const defCx = pcx.measureDef()?.fieldDef();
-    if (defCx) {
-      const m = this.visitFieldDef(defCx);
-      m.isMeasure = true;
-      return this.astAt(m, defCx);
-    }
-    const refCx = pcx.fieldPath();
-    if (refCx) {
-      return this.astAt(this.visitFieldPath(refCx), refCx);
-    }
-    throw this.internalError(pcx, "query item was not a ref or a def");
+  visitAggregateStatement(pcx: parse.AggregateStatementContext): ast.Aggregate {
+    return new ast.Aggregate(this.getQueryItems(pcx.queryFieldList()));
   }
 
-  visitAggregateList(pcx: parse.AggregateListContext): ast.Aggregate {
-    const aggList = pcx
-      .aggregateEntry()
-      .map((e) => this.visitAggregateEntry(e));
-    return new ast.Aggregate(aggList);
+  visitGroupByStatement(pcx: parse.GroupByStatementContext): ast.GroupBy {
+    return new ast.GroupBy(this.getQueryItems(pcx.queryFieldList()));
   }
 
   visitFieldCollection(

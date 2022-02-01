@@ -61,13 +61,7 @@ export const App: React.FC = () => {
             setTimeout(async () => {
               const result = Result.fromJSON(message.result);
               const data = result.data;
-              setJSON(
-                Prism.highlight(
-                  JSON.stringify(data.toObject(), null, 2),
-                  Prism.languages["json"],
-                  "sql"
-                )
-              );
+              setJSON(JSON.stringify(data.toObject(), null, 2));
               setSQL(
                 Prism.highlight(result.sql, Prism.languages["sql"], "sql")
               );
@@ -130,12 +124,7 @@ export const App: React.FC = () => {
       )}
       {!error && resultKind === ResultKind.JSON && (
         <Scroll>
-          <PrismContainer style={{ margin: "10px" }}>
-            <div
-              dangerouslySetInnerHTML={{ __html: json }}
-              style={{ margin: "10px" }}
-            />
-          </PrismContainer>
+          <PrismContainer style={{ margin: "10px" }}>{json}</PrismContainer>
         </Scroll>
       )}
       {!error && resultKind === ResultKind.SQL && (

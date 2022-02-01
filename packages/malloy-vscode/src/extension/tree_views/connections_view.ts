@@ -14,9 +14,9 @@
 import * as vscode from "vscode";
 import { ConnectionBackend } from "../../common";
 import { getDefaultIndex } from "../../common/connection_manager_types";
-import { getConnectionsConfig } from "../state";
 import connectionIcon from "../../media/database.svg";
 import * as path from "path";
+import { VSCodeConnectionManager } from "../connection_manager";
 
 export class ConnectionsProvider
   implements vscode.TreeDataProvider<ConnectionItem>
@@ -38,7 +38,7 @@ export class ConnectionsProvider
 
   async getChildren(element?: ConnectionItem): Promise<ConnectionItem[]> {
     if (element === undefined) {
-      const config = getConnectionsConfig();
+      const config = VSCodeConnectionManager.getConnectionsConfig();
       const defaultIndex = getDefaultIndex(config);
       return config.map(
         (config, index) =>

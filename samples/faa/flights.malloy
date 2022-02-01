@@ -174,7 +174,7 @@ explore: flights is table('malloy-data.faa.flights') {
   query: detail is {
     top: 30 by dep_time
     project: [
-      id2, dep_time, tail_num, carrier, origin_code, 
+      id2, dep_time, tail_num, carrier, origin_code,
       destination_code, distance, aircraft.aircraft_model_code
     ]
   }
@@ -249,8 +249,15 @@ query: kayak_query_sj_to_la is
     ]
   }
 
-query: flights -> carrier_dashboard { where: carriers.nickname: 'Southwest' }
-query: flights -> carrier_dashboard { where: carriers.nickname: 'Jetblue' }
-query: flights -> airport_dashboard { where: origin.code: 'SJC' }
-query: flights -> airport_dashboard { where:  origin.code: 'SFO' }
-query: flights -> airport_dashboard { where:  origin.code: 'SFO' }
+query: southwest_dashboard is flights -> carrier_dashboard {
+  where: carriers.nickname: 'Southwest'
+}
+query: jetblue_dashbaord is flights -> carrier_dashboard {
+  where: carriers.nickname: 'Jetblue'
+}
+query: sjc_dashboard is flights -> airport_dashboard {
+  where: origin.code: 'SJC'
+}
+query: sfo_dashboard is flights -> airport_dashboard {
+  where:  origin.code: 'SFO'
+}

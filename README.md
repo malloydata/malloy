@@ -41,58 +41,28 @@ ORDER BY flight_count desc         -- malloy automatically orders by the first a
 
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
+# Get Started
+GitHub mutes videos by default, so make sure to unmute to hear the walkthrough. 
+
+
+
+https://user-images.githubusercontent.com/7178946/151630430-308e651d-814c-4c18-8522-d2d0edb25ece.mp4
+
+
+
 
 
 # Installing the Extension
 
 Currently, the Malloy extension works on Mac and Linux machines.
 
-## 1. Download Visual Studio Code
+1. **Download Visual Studio Code**: If you don't already have it, download [Visual Studio Code](https://code.visualstudio.com/)
 
-If you don't already have it, download [Visual Studio Code](https://code.visualstudio.com/)
+2. **Add the Malloy extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
-## 2. Add the Malloy extension from the Visual Studio Code Marketplace
+3. **Connect to your database**: Directions [here](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
 
-Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
-
-## 3. Open the Malloy extension and connect to your database
-
-Click on the Malloy icon on the left side of VS Code. This opens the Malloy view - a view that allows you to view schemas as you work with Malloy models and edit database connections.
-
-In the "CONNECTIONS" panel, click "Edit Connections". This opens the connection manager page. Click "Add Connection".
-
-### BigQuery
-
-Authenticating to BigQuery can be done either via oAuth (using your Google Cloud Account) or with a Service Account Key downloaded from Google Cloud
-
-#### **Using oAuth**
-
-To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the [gcloud CLI](https://cloud.google.com/sdk/gcloud) installed. Once it's installed, open a terminal and type the following:
-
-```
-gcloud auth login --update-adc
-gcloud config set project {my_project_id} --installation
-```
-
-_Replace `{my_project_id}` with the **ID** of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, [create one](https://cloud.google.com/resource-manager/docs/creating-managing-projects)._
-
-#### **Using Service Account Key**
-
-Add the relevant account information to the new connection, and include the path to the [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
-
-### Postgres (Development in Progress, date/time support currently incomplete)
-
-Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.
-
-## 4. Test the connection
-
-Press "test" on the connection to confirm that you have successfully connected to the database.
-
-## 5. Write some Malloy!
-
-It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
-
-If you want to dive right in, create a file called `test.malloy` and try to create queries on your dataset - you can find examples [here](https://looker-open-source.github.io/malloy/documentation/language/basic.html)
+4. **Write some Malloy!**: Start with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html). It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
 
 # Join the Community
 

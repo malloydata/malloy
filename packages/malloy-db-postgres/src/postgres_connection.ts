@@ -50,6 +50,15 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
   pg_ndistinct: "number",
 };
 
+interface PostgresQueryConfiguration {
+  pageSize?: number;
+}
+
+type PostgresQueryConfigurationReader =
+  | PostgresQueryConfiguration
+  | (() => PostgresQueryConfiguration)
+  | (() => Promise<PostgresQueryConfiguration>);
+
 interface PostgresConnectionConfiguration {
   host?: string;
   port?: number;
@@ -62,17 +71,31 @@ type PostgresConnectionConfigurationReader =
   | PostgresConnectionConfiguration
   | (() => Promise<PostgresConnectionConfiguration>);
 
+const DEFAULT_PAGE_SIZE = 1000;
+const SCHEMA_PAGE_SIZE = 1000;
+
 export class PostgresConnection extends Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
 
   constructor(
     name: string,
+    queryConfigReader: PostgresQueryConfigurationReader = {},
     configReader: PostgresConnectionConfigurationReader = {}
   ) {
     super(name);
+    this.queryConfigReader = queryConfigReader;
     this.configReader = configReader;
+  }
+
+  private async readQueryConfig(): Promise<PostgresQueryConfiguration> {
+    if (this.queryConfigReader instanceof Function) {
+      return this.queryConfigReader();
+    } else {
+      return this.queryConfigReader;
+    }
   }
 
   private async readConfig(): Promise<PostgresConnectionConfiguration> {
@@ -159,7 +182,7 @@ export class PostgresConnection extends Connection {
       WHERE table_name = '${table}'
         AND table_schema = '${schema}'
       `,
-      1000,
+      SCHEMA_PAGE_SIZE,
       0,
       false
     );
@@ -179,7 +202,13 @@ export class PostgresConnection extends Connection {
   }
 
   public async executeSQLRaw(query: string): Promise<QueryData> {
-    const queryData = await this.runPostgresQuery(query, 1000, 0, false);
+    const config = await this.readQueryConfig();
+    const queryData = await this.runPostgresQuery(
+      query,
+      config.pageSize || DEFAULT_PAGE_SIZE,
+      0,
+      false
+    );
     return queryData.rows;
   }
 
@@ -189,9 +218,10 @@ export class PostgresConnection extends Connection {
 
   public async runSQL(
     sqlCommand: string,
-    pageSize = 1000,
+    pageSize?: number,
     rowIndex = 0
   ): Promise<MalloyQueryData> {
+    const config = await this.readQueryConfig();
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
@@ -202,7 +232,12 @@ export class PostgresConnection extends Connection {
     if ((result = this.resultCache.get(hash)) !== undefined) {
       return result;
     }
-    result = await this.runPostgresQuery(sqlCommand, pageSize, rowIndex, true);
+    result = await this.runPostgresQuery(
+      sqlCommand,
+      pageSize || config.pageSize || DEFAULT_PAGE_SIZE,
+      rowIndex,
+      true
+    );
 
     this.resultCache.set(hash, result);
     return result;

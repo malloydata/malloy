@@ -10,6 +10,14 @@
         {
           "title": "Key Features",
           "link": "/features.md"
+        },
+        {
+          "title": "Sample Models",
+          "link": "/samples.md"
+        },
+        {
+          "title": "Connecting a Database",
+          "link": "/connection_instructions.md"
         }
       ]
     },
@@ -154,7 +162,7 @@
       ]
     },
     {
-      "title": "Iowa Liquor - An Analysis",
+      "title": "Walkthrough: Iowa Liquor",
       "items": [
         {
           "title": "About the Data Set",
@@ -183,7 +191,7 @@
       ]
     },
     {
-      "title": "Wordle - A Perfect Solver",
+      "title": "Walkthrough: Wordle Solver",
       "items": [
         {
           "title": "Just Words",

@@ -6,11 +6,11 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
+    "build-parser": "(cd src/lang/grammar ; sh build-parser.sh)",
     "testLang": "yarn test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
-    "malloyc": "ts-node src/lang/test/malloy-to-json.ts",
-    "build": "yarn build-parser && yarn tsc --build"
+    "build": "yarn build-parser && yarn tsc --build",
+    "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",

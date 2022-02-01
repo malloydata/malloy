@@ -622,4 +622,11 @@ describe("error handling", () => {
     );
   });
   test("empty document", modelOK("\n"));
+  // test("queries with anonymous expressions", () => {
+  //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
+  //   expect(m).not.toCompile();
+  //   const errList = m.errors().errors;
+  //   const firstError = errList[0];
+  //   expect(firstError.message).toBe("Expressions in queries must have names");
+  // });
 });
