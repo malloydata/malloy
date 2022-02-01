@@ -13,7 +13,7 @@
 
 import { Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
   QueryMessageType,
@@ -38,7 +38,7 @@ enum Status {
 
 export const App: React.FC = () => {
   const [status, setStatus] = useState<Status>(Status.Ready);
-  const [html, setHTML] = useState("");
+  const [html, setHTML] = useState<Element>(document.createElement("span"));
   const [json, setJSON] = useState("");
   const [sql, setSQL] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
@@ -65,7 +65,7 @@ export const App: React.FC = () => {
               setSQL(
                 Prism.highlight(result.sql, Prism.languages["sql"], "sql")
               );
-              const rendered = await new HTMLView().render(
+              const rendered = await new HTMLView(document).render(
                 data,
                 message.styles
               );
@@ -76,7 +76,7 @@ export const App: React.FC = () => {
               }, 0);
             }, 0);
           } else {
-            setHTML("");
+            setHTML(document.createElement("span"));
             setJSON("");
             setSQL("");
             switch (message.status) {
@@ -116,10 +116,9 @@ export const App: React.FC = () => {
       {!error && <ResultKindToggle kind={resultKind} setKind={setResultKind} />}
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
-          <div
-            dangerouslySetInnerHTML={{ __html: html }}
-            style={{ margin: "10px" }}
-          />
+          <div style={{ margin: "10px" }}>
+            <DOMElement element={html} />
+          </div>
         </Scroll>
       )}
       {!error && resultKind === ResultKind.JSON && (
@@ -210,3 +209,17 @@ const PrismContainer = styled.pre`
     color: #b98f13;
   }
 `;
+
+const DOMElement: React.FC<{ element: Element }> = ({ element }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const parent = ref.current;
+    if (parent) {
+      parent.innerHTML = "";
+      parent.appendChild(element);
+    }
+  }, [element]);
+
+  return <div ref={ref}></div>;
+};

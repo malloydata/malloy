@@ -16,11 +16,13 @@ import { DataColumn } from "@malloydata/malloy";
 export type ChildRenderers = { [fieldName: string]: Renderer };
 
 export interface Renderer {
-  render(value: DataColumn): Promise<string>;
+  render(value: DataColumn): Promise<Element>;
 }
 
 export abstract class RenderTree implements Renderer {
+  constructor(protected readonly document: Document) {}
+
   protected abstract get childRenderers(): ChildRenderers;
 
-  abstract render(value: DataColumn): Promise<string>;
+  abstract render(value: DataColumn): Promise<Element>;
 }
