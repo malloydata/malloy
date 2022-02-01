@@ -6,6 +6,7 @@
     {
       "type": "npm",
       "script": "vscode-build-extension-dev",
+      "label": "build-extension-task",
       "problemMatcher": {
         "owner": "typescript",
         "source": "ts",
@@ -38,11 +39,27 @@
       },
       "isBackground": true,
       "presentation": {
-        "reveal": "never"
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "close": true
       },
       "group": {
         "kind": "build",
         "isDefault": true
+      }
+    },
+    {
+      "type": "typescript",
+      "tsconfig": "tsconfig.compile-no-emit.json",
+      "option": "watch",
+      "problemMatcher": ["$tsc-watch"],
+      "group": "build",
+      "label": "tsc-compile-watch",
+      "runOptions": { "runOn": "folderOpen" },
+      "presentation": {
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "close": true
       }
     }
   ]
