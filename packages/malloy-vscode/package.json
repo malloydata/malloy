@@ -158,6 +158,11 @@
     "views": {
       "malloy": [
         {
+          "id": "malloyHelp",
+          "name": "Help",
+          "type": "webview"
+        },
+        {
           "id": "malloySchema",
           "name": "Schema"
         },
