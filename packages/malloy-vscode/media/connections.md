@@ -1,4 +1,4 @@
-# Set Up Connections
+# Connect a Database
 
 Currently, BigQuery and PostgreSQL are supported.
 
