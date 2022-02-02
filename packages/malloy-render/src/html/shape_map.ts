@@ -40,6 +40,9 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
       } else {
         return data.value;
       }
+    } else if (data.isNull()) {
+      // ignore nulls
+      return undefined;
     } else {
       throw new Error("Invalid field type for shape map.");
     }
@@ -60,6 +63,14 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
       }
     }
     throw new Error("Invalid field type for shape map.");
+  }
+
+  getSize(): { height: number; width: number } {
+    if (this.size === "large") {
+      return { height: 350, width: 500 };
+    } else {
+      return { height: 200, width: 250 };
+    }
   }
 
   getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
@@ -91,8 +102,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     );
 
     return {
-      width: 250,
-      height: 200,
+      ...this.getSize(),
       data: { values: mapped },
       projection: {
         type: "albersUsa",
