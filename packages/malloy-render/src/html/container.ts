@@ -26,7 +26,7 @@ export abstract class ContainerRenderer extends RenderTree {
     options: {
       dataStyles: DataStyles;
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string) => void;
+      onDrill?: (drillQuery: string, target: HTMLElement) => void;
     }
   ): void {
     const result: ChildRenderers = {};
@@ -49,7 +49,7 @@ export abstract class ContainerRenderer extends RenderTree {
       document: Document,
       options: {
         isDrillingEnabled?: boolean;
-        onDrill?: (drillQuery: string) => void;
+        onDrill?: (drillQuery: string, target: HTMLElement) => void;
       }
     ) => Type,
     document: Document,
@@ -57,7 +57,7 @@ export abstract class ContainerRenderer extends RenderTree {
     options: {
       dataStyles: DataStyles;
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string) => void;
+      onDrill?: (drillQuery: string, target: HTMLElement) => void;
     }
   ): Type {
     const n = new c(document, {

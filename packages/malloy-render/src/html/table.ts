@@ -14,17 +14,16 @@
 import { DataColumn } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
 import { getDrillQuery } from "../drill";
-// import { getDrillPath, getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLNumberRenderer } from "./number";
-import { yieldTask } from "./utils";
+import { createDrillIcon, yieldTask } from "./utils";
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "small",
   };
 
-  async render(table: DataColumn): Promise<Element> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray() && !table.isRecord()) {
       throw new Error("Invalid type for Table Renderer");
     }
@@ -66,10 +65,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
       }
       if (this.options.isDrillingEnabled) {
         const drillCell = this.document.createElement("td");
-        drillCell.appendChild(this.document.createTextNode("Drill"));
+        const drillIcon = createDrillIcon(this.document);
+        drillCell.appendChild(drillIcon);
         drillCell.style.cssText = `padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; width: 25px; cursor: pointer`;
         drillCell.onclick = () =>
-          this.options.onDrill && this.options.onDrill(getDrillQuery(row));
+          this.options.onDrill &&
+          this.options.onDrill(getDrillQuery(row), drillIcon);
         rowElement.appendChild(drillCell);
       }
       tableBody.appendChild(rowElement);

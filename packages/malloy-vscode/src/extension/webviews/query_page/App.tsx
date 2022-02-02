@@ -25,6 +25,7 @@ import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
 import Prism from "prismjs";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
+import { usePopperTooltip } from "react-popper-tooltip";
 
 enum Status {
   Ready = "ready",
@@ -38,11 +39,17 @@ enum Status {
 
 export const App: React.FC = () => {
   const [status, setStatus] = useState<Status>(Status.Ready);
-  const [html, setHTML] = useState<Element>(document.createElement("span"));
+  const [html, setHTML] = useState<HTMLElement>(document.createElement("span"));
   const [json, setJSON] = useState("");
   const [sql, setSQL] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
+  const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
+  const drillTooltipId = useRef(0);
+  const { setTooltipRef, setTriggerRef, getTooltipProps } = usePopperTooltip({
+    visible: drillTooltipVisible,
+    placement: "top",
+  });
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -68,8 +75,16 @@ export const App: React.FC = () => {
               const rendered = await new HTMLView(document).render(data, {
                 dataStyles: message.styles,
                 isDrillingEnabled: true,
-                onDrill: (drillQuery: string) => {
+                onDrill: (drillQuery, target) => {
                   navigator.clipboard.writeText(drillQuery);
+                  setTriggerRef(target);
+                  setDrillTooltipVisible(true);
+                  const currentDrillTooltipId = ++drillTooltipId.current;
+                  setTimeout(() => {
+                    if (currentDrillTooltipId === drillTooltipId.current) {
+                      setDrillTooltipVisible(false);
+                    }
+                  }, 1000);
                 },
               });
               setStatus(Status.Displaying);
@@ -140,6 +155,11 @@ export const App: React.FC = () => {
         </Scroll>
       )}
       {error && <div>{error}</div>}
+      {drillTooltipVisible && (
+        <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
+          Drill copied!
+        </DrillTooltip>
+      )}
     </div>
   );
 };
@@ -213,7 +233,7 @@ const PrismContainer = styled.pre`
   }
 `;
 
-const DOMElement: React.FC<{ element: Element }> = ({ element }) => {
+const DOMElement: React.FC<{ element: HTMLElement }> = ({ element }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -226,3 +246,11 @@ const DOMElement: React.FC<{ element: Element }> = ({ element }) => {
 
   return <div ref={ref}></div>;
 };
+
+const DrillTooltip = styled.div`
+  background-color: #505050;
+  color: white;
+  border-radius: 5px;
+  box-shadow: rgb(144 144 144) 0px 1px 5px 0px;
+  padding: 5px;
+`;

@@ -18,7 +18,7 @@ import { createErrorElement, createNullElement } from "./utils";
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(data: DataColumn): Promise<Element> {
+  async render(data: DataColumn): Promise<HTMLElement> {
     if (data.isNull()) {
       return createNullElement(this.document);
     }

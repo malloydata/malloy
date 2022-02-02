@@ -18,7 +18,7 @@ import { createErrorElement, createNullElement } from "./utils";
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(data: DataColumn): Promise<Element> {
+  async render(data: DataColumn): Promise<HTMLElement> {
     if (!data.isString()) {
       return createErrorElement(
         this.document,

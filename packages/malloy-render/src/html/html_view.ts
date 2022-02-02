@@ -52,9 +52,9 @@ export class HTMLView {
     options: {
       dataStyles: DataStyles;
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string) => void;
+      onDrill?: (drillQuery: string, target: HTMLElement) => void;
     }
-  ): Promise<Element> {
+  ): Promise<HTMLElement> {
     const renderer = makeRenderer(table.field, this.document, options, {
       size: "large",
     });
@@ -86,7 +86,7 @@ export class JSONView {
     this.document = document;
   }
 
-  async render(table: DataArray): Promise<Element> {
+  async render(table: DataArray): Promise<HTMLElement> {
     const renderer = new HTMLJSONRenderer(this.document);
     try {
       return await renderer.render(table);
@@ -131,7 +131,7 @@ export function makeRenderer(
   options: {
     dataStyles: DataStyles;
     isDrillingEnabled?: boolean;
-    onDrill?: (drillQuery: string) => void;
+    onDrill?: (drillQuery: string, target: HTMLElement) => void;
   },
   styleDefaults: StyleDefaults
 ): Renderer {

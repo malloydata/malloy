@@ -49,7 +49,7 @@ export abstract class HTMLChartRenderer implements Renderer {
 
   abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
 
-  async render(table: DataColumn): Promise<Element> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray()) {
       throw new Error("Invalid type for chart renderer");
     }

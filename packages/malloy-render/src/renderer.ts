@@ -16,7 +16,7 @@ import { DataColumn } from "@malloydata/malloy";
 export type ChildRenderers = { [fieldName: string]: Renderer };
 
 export interface Renderer {
-  render(value: DataColumn): Promise<Element>;
+  render(value: DataColumn): Promise<HTMLElement>;
 }
 
 export abstract class RenderTree implements Renderer {
@@ -24,11 +24,11 @@ export abstract class RenderTree implements Renderer {
     protected readonly document: Document,
     protected readonly options: {
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string) => void;
+      onDrill?: (drillQuery: string, target: HTMLElement) => void;
     }
   ) {}
 
   protected abstract get childRenderers(): ChildRenderers;
 
-  abstract render(value: DataColumn): Promise<Element>;
+  abstract render(value: DataColumn): Promise<HTMLElement>;
 }

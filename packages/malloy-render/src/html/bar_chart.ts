@@ -42,7 +42,7 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
     this.size = options.size || this.styleDefaults.size || "medium";
   }
 
-  async render(table: DataColumn): Promise<Element> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray()) {
       return createErrorElement(
         this.document,
