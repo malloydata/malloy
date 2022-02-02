@@ -46,7 +46,7 @@ export class PostgresDialect extends Dialect {
     return fieldList
       .map(
         (f) =>
-          `${f.sqlExpression}${
+          `\n  ${f.sqlExpression}${
             f.type == "number" ? `::${this.defaultNumberType}` : ""
           } as ${f.sqlOutputName}`
         //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
@@ -66,7 +66,7 @@ export class PostgresDialect extends Dialect {
     }
     const fields = this.mapFields(fieldList);
     // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
-    return `TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail})`;
+    return `TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
