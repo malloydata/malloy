@@ -24,7 +24,7 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
-yarn build-extension
+yarn package-extension
 ```
 
 Next, in VSCode _EITHER_:
