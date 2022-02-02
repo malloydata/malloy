@@ -13,17 +13,25 @@
 
 import { DataColumn } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
+import { createErrorElement, createNullElement } from "./utils";
 
 export class HTMLImageRenderer implements Renderer {
-  async render(data: DataColumn): Promise<string> {
+  constructor(private readonly document: Document) {}
+
+  async render(data: DataColumn): Promise<Element> {
     if (!data.isString()) {
-      return "Invalid field for Image renderer";
+      return createErrorElement(
+        this.document,
+        "Invalid field for Image renderer"
+      );
     }
 
     if (data.isNull()) {
-      return "∅";
+      return createNullElement(this.document);
     }
 
-    return `<img src="${data.value}">`;
+    const element = this.document.createElement("img");
+    element.src = data.value;
+    return element;
   }
 }

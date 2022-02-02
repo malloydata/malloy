@@ -44,6 +44,7 @@ export abstract class HTMLChartRenderer implements Renderer {
   }
 
   constructor(
+    protected readonly document: Document,
     protected styleDefaults: StyleDefaults,
     options: ChartRenderOptions = {}
   ) {
@@ -52,7 +53,7 @@ export abstract class HTMLChartRenderer implements Renderer {
 
   abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
 
-  async render(table: DataColumn): Promise<string> {
+  async render(table: DataColumn): Promise<Element> {
     if (!table.isArray()) {
       throw new Error("Invalid type for chart renderer");
     }
@@ -87,6 +88,8 @@ export abstract class HTMLChartRenderer implements Renderer {
       renderer: "none",
     });
     view.logger().level(-1);
-    return await view.toSVG();
+    const element = this.document.createElement("div");
+    element.innerHTML = await view.toSVG();
+    return element;
   }
 }

@@ -53,6 +53,7 @@
     "jest": "^26.6.0",
     "jest-diff": "^27.0.6",
     "jest-expect-message": "^1.0.2",
+    "jsdom": "^19.0.0",
     "md5": "^2.3.0",
     "prettier": "^2.3.2",
     "prismjs": "^1.24.1",

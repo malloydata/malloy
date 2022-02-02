@@ -32,6 +32,7 @@ import { performance } from "perf_hooks";
 import { timeString } from "./utils";
 import { log } from "./log";
 import Prism from "prismjs";
+import { JSDOM } from "jsdom";
 
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
 
@@ -223,7 +224,12 @@ export async function runCode(
     Prism.languages["json"],
     "json"
   );
-  const htmlResult = await new HTMLView().render(queryResult.data, dataStyles);
+  const document = new JSDOM().window.document;
+  const element = await new HTMLView(document).render(
+    queryResult.data,
+    dataStyles
+  );
+  const htmlResult = element.outerHTML;
   const sqlResult = Prism.highlight(
     queryResult.sql,
     Prism.languages["sql"],
