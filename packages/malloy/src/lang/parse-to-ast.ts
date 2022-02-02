@@ -161,6 +161,12 @@ export class MalloyToAST
     return s;
   }
 
+  protected optionalText(idCx: ParseTree | undefined): string | undefined {
+    if (idCx) {
+      return this.getIdText(idCx);
+    }
+    return undefined;
+  }
   defaultResult(): ast.MalloyElement {
     return new ast.Unimplemented();
   }
@@ -294,6 +300,13 @@ export class MalloyToAST
 
   visitTableSource(pcx: parse.TableSourceContext): ast.TableSource {
     return this.visitExploreTable(pcx.exploreTable());
+  }
+
+  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+    return this.astAt(
+      new ast.SQLSource(this.getIdText(pcx.sqlExploreNameRef())),
+      pcx
+    );
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
@@ -1057,17 +1070,13 @@ export class MalloyToAST
     return this.getFieldExpr(pcx.fieldExpr());
   }
 
-  visitSqlStatement(pcx: parse.SqlStatementContext): ast.SQLStatement {
-    const commands = pcx.sqlCommand().map((cx) => cx.text);
+  visitDefineSQLStatement(
+    pcx: parse.DefineSQLStatementContext
+  ): ast.SQLStatement {
+    const commands = pcx.sqlText().map((cx) => cx.text);
     const sqlStmt = new ast.SQLStatement(commands);
-    const defCx = pcx.sqlExploreNameDef();
-    if (defCx) {
-      sqlStmt.is = this.getIdText(defCx);
-    }
-    const conCx = pcx.connectionName();
-    if (conCx) {
-      sqlStmt.connectionName = this.getIdText(conCx);
-    }
+    sqlStmt.is = this.optionalText(pcx.sqlCommandNameDef());
+    sqlStmt.connectionName = this.optionalText(pcx.connectionName());
     return this.astAt(sqlStmt, pcx);
   }
 }

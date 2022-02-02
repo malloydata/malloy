@@ -31,7 +31,7 @@ defineQuery
   ;
 
 defineSQLStatement
-  : SQL sqlStatement
+  : SQL (sqlCommandNameDef IS)? sqlText+ (ON connectionName)?
   ;
 
 importStatement
@@ -102,6 +102,7 @@ exploreSource
   : exploreName                                   # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSource
   ;
 
 exploreNameDef: id;
@@ -303,6 +304,7 @@ id
   | OBJECT_NAME_LITERAL
   ;
 
+
 timeframe
   : SECOND | MINUTE | HOUR | DAY | WEEK | MONTH | QUARTER | YEAR
   ;
@@ -417,13 +419,9 @@ jsonArray
    | OBRACK CBRACK
    ;
 
-sqlStatement
-  : (sqlExploreNameDef IS)? sqlCommand+ (ON connectionName)?
-  ;
-
-sqlCommand: SQL_STRING;
-
-sqlExploreNameDef: id;
+sqlText: SQL_STRING;
+sqlExploreNameRef: id;
+sqlCommandNameDef: id;
 connectionName: JSON_STRING;
 
 JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
@@ -478,6 +476,7 @@ END: E N D ;
 FALSE: F A L S E;
 FOR: F O R;
 FROM: F R O M ;
+FROM_SQL: F R O M '_' S Q L;
 HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;

@@ -632,6 +632,10 @@ export class NamedSource extends Mallobj {
   }
 }
 
+export class SQLSource extends NamedSource {
+  elementType = "sqlSource";
+}
+
 export class QuerySource extends Mallobj {
   elementType = "querySource";
   constructor(readonly query: QueryElement) {
@@ -1315,11 +1319,16 @@ export interface NameSpace {
   getEntry(name: string): ModelEntry | undefined;
   setEntry(name: string, value: ModelEntry, exported: boolean): void;
 }
+export interface SQLBlock {
+  sql: string[];
+  name?: string;
+}
 
 export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
+  sqlCommandList: SQLBlock[] = [];
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
   }
@@ -1347,6 +1356,18 @@ export class Document extends MalloyElement implements NameSpace {
       def.contents[entry] = cloneDeep(this.documentModel[entry].entry);
     }
     return def;
+  }
+
+  addSQLBlock(sql: string[], name?: string): boolean {
+    const ret: SQLBlock = { sql };
+    if (name) {
+      if (this.sqlCommandList.find((c) => c.name === name)) {
+        return false;
+      }
+      ret.name = name;
+    }
+    this.sqlCommandList.push(ret);
+    return true;
   }
 
   getEntry(str: string): ModelEntry {
@@ -1970,7 +1991,9 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     super();
   }
 
-  execute(_doc: Document): void {
-    throw new Error(`NYI`);
+  execute(doc: Document): void {
+    if (!doc.addSQLBlock(this.stmts, this.is)) {
+      this.log(`${this.is} already defined`);
+    }
   }
 }

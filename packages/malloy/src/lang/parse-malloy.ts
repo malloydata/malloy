@@ -33,11 +33,11 @@ import { MalloyToAST } from "./parse-to-ast";
 import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
+import md5 from "md5";
 import {
   DocumentSymbol,
   walkForDocumentSymbols,
 } from "./parse-tree-walkers/document-symbol-walker";
-
 import {
   DocumentHighlight,
   walkForDocumentHighlights,
@@ -95,13 +95,28 @@ export interface NeedURLData {
   urls: string[];
 }
 
-interface SQLReference {
-  sql: string;
-  connection: string;
+export interface SQLReferenceData {
+  sql: string[];
+  connection?: string;
+  key?: string;
+}
+
+/**
+ * The "key" for one of these is a connection name and an SQL string,
+ * so we hash those to make a unique key for the Zone code which
+ * really wants keys to be strings ...
+ */
+class SQLExploreZone extends Zone<StructDef> {
+  keyed: Record<string, SQLReferenceData> = {};
+  refKey(ref: SQLReferenceData): string {
+    const key = md5(JSON.stringify(ref));
+    this.keyed[key] = ref;
+    return key;
+  }
 }
 
 export interface NeedSQLSchema {
-  sqlRefs: SQLReference[];
+  sqlRefs: SQLReferenceData[];
 }
 
 interface NeededData extends NeedURLData, NeedSchemaData, NeedSQLSchema {}
@@ -343,6 +358,11 @@ class ImportsAndTablesStep implements TranslationStep {
   }
 }
 
+interface SQLExploreRef {
+  ref?: ast.SQLSource;
+  def?: ast.SQLStatement;
+}
+
 class ASTStep implements TranslationStep {
   response?: ASTResponse;
   private walked = false;
@@ -383,19 +403,48 @@ class ASTStep implements TranslationStep {
 
     // I kind of think table refs should probably also be collected here
     // instead of in the parse step. Note to myself, do that someday.
+    const sqlExplores: Record<string, SQLExploreRef> = {};
     if (!this.walked) {
       newAst.walk((walkedTo: ast.MalloyElement): void => {
-        if (walkedTo instanceof ast.SQLStatement && walkedTo.is) {
-          that.root.sqlQueryZone.reference(walkedTo.is, walkedTo.location);
+        if (walkedTo instanceof ast.SQLSource) {
+          if (!sqlExplores[walkedTo.name]) {
+            sqlExplores[walkedTo.name] = {};
+          }
+          sqlExplores[walkedTo.name].ref = walkedTo;
+        } else if (walkedTo instanceof ast.SQLStatement && walkedTo.is) {
+          if (!sqlExplores[walkedTo.is]) {
+            sqlExplores[walkedTo.is] = {};
+          }
+          sqlExplores[walkedTo.is].def = walkedTo;
+        } else if (walkedTo instanceof ast.Unimplemented) {
+          walkedTo.log("INTERNAL COMPILER ERROR: Untranslated parse node");
         }
       });
       this.walked = true;
     }
-    const missingSqlSchema = that.root.sqlQueryZone.getUndefined();
+    // If there is a partial ast ...
+    if (that.root.logger.hasErrors()) {
+      this.response = that.fatalErrors();
+      return this.response;
+    }
+
+    // Make sure there is a request/reference for all explored-sql entities
+    const sqlZone = that.root.sqlQueryZone;
+    for (const sqlExploreRef in sqlExplores) {
+      const sqlExplore = sqlExplores[sqlExploreRef];
+      if (sqlExplore.ref && sqlExplore.def) {
+        const sqlRef: SQLReferenceData = {
+          sql: sqlExplore.def.stmts,
+          connection: sqlExplore.def.connectionName,
+        };
+        const refKey = sqlZone.refKey(sqlRef);
+        that.root.sqlQueryZone.reference(refKey, sqlExplore.def.location);
+      }
+    }
+
+    const missingSqlSchema = sqlZone.getUndefined();
     if (missingSqlSchema) {
-      const sqlRefs = missingSqlSchema.map((s) => {
-        return { sql: s, connection: "unknown" };
-      });
+      const sqlRefs = missingSqlSchema.map((key) => sqlZone.keyed[key]);
       return { sqlRefs };
     }
 
@@ -648,7 +697,7 @@ class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<StructDef>();
   importZone = new Zone<string>();
-  sqlQueryZone = new Zone<StructDef>();
+  sqlQueryZone = new SQLExploreZone();
   logger = new MessageLog();
   readonly root: MalloyTranslator;
   constructor(rootURL: string, preload: ParseUpdate | null = null) {
