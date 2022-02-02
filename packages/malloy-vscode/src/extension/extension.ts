@@ -34,6 +34,7 @@ import {
 } from "./commands";
 import { CONNECTION_MANAGER } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
+import { HelpViewProvider } from "./webview_views/help_view";
 
 let client: LanguageClient;
 export let extensionModeProduction: boolean;
@@ -114,6 +115,12 @@ export function activate(context: vscode.ExtensionContext): void {
       "malloy.editConnections",
       editConnectionsCommand
     )
+  );
+
+  const provider = new HelpViewProvider(context.extensionUri);
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("malloyHelp", provider)
   );
 
   context.subscriptions.push(

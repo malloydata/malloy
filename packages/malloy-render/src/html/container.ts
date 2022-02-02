@@ -20,11 +20,16 @@ export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};
   protected abstract childrenStyleDefaults: StyleDefaults;
 
-  makeChildRenderers(explore: Explore, dataStyles: DataStyles): void {
+  makeChildRenderers(
+    explore: Explore,
+    document: Document,
+    dataStyles: DataStyles
+  ): void {
     const result: ChildRenderers = {};
     explore.intrinsicFields.forEach((field: Field) => {
       result[field.name] = makeRenderer(
         field,
+        document,
         dataStyles,
         this.childrenStyleDefaults
       );
@@ -36,12 +41,13 @@ export abstract class ContainerRenderer extends RenderTree {
   //  we need to be fully constructed before we construct
   //  our children.
   static make<Type extends ContainerRenderer>(
-    c: new () => Type,
+    c: new (document: Document) => Type,
+    document: Document,
     exploreField: Explore,
     dataStyles: DataStyles
   ): Type {
-    const n = new c();
-    n.makeChildRenderers(exploreField, dataStyles);
+    const n = new c(document);
+    n.makeChildRenderers(exploreField, document, dataStyles);
     return n;
   }
 }

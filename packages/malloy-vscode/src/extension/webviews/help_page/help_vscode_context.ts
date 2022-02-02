@@ -11,18 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { DataColumn } from "@malloydata/malloy";
+import { HelpPanelMessage } from "../../webview_message_manager";
+import { makeVSCodeContext } from "../vscode_context";
+import { makeUseVSCodeContext } from "../vscode_context";
 
-export type ChildRenderers = { [fieldName: string]: Renderer };
+export const HelpVSCodeContext = makeVSCodeContext<void, HelpPanelMessage>();
 
-export interface Renderer {
-  render(value: DataColumn): Promise<Element>;
-}
+export const useHelpVSCodeContext = makeUseVSCodeContext(HelpVSCodeContext);
 
-export abstract class RenderTree implements Renderer {
-  constructor(protected readonly document: Document) {}
-
-  protected abstract get childRenderers(): ChildRenderers;
-
-  abstract render(value: DataColumn): Promise<Element>;
-}
+export { getVSCodeAPI } from "../vscode_context";

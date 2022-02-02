@@ -38,10 +38,17 @@ import { HTMLTextRenderer } from "./text";
 import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
 import { AtomicFieldType } from "@malloydata/malloy/src/malloy";
+import { createErrorElement } from "./utils";
 
 export class HTMLView {
-  async render(table: DataArray, dataStyles: DataStyles): Promise<string> {
-    const renderer = makeRenderer(table.field, dataStyles, {
+  private readonly document: Document;
+
+  constructor(document: Document) {
+    this.document = document;
+  }
+
+  async render(table: DataArray, dataStyles: DataStyles): Promise<Element> {
+    const renderer = makeRenderer(table.field, this.document, dataStyles, {
       size: "large",
     });
     try {
@@ -54,24 +61,36 @@ export class HTMLView {
       return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
-        return error.toString();
+        return createErrorElement(this.document, error);
       } else {
-        return "Internal error - Exception not an Error object.";
+        return createErrorElement(
+          this.document,
+          "Internal error - Exception not an Error object."
+        );
       }
     }
   }
 }
 
 export class JSONView {
-  async render(table: DataArray): Promise<string> {
-    const renderer = new HTMLJSONRenderer();
+  private readonly document: Document;
+
+  constructor(document: Document) {
+    this.document = document;
+  }
+
+  async render(table: DataArray): Promise<Element> {
+    const renderer = new HTMLJSONRenderer(this.document);
     try {
       return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
-        return error.toString();
+        return createErrorElement(this.document, error);
       } else {
-        return "Internal error - Exception not an Error object.";
+        return createErrorElement(
+          this.document,
+          "Internal error - Exception not an Error object."
+        );
       }
     }
   }
@@ -101,59 +120,66 @@ function isContainer(field: Field | Explore): Explore {
 
 export function makeRenderer(
   field: Explore | Field,
+  document: Document,
   dataStyles: DataStyles,
   styleDefaults: StyleDefaults
 ): Renderer {
   const renderDef = getRendererOptions(field, dataStyles) || {};
 
   if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
-    return new HTMLShapeMapRenderer(styleDefaults);
+    return new HTMLShapeMapRenderer(document, styleDefaults, renderDef);
   } else if (
     renderDef.renderer === "point_map" ||
     field.name.endsWith("_point_map")
   ) {
-    return new HTMLPointMapRenderer(styleDefaults);
+    return new HTMLPointMapRenderer(document, styleDefaults);
   } else if (renderDef.renderer === "image" || field.name.endsWith("_image")) {
-    return new HTMLImageRenderer();
+    return new HTMLImageRenderer(document);
   } else if (
     renderDef.renderer === "segment_map" ||
     field.name.endsWith("_segment_map")
   ) {
-    return new HTMLSegmentMapRenderer(styleDefaults);
+    return new HTMLSegmentMapRenderer(document, styleDefaults, renderDef);
   } else if (
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
   ) {
     return ContainerRenderer.make(
       HTMLDashboardRenderer,
+      document,
       isContainer(field),
       dataStyles
     );
   } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
-    return new HTMLJSONRenderer();
+    return new HTMLJSONRenderer(document);
   } else if (
     renderDef.renderer === "line_chart" ||
     field.name.endsWith("_line_chart")
   ) {
-    return new HTMLLineChartRenderer(styleDefaults);
+    return new HTMLLineChartRenderer(document, styleDefaults, renderDef);
   } else if (
     renderDef.renderer === "scatter_chart" ||
     field.name.endsWith("_scatter_chart")
   ) {
-    return new HTMLScatterChartRenderer(styleDefaults);
+    return new HTMLScatterChartRenderer(document, styleDefaults);
   } else if (renderDef.renderer === "bar_chart") {
-    return new HTMLBarChartRenderer(styleDefaults, renderDef);
+    return new HTMLBarChartRenderer(document, styleDefaults, renderDef);
   } else if (field.name.endsWith("_bar_chart")) {
-    return new HTMLBarChartRenderer(styleDefaults, {});
+    return new HTMLBarChartRenderer(document, styleDefaults, {});
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
     if (spec) {
-      return new HTMLVegaSpecRenderer(styleDefaults, spec as TopLevelSpec);
+      return new HTMLVegaSpecRenderer(
+        document,
+        styleDefaults,
+        spec as TopLevelSpec
+      );
     } else if (renderDef.spec_name) {
       const vegaRenderer = dataStyles[renderDef.spec_name];
       if (vegaRenderer !== undefined && vegaRenderer.renderer === "vega") {
         if (vegaRenderer.spec) {
           return new HTMLVegaSpecRenderer(
+            document,
             styleDefaults,
             vegaRenderer.spec as TopLevelSpec
           );
@@ -174,32 +200,33 @@ export function makeRenderer(
         (field.type === AtomicFieldType.Date ||
           field.type === AtomicFieldType.Timestamp))
     ) {
-      return new HTMLDateRenderer();
+      return new HTMLDateRenderer(document);
     } else if (renderDef.renderer === "currency") {
-      return new HTMLCurrencyRenderer();
+      return new HTMLCurrencyRenderer(document);
     } else if (renderDef.renderer === "percent") {
-      return new HTMLPercentRenderer();
+      return new HTMLPercentRenderer(document);
     } else if (
       renderDef.renderer === "number" ||
       (field.hasParentExplore() &&
         field.isAtomicField() &&
         field.type === AtomicFieldType.Number)
     ) {
-      return new HTMLNumberRenderer();
+      return new HTMLNumberRenderer(document);
     } else if (renderDef.renderer === "bytes") {
-      return new HTMLBytesRenderer();
+      return new HTMLBytesRenderer(document);
     } else if (
       renderDef.renderer === "boolean" ||
       (field.hasParentExplore() &&
         field.isAtomicField() &&
         field.type === AtomicFieldType.Boolean)
     ) {
-      return new HTMLBooleanRenderer();
+      return new HTMLBooleanRenderer(document);
     } else if (renderDef.renderer === "link") {
-      return new HTMLLinkRenderer();
+      return new HTMLLinkRenderer(document);
     } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
       return ContainerRenderer.make(
         HTMLListRenderer,
+        document,
         isContainer(field),
         dataStyles
       );
@@ -209,6 +236,7 @@ export function makeRenderer(
     ) {
       return ContainerRenderer.make(
         HTMLListDetailRenderer,
+        document,
         isContainer(field),
         dataStyles
       );
@@ -219,11 +247,12 @@ export function makeRenderer(
     ) {
       return ContainerRenderer.make(
         HTMLTableRenderer,
+        document,
         isContainer(field),
         dataStyles
       );
     } else {
-      return new HTMLTextRenderer();
+      return new HTMLTextRenderer(document);
     }
   }
 }

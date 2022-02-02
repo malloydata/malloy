@@ -115,6 +115,8 @@ export class BigQueryConnection extends Connection {
     INT64: { type: "number", numberType: "integer" },
     FLOAT: { type: "number", numberType: "float" },
     FLOAT64: { type: "number", numberType: "float" },
+    NUMERIC: { type: "number", numberType: "float" },
+    BIGNUMERIC: { type: "number", numberType: "float" },
     TIMESTAMP: { type: "timestamp" },
     BOOLEAN: { type: "boolean" },
     BOOL: { type: "boolean" },
@@ -123,8 +125,6 @@ export class BigQueryConnection extends Connection {
     // DATETIME
     // TIME
     // GEOGRAPHY
-    // NUMERIC
-    // BIGNUMERIC
   };
 
   constructor(

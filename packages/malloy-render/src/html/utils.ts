@@ -143,3 +143,22 @@ export async function yieldTask(): Promise<void> {
     setTimeout(resolve, 0);
   });
 }
+
+export function createErrorElement(
+  document: Document,
+  error: string | Error
+): Element {
+  const element = document.createElement("span");
+  element.classList.add("error");
+  element.appendChild(
+    document.createTextNode(typeof error === "string" ? error : error.message)
+  );
+  return element;
+}
+
+export function createNullElement(document: Document): Element {
+  const element = document.createElement("span");
+  element.appendChild(document.createTextNode("∅"));
+  element.classList.add("value-null");
+  return element;
+}

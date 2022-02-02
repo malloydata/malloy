@@ -19,6 +19,7 @@
     "isolatedModules": true,
     "target": "es2019",
     "experimentalDecorators": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "useUnknownInCatchVariables": false
   }
 }

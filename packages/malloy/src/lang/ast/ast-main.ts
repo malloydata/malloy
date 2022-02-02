@@ -985,7 +985,7 @@ function getRefinedFields(
   if (!exisitingFields) {
     return addingFields;
   }
-  const newFields = [...addingFields];
+  const newFields: model.QueryFieldDef[] = [];
   const newDefinition: Record<string, boolean> = {};
   for (const field of newFields) {
     const fieldName = nameOf(field);
@@ -997,6 +997,7 @@ function getRefinedFields(
       newFields.push(field);
     }
   }
+  newFields.push(...addingFields);
   return newFields;
 }
 

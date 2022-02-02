@@ -12,6 +12,6 @@
   "include": [],
   "exclude": ["**/node_modules"],
   "compilerOptions": {
-    "downlevelIteration": true
+    "noEmit": true
   }
 }

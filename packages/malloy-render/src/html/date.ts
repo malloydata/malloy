@@ -17,22 +17,31 @@ import {
   TimestampTimeframe,
 } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
-import { timeToString } from "./utils";
+import { createErrorElement, createNullElement, timeToString } from "./utils";
 
 export class HTMLDateRenderer implements Renderer {
-  async render(data: DataColumn): Promise<string> {
+  constructor(private readonly document: Document) {}
+
+  async render(data: DataColumn): Promise<Element> {
     if (!data.isDate() && !data.isTimestamp()) {
-      return "Invalid field for date renderer";
+      return createErrorElement(
+        this.document,
+        "Invalid field for date renderer"
+      );
     }
 
     if (data.isNull()) {
-      return "∅";
+      return createNullElement(this.document);
     }
 
     const timeframe =
       data.field.timeframe ||
       (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Date);
 
-    return timeToString(data.value, timeframe);
+    const timestring = timeToString(data.value, timeframe);
+
+    const element = this.document.createElement("span");
+    element.appendChild(this.document.createTextNode(timestring));
+    return element;
   }
 }
