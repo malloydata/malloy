@@ -65,7 +65,6 @@ export const App: React.FC = () => {
               setSQL(
                 Prism.highlight(result.sql, Prism.languages["sql"], "sql")
               );
-              console.log(result);
               const rendered = await new HTMLView(document).render(data, {
                 dataStyles: message.styles,
                 isDrillingEnabled: true,

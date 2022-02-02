@@ -42,7 +42,6 @@ function timestampToDateFilter(
 
 function getTableFilters(table: DataArray): FilterItem[] {
   const filters = [];
-  console.log(table.field.filters);
   for (const f of table.field.filters || []) {
     if (!f.aggregate) {
       filters.push({ key: f.source, value: undefined });
@@ -60,7 +59,6 @@ function getRowFilters(row: DataRecord): FilterItem[] {
   for (const dim of dimensions) {
     const cell = row.cell(dim);
     // if we have an expression, use it instead of the name of the field.
-    console.log(cell);
     const key =
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
     if (key && !cell.isArray()) {
