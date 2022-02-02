@@ -8,7 +8,7 @@ The following will install dependencies for the entire set of packages and compi
 
 ```bash
 yarn install
-yarn build-extension
+yarn package-extension
 ```
 
 ### VS Code tips
