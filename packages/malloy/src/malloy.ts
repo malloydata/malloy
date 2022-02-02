@@ -1145,7 +1145,11 @@ export class AtomicField extends Entity {
   }
 
   get expression(): string {
-    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.name;
+    return (
+      this.fieldTypeDef.resultMetadata?.sourceExpression ||
+      this.fieldTypeDef.resultMetadata?.sourceField ||
+      this.name
+    );
   }
 }
 
