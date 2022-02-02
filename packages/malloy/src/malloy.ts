@@ -689,7 +689,14 @@ export class PreparedResult {
       ...explore,
       name: this.inner.queryName || explore.name,
     };
-    return new Explore(namedExplore, this.sourceExplore);
+    // TODO `sourceExplore` is not fully-implemented yet -- it cannot
+    //      handle cases where the source of the query is something other than
+    //      a named explore.
+    try {
+      return new Explore(namedExplore, this.sourceExplore);
+    } catch (error) {
+      return new Explore(namedExplore);
+    }
   }
 
   public get sourceExplore(): Explore {
