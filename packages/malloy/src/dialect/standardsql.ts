@@ -57,9 +57,9 @@ export class StandardSQLDialect extends Dialect {
       tail += ` LIMIT ${limit}`;
     }
     const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map((f) => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(", ");
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END IGNORE NULLS ${orderBy} ${tail})`;
+    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy} ${tail})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
