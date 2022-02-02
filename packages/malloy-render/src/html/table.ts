@@ -41,7 +41,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
       header.appendChild(headerCell);
     });
     if (this.options.isDrillingEnabled) {
-      header.appendChild(this.document.createElement("th"));
+      const drillHeader = this.document.createElement("th");
+      drillHeader.style.cssText = `padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; width: 25px;`;
+      header.appendChild(drillHeader);
     }
 
     const tableBody = this.document.createElement("tbody");
@@ -64,7 +66,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
       }
       if (this.options.isDrillingEnabled) {
         const drillCell = this.document.createElement("td");
-        drillCell.innerText = "drill";
+        drillCell.appendChild(this.document.createTextNode("Drill"));
+        drillCell.style.cssText = `padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; width: 25px; cursor: pointer`;
         drillCell.onclick = () =>
           this.options.onDrill && this.options.onDrill(getDrillQuery(row));
         rowElement.appendChild(drillCell);

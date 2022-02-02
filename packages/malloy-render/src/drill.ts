@@ -42,6 +42,7 @@ function timestampToDateFilter(
 
 function getTableFilters(table: DataArray): FilterItem[] {
   const filters = [];
+  console.log(table.field.filters);
   for (const f of table.field.filters || []) {
     if (!f.aggregate) {
       filters.push({ key: f.source, value: undefined });
@@ -64,7 +65,7 @@ function getRowFilters(row: DataRecord): FilterItem[] {
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
     if (key && !cell.isArray()) {
       if (cell.isNull()) {
-        filters.push({ key, value: "= null" });
+        filters.push({ key, value: "null" });
       } else if (cell.isString()) {
         filters.push({ key, value: filterQuote(cell.value) });
       } else if (cell.isNumber() || cell.isBoolean()) {
