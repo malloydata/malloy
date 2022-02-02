@@ -1073,7 +1073,10 @@ export class MalloyToAST
   visitDefineSQLStatement(
     pcx: parse.DefineSQLStatementContext
   ): ast.SQLStatement {
-    const commands = pcx.sqlText().map((cx) => cx.text);
+    const commands = pcx.sqlText().map((cx) => {
+      const fullMatch = cx.text;
+      return fullMatch.slice(2, fullMatch.length - 2);
+    });
     const sqlStmt = new ast.SQLStatement(commands);
     sqlStmt.is = this.optionalText(pcx.sqlCommandNameDef());
     sqlStmt.connectionName = this.optionalText(pcx.connectionName());

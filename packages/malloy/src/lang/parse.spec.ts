@@ -37,6 +37,9 @@ class BetaModel extends Testable {
 
   compile(): void {
     const compileTo = this.translate();
+    if (!compileTo.translated) {
+      fail(`Expected fully translated AST, got back: ${pretty(compileTo)}`);
+    }
     if (compileTo.translated && inspectCompile) {
       console.log("MODEL: ", pretty(compileTo.translated.modelDef));
       console.log("QUERIES: ", pretty(compileTo.translated.queryList));
@@ -601,6 +604,21 @@ describe("sql backdoor", () => {
         on "bigquery"
       `)
   );
+  test("explore from sql", () => {
+    const model = new BetaModel(`
+      sql: users IS || SELECT * FROM users ;;
+      explore: malloyUsers is from_sql(users) { primary_key: id }
+    `);
+    expect(model).toBeErrorless();
+    expect(model.translate()).toEqual({
+      sqlRefs: [
+        {
+          sql: [" SELECT * FROM users "],
+          connection: undefined,
+        },
+      ],
+    });
+  });
 });
 
 describe("error handling", () => {
