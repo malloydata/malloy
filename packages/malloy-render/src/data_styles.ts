@@ -135,9 +135,9 @@ export interface ListDetailRenderOptions extends DataRenderOptions {
 }
 
 export interface ChartRenderOptions extends DataRenderOptions {
+  size?: ChartSize;
   chart?: {
     color?: string;
-    size?: ChartSize;
     shape?: string;
   };
 }
@@ -150,7 +150,6 @@ export interface CartesianChartRenderOptions extends ChartRenderOptions {
     // eslint-disable-next-line camelcase
     y_axis?: string;
     color?: string;
-    size?: ChartSize;
     shape?: string;
     spark_line?: boolean;
   };
@@ -180,7 +179,6 @@ export interface PointMapRenderOptions extends ChartRenderOptions {
     latitude?: string;
     longitude?: string;
     color?: string;
-    size?: ChartSize;
     shape?: string;
   };
 }
@@ -192,7 +190,6 @@ export interface SegmentMapRenderOptions extends ChartRenderOptions {
     latitude2?: string;
     longitude2?: string;
     color?: string;
-    size?: ChartSize;
     shape?: string;
   };
 }
@@ -201,7 +198,6 @@ export interface ShapeMapRenderOptions extends ChartRenderOptions {
   chart?: {
     region?: string;
     color?: string;
-    size?: ChartSize;
     shape?: string;
   };
 }

@@ -127,7 +127,7 @@ export function makeRenderer(
   const renderDef = getRendererOptions(field, dataStyles) || {};
 
   if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
-    return new HTMLShapeMapRenderer(document, styleDefaults);
+    return new HTMLShapeMapRenderer(document, styleDefaults, renderDef);
   } else if (
     renderDef.renderer === "point_map" ||
     field.name.endsWith("_point_map")
@@ -139,7 +139,7 @@ export function makeRenderer(
     renderDef.renderer === "segment_map" ||
     field.name.endsWith("_segment_map")
   ) {
-    return new HTMLSegmentMapRenderer(document, styleDefaults);
+    return new HTMLSegmentMapRenderer(document, styleDefaults, renderDef);
   } else if (
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
@@ -156,7 +156,7 @@ export function makeRenderer(
     renderDef.renderer === "line_chart" ||
     field.name.endsWith("_line_chart")
   ) {
-    return new HTMLLineChartRenderer(document, styleDefaults);
+    return new HTMLLineChartRenderer(document, styleDefaults, renderDef);
   } else if (
     renderDef.renderer === "scatter_chart" ||
     field.name.endsWith("_scatter_chart")

@@ -15,9 +15,10 @@ import * as lite from "vega-lite";
 import * as vega from "vega";
 import { DataArray, DataColumn, Field } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
-import { StyleDefaults } from "../data_styles";
+import { ChartRenderOptions, StyleDefaults } from "../data_styles";
 
 export abstract class HTMLChartRenderer implements Renderer {
+  size: string;
   abstract getDataType(
     field: Field
   ): "temporal" | "ordinal" | "quantitative" | "nominal";
@@ -44,8 +45,11 @@ export abstract class HTMLChartRenderer implements Renderer {
 
   constructor(
     protected readonly document: Document,
-    protected styleDefaults: StyleDefaults
-  ) {}
+    protected styleDefaults: StyleDefaults,
+    options: ChartRenderOptions = {}
+  ) {
+    this.size = options.size || this.styleDefaults.size || "medium";
+  }
 
   abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
 

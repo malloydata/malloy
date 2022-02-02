@@ -227,7 +227,7 @@ class QueryField extends QueryNode {
         groupSets.length === 1
           ? `=${groupSets[0]}`
           : ` IN (${groupSets.join(",")})`;
-      return `CASE WHEN group_set${exp} THEN ${s} END`;
+      return `CASE WHEN group_set${exp} THEN\n  ${s}\n  END`;
     }
   }
 
@@ -1772,7 +1772,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
@@ -1787,7 +1787,7 @@ class QueryQuery extends QueryField {
         }\n${joins}\nWHERE ${conditions?.join(" AND ")}\n`;
         s += `LEFT JOIN (\n${indent(select)}) AS ${
           ji.alias
-        } ON ${onCondition}\n`;
+        }\n  ON ${onCondition}\n`;
         return s;
       }
     } else if (structRelationship.type === "nested") {
