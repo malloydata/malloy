@@ -47,8 +47,15 @@ export class HTMLView {
     this.document = document;
   }
 
-  async render(table: DataArray, dataStyles: DataStyles): Promise<Element> {
-    const renderer = makeRenderer(table.field, this.document, dataStyles, {
+  async render(
+    table: DataArray,
+    options: {
+      dataStyles: DataStyles;
+      isDrillingEnabled?: boolean;
+      onDrill?: (drillQuery: string) => void;
+    }
+  ): Promise<Element> {
+    const renderer = makeRenderer(table.field, this.document, options, {
       size: "large",
     });
     try {
@@ -121,10 +128,14 @@ function isContainer(field: Field | Explore): Explore {
 export function makeRenderer(
   field: Explore | Field,
   document: Document,
-  dataStyles: DataStyles,
+  options: {
+    dataStyles: DataStyles;
+    isDrillingEnabled?: boolean;
+    onDrill?: (drillQuery: string) => void;
+  },
   styleDefaults: StyleDefaults
 ): Renderer {
-  const renderDef = getRendererOptions(field, dataStyles) || {};
+  const renderDef = getRendererOptions(field, options.dataStyles) || {};
 
   if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
     return new HTMLShapeMapRenderer(document, styleDefaults);
@@ -148,7 +159,7 @@ export function makeRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
-      dataStyles
+      options
     );
   } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
     return new HTMLJSONRenderer(document);
@@ -175,7 +186,7 @@ export function makeRenderer(
         spec as TopLevelSpec
       );
     } else if (renderDef.spec_name) {
-      const vegaRenderer = dataStyles[renderDef.spec_name];
+      const vegaRenderer = options.dataStyles[renderDef.spec_name];
       if (vegaRenderer !== undefined && vegaRenderer.renderer === "vega") {
         if (vegaRenderer.spec) {
           return new HTMLVegaSpecRenderer(
@@ -228,7 +239,7 @@ export function makeRenderer(
         HTMLListRenderer,
         document,
         isContainer(field),
-        dataStyles
+        options
       );
     } else if (
       renderDef.renderer === "list_detail" ||
@@ -238,7 +249,7 @@ export function makeRenderer(
         HTMLListDetailRenderer,
         document,
         isContainer(field),
-        dataStyles
+        options
       );
     } else if (
       renderDef.renderer === "table" ||
@@ -249,7 +260,7 @@ export function makeRenderer(
         HTMLTableRenderer,
         document,
         isContainer(field),
-        dataStyles
+        options
       );
     } else {
       return new HTMLTextRenderer(document);

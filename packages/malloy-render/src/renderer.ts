@@ -20,7 +20,13 @@ export interface Renderer {
 }
 
 export abstract class RenderTree implements Renderer {
-  constructor(protected readonly document: Document) {}
+  constructor(
+    protected readonly document: Document,
+    protected readonly options: {
+      isDrillingEnabled?: boolean;
+      onDrill?: (drillQuery: string) => void;
+    }
+  ) {}
 
   protected abstract get childRenderers(): ChildRenderers;
 

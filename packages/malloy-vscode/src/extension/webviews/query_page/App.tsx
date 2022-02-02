@@ -65,10 +65,14 @@ export const App: React.FC = () => {
               setSQL(
                 Prism.highlight(result.sql, Prism.languages["sql"], "sql")
               );
-              const rendered = await new HTMLView(document).render(
-                data,
-                message.styles
-              );
+              console.log(result);
+              const rendered = await new HTMLView(document).render(data, {
+                dataStyles: message.styles,
+                isDrillingEnabled: true,
+                onDrill: (drillQuery: string) => {
+                  navigator.clipboard.writeText(drillQuery);
+                },
+              });
               setStatus(Status.Displaying);
               setTimeout(() => {
                 setHTML(rendered);

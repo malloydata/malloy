@@ -13,6 +13,7 @@
 
 import { DataColumn } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
+import { getDrillQuery } from "../drill";
 // import { getDrillPath, getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLNumberRenderer } from "./number";
@@ -39,7 +40,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
       headerCell.innerHTML = name.replace(/_/g, "_&#8203;");
       header.appendChild(headerCell);
     });
-    // header.appendChild(this.document.createElement("th"));
+    if (this.options.isDrillingEnabled) {
+      header.appendChild(this.document.createElement("th"));
+    }
 
     const tableBody = this.document.createElement("tbody");
 
@@ -59,12 +62,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
         cellElement.appendChild(rendered);
         rowElement.appendChild(cellElement);
       }
-      // const drillPath = getDrillPath(ref, rowNum);
-      // const drillQuery = getDrillQuery(table.root(), drillPath);
-      // const drillCell = dom.createElement("td");
-      // drillCell.innerText = "drill";
-      // drillCell.onclick = () => onDrill(drillQuery);
-      // rowElement.appendChild(drillCell);
+      if (this.options.isDrillingEnabled) {
+        const drillCell = this.document.createElement("td");
+        drillCell.innerText = "drill";
+        drillCell.onclick = () =>
+          this.options.onDrill && this.options.onDrill(getDrillQuery(row));
+        rowElement.appendChild(drillCell);
+      }
       tableBody.appendChild(rowElement);
     }
     const tableElement = this.document.createElement("table");

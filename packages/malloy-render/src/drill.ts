@@ -14,6 +14,9 @@
 import {
   DateTimeframe,
   TimestampTimeframe,
+  DataRecord,
+  DataArrayOrRecord,
+  Explore,
   DataArray,
 } from "@malloydata/malloy";
 import { timeToString } from "./html/utils";
@@ -27,74 +30,104 @@ function filterQuote(s: string): string {
 function timestampToDateFilter(
   key: string,
   value: Date,
-  timeFrame: DateTimeframe | TimestampTimeframe | undefined
+  timeframe: DateTimeframe | TimestampTimeframe | undefined
 ): FilterItem {
-  const filterValue =
-    "@" + timeToString(value, timeFrame || TimestampTimeframe.Second);
+  const adjustedTimeframe =
+    timeframe === TimestampTimeframe.Minute
+      ? TimestampTimeframe.Second
+      : timeframe || TimestampTimeframe.Second;
+  const filterValue = "@" + timeToString(value, adjustedTimeframe);
   return { key, value: filterValue };
 }
 
-function getTableFilters(
-  table: DataArray,
-  row: number,
-  dest: FilterItem[]
-): void {
+function getTableFilters(table: DataArray): FilterItem[] {
+  const filters = [];
   for (const f of table.field.filters || []) {
-    dest.push({ key: f.source, value: undefined });
+    if (!f.aggregate) {
+      filters.push({ key: f.source, value: undefined });
+    }
   }
+  return filters;
+}
 
-  const dimensions = table.field.intrinsicFields.filter(
+function getRowFilters(row: DataRecord): FilterItem[] {
+  const filters = [];
+  const dimensions = row.field.intrinsicFields.filter(
     (field) => field.isAtomicField() && field.sourceWasDimension()
   );
 
   for (const dim of dimensions) {
-    const cell = table.row(row).cell(dim);
+    const cell = row.cell(dim);
     // if we have an expression, use it instead of the name of the field.
+    console.log(cell);
     const key =
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
     if (key && !cell.isArray()) {
       if (cell.isNull()) {
-        dest.push({ key, value: "= null" });
+        filters.push({ key, value: "= null" });
       } else if (cell.isString()) {
-        dest.push({ key, value: filterQuote(cell.value) });
+        filters.push({ key, value: filterQuote(cell.value) });
       } else if (cell.isNumber() || cell.isBoolean()) {
-        dest.push({ key, value: cell.value.toString() });
+        filters.push({ key, value: cell.value.toString() });
       } else if (cell.isTimestamp() || cell.isDate()) {
-        dest.push(timestampToDateFilter(key, cell.value, cell.field.timeframe));
+        filters.push(
+          timestampToDateFilter(key, cell.value, cell.field.timeframe)
+        );
       }
     }
   }
+  return filters;
 }
 
-export function getDrillFilters(root: DataArray, path: string): string[] {
-  const filters: FilterItem[] = [];
-  const tablePath = path.split("|");
-  let dataTable = root;
-  for (const t of tablePath) {
-    const [rowNumString, nextTableFieldName] = t.split(":");
-    const rowNum = parseInt(rowNumString);
-    getTableFilters(dataTable, rowNum, filters);
-    if (nextTableFieldName) {
-      dataTable = dataTable.row(rowNum).cell(nextTableFieldName).array;
-    }
+function getFilters(data: DataArrayOrRecord) {
+  if (data.isRecord()) {
+    return getRowFilters(data);
+  } else {
+    return getTableFilters(data);
   }
+}
 
-  const ret = [];
+export function getDrillFilters(data: DataArrayOrRecord): {
+  formattedFilters: string[];
+  source: Explore | undefined;
+} {
+  const filters: FilterItem[] = [];
+  let current = data;
+  while (current.parent) {
+    filters.push(...getFilters(current));
+    current = current.parent;
+  }
+  filters.push(...getFilters(current));
+
+  const source = current.field.parentExplore;
+
+  const formattedFilters: string[] = [];
   for (const { key, value } of filters) {
     if (value !== undefined) {
-      ret.push(`${key}:${value}`);
+      formattedFilters.push(`${key}: ${value}`);
     } else {
-      ret.push(key);
+      formattedFilters.push(key);
     }
   }
-  return ret;
+
+  // TODO HACK: some filters get duplicated by the language, and this
+  //      is a workaround until that is fixed
+  const dedupedFilters = formattedFilters.filter(
+    (filter, index) =>
+      formattedFilters.find(
+        (otherFilter, otherIndex) =>
+          otherFilter === filter && index < otherIndex
+      ) === undefined
+  );
+
+  return { formattedFilters: dedupedFilters, source };
 }
 
-export function getDrillQuery(root: DataArray, path: string): string {
-  let ret = `${root.field.source?.name} `;
-  const filters = getDrillFilters(root, path);
-  if (filters.length) {
-    ret += `:\n  [\n  ${filters.join(",\n  ")}\n  ]\n`;
+export function getDrillQuery(data: DataArrayOrRecord): string {
+  const { formattedFilters, source } = getDrillFilters(data);
+  let ret = `query: ${source?.name} `;
+  if (formattedFilters.length) {
+    ret += `{ \n  where: [\n    ${formattedFilters.join(",\n    ")}\n  ]\n}\n`;
   }
-  return ret + "|";
+  return ret + "-> ";
 }
