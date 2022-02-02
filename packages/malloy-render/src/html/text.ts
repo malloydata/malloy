@@ -22,7 +22,7 @@ export class HTMLTextRenderer implements Renderer {
     return `${data.value}`;
   }
 
-  async render(data: DataColumn): Promise<Element> {
+  async render(data: DataColumn): Promise<HTMLElement> {
     const text = this.getText(data);
     if (text === null) {
       return createNullElement(this.document);

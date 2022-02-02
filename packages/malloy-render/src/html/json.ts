@@ -18,7 +18,7 @@ import { createErrorElement } from "./utils";
 export class HTMLJSONRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(table: DataColumn): Promise<Element> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray() && !table.isRecord()) {
       createErrorElement(this.document, "Invalid data for chart renderer.");
     }

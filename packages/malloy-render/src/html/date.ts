@@ -22,7 +22,7 @@ import { createErrorElement, createNullElement, timeToString } from "./utils";
 export class HTMLDateRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
-  async render(data: DataColumn): Promise<Element> {
+  async render(data: DataColumn): Promise<HTMLElement> {
     if (!data.isDate() && !data.isTimestamp()) {
       return createErrorElement(
         this.document,

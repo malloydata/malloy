@@ -689,7 +689,14 @@ export class PreparedResult {
       ...explore,
       name: this.inner.queryName || explore.name,
     };
-    return new Explore(namedExplore);
+    // TODO `sourceExplore` is not fully-implemented yet -- it cannot
+    //      handle cases where the source of the query is something other than
+    //      a named explore.
+    try {
+      return new Explore(namedExplore, this.sourceExplore);
+    } catch (error) {
+      return new Explore(namedExplore);
+    }
   }
 
   public get sourceExplore(): Explore {
@@ -1145,7 +1152,11 @@ export class AtomicField extends Entity {
   }
 
   get expression(): string {
-    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.name;
+    return (
+      this.fieldTypeDef.resultMetadata?.sourceExpression ||
+      this.fieldTypeDef.resultMetadata?.sourceField ||
+      this.name
+    );
   }
 }
 
@@ -1184,7 +1195,7 @@ export class DateField extends AtomicField {
       return undefined;
     }
     switch (this.fieldDateDef.timeframe) {
-      case "date":
+      case "day":
         return DateTimeframe.Date;
       case "week":
         return DateTimeframe.Week;
@@ -1981,7 +1992,7 @@ export class Result extends PreparedResult {
    * @returns The result data.
    */
   public get data(): DataArray {
-    return new DataArray(this.inner.result, this.resultExplore);
+    return new DataArray(this.inner.result, this.resultExplore, undefined);
   }
 
   public toJSON(): ResultJSON {
@@ -2233,7 +2244,11 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   private queryData: QueryData;
   protected _field: Explore;
 
-  constructor(queryData: QueryData, field: Explore) {
+  constructor(
+    queryData: QueryData,
+    field: Explore,
+    public readonly parent: DataArrayOrRecord | undefined
+  ) {
     super(field);
     this.queryData = queryData;
     this._field = field;
@@ -2258,7 +2273,7 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   row(index: number): DataRecord {
-    return new DataRecord(this.queryData[index], this.field);
+    return new DataRecord(this.queryData[index], index, this.field, this);
   }
 
   get rowCount(): number {
@@ -2296,14 +2311,21 @@ function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
   return data;
 }
 
-class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
+export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
   private queryDataRow: QueryDataRow;
   protected _field: Explore;
+  public readonly index: number | undefined;
 
-  constructor(queryDataRow: QueryDataRow, field: Explore) {
+  constructor(
+    queryDataRow: QueryDataRow,
+    index: number | undefined,
+    field: Explore,
+    public readonly parent: DataArrayOrRecord | undefined
+  ) {
     super(field);
     this.queryDataRow = queryDataRow;
     this._field = field;
+    this.index = index;
   }
 
   toObject(): QueryDataRow {
@@ -2336,9 +2358,9 @@ class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
       }
     } else if (field.isExploreField()) {
       if (value instanceof Array) {
-        return new DataArray(value, field);
+        return new DataArray(value, field, this);
       } else {
-        return new DataRecord(value as QueryDataRow, field);
+        return new DataRecord(value as QueryDataRow, undefined, field, this);
       }
     }
     throw new Error(

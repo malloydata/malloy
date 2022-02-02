@@ -29,7 +29,7 @@ export class HTMLListRenderer extends ContainerRenderer {
     return undefined;
   }
 
-  async render(table: DataColumn): Promise<Element> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray()) {
       return createErrorElement(
         this.document,
