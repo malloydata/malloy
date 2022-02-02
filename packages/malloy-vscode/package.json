@@ -255,7 +255,35 @@
           "description": "Connections for Malloy to use to access data when compiling and querying."
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "malloy-quickstart",
+        "title": "Quick Start",
+        "description": "Quickly get up to speed with Malloy.",
+        "steps": [
+          {
+            "id": "configure-connections",
+            "title": "Connect a Database",
+            "description": " \n[Edit Connections](command:malloy.editConnections)",
+            "media": { "markdown": "media/connections.md" },
+            "completionEvents": ["onSettingChanged:malloy.connections"]
+          },
+          {
+            "id": "download-samples",
+            "title": "Download Sample Models",
+            "description": " \n[Download All Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)",
+            "media": { "markdown": "media/sample-models.md" }
+          },
+          {
+            "id": "check-out-samples",
+            "title": "Explore Malloy Documentation",
+            "description": "Malloy documentation is super cool!\n[Visit Documentation](https://looker-open-source.github.io/malloy/documentation/language/basic.html)",
+            "media": { "markdown": "media/docs.md" }
+          }
+        ]
+      }
+    ]
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
