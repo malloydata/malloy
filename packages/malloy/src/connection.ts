@@ -52,7 +52,10 @@ export abstract class Connection
 
   abstract executeSQLRaw(sqlCommand: string): Promise<QueryData>;
 
-  abstract runSQL(sqlCommand: string): Promise<MalloyQueryData>;
+  abstract runSQL(
+    sqlCommand: string,
+    options?: { pageSize?: number }
+  ): Promise<MalloyQueryData>;
 
   abstract test(): Promise<void>;
 

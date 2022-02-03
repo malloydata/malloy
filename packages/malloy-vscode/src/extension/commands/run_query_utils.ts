@@ -232,8 +232,10 @@ export function runMalloyQuery(
             );
           }
 
+          let preparedResult;
           try {
-            const sql = await queryMaterializer.getSQL();
+            preparedResult = await queryMaterializer.getPreparedResult();
+            const sql = preparedResult.sql;
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
@@ -257,7 +259,10 @@ export function runMalloyQuery(
             status: QueryRunStatus.Running,
           });
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await queryMaterializer.run();
+          const queryResult = await queryMaterializer.run({
+            // Set the page size to the limit provided in the final stage of the query, if present
+            pageSize: preparedResult.resultExplore.limit,
+          });
           if (canceled) return;
 
           const runEnd = performance.now();

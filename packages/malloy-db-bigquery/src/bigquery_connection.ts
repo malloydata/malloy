@@ -172,7 +172,9 @@ export class BigQueryConnection extends Connection {
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {}
   ): Promise<MalloyQueryData> {
-    const { pageSize, rowIndex } = { ...this.readQueryOptions(), ...options };
+    const defaultOptions = this.readQueryOptions();
+    const pageSize = options.pageSize ?? defaultOptions.pageSize;
+    const rowIndex = options.rowIndex ?? defaultOptions.rowIndex;
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)

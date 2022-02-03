@@ -218,7 +218,7 @@ export class PostgresConnection extends Connection {
 
   public async runSQL(
     sqlCommand: string,
-    pageSize?: number,
+    { pageSize }: { pageSize?: number } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
@@ -234,7 +234,7 @@ export class PostgresConnection extends Connection {
     }
     result = await this.runPostgresQuery(
       sqlCommand,
-      pageSize || config.pageSize || DEFAULT_PAGE_SIZE,
+      pageSize ?? config.pageSize ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
