@@ -16,10 +16,7 @@ module.exports = {
     "ts-jest": { tsconfig: "<rootDir>/tsconfig.json" },
   },
   moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  setupFilesAfterEnv: [
-    "jest-expect-message",
-    "<rootDir>/packages/malloy/src/lang/jestery.ts",
-  ],
+  setupFilesAfterEnv: ["jest-expect-message"],
   testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/", "/out/"],
   transform: {

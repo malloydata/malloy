@@ -106,11 +106,12 @@ export interface SQLReferenceData {
  * so we hash those to make a unique key for the Zone code which
  * really wants keys to be strings ...
  */
-class SQLExploreZone extends Zone<StructDef> {
+export class SQLExploreZone extends Zone<StructDef> {
   keyed: Record<string, SQLReferenceData> = {};
   refKey(ref: SQLReferenceData): string {
     const key = md5(JSON.stringify(ref));
     this.keyed[key] = ref;
+    ref.key = key;
     return key;
   }
 }

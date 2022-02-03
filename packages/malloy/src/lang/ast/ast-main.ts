@@ -26,8 +26,7 @@ import {
 } from "../field-space";
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
-import { MalloyTranslation } from "../parse-malloy";
-// import { toTimestampV } from "./time-utils";
+import { MalloyTranslation, SQLReferenceData } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -585,6 +584,8 @@ export class NamedSource extends Mallobj {
     if (modelEnt.type === "query") {
       this.log(`Expected explore as data source, '${this.name}', is a query`);
       return ErrorFactory.structDef;
+    } else if (modelEnt.type === "sql") {
+      throw new Error("INTERNAL ERROR IN SQL REFERENCE");
     }
     const ret = { ...modelEnt };
     const declared = { ...ret.parameters } || {};
@@ -634,6 +635,12 @@ export class NamedSource extends Mallobj {
 
 export class SQLSource extends NamedSource {
   elementType = "sqlSource";
+  modelEntry(str: string): ModelEntry | undefined {
+    if (str === this.name) {
+      // root around and find the stupid value to match this name
+    }
+    return super.modelEntry(str);
+  }
 }
 
 export class QuerySource extends Mallobj {
@@ -1313,15 +1320,15 @@ export class QOPDesc extends ListOf<QueryProperty> {
 }
 
 export interface ModelEntry {
-  entry: model.NamedModelObject;
+  entry: model.NamedModelObject | SQLBlock;
   exported?: boolean;
 }
 export interface NameSpace {
   getEntry(name: string): ModelEntry | undefined;
   setEntry(name: string, value: ModelEntry, exported: boolean): void;
 }
-export interface SQLBlock {
-  sql: string[];
+export interface SQLBlock extends SQLReferenceData {
+  type: "sql";
   name?: string;
 }
 
@@ -1354,13 +1361,16 @@ export class Document extends MalloyElement implements NameSpace {
       if (this.documentModel[entry].exported) {
         def.exports.push(entry);
       }
-      def.contents[entry] = cloneDeep(this.documentModel[entry].entry);
+      const entryDef = this.documentModel[entry].entry;
+      if (entryDef.type === "struct" || entryDef.type === "query") {
+        def.contents[entry] = cloneDeep(entryDef);
+      }
     }
     return def;
   }
 
   addSQLBlock(sql: string[], name?: string): boolean {
-    const ret: SQLBlock = { sql };
+    const ret: SQLBlock = { type: "sql", sql };
     if (name) {
       if (this.sqlCommandList.find((c) => c.name === name)) {
         return false;

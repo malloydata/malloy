@@ -13,9 +13,13 @@
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { inspect } from "util";
-import { StructDef, NamedModelObject, ModelDef } from "../model/malloy_types";
-import { MalloyElement, ModelEntry, NameSpace } from "./ast";
-import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
+import {
+  StructDef,
+  NamedModelObject,
+  ModelDef,
+} from "../../model/malloy_types";
+import { MalloyElement, ModelEntry, NameSpace } from "../ast";
+import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
