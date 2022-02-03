@@ -16,6 +16,9 @@
 # BUG: If you go in $lib and delete a file which isn't MalloyParser.ts
 # this hack will fail. yarn clean will fix things though.
 
+# Exit immediately with a non-zero status code if any lines fail
+set -e
+
 lib="../lib/Malloy"
 digest=$lib/Malloy.md5
 target=$lib/MalloyParser.ts
