@@ -54,7 +54,7 @@ export abstract class Connection
 
   abstract runSQL(
     sqlCommand: string,
-    options?: { pageSize?: number }
+    options?: { rowLimit?: number }
   ): Promise<MalloyQueryData>;
 
   abstract test(): Promise<void>;

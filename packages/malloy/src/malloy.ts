@@ -234,7 +234,7 @@ export class Malloy {
   }: {
     lookupSQLRunner: LookupSQLRunner;
     preparedResult: PreparedResult;
-    options?: { pageSize?: number };
+    options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run({
     sqlRunner,
@@ -243,7 +243,7 @@ export class Malloy {
   }: {
     sqlRunner: SQLRunner;
     preparedResult: PreparedResult;
-    options?: { pageSize?: number };
+    options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run({
     sqlRunner,
@@ -254,7 +254,7 @@ export class Malloy {
     sqlRunner?: SQLRunner;
     lookupSQLRunner?: LookupSQLRunner;
     preparedResult: PreparedResult;
-    options?: { pageSize?: number };
+    options?: { rowLimit?: number };
   }): Promise<Result> {
     if (sqlRunner === undefined) {
       if (lookupSQLRunner === undefined) {
@@ -1851,7 +1851,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns The query results from running this loaded query.
    */
-  async run(options?: { pageSize?: number }): Promise<Result> {
+  async run(options?: { rowLimit?: number }): Promise<Result> {
     const lookupSQLRunner = this.runtime.lookupSQLRunner;
     const preparedResult = await this.getPreparedResult();
     return Malloy.run({ lookupSQLRunner, preparedResult, options });

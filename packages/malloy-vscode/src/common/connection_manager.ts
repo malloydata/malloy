@@ -48,7 +48,7 @@ export class ConnectionManager {
       map.set(
         "bigquery",
         new BigQueryConnection("bigquery", () => ({
-          pageSize: this.getCurrentRowLimit(),
+          rowLimit: this.getCurrentRowLimit(),
         }))
       );
       defaultName = "bigquery";
@@ -81,7 +81,7 @@ export class ConnectionManager {
       case ConnectionBackend.BigQuery:
         return new BigQueryConnection(
           connectionConfig.name,
-          () => ({ pageSize: this.getCurrentRowLimit() }),
+          () => ({ rowLimit: this.getCurrentRowLimit() }),
           {
             defaultProject: connectionConfig.projectName,
             serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
@@ -109,7 +109,7 @@ export class ConnectionManager {
         };
         return new PostgresConnection(
           connectionConfig.name,
-          () => ({ pageSize: this.getCurrentRowLimit() }),
+          () => ({ rowLimit: this.getCurrentRowLimit() }),
           configReader
         );
       }

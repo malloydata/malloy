@@ -114,7 +114,7 @@ export interface SQLRunner {
    */
   runSQL(
     sql: string,
-    options?: { pageSize?: number }
+    options?: { rowLimit?: number }
   ): Promise<MalloyQueryData>;
 }
 

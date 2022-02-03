@@ -260,8 +260,8 @@ export function runMalloyQuery(
           });
           progress.report({ increment: 40, message: "Running" });
           const queryResult = await queryMaterializer.run({
-            // Set the page size to the limit provided in the final stage of the query, if present
-            pageSize: preparedResult.resultExplore.limit,
+            // Set the row limit to the limit provided in the final stage of the query, if present
+            rowLimit: preparedResult.resultExplore.limit,
           });
           if (canceled) return;
 
