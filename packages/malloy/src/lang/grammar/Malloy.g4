@@ -16,6 +16,7 @@ malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
   : defineExploreStatement
+  | defineSQLStatement
   | defineQuery
   | importStatement
   ;
@@ -27,6 +28,10 @@ defineExploreStatement
 defineQuery
   : QUERY topLevelQueryDefs  # namedQueries_stub
   | QUERY query              # anonymousQuery
+  ;
+
+defineSQLStatement
+  : SQL (sqlCommandNameDef IS)? sqlText+ (ON connectionName)?
   ;
 
 importStatement
@@ -97,6 +102,7 @@ exploreSource
   : exploreName                                   # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSource
   ;
 
 exploreNameDef: id;
@@ -298,6 +304,7 @@ id
   | OBJECT_NAME_LITERAL
   ;
 
+
 timeframe
   : SECOND | MINUTE | HOUR | DAY | WEEK | MONTH | QUARTER | YEAR
   ;
@@ -412,6 +419,11 @@ jsonArray
    | OBRACK CBRACK
    ;
 
+sqlText: SQL_STRING;
+sqlExploreNameRef: id;
+sqlCommandNameDef: id;
+connectionName: JSON_STRING;
+
 JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
 
 fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
@@ -440,6 +452,7 @@ PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
 PROJECT: P R O J E C T SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
+SQL: S Q L SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
 
@@ -463,6 +476,7 @@ END: E N D ;
 FALSE: F A L S E;
 FOR: F O R;
 FROM: F R O M ;
+FROM_SQL: F R O M '_' S Q L;
 HAS: H A S ;
 HOUR: H O U R S?;
 IMPORT: I M P O R T;
@@ -570,6 +584,8 @@ fragment Y: [yY] ; fragment Z: [zZ] ;
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
 COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
+
+SQL_STRING: '||' .*? ';;';
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;

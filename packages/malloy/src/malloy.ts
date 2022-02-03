@@ -175,47 +175,86 @@ export class Malloy {
             errors
           );
         }
-      } else if (result.urls) {
-        for (const neededUrl of result.urls) {
-          if (neededUrl.startsWith("internal://")) {
-            throw new Error(
-              "In order to use relative imports, you must compile a file via a URL."
+      } else {
+        // Parse incomplete because some external information is required,
+        // there might be more than one of these in a single reply ...
+        if (result.urls) {
+          for (const neededUrl of result.urls) {
+            if (neededUrl.startsWith("internal://")) {
+              throw new Error(
+                "In order to use relative imports, you must compile a file via a URL."
+              );
+            }
+            const neededText = await urlReader.readURL(
+              URL.fromString(neededUrl)
             );
+            // TODO -- If the URL fetch fails, report the error with
+            // translator.update({
+            //   errors: {
+            // .   urls: {
+            // .     [neededURL]: errorMessage
+            // .   },
+            // . }
+            // });
+            // ... the parser will report this as an error. The  next time
+            // .translate() is called in the loop it will return the
+            // error message, the location of the reference, and .final
+            const urls = { [neededUrl]: neededText };
+            translator.update({ urls });
           }
-          const neededText = await urlReader.readURL(URL.fromString(neededUrl));
-          const urls = { [neededUrl]: neededText };
-          translator.update({ urls });
         }
-      } else if (result.tables) {
-        // collect tables by connection name since there may be multiple connections
-        const tablesByConnection: Map<
-          string | undefined,
-          Array<string>
-        > = new Map();
-        for (const connectionTableString of result.tables) {
-          const { connectionName } = parseTableURL(connectionTableString);
+        if (result.tables) {
+          // collect tables by connection name since there may be multiple connections
+          const tablesByConnection: Map<
+            string | undefined,
+            Array<string>
+          > = new Map();
+          for (const connectionTableString of result.tables) {
+            const { connectionName } = parseTableURL(connectionTableString);
 
-          let connectionToTablesMap = tablesByConnection.get(connectionName);
-          if (!connectionToTablesMap) {
-            connectionToTablesMap = [connectionTableString];
-          } else {
-            connectionToTablesMap.push(connectionTableString);
+            let connectionToTablesMap = tablesByConnection.get(connectionName);
+            if (!connectionToTablesMap) {
+              connectionToTablesMap = [connectionTableString];
+            } else {
+              connectionToTablesMap.push(connectionTableString);
+            }
+            tablesByConnection.set(connectionName, connectionToTablesMap);
           }
-          tablesByConnection.set(connectionName, connectionToTablesMap);
+          // iterate over connections, fetching schema for all missing tables
+          for (const [
+            connectionName,
+            connectionTableString,
+          ] of tablesByConnection) {
+            const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
+              connectionName
+            );
+            const tables = await schemaFetcher.fetchSchemaForTables(
+              connectionTableString
+            );
+            // TODO add { error: { tables: {} } handling as above in .urls
+            translator.update({ tables });
+          }
         }
-
-        // iterate over connections, fetching schema for all missing tables
-        for (const [
-          connectionName,
-          connectionTableString,
-        ] of tablesByConnection) {
-          const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
-            connectionName
-          );
-          const tables = await schemaFetcher.fetchSchemaForTables(
-            connectionTableString
-          );
-          translator.update({ tables });
+        if (result.sqlRefs) {
+          for (const _missingSQLSchemaRef_ of result.sqlRefs) {
+            throw new Error("SQL Schema fetch not yet implemented");
+            // connectionName might be undefined because lloyd says there is
+            // such a thing as a "default connection" ....
+            // const connectionName: string | undefined = missingSQLSchemaRef.connection;
+            // const sqlStatements: string[] = missingSQLSchemaRef.sql;
+            // Now ask the connection for a structdef
+            // const theResponse = await askForStructDef(connectionName, sqlStatements);
+            // ... no idea what this new api will return ... but something like ...
+            // if (theRepsone.type == "struct") {
+            //    translator.update({
+            //       sqlRefs: { [misinngSqlSchemaRef.key]: theResponse }
+            //     });
+            // } else {
+            //     translator.update({errors: {
+            //       sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
+            //     }});
+            // }
+          }
         }
       }
     }

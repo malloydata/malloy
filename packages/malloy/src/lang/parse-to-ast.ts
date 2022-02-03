@@ -19,7 +19,7 @@ import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { LogMessage, MessageLogger } from "./parse-log";
 import * as Source from "./source-reference";
-import { ParseMalloy } from "./parse-malloy";
+import { MalloyParseRoot } from "./parse-malloy";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -29,7 +29,7 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyVisitor<ast.MalloyElement>
 {
-  constructor(readonly parse: ParseMalloy, readonly msgLog: MessageLogger) {
+  constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
   }
 
@@ -161,6 +161,12 @@ export class MalloyToAST
     return s;
   }
 
+  protected optionalText(idCx: ParseTree | undefined): string | undefined {
+    if (idCx) {
+      return this.getIdText(idCx);
+    }
+    return undefined;
+  }
   defaultResult(): ast.MalloyElement {
     return new ast.Unimplemented();
   }
@@ -294,6 +300,13 @@ export class MalloyToAST
 
   visitTableSource(pcx: parse.TableSourceContext): ast.TableSource {
     return this.visitExploreTable(pcx.exploreTable());
+  }
+
+  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+    return this.astAt(
+      new ast.SQLSource(this.getIdText(pcx.sqlExploreNameRef())),
+      pcx
+    );
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
@@ -1055,5 +1068,18 @@ export class MalloyToAST
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
     return this.getFieldExpr(pcx.fieldExpr());
+  }
+
+  visitDefineSQLStatement(
+    pcx: parse.DefineSQLStatementContext
+  ): ast.SQLStatement {
+    const commands = pcx.sqlText().map((cx) => {
+      const fullMatch = cx.text;
+      return fullMatch.slice(2, fullMatch.length - 2);
+    });
+    const sqlStmt = new ast.SQLStatement(commands);
+    sqlStmt.is = this.optionalText(pcx.sqlCommandNameDef());
+    sqlStmt.connectionName = this.optionalText(pcx.connectionName());
+    return this.astAt(sqlStmt, pcx);
   }
 }
