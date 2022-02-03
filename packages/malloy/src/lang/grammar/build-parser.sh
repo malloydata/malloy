@@ -20,7 +20,13 @@ lib="../lib/Malloy"
 digest=$lib/Malloy.md5
 target=$lib/MalloyParser.ts
 
-newmd5=`md5 Malloy.g4`
+# Decide which md5 command to use based on OS
+if [[ "$(uname -a)" == Linux*  ]]; then
+  newmd5=`md5sum Malloy.g4`
+else
+  newmd5=`md5 Malloy.g4`
+fi
+
 oldmd5="--MISSING-DIGEST--"
 if [  -e $digest ]; then
   oldmd5=`cat $digest`
