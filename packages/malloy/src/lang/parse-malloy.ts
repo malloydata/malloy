@@ -443,6 +443,7 @@ class ASTStep implements TranslationStep {
       }
     }
 
+    // TODO report errors from here!
     const missingSqlSchema = sqlZone.getUndefined();
     if (missingSqlSchema) {
       const sqlRefs = missingSqlSchema.map((key) => sqlZone.keyed[key]);
