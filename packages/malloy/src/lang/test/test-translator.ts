@@ -13,9 +13,13 @@
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { inspect } from "util";
-import { StructDef, NamedModelObject, ModelDef } from "../model/malloy_types";
-import { MalloyElement, ModelEntry, NameSpace } from "./ast";
-import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
+import {
+  StructDef,
+  NamedModelObject,
+  ModelDef,
+} from "../../model/malloy_types";
+import { MalloyElement, ModelEntry, NameSpace } from "../ast";
+import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -126,7 +130,7 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   ast(): MalloyElement | undefined {
-    const astAsk = this.getASTResponse();
+    const astAsk = this.astStep.step(this);
     if (astAsk.ast) {
       if (this.grammarRule !== "malloyDocument") {
         this.testRoot = new TestRoot(astAsk.ast, this, this.internalModel);

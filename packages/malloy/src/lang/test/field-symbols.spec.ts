@@ -11,13 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import * as model from "../model/malloy_types";
+import * as model from "../../model/malloy_types";
 import {
   ColumnSpaceField,
   DefinedParameter,
   QueryFieldStruct,
-} from "./space-field";
-import { StructSpace } from "./field-space";
+} from "../space-field";
+import { StructSpace } from "../field-space";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
