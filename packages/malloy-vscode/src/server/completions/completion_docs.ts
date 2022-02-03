@@ -40,7 +40,7 @@ View [the full documentation](${DOCS_ROOT}/language/query.html).
 `,
   },
   query_property: {
-    group_by: `The \`group_by\` clause is super cool!
+    group_by: `Use the \`group_by\` clause to specify dimensions by which to group aggregate calculations.
 
 \`\`\`malloy
 query: flights -> {
