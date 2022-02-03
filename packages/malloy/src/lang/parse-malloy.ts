@@ -44,6 +44,10 @@ import {
   passForHighlights,
   sortHighlights,
 } from "./parse-tree-walkers/document-highlight-walker";
+import {
+  DocumentCompletion,
+  walkForDocumentCompletions,
+} from "./parse-tree-walkers/document-completion-walker";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
   constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
@@ -158,6 +162,11 @@ interface Metadata extends NeededData, ErrorResponse, FinalResponse {
   highlights: DocumentHighlight[];
 }
 type MetadataResponse = Partial<Metadata>;
+
+interface Completions extends NeededData, ErrorResponse, FinalResponse {
+  completions: DocumentCompletion[];
+}
+type CompletionsResponse = Partial<Completions>;
 
 export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
@@ -480,6 +489,31 @@ export abstract class MalloyTranslation {
       }
     }
     return this.metadataResponse;
+  }
+
+  completions(position: {
+    line: number;
+    character: number;
+  }): CompletionsResponse {
+    const tryParse = this.getParseResponse();
+    if (!tryParse.parse) {
+      return tryParse;
+    } else {
+      let completions: DocumentCompletion[];
+      try {
+        completions = walkForDocumentCompletions(
+          tryParse.parse.tokens,
+          tryParse.parse.root,
+          position
+        );
+      } catch {
+        completions = [];
+      }
+      return {
+        ...tryParse,
+        completions,
+      };
+    }
   }
 
   translate(extendingModel?: ModelDef): TranslateResponse {
