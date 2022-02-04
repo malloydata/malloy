@@ -13,16 +13,17 @@
 
 import { DataArrayOrRecord } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
+import { getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
-import { createErrorElement, yieldTask } from "./utils";
+import { createDrillIcon, createErrorElement, yieldTask } from "./utils";
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "medium",
   };
 
-  async render(table: DataArrayOrRecord): Promise<Element> {
+  async render(table: DataArrayOrRecord): Promise<HTMLElement> {
     if (!table.isArrayOrRecord()) {
       return createErrorElement(
         this.document,
@@ -45,6 +46,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       dimensionsContainer.style.display = "flex";
       dimensionsContainer.style.flexWrap = "wrap";
       const rowElement = this.document.createElement("div");
+      rowElement.style.position = "relative";
       for (const field of dimensions) {
         const renderer = this.childRenderers[field.name];
         const rendered = await renderer.render(row.cell(field));
@@ -110,6 +112,16 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         }
       }
       rowElement.appendChild(dimensionsContainer);
+      if (dimensions.length > 0 && this.options.isDrillingEnabled) {
+        const drillElement = this.document.createElement("span");
+        const drillIcon = createDrillIcon(this.document);
+        drillElement.appendChild(drillIcon);
+        drillElement.style.cssText = `padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;`;
+        drillElement.onclick = () =>
+          this.options.onDrill &&
+          this.options.onDrill(getDrillQuery(row), drillIcon);
+        rowElement.appendChild(drillElement);
+      }
       const dashboardOuter = this.document.createElement("div");
       dashboardOuter.classList.add("dashboard-outer");
       dashboardOuter.style.cssText = DASHBOARD_OUTER;

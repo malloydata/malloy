@@ -225,10 +225,9 @@ export async function runCode(
     "json"
   );
   const document = new JSDOM().window.document;
-  const element = await new HTMLView(document).render(
-    queryResult.data,
-    dataStyles
-  );
+  const element = await new HTMLView(document).render(queryResult.data, {
+    dataStyles,
+  });
   const htmlResult = element.outerHTML;
   const sqlResult = Prism.highlight(
     queryResult.sql,

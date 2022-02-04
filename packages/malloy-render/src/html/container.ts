@@ -23,14 +23,18 @@ export abstract class ContainerRenderer extends RenderTree {
   makeChildRenderers(
     explore: Explore,
     document: Document,
-    dataStyles: DataStyles
+    options: {
+      dataStyles: DataStyles;
+      isDrillingEnabled?: boolean;
+      onDrill?: (drillQuery: string, target: HTMLElement) => void;
+    }
   ): void {
     const result: ChildRenderers = {};
     explore.intrinsicFields.forEach((field: Field) => {
       result[field.name] = makeRenderer(
         field,
         document,
-        dataStyles,
+        options,
         this.childrenStyleDefaults
       );
     });
@@ -41,13 +45,26 @@ export abstract class ContainerRenderer extends RenderTree {
   //  we need to be fully constructed before we construct
   //  our children.
   static make<Type extends ContainerRenderer>(
-    c: new (document: Document) => Type,
+    c: new (
+      document: Document,
+      options: {
+        isDrillingEnabled?: boolean;
+        onDrill?: (drillQuery: string, target: HTMLElement) => void;
+      }
+    ) => Type,
     document: Document,
     exploreField: Explore,
-    dataStyles: DataStyles
+    options: {
+      dataStyles: DataStyles;
+      isDrillingEnabled?: boolean;
+      onDrill?: (drillQuery: string, target: HTMLElement) => void;
+    }
   ): Type {
-    const n = new c(document);
-    n.makeChildRenderers(exploreField, document, dataStyles);
+    const n = new c(document, {
+      isDrillingEnabled: options.isDrillingEnabled,
+      onDrill: options.onDrill,
+    });
+    n.makeChildRenderers(exploreField, document, options);
     return n;
   }
 }

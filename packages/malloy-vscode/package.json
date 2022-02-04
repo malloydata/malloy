@@ -296,6 +296,7 @@
     "keytar": "7.7.0",
     "react": "^17.0.2",
     "react-is": "^16.8.0",
+    "react-popper-tooltip": "^4.3.1",
     "styled-components": "^5.3.3",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",

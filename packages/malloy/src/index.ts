@@ -60,6 +60,7 @@ export type {
   ExploreField,
   QueryField,
   DataArray,
+  DataRecord,
   DataColumn,
   DataArrayOrRecord,
   ModelMaterializer,
