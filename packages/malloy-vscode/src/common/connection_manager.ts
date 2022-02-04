@@ -85,6 +85,7 @@ export class ConnectionManager {
           {
             defaultProject: connectionConfig.projectName,
             serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
+            location: connectionConfig.location,
           }
         );
       case ConnectionBackend.Postgres: {

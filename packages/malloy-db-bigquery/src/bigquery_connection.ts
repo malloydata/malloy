@@ -108,6 +108,8 @@ export class BigQueryConnection extends Connection {
 
   private config: BigQueryConnectionConfiguration;
 
+  private location: string;
+
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
     STRING: { type: "string" },
@@ -145,6 +147,7 @@ export class BigQueryConnection extends Connection {
 
     this.queryOptions = queryOptions;
     this.config = config;
+    this.location = config.location || "US";
   }
 
   get dialectName(): string {
@@ -222,7 +225,7 @@ export class BigQueryConnection extends Connection {
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
-        location: this.config.location || "US",
+        location: this.location,
         query: sqlCommand,
         dryRun: true,
       });
@@ -319,7 +322,7 @@ export class BigQueryConnection extends Connection {
     } else {
       try {
         const [job] = await this.bigQuery.createQueryJob({
-          location: "US",
+          location: this.location,
           query: sqlCommand,
         });
 
@@ -385,7 +388,7 @@ export class BigQueryConnection extends Connection {
 
     const [job] = await this.bigQuery.createQueryJob({
       query: sqlCommand,
-      location: "US",
+      location: this.location,
       destination: table,
     });
 
@@ -516,7 +519,7 @@ export class BigQueryConnection extends Connection {
 
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
     const [job] = await this.bigQuery.createQueryJob({
-      location: "US",
+      location: this.location,
       maximumBytesBilled: String(25 * 1024 * 1024 * 1024),
       ...createQueryJobOptions,
     });
