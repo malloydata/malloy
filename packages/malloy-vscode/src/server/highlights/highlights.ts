@@ -151,9 +151,11 @@ function mapTypes(type: string) {
     case HighlightType.Property.Rename:
     case HighlightType.Property.Top:
     case HighlightType.Property.Where:
+    case HighlightType.Property.SQL:
       return "keyword";
     case HighlightType.Call.Table:
     case HighlightType.Call.From:
+    case HighlightType.Call.FromSQL:
     case HighlightType.Call.Function:
       return "function";
     default:

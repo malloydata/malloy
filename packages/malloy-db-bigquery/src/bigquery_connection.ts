@@ -32,6 +32,7 @@ import {
   FieldTypeDef,
   NamedStructDefs,
   Connection,
+  SQLReferenceData,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -103,6 +104,7 @@ export class BigQueryConnection extends Connection {
 
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private sqlSchemaCache = new Map<string, StructDef>();
 
   private queryOptions?: QueryOptionsReader;
 
@@ -242,7 +244,7 @@ export class BigQueryConnection extends Connection {
     const destinationTable =
       dryRunResults.metadata.configuration.query.destinationTable;
 
-    return this.structDefFromSchema(
+    return this.structDefFromTableSchema(
       `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
       dryRunResults.metadata.statistics.query.schema
     );
@@ -443,7 +445,7 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  private structDefFromSchema(
+  private structDefFromTableSchema(
     tableURL: string,
     tableFieldSchema: bigquery.ITableFieldSchema
   ): StructDef {
@@ -462,6 +464,26 @@ export class BigQueryConnection extends Connection {
     return structDef;
   }
 
+  private structDefFromSQLSchema(
+    sqlRef: SQLReferenceData,
+    tableFieldSchema: bigquery.ITableFieldSchema
+  ): StructDef {
+    const structDef: StructDef = {
+      type: "struct",
+      // TODO feature-sql-block should be the actual name if there is one, also key shouldn't be undefined
+      name: sqlRef.key || "no_name",
+      dialect: this.dialectName,
+      structSource: {
+        type: "sql",
+        // TODO feature-sql-block shouldn't the name of the SQL block, or the SQL itself be included here?
+      },
+      structRelationship: { type: "basetable", connectionName: this.name },
+      fields: [],
+    };
+    this.addFieldsToStructDef(structDef, tableFieldSchema);
+    return structDef;
+  }
+
   public async fetchSchemaForTables(
     missing: string[]
   ): Promise<NamedStructDefs> {
@@ -471,10 +493,43 @@ export class BigQueryConnection extends Connection {
       let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
         const tableFieldSchema = await this.getTableFieldSchema(tableURL);
-        inCache = this.structDefFromSchema(tableURL, tableFieldSchema);
+        inCache = this.structDefFromTableSchema(tableURL, tableFieldSchema);
         this.schemaCache.set(tableURL, inCache);
       }
       tableStructDefs[tableURL] = inCache;
+    }
+    return tableStructDefs;
+  }
+
+  private async getSQLBlockSchema(sqlRef: SQLReferenceData) {
+    const [job] = await this.bigQuery.createQueryJob({
+      location: this.config.location || "US",
+      query: sqlRef.sql.join(""), // TODO feature-sql-block Why is this a list of strings instead of just one?
+      dryRun: true,
+    });
+
+    try {
+      return job.metadata.statistics.query.schema;
+    } catch (e) {
+      throw maybeRewriteError(e);
+    }
+  }
+
+  public async fetchSchemaForSQLBlocks(
+    sqlRefs: SQLReferenceData[]
+  ): Promise<NamedStructDefs> {
+    const tableStructDefs: NamedStructDefs = {};
+
+    for (const sqlRef of sqlRefs) {
+      // TODO feature-sql-block sqlRef key should not be nullable here
+      const key = sqlRef.key || "foo";
+      let inCache = this.sqlSchemaCache.get(key);
+      if (!inCache) {
+        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
+        inCache = this.structDefFromSQLSchema(sqlRef, tableFieldSchema);
+        this.schemaCache.set(key, inCache);
+      }
+      tableStructDefs[key] = inCache;
     }
     return tableStructDefs;
   }

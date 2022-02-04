@@ -21,6 +21,7 @@ import {
   QueryData,
   PooledConnection,
   parseTableURL,
+  SQLReferenceData,
 } from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
@@ -127,6 +128,12 @@ export class PostgresConnection extends Connection {
       tableStructDefs[tableName] = inCache;
     }
     return tableStructDefs;
+  }
+
+  public async fetchSchemaForSQLBlocks(
+    _sqlRefs: SQLReferenceData[]
+  ): Promise<Record<string, StructDef>> {
+    throw new Error("TODO implement me");
   }
 
   protected async runPostgresQuery(

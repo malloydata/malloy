@@ -33,7 +33,7 @@ export {
   // Needed for tests only
   MalloyTranslator,
 } from "./lang";
-export type { LogMessage, TranslateResponse } from "./lang";
+export type { LogMessage, TranslateResponse, SQLReferenceData } from "./lang";
 export {
   Malloy,
   Runtime,
