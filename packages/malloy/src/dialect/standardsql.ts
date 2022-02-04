@@ -334,4 +334,8 @@ ${indent(sql)}
     // const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", expr, ")"] : expr;
     return [`TIMESTAMP${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
   }
+
+  ignoreInProject(fieldName: string): boolean {
+    return fieldName === "_PARTITIONTIME";
+  }
 }
