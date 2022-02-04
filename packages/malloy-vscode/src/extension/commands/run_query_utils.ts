@@ -180,7 +180,10 @@ export function runMalloyQuery(
 
       const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
 
-      current.panel.webview.html = getWebviewHtml(entrySrc.toString());
+      current.panel.webview.html = getWebviewHtml(
+        entrySrc.toString(),
+        current.panel.webview
+      );
 
       current.panel.onDidDispose(() => {
         current.cancel();
