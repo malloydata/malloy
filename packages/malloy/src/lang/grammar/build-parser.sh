@@ -22,7 +22,7 @@ digest=$lib/Malloy.md5
 target=$lib/MalloyParser.ts
 
 if command -v md5sum > /dev/null; then
-  newmd5=`md5sum Malloy.g4 | cut -d" " -f1`
+  newmd5=`md5sum Malloy.g4`
 elif command -v md5 > /dev/null; then
   newmd5=`md5 Malloy.g4`
 else
@@ -39,7 +39,7 @@ if [ ! -r $target ]; then
 fi
 
 if [ "$oldmd5" != "$newmd5" ]; then
-  antlr4ts -visitor -o $lib Malloy.g4 && echo $newmd5 > $digest
+  antlr4ts -visitor -o $lib Malloy.g4 && echo "$newmd5" > $digest
 else
   echo "ANTLR parser $target is up to date"
 fi
