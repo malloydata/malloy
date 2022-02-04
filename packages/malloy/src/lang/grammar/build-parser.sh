@@ -38,7 +38,6 @@ if [ ! -r $target ]; then
   oldmd5="--MISSING-PARSER--"
 fi
 
-
 if [ "$oldmd5" != "$newmd5" ]; then
   antlr4ts -visitor -o $lib Malloy.g4 && echo $newmd5 > $digest
 else
