@@ -155,4 +155,10 @@ export abstract class Dialect {
     n: unknown,
     timeframe: DateTimeframe
   ): DialectExpr;
+
+  // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
+  //  included in projections.
+  ignoreInProject(_fieldName: string): boolean {
+    return false;
+  }
 }
