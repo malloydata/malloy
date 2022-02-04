@@ -57,6 +57,11 @@ interface BigQueryConnectionConfiguration {
   location?: string;
 }
 
+interface SchemaInfo {
+  schema: bigquery.ITableFieldSchema;
+  needsPartitionPsuedoColumn: boolean;
+}
+
 type QueryOptionsReader =
   | Partial<BigQueryQueryOptions>
   | (() => Partial<BigQueryQueryOptions>);
@@ -248,9 +253,7 @@ export class BigQueryConnection extends Connection {
     );
   }
 
-  public async getTableFieldSchema(
-    tableURL: string
-  ): Promise<bigquery.ITableFieldSchema> {
+  public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
     const { tablePath: tableName } = parseTableURL(tableURL);
     const segments = tableName.split(".");
 
@@ -277,7 +280,12 @@ export class BigQueryConnection extends Connection {
     try {
       const [metadata] = await table.getMetadata();
       this.bigQuery.projectId = this.projectId;
-      return metadata.schema;
+      return {
+        schema: metadata.schema,
+        needsPartitionPsuedoColumn:
+          metadata.timePartitioning.type !== undefined &&
+          metadata.timePartitioning.field === undefined,
+      };
     } catch (e) {
       throw maybeRewriteError(e);
     }
@@ -445,7 +453,7 @@ export class BigQueryConnection extends Connection {
 
   private structDefFromSchema(
     tableURL: string,
-    tableFieldSchema: bigquery.ITableFieldSchema
+    schemaInfo: SchemaInfo
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
@@ -458,7 +466,13 @@ export class BigQueryConnection extends Connection {
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
     };
-    this.addFieldsToStructDef(structDef, tableFieldSchema);
+    this.addFieldsToStructDef(structDef, schemaInfo.schema);
+    if (schemaInfo.needsPartitionPsuedoColumn) {
+      structDef.fields.push({
+        type: "timestamp",
+        name: "_PARTITIONTIME",
+      });
+    }
     return structDef;
   }
 
