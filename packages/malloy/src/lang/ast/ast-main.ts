@@ -10,7 +10,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-
 import { URL } from "url";
 import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
@@ -26,7 +25,7 @@ import {
 } from "../field-space";
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
-import { MalloyTranslation, SQLReferenceData } from "../parse-malloy";
+import { MalloyTranslation, SQLBlock, SQLReferenceData } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -561,6 +560,22 @@ export class NamedSource extends Mallobj {
     return this.name;
   }
 
+  modelStruct(): model.StructDef | undefined {
+    const modelEnt = this.modelEntry(this.name)?.entry;
+    if (!modelEnt) {
+      this.log(`Undefined data source '${this.name}'`);
+      return;
+    }
+    if (modelEnt.type === "query") {
+      this.log(`Must use 'from()' to explore query '${this.name}`);
+      return;
+    } else if (modelEnt.type === "sql") {
+      this.log(`Must use 'from_sql()' to explore sql query '${this.name}`);
+      return;
+    }
+    return { ...modelEnt };
+  }
+
   structDef(): model.StructDef {
     /*
       Can't really generate the callback list until after all the
@@ -576,18 +591,10 @@ export class NamedSource extends Mallobj {
       which might result in a full translation.
     */
 
-    const modelEnt = this.modelEntry(this.name)?.entry;
-    if (!modelEnt) {
-      this.log(`Undefined data source '${this.name}'`);
+    const ret = this.modelStruct();
+    if (!ret) {
       return ErrorFactory.structDef;
     }
-    if (modelEnt.type === "query") {
-      this.log(`Expected explore as data source, '${this.name}', is a query`);
-      return ErrorFactory.structDef;
-    } else if (modelEnt.type === "sql") {
-      throw new Error("INTERNAL ERROR IN SQL REFERENCE");
-    }
-    const ret = { ...modelEnt };
     const declared = { ...ret.parameters } || {};
 
     const makeWith = this.isBlock?.isMap || {};
@@ -635,11 +642,42 @@ export class NamedSource extends Mallobj {
 
 export class SQLSource extends NamedSource {
   elementType = "sqlSource";
-  modelEntry(str: string): ModelEntry | undefined {
-    if (str === this.name) {
-      // root around and find the stupid value to match this name
+  modelStruct(): model.StructDef | undefined {
+    const modelEnt = this.modelEntry(this.name)?.entry;
+    if (!modelEnt) {
+      this.log(`Undefined from_sql source '${this.name}'`);
+      return;
     }
-    return super.modelEntry(str);
+    if (modelEnt.type === "query") {
+      this.log(`Cannot use 'from_sql()' to explore query '${this.name}'`);
+      return;
+    } else if (modelEnt.type === "struct") {
+      this.log(`Cannot use 'from_sql()' to explore '${this.name}'`);
+      return;
+    }
+    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
+    if (!sqlDefEntry) {
+      this.log(`Cant't look up schema for sql block '${this.name}'`);
+      return;
+    }
+    const ref: SQLReferenceData = {
+      sql: modelEnt.sql,
+      connection: modelEnt.connection,
+    };
+    const key = sqlDefEntry.refKey(ref);
+    const lookup = sqlDefEntry.getEntry(key);
+    let msg = `Schema read failure for sql query '${this.name}'`;
+    if (lookup) {
+      if (lookup.status == "present") {
+        return lookup.value;
+      }
+      if (lookup.status == "error") {
+        msg = lookup.message.includes(this.name)
+          ? `'Schema error: ${lookup.message}`
+          : `Schema error '${this.name}': ${lookup.message}`;
+      }
+      this.log(msg);
+    }
   }
 }
 
@@ -1327,16 +1365,12 @@ export interface NameSpace {
   getEntry(name: string): ModelEntry | undefined;
   setEntry(name: string, value: ModelEntry, exported: boolean): void;
 }
-export interface SQLBlock extends SQLReferenceData {
-  type: "sql";
-  name?: string;
-}
 
 export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
-  sqlCommandList: SQLBlock[] = [];
+  sqlBlockList: SQLBlock[] = [];
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
   }
@@ -1344,6 +1378,7 @@ export class Document extends MalloyElement implements NameSpace {
   getModelDef(extendingModelDef: model.ModelDef | undefined): model.ModelDef {
     this.documentModel = {};
     this.queryList = [];
+    this.sqlBlockList = [];
     if (extendingModelDef) {
       for (const inName in extendingModelDef.contents) {
         const struct = extendingModelDef.contents[inName];
@@ -1358,26 +1393,43 @@ export class Document extends MalloyElement implements NameSpace {
     }
     const def: model.ModelDef = { name: "", exports: [], contents: {} };
     for (const entry in this.documentModel) {
-      if (this.documentModel[entry].exported) {
-        def.exports.push(entry);
-      }
       const entryDef = this.documentModel[entry].entry;
       if (entryDef.type === "struct" || entryDef.type === "query") {
+        if (this.documentModel[entry].exported) {
+          def.exports.push(entry);
+        }
         def.contents[entry] = cloneDeep(entryDef);
       }
     }
     return def;
   }
 
+  /*
+
+  here's how this should work ... then i am going to sleep
+
+  3) an SQL source might reference a block, in which case
+     that block will ALSO have a structdef assigned to it
+     by a call to update from the translator which will NOT
+     add it to the model like a table would, but will instea
+     add it to the existing sql block definition
+
+  */
+
   addSQLBlock(sql: string[], name?: string): boolean {
-    const ret: SQLBlock = { type: "sql", sql };
+    const ret: SQLBlock = {
+      type: "sql",
+      name: `$${this.sqlBlockList.length}`,
+      sql,
+    };
     if (name) {
-      if (this.sqlCommandList.find((c) => c.name === name)) {
+      if (this.getEntry(name)) {
         return false;
       }
+      this.setEntry(name, { entry: ret });
       ret.name = name;
     }
-    this.sqlCommandList.push(ret);
+    this.sqlBlockList.push(ret);
     return true;
   }
 

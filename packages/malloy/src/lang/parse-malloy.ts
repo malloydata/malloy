@@ -137,6 +137,11 @@ interface Metadata extends NeededData, ErrorResponse, FinalResponse {
 }
 type MetadataResponse = Partial<Metadata>;
 
+export interface SQLBlock extends SQLReferenceData {
+  type: "sql";
+  name: string;
+}
+
 interface TranslatedResponseData
   extends NeededData,
     ErrorResponse,
@@ -144,6 +149,7 @@ interface TranslatedResponseData
   translated: {
     modelDef: ModelDef;
     queryList: Query[];
+    sqlBlockList: SQLBlock[];
   };
 }
 
@@ -529,6 +535,7 @@ class TranslateStep implements TranslationStep {
         const doc = astResponse.ast;
         that.modelDef = doc.getModelDef(extendingModel);
         that.queryList = doc.queryList;
+        that.sqlBlockList = doc.sqlBlockList;
       } else {
         that.root.logger.log({
           sourceURL: that.sourceURL,
@@ -544,6 +551,7 @@ class TranslateStep implements TranslationStep {
         translated: {
           modelDef: that.modelDef,
           queryList: that.queryList,
+          sqlBlockList: that.sqlBlockList,
         },
         ...that.errors(),
         final: true,
@@ -558,6 +566,7 @@ export abstract class MalloyTranslation {
   childTranslators: Map<string, MalloyTranslation>;
   urlIsFullPath?: boolean;
   queryList: Query[] = [];
+  sqlBlockList: SQLBlock[] = [];
   modelDef: ModelDef;
 
   readonly parseStep: ParseStep;
