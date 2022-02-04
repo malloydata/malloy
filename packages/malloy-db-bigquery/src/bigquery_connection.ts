@@ -283,8 +283,8 @@ export class BigQueryConnection extends Connection {
       return {
         schema: metadata.schema,
         needsPartitionPsuedoColumn:
-          metadata.timePartitioning.type !== undefined &&
-          metadata.timePartitioning.field === undefined,
+          metadata.timePartitioning?.type !== undefined &&
+          metadata.timePartitioning?.field === undefined,
       };
     } catch (e) {
       throw maybeRewriteError(e);
