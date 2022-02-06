@@ -470,12 +470,11 @@ export class BigQueryConnection extends Connection {
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
-      // TODO feature-sql-block should be the actual name if there is one, also key shouldn't be undefined
-      name: sqlRef.key || "no_name",
+      name: sqlRef.sql[0],
       dialect: this.dialectName,
       structSource: {
         type: "sql",
-        // TODO feature-sql-block shouldn't the name of the SQL block, or the SQL itself be included here?
+        method: "subquery",
       },
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],

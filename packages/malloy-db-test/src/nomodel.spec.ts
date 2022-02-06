@@ -272,4 +272,40 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.resultExplore.limit).toBe(3);
   });
+
+  it(`sql_block`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT number_one
+        FROM UNNEST([
+          STRUCT(1 as number_one)
+        ]);;
+
+      explore: eone is  from_sql(one) {}
+
+      query: eone -> { project: number_one }
+      `
+      )
+      .run();
+    expect(result.data.value[0].number_one).toBe(1);
+  });
+
+  it(`sql_block no explore`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT number_one
+        FROM UNNEST([
+          STRUCT(1 as number_one)
+        ]);;
+
+      query: from_sql(one) -> { project: number_one }
+      `
+      )
+      .run();
+    expect(result.data.value[0].number_one).toBe(1);
+  });
 });
