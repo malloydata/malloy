@@ -642,6 +642,9 @@ export class NamedSource extends Mallobj {
 
 export class SQLSource extends NamedSource {
   elementType = "sqlSource";
+  structRef(): model.StructRef {
+    return this.structDef();
+  }
   modelStruct(): model.StructDef | undefined {
     const modelEnt = this.modelEntry(this.name)?.entry;
     if (!modelEnt) {
