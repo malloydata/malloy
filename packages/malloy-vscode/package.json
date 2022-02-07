@@ -118,6 +118,18 @@
         "command": "malloy.editConnections",
         "title": "Edit Connections",
         "category": "Malloy"
+      },
+      {
+        "command": "malloy.runNamedSQLBlock",
+        "title": "Run Named SQL Block",
+        "category": "Malloy",
+        "enablement": "false"
+      },
+      {
+        "command": "malloy.runUnnamedSQLBlock",
+        "title": "Run Unnamed SQL Block",
+        "category": "Malloy",
+        "enablement": "false"
       }
     ],
     "menus": {

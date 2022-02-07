@@ -27,9 +27,11 @@ import {
   copyFieldPathCommand,
   editConnectionsCommand,
   runNamedQuery,
+  runNamedSQLBlock,
   runQueryCommand,
   runQueryFileCommand,
   runQueryWithEdit,
+  runUnnamedSQLBlock,
   showLicensesCommand,
 } from "./commands";
 import { CONNECTION_MANAGER } from "./state";
@@ -63,6 +65,19 @@ export function activate(context: vscode.ExtensionContext): void {
   // Run named query
   context.subscriptions.push(
     vscode.commands.registerCommand("malloy.runNamedQuery", runNamedQuery)
+  );
+
+  // Run named SQL block
+  context.subscriptions.push(
+    vscode.commands.registerCommand("malloy.runNamedSQLBlock", runNamedSQLBlock)
+  );
+
+  // Run unnamed SQL block
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "malloy.runUnnamedSQLBlock",
+      runUnnamedSQLBlock
+    )
   );
 
   // Copy Field Path

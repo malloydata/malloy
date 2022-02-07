@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { SchemaReader } from ".";
 import { Connection } from "./connection";
 import {
   DocumentHighlight as DocumentHighlightDefinition,
@@ -261,7 +262,7 @@ export class Malloy {
             connectionName,
             connectionToSQLReferencesMap,
           ] of sqlRefsByConnection) {
-            // connectionName might be undefined because lloyd says there is
+            // TODO feature-sql-block connectionName might be undefined because lloyd says there is
             // such a thing as a "default connection" ....
             const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
               connectionName
@@ -270,7 +271,7 @@ export class Malloy {
               connectionToSQLReferencesMap
             );
             translator.update({ sqlRefs });
-            // TODO handle error properlt
+            // TODO feature-sql-block handle error properlt
             // translator.update({errors: {
             //   sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
             // }});
@@ -303,32 +304,125 @@ export class Malloy {
   }): Promise<Result>;
   public static async run({
     sqlRunner,
+    sqlBlock,
+    schemaReader,
+  }: {
+    sqlRunner: SQLRunner;
+    schemaReader: SchemaReader;
+    sqlBlock: SQLBlock;
+  }): Promise<Result>;
+  public static async run({
+    lookupSQLRunner,
+    sqlBlock,
+    schemaReader,
+  }: {
+    lookupSQLRunner: LookupSQLRunner;
+    schemaReader: SchemaReader;
+    sqlBlock: SQLBlock;
+  }): Promise<Result>;
+  public static async run({
+    sqlRunner,
+    sqlBlock,
+    lookupSchemaReader,
+  }: {
+    sqlRunner: SQLRunner;
+    lookupSchemaReader: LookupSchemaReader;
+    sqlBlock: SQLBlock;
+  }): Promise<Result>;
+  public static async run({
+    lookupSQLRunner,
+    sqlBlock,
+    lookupSchemaReader,
+  }: {
+    lookupSQLRunner: LookupSQLRunner;
+    lookupSchemaReader: LookupSchemaReader;
+    sqlBlock: SQLBlock;
+  }): Promise<Result>;
+  public static async run({
+    sqlRunner,
     lookupSQLRunner,
     preparedResult,
+    sqlBlock,
+    schemaReader,
+    lookupSchemaReader,
   }: {
     sqlRunner?: SQLRunner;
     lookupSQLRunner?: LookupSQLRunner;
-    preparedResult: PreparedResult;
+    preparedResult?: PreparedResult;
+    sqlBlock?: SQLBlock;
+    schemaReader?: SchemaReader;
+    lookupSchemaReader?: LookupSchemaReader;
   }): Promise<Result> {
+    if (sqlBlock === undefined && preparedResult === undefined) {
+      throw new Error(
+        "Internal error: sqlBlock or preparedResult must be provided."
+      );
+    }
+    const connectionName =
+      sqlBlock?.connection || preparedResult?.connectionName;
     if (sqlRunner === undefined) {
       if (lookupSQLRunner === undefined) {
         throw new Error(
           "Internal Error: sqlRunner or lookupSqlRunner must be provided."
         );
       }
-      sqlRunner = await lookupSQLRunner.lookupSQLRunner(
-        preparedResult.connectionName
+      sqlRunner = await lookupSQLRunner.lookupSQLRunner(connectionName);
+    }
+    if (sqlBlock !== undefined) {
+      if (schemaReader === undefined) {
+        if (lookupSchemaReader === undefined) {
+          throw new Error(
+            "Internal Error: schemaReader or lookupSchemaReader must be provided to run a SQL block."
+          );
+        }
+        schemaReader = await lookupSchemaReader.lookupSchemaReader(
+          connectionName
+        );
+      }
+      // TODO feature-sql-block perhaps runSQL should additionally return the schema so this
+      //      can be done all at once... Or perhaps that should be left up to the Connection
+      //      to cache it if it has access to that info...
+      const structDef = (
+        await schemaReader.fetchSchemaForSQLBlocks([sqlBlock])
+      )[sqlBlock.key || "foo"];
+      // TODO feature-sql-block Key should not be undefined
+      // TODO feature-sql-block For now, just pick the last SQL statement?
+      const sqlToRun = sqlBlock.sql.join("\n");
+      const result = await sqlRunner.runSQL(sqlToRun);
+      return new Result(
+        {
+          structs: [structDef],
+          sql: sqlToRun,
+          result: result.rows,
+          totalRows: result.totalRows,
+          lastStageName: structDef.name,
+          malloy: "",
+          // TODO feature-sql-block default connection name should be allowed
+          connectionName: connectionName || "foo",
+          sourceExplore: "",
+          sourceFilters: [],
+        },
+        {
+          name: "empty_model",
+          exports: [],
+          contents: {},
+        }
+      );
+    } else if (preparedResult !== undefined) {
+      const result = await sqlRunner.runSQL(preparedResult.sql);
+      return new Result(
+        {
+          ...preparedResult._rawQuery,
+          result: result.rows,
+          totalRows: result.totalRows,
+        },
+        preparedResult._modelDef
+      );
+    } else {
+      throw new Error(
+        "Internal error: sqlBlock or preparedResult must be provided."
       );
     }
-    const result = await sqlRunner.runSQL(preparedResult.sql);
-    return new Result(
-      {
-        ...preparedResult._rawQuery,
-        result: result.rows,
-        totalRows: result.totalRows,
-      },
-      preparedResult._modelDef
-    );
   }
 }
 
@@ -393,6 +487,36 @@ export class Model {
       throw new Error(`Query index ${index} is out of bounds.`);
     }
     return new PreparedQuery(this.queryList[index], this.modelDef);
+  }
+
+  /**
+   * Retrieve a prepared query by the name of a query at the top level of the model.
+   *
+   * @param queryName Name of the query to retrieve.
+   * @returns A prepared query.
+   */
+  public getSQLBlockByName(sqlBlockName: string): SQLBlock {
+    const sqlBlock = this.sqlBlockList.find(
+      (sqlBlock) => sqlBlock.name === sqlBlockName
+    );
+    if (sqlBlock === undefined) {
+      throw new Error(`No SQL Block named '${sqlBlockName}'`);
+    }
+    return sqlBlock;
+  }
+
+  /**
+   * Retrieve a prepared query by the name of a query at the top level of the model.
+   *
+   * @param index Index of the SQL Block to retrieve.
+   * @returns A prepared query.
+   */
+  public getSQLBlockByIndex(index: number): SQLBlock {
+    const sqlBlock = this.sqlBlockList[index];
+    if (sqlBlock === undefined) {
+      throw new Error(`No SQL Block at index ${index}`);
+    }
+    return sqlBlock;
   }
 
   /**
@@ -1605,6 +1729,38 @@ export class Runtime {
     return this.loadModel(model).loadQueryByName(name);
   }
 
+  /**
+   * Load a SQL block by the URL or contents of a Malloy model document
+   * and the name of a query contained in the model.
+   *
+   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
+   * @param name The name of the sql block to use within the model.
+   * @returns A `SQLBlockMaterializer` capable of materializing the requested query, running it,
+   * or loading further related objects.
+   */
+  public loadSQLBlockByName(
+    model: ModelURL | ModelString,
+    name: string
+  ): SQLBlockMaterializer {
+    return this.loadModel(model).loadSQLBlockByName(name);
+  }
+
+  /**
+   * Load a SQL block by the URL or contents of a Malloy model document
+   * and the name of a query contained in the model.
+   *
+   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
+   * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
+   * @returns A `SQLBlockMaterializer` capable of materializing the requested query, running it,
+   * or loading further related objects.
+   */
+  public loadSQLBlockByIndex(
+    model: ModelURL | ModelString,
+    index: number
+  ): SQLBlockMaterializer {
+    return this.loadModel(model).loadSQLBlockByIndex(index);
+  }
+
   // TODO maybe use overloads for the alternative parameters
   /**
    * Compile a Malloy model by URL or contents.
@@ -1740,6 +1896,12 @@ class FluentState<T> {
   ): PreparedResultMaterializer {
     return new PreparedResultMaterializer(this.runtime, materialize);
   }
+
+  protected makeSQLBlockMaterializer(
+    materialize: () => Promise<SQLBlock>
+  ): SQLBlockMaterializer {
+    return new SQLBlockMaterializer(this.runtime, materialize);
+  }
 }
 
 /**
@@ -1814,6 +1976,34 @@ export class ModelMaterializer extends FluentState<Model> {
         model,
       });
       return queryModel.preparedQuery;
+    });
+  }
+
+  /**
+   * Load a SQL Block by name.
+   *
+   * @param name The name of the SQL Block to load.
+   * @returns A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
+   * or loading further related objects.
+   */
+  public loadSQLBlockByName(name: string): SQLBlockMaterializer {
+    return this.makeSQLBlockMaterializer(async () => {
+      return (await this.materialize()).getSQLBlockByName(name);
+    });
+  }
+
+  /**
+   * Load a SQL Block by index.
+   *
+   * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
+   * @returns A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
+   * or loading further related objects.
+   *
+   * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
+   */
+  public loadSQLBlockByIndex(index: number): SQLBlockMaterializer {
+    return this.makeSQLBlockMaterializer(async () => {
+      return (await this.materialize()).getSQLBlockByIndex(index);
     });
   }
 
@@ -1990,6 +2180,45 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    */
   public async getSQL(): Promise<string> {
     return (await this.getPreparedResult()).sql;
+  }
+}
+
+/**
+ * An object representing the task of loading a `SQLBlock`, capable of
+ * materializing the SQLBlock (via `getSQLBlock()`) or extending the task run
+ * the query.
+ */
+export class SQLBlockMaterializer extends FluentState<SQLBlock> {
+  /**
+   * Run this SQL block.
+   *
+   * @returns A promise to the query result data.
+   */
+  async run(): Promise<Result> {
+    const sqlBlock = await this.getSQLBlock();
+    const lookupSQLRunner = this.runtime.lookupSQLRunner;
+    const lookupSchemaReader = this.runtime.lookupSchemaReader;
+    return Malloy.run({ lookupSQLRunner, sqlBlock, lookupSchemaReader });
+  }
+
+  /**
+   * Materialize this loaded SQL block.
+   *
+   * @returns A promise of a SQL block.
+   */
+  public getSQLBlock(): Promise<SQLBlock> {
+    return this.materialize();
+  }
+
+  /**
+   * Materialize the SQL of this loaded SQL block.
+   *
+   * @returns A promise to the SQL string.
+   */
+  public async getSQL(): Promise<string> {
+    // TODO feature-sql-block multiple statement SQL
+    const sqlBlock = await this.getSQLBlock();
+    return sqlBlock.sql.join("\n");
   }
 }
 

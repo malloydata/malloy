@@ -79,7 +79,24 @@ interface QueryFileSpec {
   file: vscode.TextDocument;
 }
 
-type QuerySpec = NamedQuerySpec | QueryStringSpec | QueryFileSpec;
+interface NamedSQLQuerySpec {
+  type: "named_sql";
+  name: string;
+  file: vscode.TextDocument;
+}
+
+interface UnnamedSQLQuerySpec {
+  type: "unnamed_sql";
+  index: number;
+  file: vscode.TextDocument;
+}
+
+type QuerySpec =
+  | NamedQuerySpec
+  | QueryStringSpec
+  | QueryFileSpec
+  | NamedSQLQuerySpec
+  | UnnamedSQLQuerySpec;
 
 // TODO Come up with a better way to handle data styles. Perhaps this is
 //      an in-language understanding of model "metadata". For now,
@@ -212,24 +229,39 @@ export function runMalloyQuery(
 
           let queryMaterializer;
           let styles: DataStyles = {};
+          const queryFileURL = URL.fromString(
+            "file://" + query.file.uri.fsPath
+          );
           if (query.type === "string") {
             queryMaterializer = runtime
-              .loadModel(URL.fromString("file://" + query.file.uri.fsPath))
+              .loadModel(queryFileURL)
               .loadQuery(query.text);
           } else if (query.type === "named") {
             queryMaterializer = runtime.loadQueryByName(
-              URL.fromString("file://" + query.file.uri.fsPath),
+              queryFileURL,
               query.name
             );
-          } else if (query.index === -1) {
-            queryMaterializer = runtime.loadQuery(
-              URL.fromString("file://" + query.file.uri.fsPath)
+          } else if (query.type === "file") {
+            if (query.index === -1) {
+              queryMaterializer = runtime.loadQuery(queryFileURL);
+            } else {
+              queryMaterializer = runtime.loadQueryByIndex(
+                queryFileURL,
+                query.index
+              );
+            }
+          } else if (query.type === "named_sql") {
+            queryMaterializer = runtime.loadSQLBlockByName(
+              queryFileURL,
+              query.name
             );
-          } else {
-            queryMaterializer = runtime.loadQueryByIndex(
-              URL.fromString("file://" + query.file.uri.fsPath),
+          } else if (query.type === "unnamed_sql") {
+            queryMaterializer = runtime.loadSQLBlockByIndex(
+              queryFileURL,
               query.index
             );
+          } else {
+            throw new Error("Internal Error: Unexpected query type");
           }
 
           try {
