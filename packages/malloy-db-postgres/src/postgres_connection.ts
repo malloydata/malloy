@@ -21,6 +21,7 @@ import {
   QueryData,
   PooledConnection,
   parseTableURL,
+  SQLReferenceData,
 } from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
@@ -77,6 +78,7 @@ const SCHEMA_PAGE_SIZE = 1000;
 export class PostgresConnection extends Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private sqlSchemaCache = new Map<string, StructDef>();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
 
@@ -121,10 +123,27 @@ export class PostgresConnection extends Connection {
     for (const tableName of missing) {
       let inCache = this.schemaCache.get(tableName);
       if (!inCache) {
-        inCache = await this.getTableSchema(tableName);
+        inCache = await this.getTableSchema(tableName, false);
         this.schemaCache.set(tableName, inCache);
       }
       tableStructDefs[tableName] = inCache;
+    }
+    return tableStructDefs;
+  }
+
+  public async fetchSchemaForSQLBlocks(
+    sqlRefs: SQLReferenceData[]
+  ): Promise<NamedStructDefs> {
+    const tableStructDefs: NamedStructDefs = {};
+    for (const sqlRef of sqlRefs) {
+      const key = sqlRef.key || "foo";
+      const tableName = sqlRef.sql[0];
+      let inCache = this.sqlSchemaCache.get(key);
+      if (!inCache) {
+        inCache = await this.getTableSchema(tableName, true);
+        this.schemaCache.set(key, inCache);
+      }
+      tableStructDefs[key] = inCache;
     }
     return tableStructDefs;
   }
@@ -158,12 +177,17 @@ export class PostgresConnection extends Connection {
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 
-  private async getTableSchema(tableURL: string): Promise<StructDef> {
+  private async getTableSchema(
+    tableURLorQuery: string,
+    isQuery = false
+  ): Promise<StructDef> {
     const structDef: StructDef = {
       type: "struct",
-      name: tableURL,
+      name: tableURLorQuery,
       dialect: "postgres",
-      structSource: { type: "table" },
+      structSource: isQuery
+        ? { type: "sql", method: "subquery" }
+        : { type: "table" },
       structRelationship: {
         type: "basetable",
         connectionName: this.name,
@@ -171,17 +195,33 @@ export class PostgresConnection extends Connection {
       fields: [],
     };
 
-    const { tablePath: tableName } = parseTableURL(tableURL);
-    const [schema, table] = tableName.split(".");
-    if (table === undefined) {
-      throw new Error("Default schema not supported Yet in Postgres");
+    // run a query that retconst urns the columns of the table or query.
+
+    let infoQuery;
+    if (isQuery) {
+      const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
+      infoQuery = `
+        drop table if exists ${tempTableName};
+        create temp table ${tempTableName} as SELECT * FROM (
+          ${tableURLorQuery}
+        ) as x where false;
+        SELECT column_name, data_type FROM information_schema.columns where table_name='${tempTableName}';
+      `;
+    } else {
+      const { tablePath: tableName } = parseTableURL(tableURLorQuery);
+      const [schema, table] = tableName.split(".");
+      if (table === undefined) {
+        throw new Error("Default schema not supported Yet in Postgres");
+      }
+      infoQuery = `
+          SELECT column_name, data_type FROM information_schema.columns
+          WHERE table_name = '${table}'
+            AND table_schema = '${schema}'
+          `;
     }
+
     const result = await this.runPostgresQuery(
-      `
-      SELECT column_name, data_type FROM information_schema.columns
-      WHERE table_name = '${table}'
-        AND table_schema = '${schema}'
-      `,
+      infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
       false

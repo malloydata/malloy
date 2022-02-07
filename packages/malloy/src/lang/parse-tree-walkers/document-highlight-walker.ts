@@ -46,6 +46,7 @@ export const HighlightType = {
     Table: "call.table",
     From: "call.from",
     Function: "call.function",
+    FromSQL: "call.from_sql",
   },
   // TODO many of these should probably be categorized further
   Keyword: {
@@ -100,6 +101,7 @@ export const HighlightType = {
     Rename: "property.rename",
     Top: "property.top",
     Where: "property.where",
+    SQL: "property.sql",
   },
 };
 
@@ -199,11 +201,17 @@ export function passForHighlights(
       case MalloyParser.WHERE:
         register(token, HighlightType.Property.Where, true);
         break;
+      case MalloyParser.SQL:
+        register(token, HighlightType.Property.SQL, true);
+        break;
       case MalloyParser.TABLE:
         register(token, HighlightType.Call.Table);
         break;
       case MalloyParser.FROM:
-        register(token, HighlightType.Call.Table);
+        register(token, HighlightType.Call.From);
+        break;
+      case MalloyParser.FROM_SQL:
+        register(token, HighlightType.Call.FromSQL);
         break;
       case MalloyParser.STRING_LITERAL:
       case MalloyParser.JSON_STRING:

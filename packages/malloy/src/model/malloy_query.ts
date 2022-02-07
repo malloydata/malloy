@@ -509,7 +509,7 @@ class QueryField extends QueryNode {
       this.parent.fieldDef.structSource.type === "nested" ||
         this.parent.fieldDef.structSource.type === "inline" ||
         (this.parent.fieldDef.structSource.type === "sql" &&
-          this.parent.fieldDef.structSource.nested === true)
+          this.parent.fieldDef.structSource.method === "nested")
     );
   }
 }
@@ -2358,7 +2358,7 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
-      structDef.structSource = { type: "sql", nested: true };
+      structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2922,7 +2922,14 @@ class QueryStruct extends QueryNode {
         return this.dialect.quoteTableName(tablePath);
       }
       case "sql":
-        return this.fieldDef.name;
+        if (this.fieldDef.structSource.method === "nested") {
+          return this.fieldDef.name;
+        } else if (this.fieldDef.structSource.method === "subquery") {
+          return `(${this.fieldDef.name})`;
+        }
+        throw new Error(
+          "Internal Error: Unknown structSource type 'sql' method"
+        );
       case "nested":
         // 'name' is always the source field even if has been renamed through
         // 'as'

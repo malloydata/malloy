@@ -33,11 +33,6 @@ create table malloytest.pg_times as (
 */
 
 describe("postgres tests", () => {
-  // have at least one test
-  it("stub", () => {
-    expect(1).toEqual(1);
-  });
-
   // it(`raw date tests`, async () => {
   //   const result = await runtime
   //     .loadQuery(
@@ -117,4 +112,19 @@ describe("postgres tests", () => {
   //   //   new Date("2020-01-01")
   //   // );
   // });
+
+  it(`sql_block`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as n
+       ;;
+
+      query: from_sql(one) -> { project: n }
+      `
+      )
+      .run();
+    expect(result.data.value[0].n).toBe(1);
+  });
 });

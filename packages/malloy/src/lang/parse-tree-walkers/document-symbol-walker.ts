@@ -162,6 +162,17 @@ class DocumentSymbolWalker implements MalloyListener {
       parent.children.push(symbol);
     }
   }
+
+  enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
+    const name = pcx.sqlCommandNameDef()?.id().text;
+    const symbol = {
+      range: this.rangeOf(pcx),
+      name: name || "unnamed_sql",
+      type: name === undefined ? "unnamed_sql" : "sql",
+      children: [],
+    };
+    this.symbols.push(symbol);
+  }
 }
 
 export function walkForDocumentSymbols(

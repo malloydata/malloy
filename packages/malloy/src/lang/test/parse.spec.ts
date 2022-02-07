@@ -15,7 +15,7 @@
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
-import { TestTranslator, pretty } from "./test-translator";
+import { TestTranslator, pretty, aTableDef } from "./test-translator";
 
 const inspectCompile = false;
 
@@ -603,8 +603,8 @@ describe("sql backdoor", () => {
   );
   test("explore from sql", () => {
     const model = new BetaModel(`
-      sql: users IS || SELECT * FROM users ;;
-      explore: malloyUsers is from_sql(users) { primary_key: id }
+      sql: users IS || SELECT * FROM aTable ;;
+      explore: malloyUsers is from_sql(users) { primary_key: ai }
     `);
     expect(model).toBeErrorless();
     const needs = model.translate()?.sqlRefs;
@@ -612,9 +612,17 @@ describe("sql backdoor", () => {
     if (needs) {
       expect(needs.length).toBe(1);
       expect(needs[0]).toMatchObject({
-        sql: [" SELECT * FROM users "],
+        sql: [" SELECT * FROM aTable "],
         connection: undefined,
       });
+      const refKey = needs[0].key;
+      expect(refKey).toBeDefined();
+      if (refKey) {
+        model.update({
+          sqlRefs: { [refKey]: aTableDef },
+        });
+        expect(model).toCompile();
+      }
     }
   });
 });

@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { SQLReferenceData } from "./lang/parse-malloy";
 import { MalloyQueryData, StructDef } from "./model";
 
 /**
@@ -87,6 +88,11 @@ export interface SchemaReader {
    * @returns A mapping of table names to schemas.
    */
   fetchSchemaForTables(tables: string[]): Promise<Record<string, StructDef>>;
+
+  // TODO comment
+  fetchSchemaForSQLBlocks(
+    sqlRefs: SQLReferenceData[]
+  ): Promise<Record<string, StructDef>>;
 }
 
 /**
