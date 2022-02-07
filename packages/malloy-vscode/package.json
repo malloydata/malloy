@@ -167,6 +167,13 @@
         "configuration": "language.json"
       }
     ],
+    "grammars": [
+      {
+        "language": "malloy",
+        "scopeName": "source.malloy",
+        "path": "./malloy.tmGrammar.json"
+      }
+    ],
     "views": {
       "malloy": [
         {

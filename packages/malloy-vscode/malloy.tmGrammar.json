@@ -1,0 +1,18 @@
+{
+  "scopeName": "source.malloy",
+  "patterns": [{ "include": "#sql-statement" }],
+  "repository": {
+    "sql-statement": {
+      "begin": "\\|\\|",
+      "end": ";;",
+      "beginCaptures": {
+        "0": { "name": "punctuation.sql-block.open" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.sql-block.close" }
+      },
+      "name": "source.sql",
+      "patterns": [{ "include": "source.sql"}]
+    }
+  }
+}
