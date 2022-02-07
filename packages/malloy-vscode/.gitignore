@@ -5,5 +5,3 @@ node_modules
 *.vsix
 third_party_notices.txt
 README.md
-malloy.tmGrammar.json
-!src/malloy.tmGrammar.json

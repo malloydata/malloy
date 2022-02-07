@@ -98,11 +98,6 @@ export async function doBuild(target?: Target): Promise<void> {
   // the only option is to put a readme file at the root of the package :(
   fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
 
-  fs.copyFileSync(
-    path.join("src", "malloy.tmGrammar.json"),
-    "malloy.tmGrammar.json"
-  );
-
   if (target) {
     fs.copyFileSync(
       path.join(
