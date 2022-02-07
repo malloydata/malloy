@@ -69,6 +69,7 @@ export type {
   ResultJSON,
   QueryMaterializer,
   PreparedResultMaterializer,
+  SQLBlockMaterializer,
   ExploreMaterializer,
 } from "./malloy";
 export type {
@@ -86,3 +87,4 @@ export { URL } from "./runtime_types";
 export { Connection } from "./connection";
 export type { PooledConnection } from "./connection";
 export type { Loggable } from "./malloy";
+export type { SQLBlock } from "./lang/parse-malloy";

@@ -22,10 +22,8 @@ import {
 } from "../../webview_message_manager";
 import { Spinner } from "../components";
 import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
-import Prism from "prismjs";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-sql";
 import { usePopperTooltip } from "react-popper-tooltip";
+import { highlight } from "./highlighter";
 
 enum Status {
   Ready = "ready",
@@ -69,9 +67,7 @@ export const App: React.FC = () => {
               const result = Result.fromJSON(message.result);
               const data = result.data;
               setJSON(JSON.stringify(data.toObject(), null, 2));
-              setSQL(
-                Prism.highlight(result.sql, Prism.languages["sql"], "sql")
-              );
+              highlight(result.sql, "sql").then(setSQL);
               const rendered = await new HTMLView(document).render(data, {
                 dataStyles: message.styles,
                 isDrillingEnabled: true,
