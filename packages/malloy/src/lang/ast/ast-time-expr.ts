@@ -528,7 +528,7 @@ export class ForRange extends ExpressionDef {
     let from = startV.value;
     if (startV.dataType === "date") {
       // This gives granular nodes a chance to control how they become timestamps
-      rangeStart = rangeStart.thisValueToTimestamp(startV);
+      rangeStart = rangeStart.thisValueToTimestamp(startV, fs.getDialect());
       from = rangeStart.getExpression(fs).value;
     }
     const to = timestampOffset(fs.getDialect(), from, "+", nV.value, units);
