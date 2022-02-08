@@ -25,7 +25,7 @@ import {
 } from "../field-space";
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
-import { MalloyTranslation, SQLBlock, SQLReferenceData } from "../parse-malloy";
+import { MalloyTranslation, SQLDef } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -33,6 +33,7 @@ import {
   ExpressionDef,
 } from "./index";
 import { QueryField } from "../space-field";
+import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -663,11 +664,7 @@ export class SQLSource extends NamedSource {
       this.log(`Cant't look up schema for sql block '${this.name}'`);
       return;
     }
-    const ref: SQLReferenceData = {
-      sql: modelEnt.sql,
-      connection: modelEnt.connection,
-    };
-    const key = sqlDefEntry.refKey(ref);
+    const key = modelEnt.digest;
     const lookup = sqlDefEntry.getEntry(key);
     let msg = `Schema read failure for sql query '${this.name}'`;
     if (lookup) {
@@ -1361,7 +1358,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 }
 
 export interface ModelEntry {
-  entry: model.NamedModelObject | SQLBlock;
+  entry: model.NamedModelObject | SQLDef;
   exported?: boolean;
 }
 export interface NameSpace {
@@ -1373,7 +1370,7 @@ export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
-  sqlBlockList: SQLBlock[] = [];
+  sqlDefs: SQLDef[] = [];
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
   }
@@ -1381,7 +1378,7 @@ export class Document extends MalloyElement implements NameSpace {
   getModelDef(extendingModelDef: model.ModelDef | undefined): model.ModelDef {
     this.documentModel = {};
     this.queryList = [];
-    this.sqlBlockList = [];
+    this.sqlDefs = [];
     if (extendingModelDef) {
       for (const inName in extendingModelDef.contents) {
         const struct = extendingModelDef.contents[inName];
@@ -1407,32 +1404,20 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  /*
-
-  here's how this should work ... then i am going to sleep
-
-  3) an SQL source might reference a block, in which case
-     that block will ALSO have a structdef assigned to it
-     by a call to update from the translator which will NOT
-     add it to the model like a table would, but will instea
-     add it to the existing sql block definition
-
-  */
-
-  addSQLBlock(sql: string[], name?: string): boolean {
-    const ret: SQLBlock = {
+  defineSQL(sql: model.SQLBlock, name?: string): boolean {
+    const ret: SQLDef = {
       type: "sql",
-      name: `$${this.sqlBlockList.length}`,
-      sql,
+      name: `$${this.sqlDefs.length}`,
+      ...sql,
     };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
-      this.setEntry(name, { entry: ret });
       ret.name = name;
+      this.setEntry(name, { entry: ret });
     }
-    this.sqlBlockList.push(ret);
+    this.sqlDefs.push(ret);
     return true;
   }
 
@@ -2052,13 +2037,16 @@ export class ConstantParameter extends HasParameter {
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
-  connectionName?: string;
-  constructor(readonly stmts: string[]) {
+  constructor(readonly blockReq: SQLBlockRequest) {
     super();
   }
 
+  sqlBlock(): model.SQLBlock {
+    return makeSQLBlock(this.blockReq);
+  }
+
   execute(doc: Document): void {
-    if (!doc.addSQLBlock(this.stmts, this.is)) {
+    if (!doc.defineSQL(this.sqlBlock(), this.is)) {
       this.log(`${this.is} already defined`);
     }
   }

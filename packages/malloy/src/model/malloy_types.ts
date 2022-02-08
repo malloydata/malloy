@@ -432,13 +432,28 @@ export type StructRelationship =
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
 
+export interface SQLBlock {
+  before?: string[];
+  select: string;
+  after?: string[];
+  digest: string; // digest/name is a hash of the connection and the select
+  connection?: string;
+}
+
+interface SubquerySource {
+  type: "sql";
+  method: "subquery";
+  sqlBlock: SQLBlock;
+}
+
 /** where does the struct come from? */
 export type StructSource =
   | { type: "table"; tablePath?: string }
   | { type: "nested" }
   | { type: "inline" }
   | { type: "query"; query: Query }
-  | { type: "sql"; method: "nested" | "subquery" };
+  | { type: "sql"; method: "nested" }
+  | SubquerySource;
 
 // Inline and nested tables, cannot have a StructRelationship
 //  the relationshipo is implied

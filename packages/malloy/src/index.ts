@@ -26,6 +26,7 @@ export type {
   FieldTypeDef,
   // Needed for drills in render
   FilterExpression,
+  SQLBlock,
 } from "./model";
 export {
   // Neede for VSCode extension
@@ -33,7 +34,7 @@ export {
   // Needed for tests only
   MalloyTranslator,
 } from "./lang";
-export type { LogMessage, TranslateResponse, SQLReferenceData } from "./lang";
+export type { LogMessage, TranslateResponse, SQLDef } from "./lang";
 export {
   Malloy,
   Runtime,

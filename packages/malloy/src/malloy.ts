@@ -17,8 +17,8 @@ import {
   DocumentSymbol as DocumentSymbolDefinition,
   LogMessage,
   MalloyTranslator,
+  SQLDef,
 } from "./lang";
-import { SQLBlock, SQLReferenceData } from "./lang/parse-malloy";
 import {
   CompiledQuery,
   FieldBooleanDef,
@@ -37,6 +37,7 @@ import {
   QueryResult,
   StructDef,
   TurtleDef,
+  SQLBlock,
 } from "./model";
 import {
   LookupSQLRunner,
@@ -166,7 +167,7 @@ export class Malloy {
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
-            result.translated.sqlBlockList
+            result.translated.sqlDefs
           );
         } else {
           const errors = result.errors || [];
@@ -236,13 +237,13 @@ export class Malloy {
             translator.update({ tables });
           }
         }
-        if (result.sqlRefs) {
+        if (result.sqlStructs) {
           // collect sql refs by connection name since there may be multiple connections
           const sqlRefsByConnection: Map<
             string | undefined,
-            Array<SQLReferenceData>
+            Array<SQLBlock>
           > = new Map();
-          for (const missingSQLSchemaRef of result.sqlRefs) {
+          for (const missingSQLSchemaRef of result.sqlStructs) {
             const connectionName = missingSQLSchemaRef.connection;
 
             let connectionToSQLReferencesMap =
@@ -266,10 +267,10 @@ export class Malloy {
             const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
               connectionName
             );
-            const sqlRefs = await schemaFetcher.fetchSchemaForSQLBlocks(
+            const sqlStructs = await schemaFetcher.fetchSchemaForSQLBlocks(
               connectionToSQLReferencesMap
             );
-            translator.update({ sqlRefs });
+            translator.update({ sqlStructs });
             // TODO handle error properlt
             // translator.update({errors: {
             //   sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
@@ -353,16 +354,16 @@ export class MalloyError extends Error {
 export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
-  private sqlBlockList: SQLBlock[];
+  private sqlDefs: SQLDef[];
 
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
-    sqlBlockList: SQLBlock[]
+    sqlDefs: SQLDef[]
   ) {
     this.modelDef = modelDef;
     this.queryList = queryList;
-    this.sqlBlockList = sqlBlockList;
+    this.sqlDefs = sqlDefs;
   }
 
   /**

@@ -607,7 +607,7 @@ describe("sql backdoor", () => {
       explore: malloyUsers is from_sql(users) { primary_key: ai }
     `);
     expect(model).toBeErrorless();
-    const needs = model.translate()?.sqlRefs;
+    const needs = model.translate()?.sqlStructs;
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
@@ -615,11 +615,11 @@ describe("sql backdoor", () => {
         sql: [" SELECT * FROM aTable "],
         connection: undefined,
       });
-      const refKey = needs[0].key;
+      const refKey = needs[0].digest;
       expect(refKey).toBeDefined();
       if (refKey) {
         model.update({
-          sqlRefs: { [refKey]: aTableDef },
+          sqlStructs: { [refKey]: aTableDef },
         });
         expect(model).toCompile();
       }
