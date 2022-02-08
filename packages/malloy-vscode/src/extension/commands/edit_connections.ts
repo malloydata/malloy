@@ -41,7 +41,7 @@ export function editConnectionsCommand(): void {
 
   const entrySrc = panel.webview.asWebviewUri(onDiskPath);
 
-  panel.webview.html = getWebviewHtml(entrySrc.toString());
+  panel.webview.html = getWebviewHtml(entrySrc.toString(), panel.webview);
 
   const messageManager = new WebviewMessageManager<ConnectionPanelMessage>(
     panel

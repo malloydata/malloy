@@ -49,6 +49,7 @@ export {
   TimestampTimeframe,
   Result,
   parseTableURL,
+  QueryMaterializer,
 } from "./malloy";
 export type {
   Explore,
@@ -67,7 +68,6 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
-  QueryMaterializer,
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,

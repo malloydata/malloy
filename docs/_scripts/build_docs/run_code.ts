@@ -24,6 +24,7 @@ import {
   URL,
   URLReader,
   QueryMaterializer,
+  SQLBlockMaterializer,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import path from "path";
@@ -126,7 +127,7 @@ class DocsURLReader implements URLReader {
 }
 
 const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
-  pageSize: 5,
+  rowLimit: 5,
 });
 
 function resolveSourcePath(sourcePath: string) {
@@ -178,48 +179,28 @@ export async function runCode(
   log(`  >> Running query ${querySummary}`);
   const runStartTime = performance.now();
 
-  const sqlRunner = {
-    runSQL: (sql: string) =>
-      BIGQUERY_CONNECTION.runSQL(sql, {
-        pageSize: options.pageSize || 5,
-      }),
-  };
-
   // Docs are compiled from source, not from a URL. This means that relative
   // imports don't work. It shouldn't be necessary to show relative imports
   // in runnable docs. If this changes, the `urlReader` will need to be able to
   // handle reading a fake URL for the query as well as real URLs for local files.
-  let queryResult;
+  let runnable: SQLBlockMaterializer | QueryMaterializer;
   if (options.sqlBlockName) {
-    const sqlBlock = await runtime
+    runnable = runtime
       .loadModel(fullCode)
-      .loadSQLBlockByName(options.sqlBlockName)
-      .getSQLBlock();
-    queryResult = await Malloy.run({
-      sqlRunner,
-      schemaReader: BIGQUERY_CONNECTION,
-      sqlBlock,
-    });
+      .loadSQLBlockByName(options.sqlBlockName);
+  } else if (options.queryName && options.exploreName) {
+    runnable = runtime
+      .loadModel(fullCode)
+      .loadExploreByName(options.exploreName)
+      .loadQueryByName(options.queryName);
+  } else if (options.queryName) {
+    runnable = runtime.loadModel(fullCode).loadQueryByName(options.queryName);
   } else {
-    let loadedQuery: QueryMaterializer;
-    if (options.queryName && options.exploreName) {
-      loadedQuery = runtime
-        .loadModel(fullCode)
-        .loadExploreByName(options.exploreName)
-        .loadQueryByName(options.queryName);
-    } else if (options.queryName) {
-      loadedQuery = runtime
-        .loadModel(fullCode)
-        .loadQueryByName(options.queryName);
-    } else {
-      loadedQuery = runtime.loadQuery(fullCode);
-    }
-    const preparedResult = await loadedQuery.getPreparedResult();
-    queryResult = await Malloy.run({
-      sqlRunner,
-      preparedResult,
-    });
+    runnable = runtime.loadQuery(fullCode);
   }
+  const queryResult = await runnable.run({
+    rowLimit: options.pageSize || 5,
+  });
 
   log(
     `  >> Finished running query ${querySummary} in ${timeString(

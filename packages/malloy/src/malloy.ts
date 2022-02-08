@@ -288,55 +288,39 @@ export class Malloy {
    * @param preparedResult A fully-prepared query which is ready to run (a `PreparedResult`).
    * @returns Query result data and associated metadata.
    */
-  public static async run({
-    lookupSQLRunner,
-    preparedResult,
-  }: {
+  public static async run(params: {
     lookupSQLRunner: LookupSQLRunner;
     preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
-  public static async run({
-    sqlRunner,
-    preparedResult,
-  }: {
+  public static async run(params: {
     sqlRunner: SQLRunner;
     preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
-  public static async run({
-    sqlRunner,
-    sqlBlock,
-    schemaReader,
-  }: {
+  public static async run(params: {
     sqlRunner: SQLRunner;
     schemaReader: SchemaReader;
     sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
-  public static async run({
-    lookupSQLRunner,
-    sqlBlock,
-    schemaReader,
-  }: {
+  public static async run(params: {
     lookupSQLRunner: LookupSQLRunner;
     schemaReader: SchemaReader;
     sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
-  public static async run({
-    sqlRunner,
-    sqlBlock,
-    lookupSchemaReader,
-  }: {
+  public static async run(params: {
     sqlRunner: SQLRunner;
     lookupSchemaReader: LookupSchemaReader;
     sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
-  public static async run({
-    lookupSQLRunner,
-    sqlBlock,
-    lookupSchemaReader,
-  }: {
+  public static async run(params: {
     lookupSQLRunner: LookupSQLRunner;
     lookupSchemaReader: LookupSchemaReader;
     sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run({
     sqlRunner,
@@ -345,6 +329,7 @@ export class Malloy {
     sqlBlock,
     schemaReader,
     lookupSchemaReader,
+    options,
   }: {
     sqlRunner?: SQLRunner;
     lookupSQLRunner?: LookupSQLRunner;
@@ -352,6 +337,7 @@ export class Malloy {
     sqlBlock?: SQLBlock;
     schemaReader?: SchemaReader;
     lookupSchemaReader?: LookupSchemaReader;
+    options?: { rowLimit?: number };
   }): Promise<Result> {
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
@@ -388,7 +374,7 @@ export class Malloy {
       // TODO feature-sql-block Key should not be undefined
       // TODO feature-sql-block For now, just pick the last SQL statement?
       const sqlToRun = sqlBlock.sql.join("\n");
-      const result = await sqlRunner.runSQL(sqlToRun);
+      const result = await sqlRunner.runSQL(sqlToRun, options);
       return new Result(
         {
           structs: [structDef],
@@ -409,7 +395,7 @@ export class Malloy {
         }
       );
     } else if (preparedResult !== undefined) {
-      const result = await sqlRunner.runSQL(preparedResult.sql);
+      const result = await sqlRunner.runSQL(preparedResult.sql, options);
       return new Result(
         {
           ...preparedResult._rawQuery,
@@ -2101,10 +2087,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns The query results from running this loaded query.
    */
-  async run(): Promise<Result> {
+  async run(options?: { rowLimit?: number }): Promise<Result> {
     const lookupSQLRunner = this.runtime.lookupSQLRunner;
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ lookupSQLRunner, preparedResult });
+    return Malloy.run({ lookupSQLRunner, preparedResult, options });
   }
 
   /**
@@ -2158,10 +2144,10 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    *
    * @returns A promise to the query result data.
    */
-  async run(): Promise<Result> {
+  async run(options?: { rowLimit?: number }): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const lookupSQLRunner = this.runtime.lookupSQLRunner;
-    return Malloy.run({ lookupSQLRunner, preparedResult });
+    return Malloy.run({ lookupSQLRunner, preparedResult, options });
   }
 
   /**
@@ -2194,11 +2180,16 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    *
    * @returns A promise to the query result data.
    */
-  async run(): Promise<Result> {
+  async run(options?: { rowLimit?: number }): Promise<Result> {
     const sqlBlock = await this.getSQLBlock();
     const lookupSQLRunner = this.runtime.lookupSQLRunner;
     const lookupSchemaReader = this.runtime.lookupSchemaReader;
-    return Malloy.run({ lookupSQLRunner, sqlBlock, lookupSchemaReader });
+    return Malloy.run({
+      lookupSQLRunner,
+      sqlBlock,
+      lookupSchemaReader,
+      options,
+    });
   }
 
   /**

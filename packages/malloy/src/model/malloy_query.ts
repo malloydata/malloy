@@ -1307,6 +1307,7 @@ class QueryQuery extends QueryField {
         f instanceof QueryAtomicField &&
         isScalarField(f) &&
         f.includeInWildcard() &&
+        !this.parent.dialect.ignoreInProject(f.fieldDef.name) &&
         (!filter || filter(f))
       ) {
         // fieldNames.push(`${struct.getFullOutputName()}${name}`);

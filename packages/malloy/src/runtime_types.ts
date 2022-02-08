@@ -114,10 +114,14 @@ export interface SQLRunner {
    * Run some SQL and yield results.
    *
    * @param sql The SQL to run.
+   * @param options.pageSize Maximum number of results to return at once.
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(sql: string): Promise<MalloyQueryData>;
+  runSQL(
+    sql: string,
+    options?: { rowLimit?: number }
+  ): Promise<MalloyQueryData>;
 }
 
 /**

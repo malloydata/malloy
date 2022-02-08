@@ -52,7 +52,7 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
 };
 
 interface PostgresQueryConfiguration {
-  pageSize?: number;
+  rowLimit?: number;
 }
 
 type PostgresQueryConfigurationReader =
@@ -245,7 +245,7 @@ export class PostgresConnection extends Connection {
     const config = await this.readQueryConfig();
     const queryData = await this.runPostgresQuery(
       query,
-      config.pageSize || DEFAULT_PAGE_SIZE,
+      config.rowLimit || DEFAULT_PAGE_SIZE,
       0,
       false
     );
@@ -258,14 +258,14 @@ export class PostgresConnection extends Connection {
 
   public async runSQL(
     sqlCommand: string,
-    pageSize?: number,
+    { rowLimit }: { rowLimit?: number } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
-      .update(String(pageSize))
+      .update(String(rowLimit))
       .update(String(rowIndex))
       .digest("hex");
     let result;
@@ -274,7 +274,7 @@ export class PostgresConnection extends Connection {
     }
     result = await this.runPostgresQuery(
       sqlCommand,
-      pageSize || config.pageSize || DEFAULT_PAGE_SIZE,
+      rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
