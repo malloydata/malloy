@@ -136,7 +136,7 @@ export class PostgresConnection extends Connection {
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
     for (const sqlRef of sqlStructs) {
-      const key = sqlRef.digest;
+      const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {
         inCache = await this.getSQLBlockSchema(sqlRef);

@@ -539,7 +539,7 @@ export class BigQueryConnection extends Connection {
 
     for (const sqlRef of sqlRefs) {
       // TODO feature-sql-block sqlRef key should not be nullable here
-      const key = sqlRef.digest;
+      const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {
         const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
