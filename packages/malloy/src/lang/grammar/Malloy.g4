@@ -31,7 +31,7 @@ defineQuery
   ;
 
 defineSQLStatement
-  : SQL (sqlCommandNameDef IS)? sqlText+ (ON connectionName)?
+  : SQL (sqlCommandNameDef IS)? sqlBlock (ON connectionName)?
   ;
 
 importStatement
@@ -419,7 +419,7 @@ jsonArray
    | OBRACK CBRACK
    ;
 
-sqlText: SQL_STRING;
+sqlBlock: SQL_STRING;
 sqlExploreNameRef: id;
 sqlCommandNameDef: id;
 connectionName: JSON_STRING;
