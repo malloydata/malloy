@@ -606,7 +606,7 @@ describe("sql backdoor", () => {
       expect(needs.length).toBe(1);
       const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
       expect(needs[0]).toMatchObject(sql);
-      const refKey = needs[0].digest;
+      const refKey = needs[0].name;
       expect(refKey).toBeDefined();
       if (refKey) {
         model.update({

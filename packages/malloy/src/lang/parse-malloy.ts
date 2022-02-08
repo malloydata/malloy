@@ -108,8 +108,8 @@ export class SQLExploreZone extends Zone<StructDef> {
 
   referenceBlock(from: ast.SQLStatement, at: Range): void {
     const sql = from.sqlBlock();
-    this.reference(sql.digest, at);
-    this.keyed[sql.digest] = sql;
+    this.reference(sql.name, at);
+    this.keyed[sql.name] = sql;
   }
 
   getUndefinedBlocks(): SQLBlock[] | undefined {
@@ -123,11 +123,6 @@ export class SQLExploreZone extends Zone<StructDef> {
 
 export interface NeedSQLStruct {
   sqlStructs: SQLBlock[];
-}
-
-export interface SQLDef extends SQLBlock {
-  type: "sql";
-  name: string;
 }
 
 interface NeededData extends NeedURLData, NeedSchemaData, NeedSQLStruct {}
@@ -147,11 +142,6 @@ interface Metadata extends NeededData, ErrorResponse, FinalResponse {
 }
 type MetadataResponse = Partial<Metadata>;
 
-export interface SQLDef extends SQLBlock {
-  type: "sql";
-  name: string;
-}
-
 interface TranslatedResponseData
   extends NeededData,
     ErrorResponse,
@@ -159,7 +149,7 @@ interface TranslatedResponseData
   translated: {
     modelDef: ModelDef;
     queryList: Query[];
-    sqlDefs: SQLDef[];
+    sqlBlocks: SQLBlock[];
   };
 }
 
@@ -542,7 +532,7 @@ class TranslateStep implements TranslationStep {
         const doc = astResponse.ast;
         that.modelDef = doc.getModelDef(extendingModel);
         that.queryList = doc.queryList;
-        that.sqlDefs = doc.sqlDefs;
+        that.sqlBlocks = doc.sqlBlocks;
       } else {
         that.root.logger.log({
           sourceURL: that.sourceURL,
@@ -558,7 +548,7 @@ class TranslateStep implements TranslationStep {
         translated: {
           modelDef: that.modelDef,
           queryList: that.queryList,
-          sqlDefs: that.sqlDefs,
+          sqlBlocks: that.sqlBlocks,
         },
         ...that.errors(),
         final: true,
@@ -573,7 +563,7 @@ export abstract class MalloyTranslation {
   childTranslators: Map<string, MalloyTranslation>;
   urlIsFullPath?: boolean;
   queryList: Query[] = [];
-  sqlDefs: SQLDef[] = [];
+  sqlBlocks: SQLBlock[] = [];
   modelDef: ModelDef;
 
   readonly parseStep: ParseStep;

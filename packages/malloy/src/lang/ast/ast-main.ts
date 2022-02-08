@@ -25,7 +25,7 @@ import {
 } from "../field-space";
 import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
-import { MalloyTranslation, SQLDef } from "../parse-malloy";
+import { MalloyTranslation } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -570,7 +570,7 @@ export class NamedSource extends Mallobj {
     if (modelEnt.type === "query") {
       this.log(`Must use 'from()' to explore query '${this.name}`);
       return;
-    } else if (modelEnt.type === "sql") {
+    } else if (modelEnt.type === "sqlBlock") {
       this.log(`Must use 'from_sql()' to explore sql query '${this.name}`);
       return;
     }
@@ -664,19 +664,23 @@ export class SQLSource extends NamedSource {
       this.log(`Cant't look up schema for sql block '${this.name}'`);
       return;
     }
-    const key = modelEnt.digest;
-    const lookup = sqlDefEntry.getEntry(key);
-    let msg = `Schema read failure for sql query '${this.name}'`;
-    if (lookup) {
-      if (lookup.status == "present") {
-        return lookup.value;
+    if (modelEnt.type == "sqlBlock") {
+      const key = modelEnt.name;
+      const lookup = sqlDefEntry.getEntry(key);
+      let msg = `Schema read failure for sql query '${this.name}'`;
+      if (lookup) {
+        if (lookup.status == "present") {
+          return lookup.value;
+        }
+        if (lookup.status == "error") {
+          msg = lookup.message.includes(this.name)
+            ? `'Schema error: ${lookup.message}`
+            : `Schema error '${this.name}': ${lookup.message}`;
+        }
+        this.log(msg);
       }
-      if (lookup.status == "error") {
-        msg = lookup.message.includes(this.name)
-          ? `'Schema error: ${lookup.message}`
-          : `Schema error '${this.name}': ${lookup.message}`;
-      }
-      this.log(msg);
+    } else {
+      this.log(`Mis-typed definition for'${this.name}'`);
     }
   }
 }
@@ -1358,7 +1362,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 }
 
 export interface ModelEntry {
-  entry: model.NamedModelObject | SQLDef;
+  entry: model.NamedModelObject | model.SQLBlock;
   exported?: boolean;
 }
 export interface NameSpace {
@@ -1370,7 +1374,7 @@ export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
-  sqlDefs: SQLDef[] = [];
+  sqlBlocks: model.SQLBlock[] = [];
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
   }
@@ -1378,7 +1382,7 @@ export class Document extends MalloyElement implements NameSpace {
   getModelDef(extendingModelDef: model.ModelDef | undefined): model.ModelDef {
     this.documentModel = {};
     this.queryList = [];
-    this.sqlDefs = [];
+    this.sqlBlocks = [];
     if (extendingModelDef) {
       for (const inName in extendingModelDef.contents) {
         const struct = extendingModelDef.contents[inName];
@@ -1405,19 +1409,15 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   defineSQL(sql: model.SQLBlock, name?: string): boolean {
-    const ret: SQLDef = {
-      type: "sql",
-      name: `$${this.sqlDefs.length}`,
-      ...sql,
-    };
+    const ret = { ...sql, as: `$${this.sqlBlocks.length}` };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
-      ret.name = name;
+      ret.as = name;
       this.setEntry(name, { entry: ret });
     }
-    this.sqlDefs.push(ret);
+    this.sqlBlocks.push(ret);
     return true;
   }
 

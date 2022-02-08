@@ -26,7 +26,8 @@ export interface SQLBlockRequest extends Partial<SQLBlock> {
  */
 export function makeSQLBlock(from: SQLBlockRequest): SQLBlock {
   const theBlock: SQLBlock = {
-    digest: `md5:/${from.connection || "$default"}//${md5(from.select)}`,
+    type: "sqlBlock",
+    name: `md5:/${from.connection || "$default"}//${md5(from.select)}`,
     select: from.select,
   };
   if (from.before) {

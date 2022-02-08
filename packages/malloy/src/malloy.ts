@@ -17,7 +17,6 @@ import {
   DocumentSymbol as DocumentSymbolDefinition,
   LogMessage,
   MalloyTranslator,
-  SQLDef,
 } from "./lang";
 import {
   CompiledQuery,
@@ -167,7 +166,7 @@ export class Malloy {
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
-            result.translated.sqlDefs
+            result.translated.sqlBlocks
           );
         } else {
           const errors = result.errors || [];
@@ -360,16 +359,16 @@ export class MalloyError extends Error {
 export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
-  private sqlDefs: SQLDef[];
+  private sqlBlocks: SQLBlock[];
 
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
-    sqlDefs: SQLDef[]
+    sqlBlocks: SQLBlock[]
   ) {
     this.modelDef = modelDef;
     this.queryList = queryList;
-    this.sqlDefs = sqlDefs;
+    this.sqlBlocks = sqlBlocks;
   }
 
   /**

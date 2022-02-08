@@ -432,11 +432,16 @@ export type StructRelationship =
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
 
-export interface SQLBlock {
+/**
+ * Use factory makeSQLBlock to create one of these, it will compute the
+ * name: property and fill it in.
+ */
+export interface SQLBlock extends AliasedName {
+  type: "sqlBlock";
+  name: string; //  hash of the connection and the select
   before?: string[];
   select: string;
   after?: string[];
-  digest: string; // digest/name is a hash of the connection and the select
   connection?: string;
 }
 
