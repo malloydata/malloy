@@ -19,7 +19,6 @@ import {
   LogMessage,
   MalloyTranslator,
 } from "./lang";
-import { SQLBlock, SQLReferenceData } from "./lang/parse-malloy";
 import {
   CompiledQuery,
   FieldBooleanDef,
@@ -38,6 +37,7 @@ import {
   QueryResult,
   StructDef,
   TurtleDef,
+  SQLBlock,
 } from "./model";
 import {
   LookupSQLRunner,
@@ -167,7 +167,7 @@ export class Malloy {
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
-            result.translated.sqlBlockList
+            result.translated.sqlBlocks
           );
         } else {
           const errors = result.errors || [];
@@ -237,13 +237,13 @@ export class Malloy {
             translator.update({ tables });
           }
         }
-        if (result.sqlRefs) {
+        if (result.sqlStructs) {
           // collect sql refs by connection name since there may be multiple connections
           const sqlRefsByConnection: Map<
             string | undefined,
-            Array<SQLReferenceData>
+            Array<SQLBlock>
           > = new Map();
-          for (const missingSQLSchemaRef of result.sqlRefs) {
+          for (const missingSQLSchemaRef of result.sqlStructs) {
             const connectionName = missingSQLSchemaRef.connection;
 
             let connectionToSQLReferencesMap =
@@ -267,10 +267,10 @@ export class Malloy {
             const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
               connectionName
             );
-            const sqlRefs = await schemaFetcher.fetchSchemaForSQLBlocks(
+            const sqlStructs = await schemaFetcher.fetchSchemaForSQLBlocks(
               connectionToSQLReferencesMap
             );
-            translator.update({ sqlRefs });
+            translator.update({ sqlStructs });
             // TODO feature-sql-block handle error properlt
             // translator.update({errors: {
             //   sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
@@ -370,10 +370,10 @@ export class Malloy {
       //      to cache it if it has access to that info...
       const structDef = (
         await schemaReader.fetchSchemaForSQLBlocks([sqlBlock])
-      )[sqlBlock.key || "foo"];
+      )[sqlBlock.name];
       // TODO feature-sql-block Key should not be undefined
       // TODO feature-sql-block For now, just pick the last SQL statement?
-      const sqlToRun = sqlBlock.sql.join("\n");
+      const sqlToRun = sqlBlock.select;
       const result = await sqlRunner.runSQL(sqlToRun, options);
       return new Result(
         {
@@ -433,16 +433,16 @@ export class MalloyError extends Error {
 export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
-  private sqlBlockList: SQLBlock[];
+  private sqlBlocks: SQLBlock[];
 
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
-    sqlBlockList: SQLBlock[]
+    sqlBlocks: SQLBlock[]
   ) {
     this.modelDef = modelDef;
     this.queryList = queryList;
-    this.sqlBlockList = sqlBlockList;
+    this.sqlBlocks = sqlBlocks;
   }
 
   /**
@@ -482,7 +482,7 @@ export class Model {
    * @returns A prepared query.
    */
   public getSQLBlockByName(sqlBlockName: string): SQLBlock {
-    const sqlBlock = this.sqlBlockList.find(
+    const sqlBlock = this.sqlBlocks.find(
       (sqlBlock) => sqlBlock.name === sqlBlockName
     );
     if (sqlBlock === undefined) {
@@ -498,7 +498,7 @@ export class Model {
    * @returns A prepared query.
    */
   public getSQLBlockByIndex(index: number): SQLBlock {
-    const sqlBlock = this.sqlBlockList[index];
+    const sqlBlock = this.sqlBlocks[index];
     if (sqlBlock === undefined) {
       throw new Error(`No SQL Block at index ${index}`);
     }
@@ -2259,9 +2259,8 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    * @returns A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
-    // TODO feature-sql-block multiple statement SQL
     const sqlBlock = await this.getSQLBlock();
-    return sqlBlock.sql.join("\n");
+    return sqlBlock.select;
   }
 }
 

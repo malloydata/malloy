@@ -32,7 +32,7 @@ import {
   FieldTypeDef,
   NamedStructDefs,
   Connection,
-  SQLReferenceData,
+  SQLBlock,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -482,16 +482,17 @@ export class BigQueryConnection extends Connection {
   }
 
   private structDefFromSQLSchema(
-    sqlRef: SQLReferenceData,
+    sqlBlock: SQLBlock,
     tableFieldSchema: bigquery.ITableFieldSchema
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
-      name: sqlRef.sql[0],
+      name: sqlBlock.name,
       dialect: this.dialectName,
       structSource: {
         type: "sql",
         method: "subquery",
+        sqlBlock,
       },
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
@@ -517,7 +518,7 @@ export class BigQueryConnection extends Connection {
     return tableStructDefs;
   }
 
-  private async getSQLBlockSchema(sqlRef: SQLReferenceData) {
+  private async getSQLBlockSchema(sqlRef: SQLBlock) {
     // We do a simple retry-loop here, as a temporary fix for a transient
     // error in which sometimes requesting results from a job yields an
     // access denied error. It seems that in these cases, simply trying again
@@ -529,7 +530,7 @@ export class BigQueryConnection extends Connection {
         const [job] = await this.bigQuery.createQueryJob({
           location: this.config.location || "US",
           // TODO feature-sql-block Why is this a list of strings instead of just one?
-          query: sqlRef.sql.join(""),
+          query: sqlRef.select,
           dryRun: true,
         });
 
@@ -542,13 +543,13 @@ export class BigQueryConnection extends Connection {
   }
 
   public async fetchSchemaForSQLBlocks(
-    sqlRefs: SQLReferenceData[]
+    sqlRefs: SQLBlock[]
   ): Promise<NamedStructDefs> {
     const tableStructDefs: NamedStructDefs = {};
 
     for (const sqlRef of sqlRefs) {
       // TODO feature-sql-block sqlRef key should not be nullable here
-      const key = sqlRef.key || "foo";
+      const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {
         const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);

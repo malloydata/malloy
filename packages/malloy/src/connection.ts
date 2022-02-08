@@ -21,8 +21,8 @@ import {
   MalloyQueryData,
   NamedStructDefs,
   QueryData,
+  SQLBlock,
 } from "./model/malloy_types";
-import { SQLReferenceData } from "./lang/parse-malloy";
 
 export interface PooledConnection {
   // Most pool implementations require a specific call to release connection handles. If a Connection is a
@@ -65,7 +65,7 @@ export abstract class Connection
   ): Promise<NamedStructDefs>;
 
   public abstract fetchSchemaForSQLBlocks(
-    sqlRefs: SQLReferenceData[]
+    sqlStructs: SQLBlock[]
   ): Promise<NamedStructDefs>;
 
   /*
