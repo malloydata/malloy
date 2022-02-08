@@ -74,26 +74,52 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
-        aggregate: d1 is count() { where: t_date: @2021-02-24}
-        aggregate: d2 is count() { where: t_date: @2021-02-23 for 2 days}
+        aggregate: d1 is count() { where: t_date: @2021-02-24} = 1
+        aggregate: d2 is count() { where: t_date: @2021-02-23 for 2 days} = 1
 
         // either this is legal or we need to convert the timestamp range into a date range...
-        // aggregate: d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days}
+        // aggregate: d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
 
 
-        aggregate: t1 is count() { where: t_timestamp: @2021-02-24}
-        aggregate: t2 is count() { where: t_timestamp: @2021-02-23::date for 2 days}
+        aggregate: t1 is count() { where: t_timestamp: @2021-02-24} = 1
+        aggregate: t2 is count() { where: t_timestamp: @2021-02-23::date for 2 days} = 1
 
-        // aggregate: t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days}
+        // aggregate: t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days} = 1
       }
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
 
     result.resultExplore.allFields.forEach((field) => {
       expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
-        `1 ${field.name}`
+        `true ${field.name}`
+      );
+    });
+  });
+
+  it(`Run Test Here - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: basicTypes is || ${basicTypes[databaseName]} ;;
+
+      query: from_sql(basicTypes) -> {
+        aggregate: works is count() = 1
+
+        // either this is legal or we need to convert the timestamp range into a date range...
+        // aggregate: d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
+
+        // aggregate: t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days} = 1
+      }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+
+    result.resultExplore.allFields.forEach((field) => {
+      expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
+        `true ${field.name}`
       );
     });
   });
