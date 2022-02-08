@@ -487,7 +487,7 @@ export class BigQueryConnection extends Connection {
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
-      name: sqlBlock.select,
+      name: sqlBlock.name,
       dialect: this.dialectName,
       structSource: {
         type: "sql",

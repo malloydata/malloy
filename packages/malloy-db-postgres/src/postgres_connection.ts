@@ -180,7 +180,7 @@ export class PostgresConnection extends Connection {
     const structDef: StructDef = {
       type: "struct",
       dialect: "postgres",
-      name: sqlRef.select,
+      name: sqlRef.name,
       structSource: {
         type: "sql",
         method: "subquery",

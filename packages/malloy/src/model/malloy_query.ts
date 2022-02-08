@@ -2925,7 +2925,7 @@ class QueryStruct extends QueryNode {
         if (this.fieldDef.structSource.method === "nested") {
           return this.fieldDef.name;
         } else if (this.fieldDef.structSource.method === "subquery") {
-          return `(${this.fieldDef.name})`;
+          return `(${this.fieldDef.structSource.sqlBlock.select})`;
         }
         throw new Error(
           "Internal Error: Unknown structSource type 'sql' method"
