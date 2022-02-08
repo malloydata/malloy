@@ -1797,6 +1797,36 @@ export class Runtime {
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name).getPreparedQuery();
   }
+
+  /**
+   * Get a SQL block by the URL or contents of a Malloy model document
+   * and the name of a SQL block contained in the model.
+   *
+   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
+   * @param name The name of the sql block to use within the model.
+   * @returns A promise of a `SQLBlock`.
+   */
+  public getSQLBlockByName(
+    model: ModelURL | ModelString,
+    name: string
+  ): Promise<SQLBlock> {
+    return this.loadSQLBlockByName(model, name).getSQLBlock();
+  }
+
+  /**
+   * Get a SQL block by the URL or contents of a Malloy model document
+   * and the name of a query contained in the model.
+   *
+   * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
+   * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
+   * @returns A promise of a `SQLBlock`.
+   */
+  public getSQLBlockByIndex(
+    model: ModelURL | ModelString,
+    index: number
+  ): Promise<SQLBlock> {
+    return this.loadSQLBlockByIndex(model, index).getSQLBlock();
+  }
 }
 
 export class ConnectionRuntime extends Runtime {
@@ -2030,6 +2060,28 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public getQuery(query: QueryString | QueryURL): Promise<PreparedQuery> {
     return this.loadQuery(query).getPreparedQuery();
+  }
+
+  /**
+   * Get a SQL Block by name.
+   *
+   * @param name The name of the SQL Block to load.
+   * @returns A promise of a `SQLBlock`.
+   */
+  public getSQLBlockByName(name: string): Promise<SQLBlock> {
+    return this.loadSQLBlockByName(name).getSQLBlock();
+  }
+
+  /**
+   * Get a SQL Block by index.
+   *
+   * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
+   * @returns A promise of a `SQLBlock`.
+   *
+   * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
+   */
+  public getSQLBlockByIndex(index: number): Promise<SQLBlock> {
+    return this.loadSQLBlockByIndex(index).getSQLBlock();
   }
 
   // TODO Consider formalizing this. Perhaps as a `withQuery` method,
