@@ -48,8 +48,7 @@ export interface BigQueryManagerOptions {
 }
 
 export interface BigQueryQueryOptions {
-  pageSize: number;
-  rowIndex: number;
+  rowLimit: number;
 }
 
 interface BigQueryConnectionConfiguration {
@@ -98,8 +97,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection extends Connection {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
-    pageSize: 10,
-    rowIndex: 0,
+    rowLimit: 10,
   };
 
   private bigQuery: BigQuerySDK;
@@ -180,9 +178,11 @@ export class BigQueryConnection extends Connection {
 
   public async runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {}
+    options: Partial<BigQueryQueryOptions> = {},
+    rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const { pageSize, rowIndex } = { ...this.readQueryOptions(), ...options };
+    const defaultOptions = this.readQueryOptions();
+    const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)

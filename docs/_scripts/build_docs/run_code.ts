@@ -125,7 +125,7 @@ class DocsURLReader implements URLReader {
 }
 
 const BIGQUERY_CONNECTION = new BigQueryConnection("bigquery", {
-  pageSize: 5,
+  rowLimit: 5,
 });
 
 function resolveSourcePath(sourcePath: string) {
@@ -199,7 +199,7 @@ export async function runCode(
     sqlRunner: {
       runSQL: (sql: string) =>
         BIGQUERY_CONNECTION.runSQL(sql, {
-          pageSize: options.pageSize || 5,
+          rowLimit: options.pageSize || 5,
         }),
     },
     preparedResult,
