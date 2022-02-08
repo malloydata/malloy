@@ -1078,6 +1078,10 @@ export class MalloyToAST
       select: commands.slice(2, commands.length - 2),
       connection: this.optionalText(pcx.connectionName()),
     });
+    const nameCx = pcx.sqlCommandNameDef();
+    if (nameCx) {
+      sqlStmt.is = this.getIdText(nameCx);
+    }
     return this.astAt(sqlStmt, pcx);
   }
 }

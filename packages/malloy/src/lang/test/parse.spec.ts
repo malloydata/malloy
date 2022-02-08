@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 
+import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
@@ -592,29 +593,19 @@ describe("sql backdoor", () => {
     "single sql statement",
     modelOK("sql: users is || SELECT * FROM USERS;;")
   );
-  test(
-    "multiple sql statements",
-    modelOK(`
-      sql: users is
-        || -- some other sql command ;;
-        || SELECT * FROM USERS;;
-        on "bigquery"
-      `)
-  );
   test("explore from sql", () => {
     const model = new BetaModel(`
       sql: users IS || SELECT * FROM aTable ;;
       explore: malloyUsers is from_sql(users) { primary_key: ai }
     `);
+    const needReq = model.translate();
     expect(model).toBeErrorless();
-    const needs = model.translate()?.sqlStructs;
+    const needs = needReq?.sqlStructs;
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
-      expect(needs[0]).toMatchObject({
-        sql: [" SELECT * FROM aTable "],
-        connection: undefined,
-      });
+      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      expect(needs[0]).toMatchObject(sql);
       const refKey = needs[0].digest;
       expect(refKey).toBeDefined();
       if (refKey) {
