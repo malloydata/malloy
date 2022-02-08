@@ -47,6 +47,7 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const parse = Malloy.parse({ source: text });
 
   parse.highlights.forEach((highlight) => {
+    return; // TODO crs temporarily disable semantic highlights
     for (
       let line = highlight.range.start.line;
       line <= highlight.range.end.line;

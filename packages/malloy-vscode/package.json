@@ -285,20 +285,28 @@
             "id": "configure-connections",
             "title": "Connect a Database",
             "description": " \n[Edit Connections](command:malloy.editConnections)",
-            "media": { "markdown": "media/connections.md" },
-            "completionEvents": ["onSettingChanged:malloy.connections"]
+            "media": {
+              "markdown": "media/connections.md"
+            },
+            "completionEvents": [
+              "onSettingChanged:malloy.connections"
+            ]
           },
           {
             "id": "download-samples",
             "title": "Download Sample Models",
             "description": " \n[Download All Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)",
-            "media": { "markdown": "media/sample-models.md" }
+            "media": {
+              "markdown": "media/sample-models.md"
+            }
           },
           {
             "id": "check-out-samples",
             "title": "Explore Malloy Documentation",
             "description": "Malloy documentation is super cool!\n[Visit Documentation](https://looker-open-source.github.io/malloy/documentation/language/basic.html)",
-            "media": { "markdown": "media/docs.md" }
+            "media": {
+              "markdown": "media/docs.md"
+            }
           }
         ]
       }
@@ -316,6 +324,7 @@
     "react": "^17.0.2",
     "react-is": "^16.8.0",
     "react-popper-tooltip": "^4.3.1",
+    "shiki": "^0.10.0",
     "styled-components": "^5.3.3",
     "us-atlas": "^3.0.0",
     "vega": "5.17.3",
@@ -329,6 +338,7 @@
     "@types/jsdom": "^16.2.11",
     "@types/mocha": "^8.2.2",
     "@types/node": "^12.19.8",
+    "@types/prismjs": "^1.26.0",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "@types/semver": "^7.3.9",
@@ -339,6 +349,7 @@
     "esbuild": "^0.14.13",
     "glob": "^7.1.7",
     "mocha": "^9.0.0",
+    "prismjs": "^1.26.0",
     "react-dom": "^17.0.2",
     "semver": "^7.3.5",
     "uuid": "^8.3.2",

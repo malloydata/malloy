@@ -79,6 +79,10 @@
         {
           "title": "Imports",
           "link": "/language/imports.md"
+        },
+        {
+          "title": "SQL Blocks",
+          "link": "/language/sql_blocks.md"
         }
       ]
     },

@@ -501,17 +501,27 @@ export class BigQueryConnection extends Connection {
   }
 
   private async getSQLBlockSchema(sqlRef: SQLReferenceData) {
-    const [job] = await this.bigQuery.createQueryJob({
-      location: this.config.location || "US",
-      query: sqlRef.sql.join(""), // TODO feature-sql-block Why is this a list of strings instead of just one?
-      dryRun: true,
-    });
+    // We do a simple retry-loop here, as a temporary fix for a transient
+    // error in which sometimes requesting results from a job yields an
+    // access denied error. It seems that in these cases, simply trying again
+    // solves the problem. This is being currently investigated by
+    // @christopherswenson and @lloydtabb. Same as below.
+    let lastFetchError;
+    for (let retries = 0; retries < 3; retries++) {
+      try {
+        const [job] = await this.bigQuery.createQueryJob({
+          location: this.config.location || "US",
+          // TODO feature-sql-block Why is this a list of strings instead of just one?
+          query: sqlRef.sql.join(""),
+          dryRun: true,
+        });
 
-    try {
-      return job.metadata.statistics.query.schema;
-    } catch (e) {
-      throw maybeRewriteError(e);
+        return job.metadata.statistics.query.schema;
+      } catch (fetchError) {
+        lastFetchError = fetchError;
+      }
     }
+    throw lastFetchError;
   }
 
   public async fetchSchemaForSQLBlocks(
