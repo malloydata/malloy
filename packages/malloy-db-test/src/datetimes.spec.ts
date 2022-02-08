@@ -83,8 +83,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
         aggregate: t1 is count() { where: t_timestamp: @2021-02-24}
         aggregate: t2 is count() { where: t_timestamp: @2021-02-23::date for 2 days}
-        
-        aggregate: t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days}
+
+        // aggregate: t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days}
       }
       `
       )

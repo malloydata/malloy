@@ -161,4 +161,6 @@ export abstract class Dialect {
   ignoreInProject(_fieldName: string): boolean {
     return false;
   }
+
+  abstract sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr;
 }
