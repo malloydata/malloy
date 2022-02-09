@@ -14,8 +14,6 @@
 import path from "path";
 import fs from "fs";
 import archiver from "archiver";
-import { Malloy } from "@malloydata/malloy";
-import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { performance } from "perf_hooks";
 import { renderDoc } from "./render_document";
 import { renderFooter, renderSidebar, Section } from "./page";
@@ -39,8 +37,6 @@ const SAMPLES_PATH = path.join(__dirname, "../../../samples");
 const AUX_OUT_PATH = path.join(__dirname, "../../aux/generated");
 
 const WATCH_ENABLED = process.argv.includes("--watch");
-
-Malloy.db = new BigQueryConnection("docs");
 
 async function compileDoc(file: string): Promise<{
   errors: { path: string; snippet: string; error: string }[];

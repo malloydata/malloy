@@ -19,7 +19,6 @@
  */
 import { DataStyles, HTMLView } from "@malloydata/render";
 import {
-  Malloy,
   Runtime,
   URL,
   URLReader,
