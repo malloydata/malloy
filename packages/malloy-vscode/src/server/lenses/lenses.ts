@@ -111,16 +111,19 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         }
       });
     } else if (symbol.type === "sql") {
-      // TODO crs-sql-statement Cannot access these by name currently
       lenses.push({
         range: symbol.range.toJSON(),
         command: {
           title: "Run",
-          command: "malloy.runUnnamedSQLBlock",
-          arguments: [currentUnnamedSQLBlockIndex],
+          command: "malloy.runNamedSQLBlock",
+          arguments: [symbol.name],
         },
       });
-      // TODO feature-sql-block Currently named SQL blocks are indexable
+      // TODO feature-sql-block Currently, named SQL blocks are not in the model, but stored
+      //      in the same list alongside unnaed SQL blocks. This is unlike the way queries work:
+      //      named queries exist in the model, and unnamed queries exist outside the model in
+      //      a separate list. Anyway, this means that at the moment, _named_ SQL blocks are also
+      //      indexable.
       currentUnnamedSQLBlockIndex++;
     } else if (symbol.type === "unnamed_sql") {
       lenses.push({

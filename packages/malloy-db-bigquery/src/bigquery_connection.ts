@@ -529,7 +529,6 @@ export class BigQueryConnection extends Connection {
       try {
         const [job] = await this.bigQuery.createQueryJob({
           location: this.config.location || "US",
-          // TODO feature-sql-block Why is this a list of strings instead of just one?
           query: sqlRef.select,
           dryRun: true,
         });
@@ -548,7 +547,6 @@ export class BigQueryConnection extends Connection {
     const tableStructDefs: NamedStructDefs = {};
 
     for (const sqlRef of sqlRefs) {
-      // TODO feature-sql-block sqlRef key should not be nullable here
       const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {

@@ -262,8 +262,6 @@ export class Malloy {
             connectionName,
             connectionToSQLReferencesMap,
           ] of sqlRefsByConnection) {
-            // TODO feature-sql-block connectionName might be undefined because lloyd says there is
-            // such a thing as a "default connection" ....
             const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
               connectionName
             );
@@ -271,7 +269,7 @@ export class Malloy {
               connectionToSQLReferencesMap
             );
             translator.update({ sqlStructs });
-            // TODO feature-sql-block handle error properlt
+            // TODO feature-sql-block handle error properly
             // translator.update({errors: {
             //   sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
             // }});
@@ -366,15 +364,17 @@ export class Malloy {
         );
       }
       // TODO feature-sql-block perhaps runSQL should additionally return the schema so this
-      //      can be done all at once... Or perhaps that should be left up to the Connection
-      //      to cache it if it has access to that info...
+      //      can be done in one call to the DB.
       const structDef = (
         await schemaReader.fetchSchemaForSQLBlocks([sqlBlock])
       )[sqlBlock.name];
-      // TODO feature-sql-block Key should not be undefined
-      // TODO feature-sql-block For now, just pick the last SQL statement?
       const sqlToRun = sqlBlock.select;
       const result = await sqlRunner.runSQL(sqlToRun, options);
+      if (structDef.structRelationship.type !== "basetable") {
+        throw new Error(
+          "Expected schema's structRelationship type to be 'basetable'."
+        );
+      }
       return new Result(
         {
           structs: [structDef],
@@ -382,9 +382,10 @@ export class Malloy {
           result: result.rows,
           totalRows: result.totalRows,
           lastStageName: structDef.name,
+          // TODO feature-sql-block There is no malloy code...
           malloy: "",
-          // TODO feature-sql-block default connection name should be allowed
-          connectionName: connectionName || "foo",
+          connectionName: structDef.structRelationship.connectionName,
+          // TODO feature-sql-block There is no source explore...
           sourceExplore: "",
           sourceFilters: [],
         },
@@ -483,7 +484,7 @@ export class Model {
    */
   public getSQLBlockByName(sqlBlockName: string): SQLBlock {
     const sqlBlock = this.sqlBlocks.find(
-      (sqlBlock) => sqlBlock.name === sqlBlockName
+      (sqlBlock) => sqlBlock.as === sqlBlockName
     );
     if (sqlBlock === undefined) {
       throw new Error(`No SQL Block named '${sqlBlockName}'`);
