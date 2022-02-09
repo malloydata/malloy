@@ -234,7 +234,7 @@ class ParseStep implements TranslationStep {
       }
     }
     let source = that.root.importZone.get(that.sourceURL);
-    if (!source) {
+    if (source === undefined) {
       return { urls: [that.sourceURL] };
     }
     if (source == "") {
