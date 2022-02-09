@@ -111,12 +111,13 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
         }
       });
     } else if (symbol.type === "sql") {
+      // TODO crs-sql-statement Cannot access these by name currently
       lenses.push({
         range: symbol.range.toJSON(),
         command: {
           title: "Run",
-          command: "malloy.runNamedSQLBlock",
-          arguments: [symbol.name],
+          command: "malloy.runUnnamedSQLBlock",
+          arguments: [currentUnnamedSQLBlockIndex],
         },
       });
       // TODO feature-sql-block Currently named SQL blocks are indexable
