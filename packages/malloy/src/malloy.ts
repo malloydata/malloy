@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { SchemaReader } from ".";
-import { Connection } from "./connection";
+import { InfoConnection } from ".";
 import {
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
@@ -40,15 +39,14 @@ import {
   SQLBlock,
 } from "./model";
 import {
-  LookupSQLRunner,
-  LookupSchemaReader,
+  LookupConnection,
   ModelString,
   ModelURL,
   QueryString,
   QueryURL,
   URL,
   URLReader,
-  SQLRunner,
+  Connection,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -68,7 +66,6 @@ export class Malloy {
     return "0.0.1";
   }
 
-  public static db: Connection;
   private static _log: Loggable;
 
   public static get log(): Loggable {
@@ -141,19 +138,19 @@ export class Malloy {
    * Compile a parsed Malloy document.
    *
    * @param urlReader Object capable of reading contents of a URL.
-   * @param lookupSchemaReader Mapping of connection names to objects capable of reading Malloy schemas.
+   * @param connections Mapping of connection names to objects capable of reading Malloy schemas.
    * @param parse The parsed Malloy document.
    * @param model A compiled model to build upon (optional).
    * @returns A (promise of a) compiled `Model`.
    */
   public static async compile({
     urlReader,
-    lookupSchemaReader,
+    connections,
     parse,
     model,
   }: {
     urlReader: URLReader;
-    lookupSchemaReader: LookupSchemaReader;
+    connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
   }): Promise<Model> {
@@ -227,10 +224,10 @@ export class Malloy {
             connectionName,
             connectionTableString,
           ] of tablesByConnection) {
-            const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
+            const connection = await connections.lookupConnection(
               connectionName
             );
-            const tables = await schemaFetcher.fetchSchemaForTables(
+            const tables = await connection.fetchSchemaForTables(
               connectionTableString
             );
             // TODO add { error: { tables: {} } handling as above in .urls
@@ -262,10 +259,10 @@ export class Malloy {
             connectionName,
             connectionToSQLReferencesMap,
           ] of sqlRefsByConnection) {
-            const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
+            const connection = await connections.lookupConnection(
               connectionName
             );
-            const sqlStructs = await schemaFetcher.fetchSchemaForSQLBlocks(
+            const sqlStructs = await connection.fetchSchemaForSQLBlocks(
               connectionToSQLReferencesMap
             );
             translator.update({ sqlStructs });
@@ -282,59 +279,51 @@ export class Malloy {
   /**
    * Run a fully-prepared query.
    *
-   * @param lookupSQLRunner A mapping from connection names to objects capable of running SQL.
+   * @param get A mapping from connection names to objects capable of running SQL.
    * @param preparedResult A fully-prepared query which is ready to run (a `PreparedResult`).
    * @returns Query result data and associated metadata.
    */
   public static async run(params: {
-    lookupSQLRunner: LookupSQLRunner;
+    connections: LookupConnection<Connection>;
     preparedResult: PreparedResult;
     options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run(params: {
-    sqlRunner: SQLRunner;
+    connection: Connection;
     preparedResult: PreparedResult;
     options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run(params: {
-    sqlRunner: SQLRunner;
-    schemaReader: SchemaReader;
+    connection: Connection;
     sqlBlock: SQLBlock;
     options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run(params: {
-    lookupSQLRunner: LookupSQLRunner;
-    schemaReader: SchemaReader;
+    connections: LookupConnection<Connection>;
     sqlBlock: SQLBlock;
     options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run(params: {
-    sqlRunner: SQLRunner;
-    lookupSchemaReader: LookupSchemaReader;
+    connection: Connection;
     sqlBlock: SQLBlock;
     options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run(params: {
-    lookupSQLRunner: LookupSQLRunner;
-    lookupSchemaReader: LookupSchemaReader;
+    connections: LookupConnection<Connection>;
     sqlBlock: SQLBlock;
     options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run({
-    sqlRunner,
-    lookupSQLRunner,
+    connections,
     preparedResult,
     sqlBlock,
-    schemaReader,
-    lookupSchemaReader,
+    connection,
     options,
   }: {
-    sqlRunner?: SQLRunner;
-    lookupSQLRunner?: LookupSQLRunner;
+    connection?: Connection;
     preparedResult?: PreparedResult;
     sqlBlock?: SQLBlock;
-    schemaReader?: SchemaReader;
-    lookupSchemaReader?: LookupSchemaReader;
+    connections?: LookupConnection<Connection>;
     options?: { rowLimit?: number };
   }): Promise<Result> {
     if (sqlBlock === undefined && preparedResult === undefined) {
@@ -344,32 +333,22 @@ export class Malloy {
     }
     const connectionName =
       sqlBlock?.connection || preparedResult?.connectionName;
-    if (sqlRunner === undefined) {
-      if (lookupSQLRunner === undefined) {
+    if (connection === undefined) {
+      if (connections === undefined) {
         throw new Error(
-          "Internal Error: sqlRunner or lookupSqlRunner must be provided."
+          "Internal Error: Connection or LookupConnection<Connection> must be provided."
         );
       }
-      sqlRunner = await lookupSQLRunner.lookupSQLRunner(connectionName);
+      connection = await connections.lookupConnection(connectionName);
     }
     if (sqlBlock !== undefined) {
-      if (schemaReader === undefined) {
-        if (lookupSchemaReader === undefined) {
-          throw new Error(
-            "Internal Error: schemaReader or lookupSchemaReader must be provided to run a SQL block."
-          );
-        }
-        schemaReader = await lookupSchemaReader.lookupSchemaReader(
-          connectionName
-        );
-      }
       // TODO feature-sql-block perhaps runSQL should additionally return the schema so this
       //      can be done in one call to the DB.
-      const structDef = (
-        await schemaReader.fetchSchemaForSQLBlocks([sqlBlock])
-      )[sqlBlock.name];
+      const structDef = (await connection.fetchSchemaForSQLBlocks([sqlBlock]))[
+        sqlBlock.name
+      ];
       const sqlToRun = sqlBlock.select;
-      const result = await sqlRunner.runSQL(sqlToRun, options);
+      const result = await connection.runSQL(sqlToRun, options);
       if (structDef.structRelationship.type !== "basetable") {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
@@ -396,7 +375,7 @@ export class Malloy {
         }
       );
     } else if (preparedResult !== undefined) {
-      const result = await sqlRunner.runSQL(preparedResult.sql, options);
+      const result = await connection.runSQL(preparedResult.sql, options);
       return new Result(
         {
           ...preparedResult._rawQuery,
@@ -931,7 +910,7 @@ export class InMemoryURLReader implements URLReader {
 /**
  * A fixed mapping of connection names to connections.
  */
-export class FixedConnectionMap implements LookupSchemaReader, LookupSQLRunner {
+export class FixedConnectionMap implements LookupConnection<Connection> {
   private connections: Map<string, Connection>;
   private defaultConnectionName?: string;
   constructor(
@@ -966,13 +945,7 @@ export class FixedConnectionMap implements LookupSchemaReader, LookupSQLRunner {
     }
   }
 
-  public async lookupSchemaReader(
-    connectionName?: string
-  ): Promise<Connection> {
-    return this.getConnection(connectionName);
-  }
-
-  public async lookupSQLRunner(connectionName?: string): Promise<Connection> {
+  public async lookupConnection(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 
@@ -1572,48 +1545,39 @@ export class ExploreField extends Explore {
  */
 export class Runtime {
   private _urlReader: URLReader;
-  private _lookupSchemaReader: LookupSchemaReader;
-  private _lookupSQLRunner: LookupSQLRunner;
+  private _connections: LookupConnection<Connection>;
 
-  constructor(runtime: LookupSchemaReader & LookupSQLRunner & URLReader);
+  constructor(runtime: LookupConnection<Connection> & URLReader);
+  constructor(urls: URLReader, connections: LookupConnection<Connection>);
+  constructor(urls: URLReader, connection: Connection);
+  constructor(connection: Connection);
+  constructor(connections: LookupConnection<Connection>);
   constructor(
-    urls: URLReader,
-    connections: LookupSchemaReader & LookupSQLRunner
-  );
-  constructor(
-    urls: URLReader,
-    schemas: LookupSchemaReader,
-    connections: LookupSQLRunner
-  );
-  constructor(connections: LookupSchemaReader & LookupSQLRunner);
-  constructor(schemas: LookupSchemaReader, connections: LookupSQLRunner);
-  constructor(...args: (URLReader | LookupSchemaReader | LookupSQLRunner)[]) {
+    ...args: (URLReader | LookupConnection<Connection> | Connection)[]
+  ) {
     let urlReader: URLReader | undefined;
-    let lookupSchemaReader: LookupSchemaReader | undefined;
-    let lookupSQLRunner: LookupSQLRunner | undefined;
+    let connections: LookupConnection<Connection> | undefined;
     for (const arg of args) {
       if (isURLReader(arg)) {
         urlReader = arg;
-      }
-      if (isLookupSchemaReader(arg)) {
-        lookupSchemaReader = arg;
-      }
-      if (isLookupSQLRunner(arg)) {
-        lookupSQLRunner = arg;
+      } else if (isLookupConnection<Connection>(arg)) {
+        connections = arg;
+      } else {
+        connections = {
+          lookupConnection: () => Promise.resolve(arg),
+        };
       }
     }
     if (urlReader === undefined) {
       urlReader = new EmptyURLReader();
     }
-    if (lookupSchemaReader === undefined) {
-      throw new Error("A LookupSchemaReader is required.");
-    }
-    if (lookupSQLRunner === undefined) {
-      throw new Error("A LookupSQLReader is required.");
+    if (connections === undefined) {
+      throw new Error(
+        "A LookupConnection<Connection> or Connection is required."
+      );
     }
     this._urlReader = urlReader;
-    this._lookupSQLRunner = lookupSQLRunner;
-    this._lookupSchemaReader = lookupSchemaReader;
+    this._connections = connections;
   }
 
   /**
@@ -1624,17 +1588,10 @@ export class Runtime {
   }
 
   /**
-   * @returns The `LookupSQLRunner` for this runtime instance.
+   * @returns The `LookupConnection<Connection>` for this runtime instance.
    */
-  public get lookupSQLRunner(): LookupSQLRunner {
-    return this._lookupSQLRunner;
-  }
-
-  /**
-   * @returns The `LookupSchemaReader` for this runtime instance.
-   */
-  public get lookupSchemaReader(): LookupSchemaReader {
-    return this._lookupSchemaReader;
+  public get connections(): LookupConnection<Connection> {
+    return this._connections;
   }
 
   /**
@@ -1657,7 +1614,7 @@ export class Runtime {
             });
       return Malloy.compile({
         urlReader: this.urlReader,
-        lookupSchemaReader: this.lookupSchemaReader,
+        connections: this.connections,
         parse,
       });
     });
@@ -1831,7 +1788,7 @@ export class Runtime {
 }
 
 export class ConnectionRuntime extends Runtime {
-  public readonly connections: Connection[];
+  public readonly rawConnections: Connection[];
 
   constructor(urls: URLReader, connections: Connection[]);
   constructor(connections: Connection[]);
@@ -1842,14 +1799,14 @@ export class ConnectionRuntime extends Runtime {
     if (maybeConnections === undefined) {
       const connections = urlsOrConnections as Connection[];
       super(FixedConnectionMap.fromArray(connections));
-      this.connections = connections;
+      this.rawConnections = connections;
     } else {
       const connections = maybeConnections as Connection[];
       super(
         urlsOrConnections as URLReader,
         FixedConnectionMap.fromArray(connections)
       );
-      this.connections = connections;
+      this.rawConnections = connections;
     }
   }
 }
@@ -1975,7 +1932,7 @@ export class ModelMaterializer extends FluentState<Model> {
   public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
-      const lookupSchemaReader = this.runtime.lookupSchemaReader;
+      const connections = this.runtime.connections;
       const parse =
         query instanceof URL
           ? await Malloy.parse({
@@ -1988,7 +1945,7 @@ export class ModelMaterializer extends FluentState<Model> {
       const model = await this.getModel();
       const queryModel = await Malloy.compile({
         urlReader,
-        lookupSchemaReader,
+        connections,
         parse,
         model,
       });
@@ -2141,9 +2098,9 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    * @returns The query results from running this loaded query.
    */
   async run(options?: { rowLimit?: number }): Promise<Result> {
-    const lookupSQLRunner = this.runtime.lookupSQLRunner;
+    const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ lookupSQLRunner, preparedResult, options });
+    return Malloy.run({ connections, preparedResult, options });
   }
 
   /**
@@ -2199,8 +2156,8 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    */
   async run(options?: { rowLimit?: number }): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
-    const lookupSQLRunner = this.runtime.lookupSQLRunner;
-    return Malloy.run({ lookupSQLRunner, preparedResult, options });
+    const connections = this.runtime.connections;
+    return Malloy.run({ connections, preparedResult, options });
   }
 
   /**
@@ -2235,12 +2192,10 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    */
   async run(options?: { rowLimit?: number }): Promise<Result> {
     const sqlBlock = await this.getSQLBlock();
-    const lookupSQLRunner = this.runtime.lookupSQLRunner;
-    const lookupSchemaReader = this.runtime.lookupSchemaReader;
+    const connections = this.runtime.connections;
     return Malloy.run({
-      lookupSQLRunner,
+      connections,
       sqlBlock,
-      lookupSchemaReader,
       options,
     });
   }
@@ -2738,19 +2693,21 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
 }
 
 function isURLReader(
-  thing: URLReader | LookupSchemaReader | LookupSQLRunner
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
 ): thing is URLReader {
   return "readURL" in thing;
 }
 
-function isLookupSchemaReader(
-  thing: URLReader | LookupSchemaReader | LookupSQLRunner
-): thing is LookupSchemaReader {
-  return "lookupSchemaReader" in thing;
-}
-
-function isLookupSQLRunner(
-  thing: URLReader | LookupSchemaReader | LookupSQLRunner
-): thing is LookupSQLRunner {
-  return "lookupSQLRunner" in thing;
+function isLookupConnection<T extends InfoConnection = InfoConnection>(
+  thing:
+    | URLReader
+    | LookupConnection<InfoConnection>
+    | LookupConnection<Connection>
+    | Connection
+): thing is LookupConnection<T> {
+  return "lookupConnection" in thing;
 }

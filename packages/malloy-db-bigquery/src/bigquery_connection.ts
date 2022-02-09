@@ -31,8 +31,8 @@ import {
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
-  Connection,
   SQLBlock,
+  Connection,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -95,7 +95,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection extends Connection {
+export class BigQueryConnection implements Connection {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -114,6 +114,8 @@ export class BigQueryConnection extends Connection {
   private config: BigQueryConnectionConfiguration;
 
   private location: string;
+
+  public readonly name: string;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -139,7 +141,7 @@ export class BigQueryConnection extends Connection {
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
-    super(name);
+    this.name = name;
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
