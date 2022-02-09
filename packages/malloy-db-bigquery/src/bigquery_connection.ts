@@ -221,6 +221,20 @@ export class BigQueryConnection implements Connection {
     }
   }
 
+  public async runSQLAndFetchResultSchema(
+    // TODO feature-sql-block Implement an actual version of this that does these simultaneously
+    sql: string,
+    options?: { rowLimit?: number | undefined }
+  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
+    const data = await this.runSQL(sql, options);
+    const schema = (
+      await this.fetchSchemaForSQLBlocks([
+        { name: "ignoreme", select: sql, type: "sqlBlock" },
+      ])
+    )["ignoreme"];
+    return { data, schema };
+  }
+
   public async downloadMalloyQuery(
     sqlCommand: string
   ): Promise<ResourceStream<RowMetadata>> {

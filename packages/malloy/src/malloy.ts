@@ -342,28 +342,26 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlBlock !== undefined) {
-      // TODO feature-sql-block perhaps runSQL should additionally return the schema so this
-      //      can be done in one call to the DB.
-      const structDef = (await connection.fetchSchemaForSQLBlocks([sqlBlock]))[
-        sqlBlock.name
-      ];
       const sqlToRun = sqlBlock.select;
-      const result = await connection.runSQL(sqlToRun, options);
-      if (structDef.structRelationship.type !== "basetable") {
+      const { schema, data } = await connection.runSQLAndFetchResultSchema(
+        sqlToRun,
+        options
+      );
+      if (schema.structRelationship.type !== "basetable") {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
       return new Result(
         {
-          structs: [structDef],
+          structs: [schema],
           sql: sqlToRun,
-          result: result.rows,
-          totalRows: result.totalRows,
-          lastStageName: structDef.name,
+          result: data.rows,
+          totalRows: data.totalRows,
+          lastStageName: schema.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: "",
-          connectionName: structDef.structRelationship.connectionName,
+          connectionName: schema.structRelationship.connectionName,
           // TODO feature-sql-block There is no source explore...
           sourceExplore: "",
           sourceFilters: [],
