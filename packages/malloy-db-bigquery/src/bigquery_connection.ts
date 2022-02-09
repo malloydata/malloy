@@ -105,7 +105,10 @@ export class BigQueryConnection implements Connection {
   private temporaryTables = new Map<string, string>();
   private defaultProject;
 
-  private resultCache = new Map<string, MalloyQueryData>();
+  private resultCache = new Map<
+    string,
+    { data: MalloyQueryData; schema: bigquery.ITableFieldSchema }
+  >();
   private schemaCache = new Map<string, StructDef>();
   private sqlSchemaCache = new Map<string, StructDef>();
 
@@ -178,11 +181,11 @@ export class BigQueryConnection implements Connection {
     return false;
   }
 
-  public async runSQL(
+  private async _runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
-  ): Promise<MalloyQueryData> {
+  ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
     const hash = crypto
@@ -191,9 +194,10 @@ export class BigQueryConnection implements Connection {
       .update(String(pageSize))
       .update(String(rowIndex))
       .digest("hex");
-    let result;
-    if ((result = this.resultCache.get(hash)) !== undefined) {
-      return result;
+
+    const cached = this.resultCache.get(hash);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
@@ -212,26 +216,39 @@ export class BigQueryConnection implements Connection {
         ? jobResult[2].totalRows
         : "0");
 
+      if (jobResult[2]?.schema === undefined) {
+        throw new Error("Schema not present");
+      }
+
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      result = { rows: jobResult[0], totalRows };
-      this.resultCache.set(hash, result);
-      return result;
+      const data = { rows: jobResult[0], totalRows };
+      const schema = jobResult[2]?.schema;
+
+      this.resultCache.set(hash, { data, schema });
+      return { data, schema };
     } catch (e) {
       throw maybeRewriteError(e);
     }
   }
 
-  public async runSQLAndFetchResultSchema(
-    // TODO feature-sql-block Implement an actual version of this that does these simultaneously
-    sql: string,
+  public async runSQL(
+    sqlCommand: string,
+    options: Partial<BigQueryQueryOptions> = {},
+    rowIndex = 0
+  ): Promise<MalloyQueryData> {
+    const { data } = await this._runSQL(sqlCommand, options, rowIndex);
+    return data;
+  }
+
+  public async runSQLBlockAndFetchResultSchema(
+    sqlBlock: SQLBlock,
     options?: { rowLimit?: number | undefined }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sql, options);
-    const schema = (
-      await this.fetchSchemaForSQLBlocks([
-        { name: "ignoreme", select: sql, type: "sqlBlock" },
-      ])
-    )["ignoreme"];
+    const { data, schema: schemaRaw } = await this._runSQL(
+      sqlBlock.select,
+      options
+    );
+    const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
     return { data, schema };
   }
 
@@ -544,7 +561,7 @@ export class BigQueryConnection implements Connection {
     for (let retries = 0; retries < 3; retries++) {
       try {
         const [job] = await this.bigQuery.createQueryJob({
-          location: this.config.location || "US",
+          location: this.location,
           query: sqlRef.select,
           dryRun: true,
         });
@@ -580,7 +597,7 @@ export class BigQueryConnection implements Connection {
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<PagedResponse<any, Query, bigquery.ITableDataList>> {
+  ): Promise<PagedResponse<any, Query, bigquery.IGetQueryResultsResponse>> {
     try {
       const job = await this.createBigQueryJob({
         query: sqlCommand,

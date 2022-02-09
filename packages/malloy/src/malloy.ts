@@ -342,9 +342,8 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlBlock !== undefined) {
-      const sqlToRun = sqlBlock.select;
-      const { schema, data } = await connection.runSQLAndFetchResultSchema(
-        sqlToRun,
+      const { schema, data } = await connection.runSQLBlockAndFetchResultSchema(
+        sqlBlock,
         options
       );
       if (schema.structRelationship.type !== "basetable") {
@@ -355,7 +354,7 @@ export class Malloy {
       return new Result(
         {
           structs: [schema],
-          sql: sqlToRun,
+          sql: sqlBlock.select,
           result: data.rows,
           totalRows: data.totalRows,
           lastStageName: schema.name,

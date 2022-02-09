@@ -114,8 +114,8 @@ export interface Connection extends InfoConnection {
     options?: { rowLimit?: number }
   ): Promise<MalloyQueryData>;
 
-  runSQLAndFetchResultSchema(
-    sql: string,
+  runSQLBlockAndFetchResultSchema(
+    sqlBlock: SQLBlock,
     options?: { rowLimit?: number }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
 

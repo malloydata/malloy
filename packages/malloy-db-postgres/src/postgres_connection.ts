@@ -148,17 +148,15 @@ export class PostgresConnection implements Connection {
     return tableStructDefs;
   }
 
-  public async runSQLAndFetchResultSchema(
+  public async runSQLBlockAndFetchResultSchema(
     // TODO feature-sql-block Implement an actual version of this that does these simultaneously
-    sql: string,
+    sqlBlock: SQLBlock,
     options?: { rowLimit?: number | undefined }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sql, options);
-    const schema = (
-      await this.fetchSchemaForSQLBlocks([
-        { name: "ignoreme", select: sql, type: "sqlBlock" },
-      ])
-    )["ignoreme"];
+    const data = await this.runSQL(sqlBlock.select, options);
+    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock]))[
+      sqlBlock.name
+    ];
     return { data, schema };
   }
 
