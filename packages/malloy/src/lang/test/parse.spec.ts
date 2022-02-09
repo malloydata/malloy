@@ -127,6 +127,7 @@ function modelOK(s: string): TestFunc {
 }
 
 describe("model statements", () => {
+  test("empty model", modelOK(""));
   describe("explore:", () => {
     test("explore table", modelOK(`explore: testA is table('aTable')`));
     test(

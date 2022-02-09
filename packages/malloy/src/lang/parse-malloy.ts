@@ -232,14 +232,9 @@ class ParseStep implements TranslationStep {
         this.response = that.fatalErrors();
         return this.response;
       }
-    }
-    let source = that.root.importZone.get(that.sourceURL);
-    if (!source) {
       return { urls: [that.sourceURL] };
     }
-    if (source == "") {
-      source = "\n";
-    }
+    const source = srcEnt.value == "" ? "\n" : srcEnt.value;
 
     const parse = this.runParser(
       source,
