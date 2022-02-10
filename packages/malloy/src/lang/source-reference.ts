@@ -23,18 +23,19 @@ export interface Range {
   end?: Position;
 }
 
-export function rangeFromContext(cx: ParserRuleContext): Range {
-  const point: Range = {
+export function rangeFromContext(pcx: ParserRuleContext): Range {
+  const stopToken = pcx.stop || pcx.start;
+  return {
     begin: {
-      line: cx.start.line,
-      char: cx.start.charPositionInLine,
+      line: pcx.start.line,
+      char: pcx.start.charPositionInLine,
+    },
+    end: {
+      line: stopToken.line,
+      char:
+        stopToken.stopIndex -
+        (stopToken.startIndex - stopToken.charPositionInLine) +
+        1,
     },
   };
-  if (cx.stop) {
-    point.end = {
-      line: cx.stop.line,
-      char: cx.stop.charPositionInLine,
-    };
-  }
-  return point;
 }
