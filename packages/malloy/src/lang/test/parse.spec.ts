@@ -674,7 +674,7 @@ describe("error handling", () => {
     const errList = m.errors().errors;
     const firstError = errList[0];
     expect(firstError.message).toBe(
-      "Query must contain group_by:, aggregate:, or project:"
+      "Can't determine query type (group_by/aggregate/nest,project,index)"
     );
   });
   test("refine can't change query type", () => {

@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 import { URL } from "url";
-import { cloneDeep, ThrottleSettings } from "lodash";
+import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
@@ -1317,6 +1317,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
       } else if (
         el instanceof Nests ||
         el instanceof NestDefinition ||
+        el instanceof NestReference ||
         el instanceof GroupBy
       ) {
         firstGuess ||= "grouping";
@@ -1340,7 +1341,9 @@ export class QOPDesc extends ListOf<QueryProperty> {
       firstGuess = "grouping";
     }
     if (!firstGuess) {
-      this.log("Query must contain group_by:, aggregate:, or project:");
+      this.log(
+        "Can't determine query type (group_by/aggregate/nest,project,index)"
+      );
     }
     const guessType = firstGuess || "grouping";
     this.opType = guessType;
