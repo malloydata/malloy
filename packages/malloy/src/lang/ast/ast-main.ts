@@ -517,6 +517,23 @@ export class RefinedExplore extends Mallobj {
   }
 }
 
+/**
+ * A Mallobj made from a source with no refinements
+ */
+export class RenamedExplore extends Mallobj {
+  elementType = "renamedExplore";
+
+  constructor(readonly source: Mallobj) {
+    super({ source });
+  }
+
+  structDef(): model.StructDef {
+    const structDef = cloneDeep(this.source.structDef());
+    structDef.location = this.location;
+    return structDef;
+  }
+}
+
 export class TableSource extends Mallobj {
   elementType = "tableSource";
   constructor(readonly name: string) {
@@ -686,7 +703,9 @@ export class SQLSource extends NamedSource {
       let msg = `Schema read failure for sql query '${this.name}'`;
       if (lookup) {
         if (lookup.status == "present") {
-          return lookup.value;
+          const structDef = lookup.value;
+          structDef.fields.forEach((field) => (field.location = this.location));
+          return structDef;
         }
         if (lookup.status == "error") {
           msg = lookup.message.includes(this.name)

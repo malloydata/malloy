@@ -283,7 +283,7 @@ export class MalloyToAST
         pcx
       );
     }
-    return source;
+    return this.astAt(new ast.RenamedExplore(source), pcx);
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.ExploreDesc {
