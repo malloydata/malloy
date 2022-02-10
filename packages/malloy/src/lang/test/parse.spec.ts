@@ -71,7 +71,7 @@ function checkForErrors(trans: Testable) {
     };
   }
   return {
-    message: () => "Translation resulted in no errors",
+    message: () => "Unexpected error free translation",
     pass: true,
   };
 }
@@ -659,6 +659,17 @@ describe("error handling", () => {
     );
   });
   test("empty document", modelOK("\n"));
+  test("query without fields", () => {
+    const m = new BetaModel(`
+      query: a -> { top: 5 }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe(
+      "Query must contain group_by:, aggregate:, or project:"
+    );
+  });
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
   //   expect(m).not.toCompile();

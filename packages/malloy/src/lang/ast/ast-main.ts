@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 import { URL } from "url";
-import { cloneDeep } from "lodash";
+import { cloneDeep, ThrottleSettings } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
@@ -1300,30 +1300,43 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   protected computeType(): QOPType {
     let firstGuess: QOPType | undefined;
+    if (this.refineThis) {
+      if (this.refineThis.type == "reduce") {
+        firstGuess = "grouping";
+      } else {
+        firstGuess = this.refineThis.type;
+      }
+    }
     let anyGrouping = false;
     for (const el of this.list) {
       if (el instanceof Index) {
         firstGuess ||= "index";
         if (firstGuess !== "index") {
-          el.log(`index: not legal in ${firstGuess} segment`);
+          el.log(`index: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof GroupBy) {
         firstGuess ||= "grouping";
         anyGrouping = true;
         if (firstGuess === "project" || firstGuess === "index") {
-          el.log(`group_by: not legal in ${firstGuess}: segment`);
+          el.log(`group_by: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof Aggregate) {
         firstGuess ||= "aggregate";
         if (firstGuess === "project" || firstGuess === "index") {
-          el.log(`aggregate: not legal in ${firstGuess}: segment`);
+          el.log(`aggregate: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof ProjectStatement) {
         firstGuess ||= "project";
+        if (firstGuess !== "project") {
+          el.log(`project: not legal in ${firstGuess} query`);
+        }
       }
     }
     if (firstGuess === "aggregate" && anyGrouping) {
       firstGuess = "grouping";
+    }
+    if (!firstGuess) {
+      this.log("Query must contain group_by:, aggregate:, or project:");
     }
     const guessType = firstGuess || "grouping";
     this.opType = guessType;
