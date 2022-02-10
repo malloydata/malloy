@@ -308,16 +308,17 @@ export class BigQueryConnection implements Connection {
         `Improper table path: ${tableName}. A table path requires 2 or 3 segments`
       );
 
-    // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
-    // temporarily tell BigQuery SDK to use the passed project ID so that API routes are correct.
-    // once we're done, set it back to our project ID.
-    if (projectId) this.bigQuery.projectId = projectId;
-
-    const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
-
     try {
-      const [metadata] = await table.getMetadata();
+      // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
+      //      instance. So we hack it until a better way exists: we set the `this.bigQuery.projectId`
+      //      to the `projectId` for the dataset, then put it back when we're done. Importantly, we
+      //      set it back _before_ we await the promise, thus avoiding a "concurrency" issue. We've decided
+      //      this is better than creating a new BQ instance every time we need to get a table schema.
+      if (projectId) this.bigQuery.projectId = projectId;
+      const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
+      const metadataPromise = table.getMetadata();
       this.bigQuery.projectId = this.projectId;
+      const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
         needsPartitionPsuedoColumn:
