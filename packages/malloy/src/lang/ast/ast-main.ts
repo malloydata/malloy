@@ -463,13 +463,12 @@ export class RefinedExplore extends Mallobj {
           el.log("Too many accept/except statements");
         }
         fieldListEdit = el;
-      } else if (el instanceof RenameField) {
-        fields.push(el);
       } else if (
         el instanceof Measures ||
         el instanceof Dimensions ||
         el instanceof Joins ||
-        el instanceof Turtles
+        el instanceof Turtles ||
+        el instanceof Renames
       ) {
         fields.push(...el.list);
       } else if (el instanceof Filter) {
@@ -872,7 +871,7 @@ export type ExploreProperty =
   | Measures
   | Dimensions
   | FieldListEdit
-  | RenameField
+  | Renames
   | PrimaryKey
   | Turtles;
 export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
@@ -882,7 +881,7 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
     p instanceof Measures ||
     p instanceof Dimensions ||
     p instanceof FieldListEdit ||
-    p instanceof RenameField ||
+    p instanceof Renames ||
     p instanceof PrimaryKey ||
     p instanceof Turtles
   );
@@ -970,6 +969,12 @@ export class Dimensions extends ListOf<ExprFieldDecl> {
     for (const dim of dimensions) {
       dim.isMeasure = false;
     }
+  }
+}
+
+export class Renames extends ListOf<RenameField> {
+  constructor(renames: RenameField[]) {
+    super("renameField", renames);
   }
 }
 

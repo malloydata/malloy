@@ -861,10 +861,9 @@ describe("source locations", () => {
   });
 
   test("location of renamed field", () => {
-    // TODO jump-to-definition Location of rename includes the `rename: x is`
     const source = markSource`
       explore: na is table('aTable') {
-        ${"rename: bbool is abool"}
+        rename: ${"bbool is abool"}
       }
     `;
     const m = new BetaModel(source.code);

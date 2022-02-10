@@ -208,6 +208,20 @@ export class MalloyToAST
     return visited;
   }
 
+  protected getRenames(cxList: ParserRuleContext[]): ast.RenameField[] {
+    const visited: ast.RenameField[] = [];
+    for (const cx of cxList) {
+      const v = this.visit(cx);
+      if (v instanceof ast.RenameField) {
+        this.astAt(v, cx);
+        visited.push(v);
+      } else {
+        this.contextError(cx, "Expected rename definition");
+      }
+    }
+    return visited;
+  }
+
   protected getFieldExpr(cx: parse.FieldExprContext): ast.ExpressionDef {
     const element = this.visit(cx);
     if (element instanceof ast.ExpressionDef) {
@@ -430,7 +444,7 @@ export class MalloyToAST
     return this.astAt(stmt, pcx);
   }
 
-  visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.RenameField {
+  visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0).id();
     const oldName = pcx.fieldName(1).id();
     const rename = new ast.RenameField(
@@ -438,6 +452,12 @@ export class MalloyToAST
       this.getIdText(oldName)
     );
     return this.astAt(rename, pcx);
+  }
+
+  visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.Renames {
+    const renames = this.getRenames(pcx.renameList().exploreRenameDef());
+    const stmt = new ast.Renames(renames);
+    return this.astAt(stmt, pcx);
   }
 
   visitFilterClauseList(pcx: parse.FilterClauseListContext): ast.Filter {

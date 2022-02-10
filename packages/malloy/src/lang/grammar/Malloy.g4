@@ -121,9 +121,18 @@ exploreStatement
   | JOIN_CROSS joinList                # defJoinCross
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
-  | RENAME fieldName IS fieldName      # defExploreRename
+  | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
+  ;
+
+renameList
+  : OBRACK (exploreRenameDef COMMA?)* CBRACK
+  | exploreRenameDef
+  ;
+
+exploreRenameDef
+  : fieldName IS fieldName
   ;
 
 dimensionDefList
