@@ -665,12 +665,12 @@ export class DocumentSymbol {
   constructor(documentSymbol: DocumentSymbolDefinition) {
     this._range = new DocumentRange(
       new DocumentPosition(
-        documentSymbol.range.start.line,
-        documentSymbol.range.start.character
+        documentSymbol.range.begin.line - 1,
+        documentSymbol.range.begin.char
       ),
       new DocumentPosition(
-        documentSymbol.range.end.line,
-        documentSymbol.range.end.character
+        documentSymbol.range.end.line - 1,
+        documentSymbol.range.end.char
       )
     );
     this._type = documentSymbol.type;
