@@ -17,8 +17,7 @@ export type {
   UpdateData,
   SchemaData,
   URLData,
-  SQLSchemaData,
-  SQLReferenceData,
+  SQLStructData,
 } from "./parse-malloy";
 export { exploreQueryWalkerBuilder } from "./parse-tree-walkers/explore-query-walker";
 export type { ExploreClauseRef } from "./parse-tree-walkers/explore-query-walker";

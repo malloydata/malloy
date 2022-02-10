@@ -25,6 +25,8 @@ import {
   NamedStructDefs,
   StructDef,
   ModelDef,
+  SQLBlock,
+  DocumentRange,
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
@@ -33,7 +35,6 @@ import { MalloyToAST } from "./parse-to-ast";
 import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
-import md5 from "md5";
 import {
   DocumentSymbol,
   walkForDocumentSymbols,
@@ -95,35 +96,39 @@ export interface NeedURLData {
   urls: string[];
 }
 
-export interface SQLReferenceData {
-  sql: string[];
-  connection?: string;
-  key?: string;
-}
-
 /**
- * The "key" for one of these is a connection name and an SQL string,
- * so we hash those to make a unique key for the Zone code which
- * really wants keys to be strings ...
+ * An SQL Block contains a unique key inside it, and we use that to
+ * reference and define blocks, since Zone really wants keys to be strings.
+ *
+ * If I had SQLBlocks when Zones were defined, this would not be
+ * a one off class, it would be Zone<keyType,valueType>
  */
 export class SQLExploreZone extends Zone<StructDef> {
-  keyed: Record<string, SQLReferenceData> = {};
-  refKey(ref: SQLReferenceData): string {
-    const key = md5(JSON.stringify(ref));
-    this.keyed[key] = ref;
-    ref.key = key;
-    return key;
+  keyed: Record<string, SQLBlock> = {};
+
+  referenceBlock(from: ast.SQLStatement, at: DocumentRange): void {
+    const sql = from.sqlBlock();
+    this.reference(sql.name, at);
+    this.keyed[sql.name] = sql;
+  }
+
+  getUndefinedBlocks(): SQLBlock[] | undefined {
+    const blockRefs = this.getUndefined();
+    if (blockRefs) {
+      return blockRefs.map((ref) => this.keyed[ref]);
+    }
+    return undefined;
   }
 }
 
-export interface NeedSQLSchema {
-  sqlRefs: SQLReferenceData[];
+export interface NeedSQLStruct {
+  sqlStructs: SQLBlock[];
 }
 
-interface NeededData extends NeedURLData, NeedSchemaData, NeedSQLSchema {}
+interface NeededData extends NeedURLData, NeedSchemaData, NeedSQLStruct {}
 export type DataRequestResponse = Partial<NeededData> | null;
 function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!dr && (dr.tables || dr.urls || dr.sqlRefs) != undefined;
+  return !!dr && (dr.tables || dr.urls || dr.sqlStructs) != undefined;
 }
 
 interface ASTData extends ErrorResponse, NeededData, FinalResponse {
@@ -137,11 +142,6 @@ interface Metadata extends NeededData, ErrorResponse, FinalResponse {
 }
 type MetadataResponse = Partial<Metadata>;
 
-export interface SQLBlock extends SQLReferenceData {
-  type: "sql";
-  name: string;
-}
-
 interface TranslatedResponseData
   extends NeededData,
     ErrorResponse,
@@ -149,7 +149,7 @@ interface TranslatedResponseData
   translated: {
     modelDef: ModelDef;
     queryList: Query[];
-    sqlBlockList: SQLBlock[];
+    sqlBlocks: SQLBlock[];
   };
 }
 
@@ -232,14 +232,9 @@ class ParseStep implements TranslationStep {
         this.response = that.fatalErrors();
         return this.response;
       }
-    }
-    let source = that.root.importZone.get(that.sourceURL);
-    if (!source) {
       return { urls: [that.sourceURL] };
     }
-    if (source == "") {
-      source = "\n";
-    }
+    const source = srcEnt.value == "" ? "\n" : srcEnt.value;
 
     const parse = this.runParser(
       source,
@@ -441,20 +436,17 @@ class ASTStep implements TranslationStep {
     for (const sqlExploreRef in sqlExplores) {
       const sqlExplore = sqlExplores[sqlExploreRef];
       if (sqlExplore.ref && sqlExplore.def) {
-        const sqlRef: SQLReferenceData = {
-          sql: sqlExplore.def.stmts,
-          connection: sqlExplore.def.connectionName,
-        };
-        const refKey = sqlZone.refKey(sqlRef);
-        that.root.sqlQueryZone.reference(refKey, sqlExplore.def.location.range);
+        that.root.sqlQueryZone.referenceBlock(
+          sqlExplore.def,
+          sqlExplore.def.location.range
+        );
       }
     }
 
     // TODO report errors from here!
-    const missingSqlSchema = sqlZone.getUndefined();
-    if (missingSqlSchema) {
-      const sqlRefs = missingSqlSchema.map((key) => sqlZone.keyed[key]);
-      return { sqlRefs };
+    const missingSqlStructs = sqlZone.getUndefinedBlocks();
+    if (missingSqlStructs) {
+      return { sqlStructs: missingSqlStructs };
     }
 
     newAst.setTranslator(that);
@@ -536,7 +528,7 @@ class TranslateStep implements TranslationStep {
         const doc = astResponse.ast;
         that.modelDef = doc.getModelDef(extendingModel);
         that.queryList = doc.queryList;
-        that.sqlBlockList = doc.sqlBlockList;
+        that.sqlBlocks = doc.sqlBlocks;
       } else {
         that.root.logger.log({
           sourceURL: that.sourceURL,
@@ -552,7 +544,7 @@ class TranslateStep implements TranslationStep {
         translated: {
           modelDef: that.modelDef,
           queryList: that.queryList,
-          sqlBlockList: that.sqlBlockList,
+          sqlBlocks: that.sqlBlocks,
         },
         ...that.errors(),
         final: true,
@@ -567,7 +559,7 @@ export abstract class MalloyTranslation {
   childTranslators: Map<string, MalloyTranslation>;
   urlIsFullPath?: boolean;
   queryList: Query[] = [];
-  sqlBlockList: SQLBlock[] = [];
+  sqlBlocks: SQLBlock[] = [];
   modelDef: ModelDef;
 
   readonly parseStep: ParseStep;
@@ -723,14 +715,14 @@ export class MalloyTranslator extends MalloyTranslation {
   update(dd: ParseUpdate): void {
     this.schemaZone.updateFrom(dd.tables, dd.errors?.tables);
     this.importZone.updateFrom(dd.urls, dd.errors?.urls);
-    this.sqlQueryZone.updateFrom(dd.sqlRefs, dd.errors?.sqlRefs);
+    this.sqlQueryZone.updateFrom(dd.sqlStructs, dd.errors?.sqlStructs);
   }
 }
 
 interface ErrorData {
   tables: Record<string, string>;
   urls: Record<string, string>;
-  sqlRefs: Record<string, string>;
+  sqlStructs: Record<string, string>;
 }
 
 export interface URLData {
@@ -739,10 +731,10 @@ export interface URLData {
 export interface SchemaData {
   tables: ZoneData<StructDef>;
 }
-export interface SQLSchemaData {
-  sqlRefs: ZoneData<StructDef>;
+export interface SQLStructData {
+  sqlStructs: ZoneData<StructDef>;
 }
-export interface UpdateData extends URLData, SchemaData, SQLSchemaData {
+export interface UpdateData extends URLData, SchemaData, SQLStructData {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;

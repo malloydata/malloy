@@ -24,7 +24,7 @@ import {
   IndexFieldSpace,
 } from "../field-space";
 import { LogMessage, MessageLogger } from "../parse-log";
-import { MalloyTranslation, SQLBlock, SQLReferenceData } from "../parse-malloy";
+import { MalloyTranslation } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -32,6 +32,7 @@ import {
   ExpressionDef,
 } from "./index";
 import { QueryField } from "../space-field";
+import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -585,7 +586,7 @@ export class NamedSource extends Mallobj {
     if (modelEnt.type === "query") {
       this.log(`Must use 'from()' to explore query '${this.name}`);
       return;
-    } else if (modelEnt.type === "sql") {
+    } else if (modelEnt.type === "sqlBlock") {
       this.log(`Must use 'from_sql()' to explore sql query '${this.name}`);
       return;
     }
@@ -679,23 +680,23 @@ export class SQLSource extends NamedSource {
       this.log(`Cant't look up schema for sql block '${this.name}'`);
       return;
     }
-    const ref: SQLReferenceData = {
-      sql: modelEnt.sql,
-      connection: modelEnt.connection,
-    };
-    const key = sqlDefEntry.refKey(ref);
-    const lookup = sqlDefEntry.getEntry(key);
-    let msg = `Schema read failure for sql query '${this.name}'`;
-    if (lookup) {
-      if (lookup.status == "present") {
-        return lookup.value;
+    if (modelEnt.type == "sqlBlock") {
+      const key = modelEnt.name;
+      const lookup = sqlDefEntry.getEntry(key);
+      let msg = `Schema read failure for sql query '${this.name}'`;
+      if (lookup) {
+        if (lookup.status == "present") {
+          return lookup.value;
+        }
+        if (lookup.status == "error") {
+          msg = lookup.message.includes(this.name)
+            ? `'Schema error: ${lookup.message}`
+            : `Schema error '${this.name}': ${lookup.message}`;
+        }
+        this.log(msg);
       }
-      if (lookup.status == "error") {
-        msg = lookup.message.includes(this.name)
-          ? `'Schema error: ${lookup.message}`
-          : `Schema error '${this.name}': ${lookup.message}`;
-      }
-      this.log(msg);
+    } else {
+      this.log(`Mis-typed definition for'${this.name}'`);
     }
   }
 }
@@ -1377,7 +1378,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 }
 
 export interface ModelEntry {
-  entry: model.NamedModelObject | SQLBlock;
+  entry: model.NamedModelObject | model.SQLBlock;
   exported?: boolean;
 }
 export interface NameSpace {
@@ -1389,7 +1390,7 @@ export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
-  sqlBlockList: SQLBlock[] = [];
+  sqlBlocks: model.SQLBlock[] = [];
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
   }
@@ -1397,7 +1398,7 @@ export class Document extends MalloyElement implements NameSpace {
   getModelDef(extendingModelDef: model.ModelDef | undefined): model.ModelDef {
     this.documentModel = {};
     this.queryList = [];
-    this.sqlBlockList = [];
+    this.sqlBlocks = [];
     if (extendingModelDef) {
       for (const inName in extendingModelDef.contents) {
         const struct = extendingModelDef.contents[inName];
@@ -1423,32 +1424,16 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  /*
-
-  here's how this should work ... then i am going to sleep
-
-  3) an SQL source might reference a block, in which case
-     that block will ALSO have a structdef assigned to it
-     by a call to update from the translator which will NOT
-     add it to the model like a table would, but will instea
-     add it to the existing sql block definition
-
-  */
-
-  addSQLBlock(sql: string[], name?: string): boolean {
-    const ret: SQLBlock = {
-      type: "sql",
-      name: `$${this.sqlBlockList.length}`,
-      sql,
-    };
+  defineSQL(sql: model.SQLBlock, name?: string): boolean {
+    const ret = { ...sql, as: `$${this.sqlBlocks.length}` };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
+      ret.as = name;
       this.setEntry(name, { entry: ret });
-      ret.name = name;
     }
-    this.sqlBlockList.push(ret);
+    this.sqlBlocks.push(ret);
     return true;
   }
 
@@ -2072,13 +2057,18 @@ export class ConstantParameter extends HasParameter {
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
-  connectionName?: string;
-  constructor(readonly stmts: string[]) {
+  constructor(readonly blockReq: SQLBlockRequest) {
     super();
   }
 
+  sqlBlock(): model.SQLBlock {
+    const sqlBlock = makeSQLBlock(this.blockReq);
+    sqlBlock.location = this.location;
+    return sqlBlock;
+  }
+
   execute(doc: Document): void {
-    if (!doc.addSQLBlock(this.stmts, this.is)) {
+    if (!doc.defineSQL(this.sqlBlock(), this.is)) {
       this.log(`${this.is} already defined`);
     }
   }

@@ -817,7 +817,8 @@ export class MalloyToAST
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
-    return new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    const idRef = new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    return this.astAt(idRef, pcx);
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {
@@ -1076,13 +1077,15 @@ export class MalloyToAST
   visitDefineSQLStatement(
     pcx: parse.DefineSQLStatementContext
   ): ast.SQLStatement {
-    const commands = pcx.sqlText().map((cx) => {
-      const fullMatch = cx.text;
-      return fullMatch.slice(2, fullMatch.length - 2);
+    const commands = pcx.sqlBlock().text;
+    const sqlStmt = new ast.SQLStatement({
+      select: commands.slice(2, commands.length - 2),
+      connection: this.optionalText(pcx.connectionName()),
     });
-    const sqlStmt = new ast.SQLStatement(commands);
-    sqlStmt.is = this.optionalText(pcx.sqlCommandNameDef());
-    sqlStmt.connectionName = this.optionalText(pcx.connectionName());
+    const nameCx = pcx.sqlCommandNameDef();
+    if (nameCx) {
+      sqlStmt.is = this.getIdText(nameCx);
+    }
     return this.astAt(sqlStmt, pcx);
   }
 }
