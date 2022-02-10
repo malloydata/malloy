@@ -861,10 +861,10 @@ describe("source locations", () => {
   });
 
   test("location of renamed field", () => {
-    // TODO jump-to-definition Location of renamed fields probably wants to be the rename statement, not the original source?
+    // TODO jump-to-definition Location of rename includes the `rename: x is`
     const source = markSource`
-      explore: na is ${"table('aTable')"} {
-        rename: bbool is abool
+      explore: na is table('aTable') {
+        ${"rename: bbool is abool"}
       }
     `;
     const m = new BetaModel(source.code);
