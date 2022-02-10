@@ -680,7 +680,7 @@ describe("error handling", () => {
 
 describe("source locations", () => {
   test("renamed explore location", () => {
-    const source = markSource`explore: na is ${"a"}`;
+    const source = markSource`explore: ${"na is a"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
     expect(m).toBeErrorless();
@@ -690,7 +690,7 @@ describe("source locations", () => {
   });
 
   test("refined explore location", () => {
-    const source = markSource`explore: na is ${"a {}"}`;
+    const source = markSource`explore: ${"na is a {}"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
     expect(m).toBeErrorless();

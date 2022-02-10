@@ -419,6 +419,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
       const struct = {
         ...this.mallobj.withParameters(this.parameters),
         as: this.name,
+        location: this.location,
       };
       doc.setEntry(this.name, {
         entry: struct,
