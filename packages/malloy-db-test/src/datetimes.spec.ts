@@ -77,14 +77,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: [
           d1 is count() { where: t_date: @2021-02-24} = 1
           d2 is count() { where: t_date: @2021-02-23 for 2 days} = 1
+          // d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
 
-          // either this is legal or we need to convert the timestamp range into a date range...
-          //d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
+
 
           t1 is count() { where: t_timestamp: @2021-02-24} = 1
-          t2 is count() { where: t_timestamp: @2021-02-23::date for 2 days} = 1
-
-          // t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days} = 1
+          // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
+          t3 is count() { where: t_timestamp: @2021-02-23 00:00:00 for 2 days} = 1
         ]
       }
       `
@@ -109,10 +108,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: [
           works is count() = 1
 
-          // either this is legal or we need to convert the timestamp range into a date range...
+          // this is actually not working quite right, needs to be a date comparison, not a
+          //  time comparison or an error...
           // d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
 
-          // t3 is count() { where: t_timestamp: (@2021-02-23 00:00)::timestamp for 2 days} = 1
+          // the end of the range is a date which can't be casted to a timezone.
+          // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
         ]
       }
       `

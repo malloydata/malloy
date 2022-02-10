@@ -358,4 +358,18 @@ ${indent(sql)}
       ` AS ${castMap[castTo] || castTo})`,
     ];
   }
+
+  sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    timezone: string
+  ): string {
+    if (type === "date") {
+      return `DATE('${timeString}')`;
+    } else if (type === "timestamp") {
+      return `TIMESTAMP('${timeString}', '${timezone}')`;
+    } else {
+      throw new Error(`Unknown Liternal time format ${type}`);
+    }
+  }
 }

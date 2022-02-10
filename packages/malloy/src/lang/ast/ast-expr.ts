@@ -321,7 +321,7 @@ export class ExprTime extends ExpressionDef {
     this.translationValue = {
       dataType: timeType,
       aggregate: aggregate,
-      value: typeof value === "string" ? [`'${value}'`] : value,
+      value: typeof value === "string" ? [value] : value,
     };
   }
 

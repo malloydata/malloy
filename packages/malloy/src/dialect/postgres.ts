@@ -261,4 +261,18 @@ export class PostgresDialect extends Dialect {
   sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr {
     return ["(", expr, `)::${castMap[castTo] || castTo}`];
   }
+
+  sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    _timezone: string
+  ): string {
+    if (type === "date") {
+      return `DATE('${timeString}')`;
+    } else if (type === "timestamp") {
+      return `TIMESTAMP '${timeString}'`;
+    } else {
+      throw new Error(`Unknown Liternal time format ${type}`);
+    }
+  }
 }

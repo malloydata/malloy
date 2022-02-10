@@ -163,4 +163,10 @@ export abstract class Dialect {
   }
 
   abstract sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr;
+
+  abstract sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    timezone: string
+  ): string;
 }
