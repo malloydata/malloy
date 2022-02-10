@@ -814,7 +814,8 @@ export class MalloyToAST
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
-    return new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    const idRef = new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    return this.astAt(idRef, pcx);
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {
