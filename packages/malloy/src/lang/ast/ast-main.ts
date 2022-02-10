@@ -1314,7 +1314,11 @@ export class QOPDesc extends ListOf<QueryProperty> {
         if (firstGuess !== "index") {
           el.log(`index: not legal in ${firstGuess} query`);
         }
-      } else if (el instanceof GroupBy) {
+      } else if (
+        el instanceof Nests ||
+        el instanceof NestDefinition ||
+        el instanceof GroupBy
+      ) {
         firstGuess ||= "grouping";
         anyGrouping = true;
         if (firstGuess === "project" || firstGuess === "index") {
