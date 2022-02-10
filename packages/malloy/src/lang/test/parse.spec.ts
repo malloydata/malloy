@@ -777,12 +777,10 @@ describe("source locations", () => {
   });
 
   test("location of field inherited from sql block", () => {
-    // TODO jump-to-definition The location of the fields probably wants to be the SQL block definition,
-    //      not the `from_sql(s)`...
     const source = markSource`
-      sql: s is || SELECT 1 as one ;;
+      sql: ${"s is || SELECT 1 as one ;;"}
 
-      explore: na is ${"from_sql(s)"}
+      explore: na is from_sql(s)
     `;
     const m = new BetaModel(source.code);
     const result = m.translate();

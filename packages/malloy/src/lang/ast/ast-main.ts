@@ -704,7 +704,9 @@ export class SQLSource extends NamedSource {
       if (lookup) {
         if (lookup.status == "present") {
           const structDef = lookup.value;
-          structDef.fields.forEach((field) => (field.location = this.location));
+          structDef.fields.forEach(
+            (field) => (field.location = modelEnt.location)
+          );
           return structDef;
         }
         if (lookup.status == "error") {
