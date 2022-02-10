@@ -1636,11 +1636,18 @@ class QueryQuery extends QueryField {
             dimCount++;
           }
 
+          const location = fi.f.fieldDef.location;
+
           // build out the result fields...
           switch (fi.f.fieldDef.type) {
             case "boolean":
             case "string":
-              fields.push({ name, type: fi.f.fieldDef.type, resultMetadata });
+              fields.push({
+                name,
+                type: fi.f.fieldDef.type,
+                resultMetadata,
+                location,
+              });
               break;
             case "timestamp": {
               const timeframe = fi.f.fieldDef.timeframe || "second";
@@ -1655,6 +1662,7 @@ class QueryQuery extends QueryField {
                     type: "date",
                     timeframe,
                     resultMetadata,
+                    location,
                   });
                   break;
                 case "second":
@@ -1666,6 +1674,7 @@ class QueryQuery extends QueryField {
                     type: "timestamp",
                     timeframe,
                     resultMetadata,
+                    location,
                   });
                   break;
                 case "hour_of_day":
@@ -1678,6 +1687,7 @@ class QueryQuery extends QueryField {
                     numberType: "integer",
                     timeframe,
                     resultMetadata,
+                    location,
                   });
                   break;
               }
@@ -1689,6 +1699,7 @@ class QueryQuery extends QueryField {
                 type: fi.f.fieldDef.type,
                 timeframe: fi.f.fieldDef.timeframe,
                 resultMetadata,
+                location,
               });
               break;
             }
@@ -1698,6 +1709,7 @@ class QueryQuery extends QueryField {
                 numberType: fi.f.fieldDef.numberType,
                 type: "number",
                 resultMetadata,
+                location,
               });
               break;
             default:
@@ -3073,6 +3085,7 @@ class QueryStruct extends QueryNode {
       type: "turtle",
       name: turtleDef.name,
       pipeline,
+      location: turtleDef.location,
     };
     return flatTurtleDef;
   }

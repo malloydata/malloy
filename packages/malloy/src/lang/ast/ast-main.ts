@@ -23,7 +23,6 @@ import {
   QueryFieldSpace,
   IndexFieldSpace,
 } from "../field-space";
-import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation, SQLBlock, SQLReferenceData } from "../parse-malloy";
 import {
@@ -90,7 +89,7 @@ type ElementChildren = Record<string, ChildBody>;
 
 export abstract class MalloyElement {
   abstract elementType: string;
-  codeLocation?: Source.Range;
+  codeLocation?: model.DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
   private logger?: MessageLogger;
@@ -125,7 +124,7 @@ export abstract class MalloyElement {
     }
   }
 
-  get location(): Source.Range {
+  get location(): model.DocumentLocation {
     if (this.codeLocation) {
       return this.codeLocation;
     }
@@ -133,10 +132,16 @@ export abstract class MalloyElement {
       return this.parent.location;
     }
     this.log("Location not set during parse");
-    return { begin: { line: 0 } };
+    return {
+      url: this.sourceURL,
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      },
+    };
   }
 
-  set location(loc: Source.Range | undefined) {
+  set location(loc: model.DocumentLocation | undefined) {
     this.codeLocation = loc;
   }
 
@@ -169,16 +174,21 @@ export abstract class MalloyElement {
     this.xlate = x;
   }
 
+  private get sourceURL() {
+    const trans = this.translator();
+    return trans?.sourceURL || "(missing)";
+  }
+
   log(logString: string): void {
     const trans = this.translator();
     const msg: LogMessage = {
-      sourceURL: trans?.sourceURL || "(missing)",
+      sourceURL: this.sourceURL,
       message: logString,
     };
     const loc = this.location;
     if (loc) {
-      msg.begin = loc.begin;
-      msg.end = loc.end;
+      msg.begin = loc.range.start;
+      msg.end = loc.range.end;
     }
     const logTo = trans?.root.logger;
     if (logTo) {
@@ -468,6 +478,9 @@ export class RefinedExplore extends Mallobj {
     }
 
     const from = cloneDeep(this.source.structDef());
+    if (from.structRelationship.type === "basetable") {
+      from.location = this.location;
+    }
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
@@ -516,6 +529,9 @@ export class TableSource extends Mallobj {
     let msg = `Schema read failure for table '${this.name}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status == "present") {
+        tableDefEntry.value.fields.forEach(
+          (field) => (field.location = this.location)
+        );
         return tableDefEntry.value;
       }
       if (tableDefEntry.status == "error") {
@@ -1519,6 +1535,7 @@ export class TurtleDecl extends MalloyElement {
       type: "turtle",
       name: this.name,
       ...pipe,
+      location: this.location,
     };
   }
 }
@@ -1707,6 +1724,7 @@ export class PipelineDesc extends MalloyElement {
       ...resultPipe,
       type: "query",
       structRef: queryHead.structRef(),
+      location: this.location,
     };
     return { outputStruct, query };
   }
@@ -1717,6 +1735,7 @@ export class PipelineDesc extends MalloyElement {
       type: "query",
       structRef,
       pipeline: [],
+      location: this.location,
     };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
@@ -1842,6 +1861,7 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       ...this.queryDetails.query(),
       type: "query",
       name: this.name,
+      location: this.location,
     };
     const exported = false;
     doc.setEntry(this.name, { entry, exported });

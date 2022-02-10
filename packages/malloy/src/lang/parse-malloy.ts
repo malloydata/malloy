@@ -284,7 +284,8 @@ class ParseStep implements TranslationStep {
       sourceURL: sourceURL,
       root: parseFunc.call(malloyParser) as ParseTree,
       tokens: tokenStream,
-      malloyVersion: "?.?.?-????", // TODO put the real version here
+      // TODO put the real version here
+      malloyVersion: "?.?.?-????",
     };
   }
 }
@@ -445,7 +446,7 @@ class ASTStep implements TranslationStep {
           connection: sqlExplore.def.connectionName,
         };
         const refKey = sqlZone.refKey(sqlRef);
-        that.root.sqlQueryZone.reference(refKey, sqlExplore.def.location);
+        that.root.sqlQueryZone.reference(refKey, sqlExplore.def.location.range);
       }
     }
 

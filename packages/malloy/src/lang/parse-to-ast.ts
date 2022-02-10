@@ -175,7 +175,10 @@ export class MalloyToAST
     el: MT,
     cx: ParserRuleContext
   ): MT {
-    el.location = Source.rangeFromContext(cx);
+    el.location = {
+      url: this.parse.sourceURL,
+      range: Source.rangeFromContext(cx),
+    };
     return el;
   }
 

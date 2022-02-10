@@ -26,4 +26,3 @@ export { HighlightType } from "./parse-tree-walkers/document-highlight-walker";
 export type { DocumentHighlight } from "./parse-tree-walkers/document-highlight-walker";
 export type { DocumentSymbol } from "./parse-tree-walkers/document-symbol-walker";
 export type { LogMessage } from "./parse-log";
-export type { Range } from "./source-reference";
