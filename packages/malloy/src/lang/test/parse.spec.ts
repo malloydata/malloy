@@ -218,6 +218,13 @@ describe("model statements", () => {
         query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
       `)
     );
+    test(
+      "refine and extend query",
+      modelOK(`
+        query: a_by_str is a -> { group_by: astr }
+        query: -> a_by_str { aggregate: str_count is count() }
+      `)
+    );
   });
   describe("import:", () => {
     test("simple import", () => {
@@ -669,6 +676,15 @@ describe("error handling", () => {
     expect(firstError.message).toBe(
       "Query must contain group_by:, aggregate:, or project:"
     );
+  });
+  test("refine can't change query type", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle { project: astr }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("project: not legal in grouping query");
   });
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
