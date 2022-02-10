@@ -134,7 +134,8 @@ export abstract class MalloyElement {
       return this.parent.location;
     }
     this.log("Location not set during parse");
-    return { begin: { line: 0 } };
+    const noWhere = { line: 1, char: 0 };
+    return { begin: noWhere, end: noWhere };
   }
 
   set location(loc: Source.Range | undefined) {

@@ -15,12 +15,12 @@ import { ParserRuleContext } from "antlr4ts";
 
 export interface Position {
   line: number;
-  char?: number;
+  char: number;
 }
 
 export interface Range {
   begin: Position;
-  end?: Position;
+  end: Position;
 }
 
 export function rangeFromContext(pcx: ParserRuleContext): Range {
