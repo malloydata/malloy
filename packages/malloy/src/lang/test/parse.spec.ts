@@ -71,7 +71,7 @@ function checkForErrors(trans: Testable) {
     };
   }
   return {
-    message: () => "Translation resulted in no errors",
+    message: () => "Unexpected error free translation",
     pass: true,
   };
 }
@@ -216,6 +216,13 @@ describe("model statements", () => {
       "reduce pipe project",
       modelOK(`
         query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+      `)
+    );
+    test(
+      "refine and extend query",
+      modelOK(`
+        query: a_by_str is a -> { group_by: astr }
+        query: -> a_by_str { aggregate: str_count is count() }
       `)
     );
   });
@@ -659,6 +666,26 @@ describe("error handling", () => {
     );
   });
   test("empty document", modelOK("\n"));
+  test("query without fields", () => {
+    const m = new BetaModel(`
+      query: a -> { top: 5 }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe(
+      "Can't determine query type (group_by/aggregate/nest,project,index)"
+    );
+  });
+  test("refine can't change query type", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle { project: astr }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("project: not legal in grouping query");
+  });
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
   //   expect(m).not.toCompile();
