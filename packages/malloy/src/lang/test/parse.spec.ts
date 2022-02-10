@@ -851,8 +851,7 @@ describe("source locations", () => {
   });
 
   test("location of named SQL block", () => {
-    // TODO jump-to-definition Location of SQL blocks contains the `sql: s is`
-    const source = markSource`${"sql: s is || SELECT 1 ;;"}`;
+    const source = markSource`sql: ${"s is || SELECT 1 ;;"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
     expect(m).toBeErrorless();

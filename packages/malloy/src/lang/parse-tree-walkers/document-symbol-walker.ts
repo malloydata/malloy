@@ -50,7 +50,7 @@ class DocumentSymbolWalker implements MalloyListener {
     });
   }
 
-  enterAnonymousQuery(pcx: parser.AnonymousQueryContext) {
+  enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
     this.symbols.push({
       range: rangeFromContext(pcx),
       name: "unnamed_query",
@@ -145,7 +145,7 @@ class DocumentSymbolWalker implements MalloyListener {
     }
   }
 
-  enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
+  enterSqlStatementDef(pcx: parser.SqlStatementDefContext) {
     const name = pcx.sqlCommandNameDef()?.id().text;
     const symbol = {
       range: rangeFromContext(pcx),

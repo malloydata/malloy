@@ -733,7 +733,7 @@ export class MalloyToAST
   }
 
   visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const query = this.visit(pcx.query());
+    const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
       return new ast.AnonymousQuery(query);
     }
@@ -1097,6 +1097,10 @@ export class MalloyToAST
   visitDefineSQLStatement(
     pcx: parse.DefineSQLStatementContext
   ): ast.SQLStatement {
+    return this.visitSQLStatementDef(pcx.sqlStatementDef());
+  }
+
+  visitSQLStatementDef(pcx: parse.SqlStatementDefContext): ast.SQLStatement {
     const commands = pcx.sqlBlock().text;
     const sqlStmt = new ast.SQLStatement({
       select: commands.slice(2, commands.length - 2),

@@ -26,12 +26,20 @@ defineExploreStatement
   ;
 
 defineQuery
-  : QUERY topLevelQueryDefs  # namedQueries_stub
-  | QUERY query              # anonymousQuery
+  : QUERY topLevelQueryDefs      # namedQueries_stub
+  | QUERY topLevelAnonQueryDef   # anonymousQuery
+  ;
+
+topLevelAnonQueryDef
+  : query
   ;
 
 defineSQLStatement
-  : SQL (sqlCommandNameDef IS)? sqlBlock (ON connectionName)?
+  : SQL sqlStatementDef
+  ;
+
+sqlStatementDef
+  : (sqlCommandNameDef IS)? sqlBlock (ON connectionName)?
   ;
 
 importStatement
