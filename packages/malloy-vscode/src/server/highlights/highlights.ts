@@ -39,6 +39,12 @@ export const TOKEN_TYPES = [
 
 export const TOKEN_MODIFIERS = ["declaration", "documentation"];
 
+export function stubMalloyHighlights(_document: TextDocument): SemanticTokens {
+  return new SemanticTokensBuilder().build();
+}
+
+// TODO Currently semantic highlights are disabled. Either remove `getMalloyHighlights`
+//      or call it instead of `stubMalloyHighlights`.
 export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const tokensBuilder = new SemanticTokensBuilder();
 
@@ -47,7 +53,6 @@ export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const parse = Malloy.parse({ source: text });
 
   parse.highlights.forEach((highlight) => {
-    return; // TODO crs temporarily disable semantic highlights
     for (
       let line = highlight.range.start.line;
       line <= highlight.range.end.line;

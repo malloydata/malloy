@@ -27,7 +27,7 @@ import { getMalloySymbols } from "./symbols";
 import {
   TOKEN_TYPES,
   TOKEN_MODIFIERS,
-  getMalloyHighlights,
+  stubMalloyHighlights,
 } from "./highlights";
 import { getMalloyLenses } from "./lenses";
 import { CONNECTION_MANAGER } from "./connections";
@@ -96,7 +96,7 @@ connection.onDocumentSymbol((handler) => {
 connection.languages.semanticTokens.on((handler) => {
   const document = documents.get(handler.textDocument.uri);
   return document
-    ? getMalloyHighlights(document)
+    ? stubMalloyHighlights(document)
     : new SemanticTokensBuilder().build();
 });
 
