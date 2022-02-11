@@ -49,7 +49,7 @@ const QUERY_PROPERTIES = [
   "nest",
 ];
 
-const MODEL_PROPERTIES = ["explore", "query"];
+const MODEL_PROPERTIES = ["explore", "query", "sql"];
 
 class DocumentCompletionWalker implements MalloyListener {
   constructor(

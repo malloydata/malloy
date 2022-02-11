@@ -38,6 +38,21 @@ query: flights -> {
 
 View [the full documentation](${DOCS_ROOT}/language/query.html).
 `,
+    sql: `Use \`sql\` to declare a block of SQL code.
+
+\`\`\`malloy
+sql: users_sample is ||
+  SELECT
+    first_name,
+    last_name,
+    gender
+  FROM malloy-data.ecomm.users
+  LIMIT 10
+;;
+\`\`\`
+
+View [the full documentation](${DOCS_ROOT}/language/sql_blocks.html).
+`,
   },
   query_property: {
     group_by: `Use the \`group_by\` clause to specify dimensions by which to group aggregate calculations.
