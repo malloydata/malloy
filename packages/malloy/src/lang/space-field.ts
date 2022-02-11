@@ -20,7 +20,6 @@ import {
   HasParameter,
   Join,
 } from "./ast";
-import { cloneDeep } from "lodash";
 
 // "Space Fields" are a field in a field space
 
@@ -98,12 +97,15 @@ export class RenameSpaceField extends SpaceField {
   }
 
   fieldDef(): model.FieldDef | undefined {
-    const renamedField = cloneDeep(this.otherField.fieldDef());
-    if (renamedField !== undefined) {
-      renamedField.as = this.newName;
-      renamedField.location = this.location;
+    const renamedFieldRaw = this.otherField.fieldDef();
+    if (renamedFieldRaw === undefined) {
+      return undefined;
     }
-    return renamedField;
+    return {
+      ...renamedFieldRaw,
+      as: this.newName,
+      location: this.location,
+    };
   }
 
   type(): FieldType {

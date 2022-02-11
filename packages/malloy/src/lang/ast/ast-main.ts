@@ -479,9 +479,6 @@ export class RefinedExplore extends Mallobj {
     }
 
     const from = cloneDeep(this.source.structDef());
-    if (from.structRelationship.type === "basetable") {
-      from.location = this.location;
-    }
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
@@ -517,23 +514,6 @@ export class RefinedExplore extends Mallobj {
   }
 }
 
-/**
- * A Mallobj made from a source with no refinements
- */
-export class RenamedExplore extends Mallobj {
-  elementType = "renamedExplore";
-
-  constructor(readonly source: Mallobj) {
-    super({ source });
-  }
-
-  structDef(): model.StructDef {
-    const structDef = cloneDeep(this.source.structDef());
-    structDef.location = this.location;
-    return structDef;
-  }
-}
-
 export class TableSource extends Mallobj {
   elementType = "tableSource";
   constructor(readonly name: string) {
@@ -547,10 +527,18 @@ export class TableSource extends Mallobj {
     let msg = `Schema read failure for table '${this.name}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status == "present") {
+        tableDefEntry.value.location = this.location;
         tableDefEntry.value.fields.forEach(
           (field) => (field.location = this.location)
         );
-        return tableDefEntry.value;
+        return {
+          ...tableDefEntry.value,
+          fields: tableDefEntry.value.fields.map((field) => ({
+            ...field,
+            location: this.location,
+          })),
+          location: this.location,
+        };
       }
       if (tableDefEntry.status == "error") {
         msg = tableDefEntry.message.includes(this.name)
@@ -704,10 +692,13 @@ export class SQLSource extends NamedSource {
       if (lookup) {
         if (lookup.status == "present") {
           const structDef = lookup.value;
-          structDef.fields.forEach(
-            (field) => (field.location = modelEnt.location)
-          );
-          return structDef;
+          return {
+            ...structDef,
+            fields: structDef.fields.map((field) => ({
+              ...field,
+              location: modelEnt.location,
+            })),
+          };
         }
         if (lookup.status == "error") {
           msg = lookup.message.includes(this.name)

@@ -19,6 +19,8 @@ import {
   ModelDef,
   Query,
   QueryFieldDef,
+  FieldDef,
+  isFilteredAliasedName,
   PipeSegment,
   TurtleDef,
   DocumentLocation,
@@ -195,13 +197,22 @@ export function getModelQuery(modelDef: ModelDef, name: string): Query {
   return modelDef.contents[name] as Query;
 }
 
-export function getField(thing: StructDef | PipeSegment, name: string): any {
+export function getField(
+  thing: StructDef | PipeSegment,
+  name: string
+): FieldDef {
   const result = thing.fields.find(
     (field: QueryFieldDef) =>
       typeof field !== "string" && (field.as || field.name) === name
   );
   if (typeof result === "string") {
     throw new Error("Expected a def, got a ref.");
+  }
+  if (result === undefined) {
+    throw new Error("Expected a field, not undefined");
+  }
+  if (isFilteredAliasedName(result)) {
+    throw new Error("Ignoring these for now");
   }
   return result;
 }

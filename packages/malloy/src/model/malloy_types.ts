@@ -445,7 +445,7 @@ export type StructRelationship =
  * Use factory makeSQLBlock to create one of these, it will compute the
  * name: property and fill it in.
  */
-export interface SQLBlock extends AliasedName, HasLocation {
+export interface SQLBlock extends NamedObject {
   type: "sqlBlock";
   name: string; //  hash of the connection and the select
   before?: string[];

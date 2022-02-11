@@ -297,7 +297,7 @@ export class MalloyToAST
         pcx
       );
     }
-    return this.astAt(new ast.RenamedExplore(source), pcx);
+    return source;
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.ExploreDesc {
