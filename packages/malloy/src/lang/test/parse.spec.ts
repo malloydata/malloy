@@ -1236,8 +1236,11 @@ describe("source references", () => {
     });
   });
 
-  function pos(location: DocumentLocation): [string, DocumentPosition] {
-    return [location.url, location.range.start];
+  function pos(location: DocumentLocation): [DocumentPosition] {
+    return [
+      // location.url,
+      location.range.start,
+    ];
   }
 
   test("reference to join in aggregate source", () => {

@@ -649,14 +649,14 @@ export abstract class MalloyTranslation {
   }
 
   referenceAt(
-    url: string,
+    // url: string,
     position: DocumentPosition
   ): DocumentReference | undefined {
     // TODO jump-to-definition Store references in sorted order, and do a binary search to
     //      find them.
     return this.references.find((reference) => {
       return (
-        reference.location.url === url &&
+        // reference.location.url === url &&
         reference.location.range.start.line <= position.line &&
         reference.location.range.end.line >= position.line &&
         (position.line !== reference.location.range.start.line ||
