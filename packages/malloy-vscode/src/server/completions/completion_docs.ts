@@ -17,7 +17,7 @@ export const COMPLETION_DOCS: {
   [kind: string]: { [property: string]: string };
 } = {
   model_property: {
-    explore: `Use \`explore\` to define an explore.
+    explore: `Use \`explore\` to name, describe, and augment a data source.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -27,7 +27,7 @@ explore: flights is table('malloy-data.faa.flights') {
 
 View [the full documentation](${DOCS_ROOT}/language/explore.html).
 `,
-    query: `Use \`query\` to define a query.
+    query: `Use \`query\` to define a top-level query which can be run within this document.
 
 \`\`\`malloy
 query: flights -> {
@@ -192,7 +192,7 @@ explore: flights is table('malloy-data.faa.flights') {
 
 View [the full documentation](${DOCS_ROOT}/language/fields.html#measures).
 `,
-    query: `Use \`query\` to define a query.
+    query: `Use \`query\` to define a named query which can be referenced and/or refined.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
