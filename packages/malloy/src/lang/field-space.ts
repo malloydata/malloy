@@ -155,24 +155,21 @@ export class StructSpace implements FieldSpace {
   }
 
   lookup(fieldPath: string): LookupResult {
-    const split = FieldPath.of(fieldPath);
-    const found = this.entry(split.head);
-    if (split.tail) {
+    const step = FieldPath.walk(fieldPath);
+    const found = this.entry(step.head);
+    if (step.tail) {
       if (found instanceof StructSpaceField) {
-        return found.fieldSpace.lookup(split.tail);
+        return found.fieldSpace.lookup(step.tail);
       }
       return {
-        error: `'${split.head}' cannot contain a '${split.tail}'`,
+        error: `'${step.head}' cannot contain a '${step.tail}'`,
         found: undefined,
       };
     }
     if (found) {
       return { found, error: undefined };
     }
-    return {
-      error: `'${split.head}' is not defined`,
-      found: undefined,
-    };
+    return { error: `'${step.head}' is not defined`, found };
   }
 }
 

@@ -11,35 +11,21 @@
  * GNU General Public License for more details.
  */
 
-function undot(s: string): string[] {
-  return s.split(".");
-}
-function redot(p: string[]): string {
-  return p.join(".");
-}
-
-export function of(field: string): { head: string; tail: string } {
-  const parts = undot(field);
-  return {
-    head: parts[0],
-    tail: redot(parts.slice(1)),
-  };
-}
-
 /**
- * First segment in a dotted path
- * @param field A dotted path name
+ * When walking a field path, return the segment being walked
+ * and the remaining segments for recursion.
+ * @param field Dotted field name
+ * @returns feld as { head: string; tail: string }
  */
-export function head(field: string): string {
-  return undot(field)[0];
-}
-
-/**
- * A path with the "head" stripped off
- * @param field A dotted path name
- */
-export function tail(field: string): string {
-  return redot(undot(field).slice(1));
+export function walk(field: string): { head: string; tail: string } {
+  const dot = field.indexOf(".");
+  if (dot >= 0) {
+    return {
+      head: field.slice(0, dot),
+      tail: field.slice(dot + 1),
+    };
+  }
+  return { head: field, tail: "" };
 }
 
 /**
@@ -47,8 +33,11 @@ export function tail(field: string): string {
  * @param field A dotted path name
  */
 export function body(field: string): string {
-  const parts = undot(field);
-  return redot(parts.slice(0, parts.length - 1));
+  const lastDot = field.lastIndexOf(".");
+  if (lastDot >= 0) {
+    return field.slice(0, lastDot);
+  }
+  return field;
 }
 
 /**
@@ -56,10 +45,6 @@ export function body(field: string): string {
  * @param field A dotted path name
  */
 export function foot(field: string): string {
-  const parts = undot(field);
-  return parts[parts.length - 1];
-}
-
-export function join(...parts: string[]): string {
-  return parts.join(".");
+  const lastDot = field.lastIndexOf(".");
+  return field.slice(lastDot + 1);
 }
