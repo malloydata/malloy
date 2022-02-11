@@ -29,22 +29,22 @@ export function walk(field: string): { head: string; tail: string } {
 }
 
 /**
- * A path with the last segment stripped off
- * @param field A dotted path name
+ * If the fieldPath is not just a field, the returns the path to the field
+ * @param fieldPath A dotted path name
  */
-export function body(field: string): string {
-  const lastDot = field.lastIndexOf(".");
-  if (lastDot >= 0) {
-    return field.slice(0, lastDot);
+export function path(fieldPath: string): string {
+  const lastDot = fieldPath.lastIndexOf(".");
+  if (lastDot < 0) {
+    return "";
   }
-  return field;
+  return fieldPath.slice(0, lastDot);
 }
 
 /**
  * Last segment in a dotted path
- * @param field A dotted path name
+ * @param fieldPath A dotted path name
  */
-export function foot(field: string): string {
-  const lastDot = field.lastIndexOf(".");
-  return field.slice(lastDot + 1);
+export function field(fieldPath: string): string {
+  const lastDot = fieldPath.lastIndexOf(".");
+  return fieldPath.slice(lastDot + 1);
 }
