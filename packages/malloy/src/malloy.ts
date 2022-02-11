@@ -15,6 +15,7 @@ import { Connection } from "./connection";
 import {
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
+  DocumentCompletion as DocumentCompletionDefinition,
   LogMessage,
   MalloyTranslator,
 } from "./lang";
@@ -536,6 +537,15 @@ export class Parse {
   public get _translator(): MalloyTranslator {
     return this.translator;
   }
+
+  public completions(position: {
+    line: number;
+    character: number;
+  }): DocumentCompletion[] {
+    return (this.translator.completions(position).completions || []).map(
+      (completion) => new DocumentCompletion(completion)
+    );
+  }
 }
 
 /**
@@ -711,6 +721,16 @@ export class DocumentSymbol {
    */
   public get children(): DocumentSymbol[] {
     return this._children;
+  }
+}
+
+export class DocumentCompletion {
+  public readonly type: string;
+  public readonly text: string;
+
+  constructor(completion: DocumentCompletionDefinition) {
+    this.type = completion.type;
+    this.text = completion.text;
   }
 }
 

@@ -44,6 +44,10 @@ import {
   passForHighlights,
   sortHighlights,
 } from "./parse-tree-walkers/document-highlight-walker";
+import {
+  DocumentCompletion,
+  walkForDocumentCompletions,
+} from "./parse-tree-walkers/document-completion-walker";
 import { Range } from "./source-reference";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
@@ -141,6 +145,11 @@ interface Metadata extends NeededData, ErrorResponse, FinalResponse {
   highlights: DocumentHighlight[];
 }
 type MetadataResponse = Partial<Metadata>;
+
+interface Completions extends NeededData, ErrorResponse, FinalResponse {
+  completions: DocumentCompletion[];
+}
+type CompletionsResponse = Partial<Completions>;
 
 interface TranslatedResponseData
   extends NeededData,
@@ -504,6 +513,37 @@ class MetadataStep implements TranslationStep {
   }
 }
 
+class CompletionsStep implements TranslationStep {
+  constructor(readonly parseStep: ParseStep) {}
+
+  step(
+    that: MalloyTranslation,
+    position?: { line: number; character: number }
+  ): CompletionsResponse {
+    const tryParse = this.parseStep.step(that);
+    if (!tryParse.parse) {
+      return tryParse;
+    } else {
+      let completions: DocumentCompletion[] = [];
+      if (position !== undefined) {
+        try {
+          completions = walkForDocumentCompletions(
+            tryParse.parse.tokens,
+            tryParse.parse.root,
+            position
+          );
+        } catch {
+          /* Do nothing */
+        }
+      }
+      return {
+        ...tryParse,
+        completions,
+      };
+    }
+  }
+}
+
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
   constructor(readonly astStep: ASTStep) {}
@@ -565,6 +605,7 @@ export abstract class MalloyTranslation {
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
+  readonly completionsStep: CompletionsStep;
   readonly translateStep: TranslateStep;
 
   constructor(
@@ -586,6 +627,7 @@ export abstract class MalloyTranslation {
      */
     this.parseStep = new ParseStep();
     this.metadataStep = new MetadataStep(this.parseStep);
+    this.completionsStep = new CompletionsStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.translateStep = new TranslateStep(this.astStep);
@@ -678,6 +720,13 @@ export abstract class MalloyTranslation {
 
   metadata(): MetadataResponse {
     return this.metadataStep.step(this);
+  }
+
+  completions(position: {
+    line: number;
+    character: number;
+  }): CompletionsResponse {
+    return this.completionsStep.step(this, position);
   }
 }
 
