@@ -27,6 +27,7 @@ import {
   ModelDef,
   SQLBlock,
   DocumentRange,
+  DocumentReference,
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
@@ -609,6 +610,8 @@ export abstract class MalloyTranslation {
   readonly completionsStep: CompletionsStep;
   readonly translateStep: TranslateStep;
 
+  readonly references: DocumentReference[] = [];
+
   constructor(
     readonly sourceURL: string,
     public grammarRule = "malloyDocument"
@@ -638,6 +641,10 @@ export abstract class MalloyTranslation {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
     }
+  }
+
+  addReference(reference: DocumentReference): void {
+    this.references.push(reference);
   }
 
   fatalErrors(): FatalResponse {

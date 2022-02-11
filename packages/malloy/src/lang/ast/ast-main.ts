@@ -175,6 +175,10 @@ export abstract class MalloyElement {
     this.xlate = x;
   }
 
+  addReference(reference: model.DocumentReference): void {
+    this.translator()?.addReference(reference);
+  }
+
   private get sourceURL() {
     const trans = this.translator();
     return trans?.sourceURL || "(missing)";
@@ -595,7 +599,14 @@ export class NamedSource extends Mallobj {
       this.log(`Must use 'from_sql()' to explore sql query '${this.name}`);
       return;
     }
-    return { ...modelEnt };
+    const result = { ...modelEnt };
+    this.addReference({
+      type: "exploreReference",
+      text: this.name,
+      definition: result,
+      location: this.location,
+    });
+    return result;
   }
 
   structDef(): model.StructDef {

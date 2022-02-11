@@ -925,3 +925,108 @@ describe("source locations", () => {
     expect(y.location).toMatchObject(source.locations[0]);
   });
 });
+
+describe("source references", () => {
+  test("reference to explore", () => {
+    const source = markSource`
+      explore: ${"na is table('aTable')"}
+      query: ${"na"} -> { project: * }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.references[0]).toMatchObject({
+      location: source.locations[1],
+      type: "exploreReference",
+      text: "na",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in expression", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { project: bbool is not ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.references[1]).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to joined field in expression", () => {
+    // TODO jump-to-definition We would really like `self.astr` to be _two_ references, one to `self`
+    //      and the other to `self.astr`.
+    const source = markSource`
+      explore: na is ${"table('aTable')" /* 0 */} {
+        join_one: self is ${"table('aTable')" /* 1 */}
+          on ${"astr" /* 2 */} = ${"self.astr" /* 3 */}
+      }
+      query: na -> { project: bstr is ${"self.astr" /* 4 */} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.references.length).toBe(5);
+    expect(m.references[0]).toMatchObject({
+      location: source.locations[3],
+      type: "fieldReference",
+      text: "self.astr",
+      definition: {
+        location: source.locations[1],
+      },
+    });
+    expect(m.references[1]).toMatchObject({
+      location: source.locations[2],
+      type: "fieldReference",
+      text: "astr",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+    // TODO jump-to-definition This reference appears twice. `addReference` may want to be one-time-use, or
+    //      the calling function should be memoized.
+    expect(m.references[2]).toMatchObject({
+      location: source.locations[3],
+      type: "fieldReference",
+      text: "self.astr",
+      definition: {
+        location: source.locations[1],
+      },
+    });
+    expect(m.references[3]).toMatchObject({
+      text: "na",
+    });
+    expect(m.references[4]).toMatchObject({
+      location: source.locations[4],
+      type: "fieldReference",
+      text: "self.astr",
+      definition: {
+        location: source.locations[1],
+      },
+    });
+  });
+
+  test.skip("reference to field not in expression", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { project: ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.references[1]).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+});

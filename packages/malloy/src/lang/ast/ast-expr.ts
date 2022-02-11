@@ -44,7 +44,7 @@ import {
   ExprCompare,
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
-import { SpaceParam } from "../space-field";
+import { SpaceField, SpaceParam } from "../space-field";
 import { Dialect } from "../../dialect";
 
 /**
@@ -414,7 +414,21 @@ export class ExprIdReference extends ExpressionDef {
       const dataType = typeMixin.type;
       const aggregate = !!typeMixin.aggregate;
       const value = [{ type: entry.refType, path: this.refString }];
-      return { dataType, aggregate, value };
+      const result = { dataType, aggregate, value };
+      if (entry instanceof SpaceField) {
+        const definition = entry.fieldDef();
+        if (definition) {
+          this.addReference({
+            type: "fieldReference",
+            definition,
+            text: this.refString,
+            location: this.location,
+          });
+        } else {
+          // TODO jump-to-definition
+        }
+      }
+      return result;
     }
     if (
       fs instanceof CircleSpace &&

@@ -47,6 +47,38 @@ export interface DocumentLocation {
   range: DocumentRange;
 }
 
+interface DocumentReferenceBase {
+  text: string;
+  location: DocumentLocation;
+  definition: HasLocation;
+}
+
+export interface DocumentExploreReference extends DocumentReferenceBase {
+  type: "exploreReference";
+  definition: StructDef;
+}
+
+export interface DocumentSQLBlockReference extends DocumentReferenceBase {
+  type: "sqlBlockReference";
+  definition: SQLBlock;
+}
+
+export interface DocumentQueryReference extends DocumentReferenceBase {
+  type: "queryReference";
+  definition: Query;
+}
+
+export interface DocumentFieldReference extends DocumentReferenceBase {
+  type: "fieldReference";
+  definition: FieldDef;
+}
+
+export type DocumentReference =
+  | DocumentExploreReference
+  | DocumentQueryReference
+  | DocumentSQLBlockReference
+  | DocumentFieldReference;
+
 /** put location into the parse tree. */
 export interface HasLocation {
   location?: DocumentLocation;
