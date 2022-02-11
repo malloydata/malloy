@@ -21,6 +21,7 @@ import {
   QueryData,
   PooledConnection,
   parseTableURL,
+  SQLBlock,
 } from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
@@ -51,7 +52,7 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
 };
 
 interface PostgresQueryConfiguration {
-  pageSize?: number;
+  rowLimit?: number;
 }
 
 type PostgresQueryConfigurationReader =
@@ -77,6 +78,7 @@ const SCHEMA_PAGE_SIZE = 1000;
 export class PostgresConnection extends Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private sqlSchemaCache = new Map<string, StructDef>();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
 
@@ -129,6 +131,22 @@ export class PostgresConnection extends Connection {
     return tableStructDefs;
   }
 
+  public async fetchSchemaForSQLBlocks(
+    sqlStructs: SQLBlock[]
+  ): Promise<NamedStructDefs> {
+    const tableStructDefs: NamedStructDefs = {};
+    for (const sqlRef of sqlStructs) {
+      const key = sqlRef.name;
+      let inCache = this.sqlSchemaCache.get(key);
+      if (!inCache) {
+        inCache = await this.getSQLBlockSchema(sqlRef);
+        this.schemaCache.set(key, inCache);
+      }
+      tableStructDefs[key] = inCache;
+    }
+    return tableStructDefs;
+  }
+
   protected async runPostgresQuery(
     sqlCommand: string,
     _pageSize: number,
@@ -158,6 +176,60 @@ export class PostgresConnection extends Connection {
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 
+  private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
+    const structDef: StructDef = {
+      type: "struct",
+      dialect: "postgres",
+      name: sqlRef.name,
+      structSource: {
+        type: "sql",
+        method: "subquery",
+        sqlBlock: sqlRef,
+      },
+      structRelationship: {
+        type: "basetable",
+        connectionName: this.name,
+      },
+      fields: [],
+    };
+
+    // TODO -- Should be a uuid
+    const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
+    const infoQuery = `
+      drop table if exists ${tempTableName};
+      create temp table ${tempTableName} as SELECT * FROM (
+        ${sqlRef.select}
+      ) as x where false;
+      SELECT column_name, data_type FROM information_schema.columns where table_name='${tempTableName}';
+    `;
+    await this.schemaFromQuery(infoQuery, structDef);
+    return structDef;
+  }
+
+  private async schemaFromQuery(
+    infoQuery: string,
+    structDef: StructDef
+  ): Promise<void> {
+    const result = await this.runPostgresQuery(
+      infoQuery,
+      SCHEMA_PAGE_SIZE,
+      0,
+      false
+    );
+    for (const row of result.rows) {
+      const postgresDataType = row["data_type"] as string;
+      const malloyType = postgresToMalloyTypes[postgresDataType];
+      if (malloyType !== undefined) {
+        structDef.fields.push({
+          type: malloyType,
+          name: row["column_name"] as string,
+        });
+      } else {
+        throw new Error(`unknown postgres type ${postgresDataType}`);
+      }
+    }
+  }
+
   private async getTableSchema(tableURL: string): Promise<StructDef> {
     const structDef: StructDef = {
       type: "struct",
@@ -176,28 +248,13 @@ export class PostgresConnection extends Connection {
     if (table === undefined) {
       throw new Error("Default schema not supported Yet in Postgres");
     }
-    const result = await this.runPostgresQuery(
-      `
+    const infoQuery = `
       SELECT column_name, data_type FROM information_schema.columns
       WHERE table_name = '${table}'
         AND table_schema = '${schema}'
-      `,
-      SCHEMA_PAGE_SIZE,
-      0,
-      false
-    );
-    for (const row of result.rows) {
-      const postgresDataType = row["data_type"] as string;
-      const malloyType = postgresToMalloyTypes[postgresDataType];
-      if (malloyType !== undefined) {
-        structDef.fields.push({
-          type: malloyType,
-          name: row["column_name"] as string,
-        });
-      } else {
-        throw new Error(`unknown postgres type ${postgresDataType}`);
-      }
-    }
+    `;
+
+    await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }
 
@@ -205,7 +262,7 @@ export class PostgresConnection extends Connection {
     const config = await this.readQueryConfig();
     const queryData = await this.runPostgresQuery(
       query,
-      config.pageSize || DEFAULT_PAGE_SIZE,
+      config.rowLimit || DEFAULT_PAGE_SIZE,
       0,
       false
     );
@@ -218,14 +275,14 @@ export class PostgresConnection extends Connection {
 
   public async runSQL(
     sqlCommand: string,
-    pageSize?: number,
+    { rowLimit }: { rowLimit?: number } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
-      .update(String(pageSize))
+      .update(String(rowLimit))
       .update(String(rowIndex))
       .digest("hex");
     let result;
@@ -234,7 +291,7 @@ export class PostgresConnection extends Connection {
     }
     result = await this.runPostgresQuery(
       sqlCommand,
-      pageSize || config.pageSize || DEFAULT_PAGE_SIZE,
+      rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );

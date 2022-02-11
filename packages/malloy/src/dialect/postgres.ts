@@ -22,6 +22,11 @@ import {
   TimestampTimeframe,
 } from "./dialect";
 
+const castMap: Record<string, string> = {
+  number: "double precision",
+  string: "varchar",
+};
+
 export class PostgresDialect extends Dialect {
   name = "postgres";
   defaultNumberType = "DOUBLE PRECISION";
@@ -251,5 +256,23 @@ export class PostgresDialect extends Dialect {
     timeframe: DateTimeframe
   ): DialectExpr {
     return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
+  }
+
+  sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr {
+    return ["(", expr, `)::${castMap[castTo] || castTo}`];
+  }
+
+  sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    _timezone: string
+  ): string {
+    if (type === "date") {
+      return `DATE('${timeString}')`;
+    } else if (type === "timestamp") {
+      return `TIMESTAMP '${timeString}'`;
+    } else {
+      throw new Error(`Unknown Liternal time format ${type}`);
+    }
   }
 }

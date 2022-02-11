@@ -180,7 +180,10 @@ export function runMalloyQuery(
 
       const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
 
-      current.panel.webview.html = getWebviewHtml(entrySrc.toString());
+      current.panel.webview.html = getWebviewHtml(
+        entrySrc.toString(),
+        current.panel.webview
+      );
 
       current.panel.onDidDispose(() => {
         current.cancel();
@@ -232,8 +235,10 @@ export function runMalloyQuery(
             );
           }
 
+          let preparedResult;
           try {
-            const sql = await queryMaterializer.getSQL();
+            preparedResult = await queryMaterializer.getPreparedResult();
+            const sql = preparedResult.sql;
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
@@ -257,7 +262,10 @@ export function runMalloyQuery(
             status: QueryRunStatus.Running,
           });
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await queryMaterializer.run();
+          const queryResult = await queryMaterializer.run({
+            // Set the row limit to the limit provided in the final stage of the query, if present
+            rowLimit: preparedResult.resultExplore.limit,
+          });
           if (canceled) return;
 
           const runEnd = performance.now();

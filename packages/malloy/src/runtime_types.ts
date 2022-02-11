@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { MalloyQueryData, StructDef } from "./model";
+import { MalloyQueryData, SQLBlock, StructDef } from "./model";
 
 /**
  * A URL.
@@ -87,6 +87,11 @@ export interface SchemaReader {
    * @returns A mapping of table names to schemas.
    */
   fetchSchemaForTables(tables: string[]): Promise<Record<string, StructDef>>;
+
+  // TODO comment
+  fetchSchemaForSQLBlocks(
+    sqlStructs: SQLBlock[]
+  ): Promise<Record<string, StructDef>>;
 }
 
 /**
@@ -108,10 +113,14 @@ export interface SQLRunner {
    * Run some SQL and yield results.
    *
    * @param sql The SQL to run.
+   * @param options.pageSize Maximum number of results to return at once.
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(sql: string): Promise<MalloyQueryData>;
+  runSQL(
+    sql: string,
+    options?: { rowLimit?: number }
+  ): Promise<MalloyQueryData>;
 }
 
 /**

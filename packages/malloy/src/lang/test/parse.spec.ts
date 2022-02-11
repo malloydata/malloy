@@ -12,10 +12,11 @@
  * GNU General Public License for more details.
  */
 
+import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
-import { TestTranslator, pretty } from "./test-translator";
+import { TestTranslator, pretty, aTableDef } from "./test-translator";
 
 const inspectCompile = false;
 
@@ -70,7 +71,7 @@ function checkForErrors(trans: Testable) {
     };
   }
   return {
-    message: () => "Translation resulted in no errors",
+    message: () => "Unexpected error free translation",
     pass: true,
   };
 }
@@ -126,6 +127,7 @@ function modelOK(s: string): TestFunc {
 }
 
 describe("model statements", () => {
+  test("empty model", modelOK(""));
   describe("explore:", () => {
     test("explore table", modelOK(`explore: testA is table('aTable')`));
     test(
@@ -214,6 +216,13 @@ describe("model statements", () => {
       "reduce pipe project",
       modelOK(`
         query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
+      `)
+    );
+    test(
+      "refine and extend query",
+      modelOK(`
+        query: a_by_str is a -> { group_by: astr }
+        query: -> a_by_str { aggregate: str_count is count() }
       `)
     );
   });
@@ -592,29 +601,27 @@ describe("sql backdoor", () => {
     "single sql statement",
     modelOK("sql: users is || SELECT * FROM USERS;;")
   );
-  test(
-    "multiple sql statements",
-    modelOK(`
-      sql: users is
-        || -- some other sql command ;;
-        || SELECT * FROM USERS;;
-        on "bigquery"
-      `)
-  );
   test("explore from sql", () => {
     const model = new BetaModel(`
-      sql: users IS || SELECT * FROM users ;;
-      explore: malloyUsers is from_sql(users) { primary_key: id }
+      sql: users IS || SELECT * FROM aTable ;;
+      explore: malloyUsers is from_sql(users) { primary_key: ai }
     `);
+    const needReq = model.translate();
     expect(model).toBeErrorless();
-    const needs = model.translate()?.sqlRefs;
+    const needs = needReq?.sqlStructs;
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
-      expect(needs[0]).toMatchObject({
-        sql: [" SELECT * FROM users "],
-        connection: undefined,
-      });
+      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      expect(needs[0]).toMatchObject(sql);
+      const refKey = needs[0].name;
+      expect(refKey).toBeDefined();
+      if (refKey) {
+        model.update({
+          sqlStructs: { [refKey]: aTableDef },
+        });
+        expect(model).toCompile();
+      }
     }
   });
 });
@@ -659,6 +666,26 @@ describe("error handling", () => {
     );
   });
   test("empty document", modelOK("\n"));
+  test("query without fields", () => {
+    const m = new BetaModel(`
+      query: a -> { top: 5 }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe(
+      "Can't determine query type (group_by/aggregate/nest,project,index)"
+    );
+  });
+  test("refine can't change query type", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle { project: astr }
+    `);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe("project: not legal in grouping query");
+  });
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
   //   expect(m).not.toCompile();

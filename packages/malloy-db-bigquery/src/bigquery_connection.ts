@@ -32,6 +32,7 @@ import {
   FieldTypeDef,
   NamedStructDefs,
   Connection,
+  SQLBlock,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -47,14 +48,18 @@ export interface BigQueryManagerOptions {
 }
 
 export interface BigQueryQueryOptions {
-  pageSize: number;
-  rowIndex: number;
+  rowLimit: number;
 }
 
 interface BigQueryConnectionConfiguration {
   defaultProject?: string;
   serviceAccountKeyPath?: string;
   location?: string;
+}
+
+interface SchemaInfo {
+  schema: bigquery.ITableFieldSchema;
+  needsPartitionPsuedoColumn: boolean;
 }
 
 type QueryOptionsReader =
@@ -92,8 +97,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection extends Connection {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
-    pageSize: 10,
-    rowIndex: 0,
+    rowLimit: 10,
   };
 
   private bigQuery: BigQuerySDK;
@@ -103,10 +107,13 @@ export class BigQueryConnection extends Connection {
 
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
+  private sqlSchemaCache = new Map<string, StructDef>();
 
   private queryOptions?: QueryOptionsReader;
 
   private config: BigQueryConnectionConfiguration;
+
+  private location: string;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -145,6 +152,7 @@ export class BigQueryConnection extends Connection {
 
     this.queryOptions = queryOptions;
     this.config = config;
+    this.location = config.location || "US";
   }
 
   get dialectName(): string {
@@ -170,9 +178,11 @@ export class BigQueryConnection extends Connection {
 
   public async runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {}
+    options: Partial<BigQueryQueryOptions> = {},
+    rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const { pageSize, rowIndex } = { ...this.readQueryOptions(), ...options };
+    const defaultOptions = this.readQueryOptions();
+    const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
@@ -222,7 +232,7 @@ export class BigQueryConnection extends Connection {
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
-        location: this.config.location || "US",
+        location: this.location,
         query: sqlCommand,
         dryRun: true,
       });
@@ -242,15 +252,13 @@ export class BigQueryConnection extends Connection {
     const destinationTable =
       dryRunResults.metadata.configuration.query.destinationTable;
 
-    return this.structDefFromSchema(
+    return this.structDefFromTableSchema(
       `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
       dryRunResults.metadata.statistics.query.schema
     );
   }
 
-  public async getTableFieldSchema(
-    tableURL: string
-  ): Promise<bigquery.ITableFieldSchema> {
+  public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
     const { tablePath: tableName } = parseTableURL(tableURL);
     const segments = tableName.split(".");
 
@@ -277,7 +285,12 @@ export class BigQueryConnection extends Connection {
     try {
       const [metadata] = await table.getMetadata();
       this.bigQuery.projectId = this.projectId;
-      return metadata.schema;
+      return {
+        schema: metadata.schema,
+        needsPartitionPsuedoColumn:
+          metadata.timePartitioning?.type !== undefined &&
+          metadata.timePartitioning?.field === undefined,
+      };
     } catch (e) {
       throw maybeRewriteError(e);
     }
@@ -319,7 +332,7 @@ export class BigQueryConnection extends Connection {
     } else {
       try {
         const [job] = await this.bigQuery.createQueryJob({
-          location: "US",
+          location: this.location,
           query: sqlCommand,
         });
 
@@ -385,7 +398,7 @@ export class BigQueryConnection extends Connection {
 
     const [job] = await this.bigQuery.createQueryJob({
       query: sqlCommand,
-      location: "US",
+      location: this.location,
       destination: table,
     });
 
@@ -443,9 +456,9 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  private structDefFromSchema(
+  private structDefFromTableSchema(
     tableURL: string,
-    tableFieldSchema: bigquery.ITableFieldSchema
+    schemaInfo: SchemaInfo
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
@@ -454,6 +467,32 @@ export class BigQueryConnection extends Connection {
       structSource: {
         type: "table",
         tablePath: this.tableURLtoTablePath(tableURL),
+      },
+      structRelationship: { type: "basetable", connectionName: this.name },
+      fields: [],
+    };
+    this.addFieldsToStructDef(structDef, schemaInfo.schema);
+    if (schemaInfo.needsPartitionPsuedoColumn) {
+      structDef.fields.push({
+        type: "timestamp",
+        name: "_PARTITIONTIME",
+      });
+    }
+    return structDef;
+  }
+
+  private structDefFromSQLSchema(
+    sqlBlock: SQLBlock,
+    tableFieldSchema: bigquery.ITableFieldSchema
+  ): StructDef {
+    const structDef: StructDef = {
+      type: "struct",
+      name: sqlBlock.name,
+      dialect: this.dialectName,
+      structSource: {
+        type: "sql",
+        method: "subquery",
+        sqlBlock,
       },
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
@@ -471,10 +510,43 @@ export class BigQueryConnection extends Connection {
       let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
         const tableFieldSchema = await this.getTableFieldSchema(tableURL);
-        inCache = this.structDefFromSchema(tableURL, tableFieldSchema);
+        inCache = this.structDefFromTableSchema(tableURL, tableFieldSchema);
         this.schemaCache.set(tableURL, inCache);
       }
       tableStructDefs[tableURL] = inCache;
+    }
+    return tableStructDefs;
+  }
+
+  private async getSQLBlockSchema(sqlRef: SQLBlock) {
+    const [job] = await this.bigQuery.createQueryJob({
+      location: this.config.location || "US",
+      query: sqlRef.select,
+      dryRun: true,
+    });
+
+    try {
+      return job.metadata.statistics.query.schema;
+    } catch (e) {
+      throw maybeRewriteError(e);
+    }
+  }
+
+  public async fetchSchemaForSQLBlocks(
+    sqlRefs: SQLBlock[]
+  ): Promise<NamedStructDefs> {
+    const tableStructDefs: NamedStructDefs = {};
+
+    for (const sqlRef of sqlRefs) {
+      // TODO feature-sql-block sqlRef key should not be nullable here
+      const key = sqlRef.name;
+      let inCache = this.sqlSchemaCache.get(key);
+      if (!inCache) {
+        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
+        inCache = this.structDefFromSQLSchema(sqlRef, tableFieldSchema);
+        this.schemaCache.set(key, inCache);
+      }
+      tableStructDefs[key] = inCache;
     }
     return tableStructDefs;
   }
@@ -516,7 +588,7 @@ export class BigQueryConnection extends Connection {
 
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
     const [job] = await this.bigQuery.createQueryJob({
-      location: "US",
+      location: this.location,
       maximumBytesBilled: String(25 * 1024 * 1024 * 1024),
       ...createQueryJobOptions,
     });

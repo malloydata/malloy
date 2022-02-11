@@ -21,6 +21,7 @@ import {
   MalloyQueryData,
   NamedStructDefs,
   QueryData,
+  SQLBlock,
 } from "./model/malloy_types";
 
 export interface PooledConnection {
@@ -52,12 +53,19 @@ export abstract class Connection
 
   abstract executeSQLRaw(sqlCommand: string): Promise<QueryData>;
 
-  abstract runSQL(sqlCommand: string): Promise<MalloyQueryData>;
+  abstract runSQL(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): Promise<MalloyQueryData>;
 
   abstract test(): Promise<void>;
 
   public abstract fetchSchemaForTables(
     missing: string[]
+  ): Promise<NamedStructDefs>;
+
+  public abstract fetchSchemaForSQLBlocks(
+    sqlStructs: SQLBlock[]
   ): Promise<NamedStructDefs>;
 
   /*

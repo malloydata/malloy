@@ -26,6 +26,7 @@ export type {
   FieldTypeDef,
   // Needed for drills in render
   FilterExpression,
+  SQLBlock,
 } from "./model";
 export {
   // Neede for VSCode extension

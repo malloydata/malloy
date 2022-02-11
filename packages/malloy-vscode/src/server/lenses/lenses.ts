@@ -40,6 +40,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
   const symbols = Malloy.parse({ source: document.getText() }).symbols;
 
   let currentUnnamedQueryIndex = 0;
+  let curretnUnnamedSqlQueryIndex = 0;
   symbols.forEach((symbol) => {
     if (symbol.type === "query") {
       lenses.push({
@@ -109,6 +110,25 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
           });
         }
       });
+    } else if (symbol.type === "sql") {
+      lenses.push({
+        range: symbol.range.toJSON(),
+        command: {
+          title: "Run",
+          command: "malloy.runSqlQuery",
+          arguments: [symbol.name],
+        },
+      });
+    } else if (symbol.type === "unnamed_sql") {
+      lenses.push({
+        range: symbol.range.toJSON(),
+        command: {
+          title: "Run",
+          command: "malloy.runUnnamedSqlQuery",
+          arguments: [curretnUnnamedSqlQueryIndex],
+        },
+      });
+      curretnUnnamedSqlQueryIndex++;
     }
   });
 

@@ -155,4 +155,18 @@ export abstract class Dialect {
     n: unknown,
     timeframe: DateTimeframe
   ): DialectExpr;
+
+  // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
+  //  included in projections.
+  ignoreInProject(_fieldName: string): boolean {
+    return false;
+  }
+
+  abstract sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr;
+
+  abstract sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    timezone: string
+  ): string;
 }

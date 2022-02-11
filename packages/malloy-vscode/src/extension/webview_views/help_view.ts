@@ -42,7 +42,10 @@ export class HelpViewProvider implements vscode.WebviewViewProvider {
 
     const entrySrc = webviewView.webview.asWebviewUri(onDiskPath);
 
-    webviewView.webview.html = getWebviewHtml(entrySrc.toString());
+    webviewView.webview.html = getWebviewHtml(
+      entrySrc.toString(),
+      webviewView.webview
+    );
 
     const messageManager = new WebviewMessageManager<HelpPanelMessage>(
       webviewView

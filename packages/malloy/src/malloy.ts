@@ -37,6 +37,7 @@ import {
   QueryResult,
   StructDef,
   TurtleDef,
+  SQLBlock,
 } from "./model";
 import {
   LookupSQLRunner,
@@ -165,7 +166,8 @@ export class Malloy {
         if (result.translated) {
           return new Model(
             result.translated.modelDef,
-            result.translated.queryList
+            result.translated.queryList,
+            result.translated.sqlBlocks
           );
         } else {
           const errors = result.errors || [];
@@ -235,25 +237,44 @@ export class Malloy {
             translator.update({ tables });
           }
         }
-        if (result.sqlRefs) {
-          for (const _missingSQLSchemaRef_ of result.sqlRefs) {
-            throw new Error("SQL Schema fetch not yet implemented");
+        if (result.sqlStructs) {
+          // collect sql refs by connection name since there may be multiple connections
+          const sqlRefsByConnection: Map<
+            string | undefined,
+            Array<SQLBlock>
+          > = new Map();
+          for (const missingSQLSchemaRef of result.sqlStructs) {
+            const connectionName = missingSQLSchemaRef.connection;
+
+            let connectionToSQLReferencesMap =
+              sqlRefsByConnection.get(connectionName);
+            if (!connectionToSQLReferencesMap) {
+              connectionToSQLReferencesMap = [missingSQLSchemaRef];
+            } else {
+              connectionToSQLReferencesMap.push(missingSQLSchemaRef);
+            }
+            sqlRefsByConnection.set(
+              connectionName,
+              connectionToSQLReferencesMap
+            );
+          }
+          for (const [
+            connectionName,
+            connectionToSQLReferencesMap,
+          ] of sqlRefsByConnection) {
             // connectionName might be undefined because lloyd says there is
             // such a thing as a "default connection" ....
-            // const connectionName: string | undefined = missingSQLSchemaRef.connection;
-            // const sqlStatements: string[] = missingSQLSchemaRef.sql;
-            // Now ask the connection for a structdef
-            // const theResponse = await askForStructDef(connectionName, sqlStatements);
-            // ... no idea what this new api will return ... but something like ...
-            // if (theRepsone.type == "struct") {
-            //    translator.update({
-            //       sqlRefs: { [misinngSqlSchemaRef.key]: theResponse }
-            //     });
-            // } else {
-            //     translator.update({errors: {
-            //       sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
-            //     }});
-            // }
+            const schemaFetcher = await lookupSchemaReader.lookupSchemaReader(
+              connectionName
+            );
+            const sqlStructs = await schemaFetcher.fetchSchemaForSQLBlocks(
+              connectionToSQLReferencesMap
+            );
+            translator.update({ sqlStructs });
+            // TODO handle error properlt
+            // translator.update({errors: {
+            //   sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
+            // }});
           }
         }
       }
@@ -270,25 +291,31 @@ export class Malloy {
   public static async run({
     lookupSQLRunner,
     preparedResult,
+    options,
   }: {
     lookupSQLRunner: LookupSQLRunner;
     preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run({
     sqlRunner,
     preparedResult,
+    options,
   }: {
     sqlRunner: SQLRunner;
     preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
   }): Promise<Result>;
   public static async run({
     sqlRunner,
     lookupSQLRunner,
     preparedResult,
+    options,
   }: {
     sqlRunner?: SQLRunner;
     lookupSQLRunner?: LookupSQLRunner;
     preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
   }): Promise<Result> {
     if (sqlRunner === undefined) {
       if (lookupSQLRunner === undefined) {
@@ -300,7 +327,7 @@ export class Malloy {
         preparedResult.connectionName
       );
     }
-    const result = await sqlRunner.runSQL(preparedResult.sql);
+    const result = await sqlRunner.runSQL(preparedResult.sql, options);
     return new Result(
       {
         ...preparedResult._rawQuery,
@@ -333,10 +360,16 @@ export class MalloyError extends Error {
 export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
+  private sqlBlocks: SQLBlock[];
 
-  constructor(modelDef: ModelDef, queryList: InternalQuery[]) {
+  constructor(
+    modelDef: ModelDef,
+    queryList: InternalQuery[],
+    sqlBlocks: SQLBlock[]
+  ) {
     this.modelDef = modelDef;
     this.queryList = queryList;
+    this.sqlBlocks = sqlBlocks;
   }
 
   /**
@@ -987,7 +1020,7 @@ export class Explore extends Entity {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, []);
+    return new Model(this.modelDef, [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1551,7 +1584,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async function materialize() {
-      return new Model(modelDef, []);
+      return new Model(modelDef, [], []);
     });
   }
 
@@ -1904,10 +1937,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns The query results from running this loaded query.
    */
-  async run(): Promise<Result> {
+  async run(options?: { rowLimit?: number }): Promise<Result> {
     const lookupSQLRunner = this.runtime.lookupSQLRunner;
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ lookupSQLRunner, preparedResult });
+    return Malloy.run({ lookupSQLRunner, preparedResult, options });
   }
 
   /**
