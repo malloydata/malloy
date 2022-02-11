@@ -9,7 +9,6 @@
     { "path": "packages/malloy-vscode" }
   ],
   "files": [],
-  "include": [],
   "exclude": ["**/node_modules"],
   "compilerOptions": {
     "noEmit": true
