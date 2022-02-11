@@ -348,7 +348,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
       if (qi instanceof FieldName || qi instanceof NestReference) {
-        this.addReference(qi.name);
+        this.addReference(qi, qi.name);
       } else if (qi instanceof ExprFieldDecl) {
         this.addField(qi);
       } else if (qi instanceof NestDefinition) {
@@ -362,7 +362,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        this.addReference(member.name);
+        this.addReference(member, member.name);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
@@ -371,7 +371,11 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
   }
 
-  addReference(ref: string): void {
+  addReference(astEl: MalloyElement, ref: string): void {
+    if (this.findEntry(ref) == undefined) {
+      astEl.log(`Reference to undefined '${ref}'`);
+      return;
+    }
     this.setEntry(ref, new FANSPaceField(ref, this));
   }
 
