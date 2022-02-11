@@ -68,8 +68,6 @@ export class AbstractParameter extends SpaceParam {
 }
 
 export abstract class SpaceField extends SpaceEntry {
-  // TODO Field should decide if they care about naming with an "implements"
-  abstract rename(newName: string): void;
   readonly refType = "field";
 
   protected fieldTypeFromFieldDef(def: model.FieldDef): FieldType {
@@ -89,6 +87,32 @@ export abstract class SpaceField extends SpaceEntry {
   }
 }
 
+export class RenameSpaceField extends SpaceField {
+  constructor(
+    private readonly otherField: SpaceField,
+    private readonly newName: string,
+    private readonly location: model.DocumentLocation
+  ) {
+    super();
+  }
+
+  fieldDef(): model.FieldDef | undefined {
+    const renamedFieldRaw = this.otherField.fieldDef();
+    if (renamedFieldRaw === undefined) {
+      return undefined;
+    }
+    return {
+      ...renamedFieldRaw,
+      as: this.newName,
+      location: this.location,
+    };
+  }
+
+  type(): FieldType {
+    return this.otherField.type();
+  }
+}
+
 export class WildSpaceField extends SpaceField {
   constructor(readonly wildText: string) {
     super();
@@ -100,10 +124,6 @@ export class WildSpaceField extends SpaceField {
 
   queryFieldDef(): model.QueryFieldDef {
     return this.wildText;
-  }
-
-  rename(_name: string): void {
-    throw new Error("Can't rename wild things");
   }
 }
 
@@ -124,14 +144,6 @@ export class StructSpaceField extends SpaceField {
     return this.sourceDef;
   }
 
-  rename(name: string): void {
-    this.sourceDef = {
-      ...this.sourceDef,
-      as: name,
-    };
-    this.space = undefined;
-  }
-
   type(): FieldType {
     return { type: "struct" };
   }
@@ -146,13 +158,6 @@ export class JoinSpaceField extends StructSpaceField {
 export class ColumnSpaceField extends SpaceField {
   constructor(protected def: model.FieldTypeDef) {
     super();
-  }
-
-  rename(name: string): void {
-    this.def = {
-      ...this.def,
-      as: name,
-    };
   }
 
   fieldDef(): model.FieldDef {
@@ -186,10 +191,6 @@ export class QueryFieldAST extends QueryField {
     protected name: string
   ) {
     super(fs);
-  }
-
-  rename(newName: string): void {
-    this.renameAs = newName;
   }
 
   fieldDef(): model.TurtleDef {
@@ -235,10 +236,6 @@ export class FANSPaceField extends SpaceField {
 
   name(): string {
     return this.as || this.ref;
-  }
-
-  rename(name: string): void {
-    this.as = name;
   }
 
   private filtersPresent() {
@@ -327,10 +324,6 @@ export class ExpressionFieldFromAst extends SpaceField {
 
   get name(): string {
     return this.fieldName;
-  }
-
-  rename(name: string): void {
-    this.fieldName = name;
   }
 
   fieldDef(): model.FieldDef {

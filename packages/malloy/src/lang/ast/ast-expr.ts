@@ -236,6 +236,7 @@ export class ExprFieldDecl extends MalloyElement {
       const template: FieldTypeDef = {
         name: exprName,
         type: retType,
+        location: this.location,
       };
       if (compressValue.length > 0) {
         template.e = compressValue;

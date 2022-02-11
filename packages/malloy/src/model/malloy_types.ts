@@ -37,10 +37,19 @@ export function paramHasValue(p: Parameter): boolean {
   return isValueParameter(p) || p.condition !== null;
 }
 
-/** put line number into the parse tree. */
-export interface LineNumber {
-  fileName?: string;
-  lineNumber?: number;
+export interface DocumentRange {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+}
+
+export interface DocumentLocation {
+  url: string;
+  range: DocumentRange;
+}
+
+/** put location into the parse tree. */
+export interface HasLocation {
+  location?: DocumentLocation;
 }
 
 /** All names have their source names and how they will appear in the symbol table that owns them */
@@ -68,7 +77,7 @@ export function isFilteredAliasedName(
 }
 
 /** all named objects have a type an a name (optionally aliased) */
-export interface NamedObject extends AliasedName, LineNumber {
+export interface NamedObject extends AliasedName, HasLocation {
   type: string;
 }
 
@@ -350,7 +359,7 @@ export interface Pipeline {
   pipeline: PipeSegment[];
 }
 
-export interface Query extends Pipeline, Filtered {
+export interface Query extends Pipeline, Filtered, HasLocation {
   type?: "query";
   structRef: StructRef;
 }
@@ -436,7 +445,7 @@ export type StructRelationship =
  * Use factory makeSQLBlock to create one of these, it will compute the
  * name: property and fill it in.
  */
-export interface SQLBlock extends AliasedName {
+export interface SQLBlock extends NamedObject {
   type: "sqlBlock";
   name: string; //  hash of the connection and the select
   before?: string[];

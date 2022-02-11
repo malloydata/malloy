@@ -23,7 +23,6 @@ import {
   QueryFieldSpace,
   IndexFieldSpace,
 } from "../field-space";
-import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
 import {
@@ -91,7 +90,7 @@ type ElementChildren = Record<string, ChildBody>;
 
 export abstract class MalloyElement {
   abstract elementType: string;
-  codeLocation?: Source.Range;
+  codeLocation?: model.DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
   private logger?: MessageLogger;
@@ -126,7 +125,7 @@ export abstract class MalloyElement {
     }
   }
 
-  get location(): Source.Range {
+  get location(): model.DocumentLocation {
     if (this.codeLocation) {
       return this.codeLocation;
     }
@@ -134,10 +133,16 @@ export abstract class MalloyElement {
       return this.parent.location;
     }
     this.log("Location not set during parse");
-    return { begin: { line: 0 } };
+    return {
+      url: this.sourceURL,
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      },
+    };
   }
 
-  set location(loc: Source.Range | undefined) {
+  set location(loc: model.DocumentLocation | undefined) {
     this.codeLocation = loc;
   }
 
@@ -170,16 +175,21 @@ export abstract class MalloyElement {
     this.xlate = x;
   }
 
+  private get sourceURL() {
+    const trans = this.translator();
+    return trans?.sourceURL || "(missing)";
+  }
+
   log(logString: string): void {
     const trans = this.translator();
     const msg: LogMessage = {
-      sourceURL: trans?.sourceURL || "(missing)",
+      sourceURL: this.sourceURL,
       message: logString,
     };
     const loc = this.location;
     if (loc) {
-      msg.begin = loc.begin;
-      msg.end = loc.end;
+      msg.begin = loc.range.start;
+      msg.end = loc.range.end;
     }
     const logTo = trans?.root.logger;
     if (logTo) {
@@ -409,6 +419,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
       const struct = {
         ...this.mallobj.withParameters(this.parameters),
         as: this.name,
+        location: this.location,
       };
       doc.setEntry(this.name, {
         entry: struct,
@@ -452,13 +463,12 @@ export class RefinedExplore extends Mallobj {
           el.log("Too many accept/except statements");
         }
         fieldListEdit = el;
-      } else if (el instanceof RenameField) {
-        fields.push(el);
       } else if (
         el instanceof Measures ||
         el instanceof Dimensions ||
         el instanceof Joins ||
-        el instanceof Turtles
+        el instanceof Turtles ||
+        el instanceof Renames
       ) {
         fields.push(...el.list);
       } else if (el instanceof Filter) {
@@ -517,7 +527,18 @@ export class TableSource extends Mallobj {
     let msg = `Schema read failure for table '${this.name}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status == "present") {
-        return tableDefEntry.value;
+        tableDefEntry.value.location = this.location;
+        tableDefEntry.value.fields.forEach(
+          (field) => (field.location = this.location)
+        );
+        return {
+          ...tableDefEntry.value,
+          fields: tableDefEntry.value.fields.map((field) => ({
+            ...field,
+            location: this.location,
+          })),
+          location: this.location,
+        };
       }
       if (tableDefEntry.status == "error") {
         msg = tableDefEntry.message.includes(this.name)
@@ -670,7 +691,14 @@ export class SQLSource extends NamedSource {
       let msg = `Schema read failure for sql query '${this.name}'`;
       if (lookup) {
         if (lookup.status == "present") {
-          return lookup.value;
+          const structDef = lookup.value;
+          return {
+            ...structDef,
+            fields: structDef.fields.map((field) => ({
+              ...field,
+              location: modelEnt.location,
+            })),
+          };
         }
         if (lookup.status == "error") {
           msg = lookup.message.includes(this.name)
@@ -728,6 +756,7 @@ export class KeyJoin extends Join {
         type: "foreignKey",
         foreignKey: this.key,
       },
+      location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -785,6 +814,7 @@ export class ExpressionJoin extends Join {
     const joinStruct: model.StructDef = {
       ...sourceDef,
       structRelationship: { type: this.joinType },
+      location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -836,7 +866,7 @@ export type ExploreProperty =
   | Measures
   | Dimensions
   | FieldListEdit
-  | RenameField
+  | Renames
   | PrimaryKey
   | Turtles;
 export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
@@ -846,7 +876,7 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
     p instanceof Measures ||
     p instanceof Dimensions ||
     p instanceof FieldListEdit ||
-    p instanceof RenameField ||
+    p instanceof Renames ||
     p instanceof PrimaryKey ||
     p instanceof Turtles
   );
@@ -934,6 +964,12 @@ export class Dimensions extends ListOf<ExprFieldDecl> {
     for (const dim of dimensions) {
       dim.isMeasure = false;
     }
+  }
+}
+
+export class Renames extends ListOf<RenameField> {
+  constructor(renames: RenameField[]) {
+    super("renameField", renames);
   }
 }
 
@@ -1524,6 +1560,7 @@ export class TurtleDecl extends MalloyElement {
       type: "turtle",
       name: this.name,
       ...pipe,
+      location: this.location,
     };
   }
 }
@@ -1712,6 +1749,7 @@ export class PipelineDesc extends MalloyElement {
       ...resultPipe,
       type: "query",
       structRef: queryHead.structRef(),
+      location: this.location,
     };
     return { outputStruct, query };
   }
@@ -1722,6 +1760,7 @@ export class PipelineDesc extends MalloyElement {
       type: "query",
       structRef,
       pipeline: [],
+      location: this.location,
     };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
@@ -1847,6 +1886,7 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       ...this.queryDetails.query(),
       type: "query",
       name: this.name,
+      location: this.location,
     };
     const exported = false;
     doc.setEntry(this.name, { entry, exported });
@@ -2062,7 +2102,9 @@ export class SQLStatement extends MalloyElement implements DocStatement {
   }
 
   sqlBlock(): model.SQLBlock {
-    return makeSQLBlock(this.blockReq);
+    const sqlBlock = makeSQLBlock(this.blockReq);
+    sqlBlock.location = this.location;
+    return sqlBlock;
   }
 
   execute(doc: Document): void {

@@ -18,12 +18,10 @@ import { MalloyListener } from "../lib/Malloy/MalloyListener";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyParser } from "../lib/Malloy/MalloyParser";
 import { Token } from "antlr4ts/Token";
+import { DocumentRange } from "../../model/malloy_types";
 
 export interface DocumentHighlight {
-  range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-  };
+  range: DocumentRange;
   type: string;
 }
 

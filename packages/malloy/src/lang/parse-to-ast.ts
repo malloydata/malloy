@@ -175,7 +175,10 @@ export class MalloyToAST
     el: MT,
     cx: ParserRuleContext
   ): MT {
-    el.location = Source.rangeFromContext(cx);
+    el.location = {
+      url: this.parse.sourceURL,
+      range: Source.rangeFromContext(cx),
+    };
     return el;
   }
 
@@ -200,6 +203,20 @@ export class MalloyToAST
         }
       } else {
         this.contextError(cx, "Expected field definition");
+      }
+    }
+    return visited;
+  }
+
+  protected getRenames(cxList: ParserRuleContext[]): ast.RenameField[] {
+    const visited: ast.RenameField[] = [];
+    for (const cx of cxList) {
+      const v = this.visit(cx);
+      if (v instanceof ast.RenameField) {
+        this.astAt(v, cx);
+        visited.push(v);
+      } else {
+        this.contextError(cx, "Expected rename definition");
       }
     }
     return visited;
@@ -427,7 +444,7 @@ export class MalloyToAST
     return this.astAt(stmt, pcx);
   }
 
-  visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.RenameField {
+  visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0).id();
     const oldName = pcx.fieldName(1).id();
     const rename = new ast.RenameField(
@@ -435,6 +452,12 @@ export class MalloyToAST
       this.getIdText(oldName)
     );
     return this.astAt(rename, pcx);
+  }
+
+  visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.Renames {
+    const renames = this.getRenames(pcx.renameList().exploreRenameDef());
+    const stmt = new ast.Renames(renames);
+    return this.astAt(stmt, pcx);
   }
 
   visitFilterClauseList(pcx: parse.FilterClauseListContext): ast.Filter {
@@ -710,7 +733,7 @@ export class MalloyToAST
   }
 
   visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const query = this.visit(pcx.query());
+    const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
       return new ast.AnonymousQuery(query);
     }
@@ -1074,6 +1097,10 @@ export class MalloyToAST
   visitDefineSQLStatement(
     pcx: parse.DefineSQLStatementContext
   ): ast.SQLStatement {
+    return this.visitSQLStatementDef(pcx.sqlStatementDef());
+  }
+
+  visitSQLStatementDef(pcx: parse.SqlStatementDefContext): ast.SQLStatement {
     const commands = pcx.sqlBlock().text;
     const sqlStmt = new ast.SQLStatement({
       select: commands.slice(2, commands.length - 2),

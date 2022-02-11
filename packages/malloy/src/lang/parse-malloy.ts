@@ -26,6 +26,7 @@ import {
   StructDef,
   ModelDef,
   SQLBlock,
+  DocumentRange,
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
@@ -48,7 +49,6 @@ import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from "./parse-tree-walkers/document-completion-walker";
-import { Range } from "./source-reference";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
   constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
@@ -110,7 +110,7 @@ export interface NeedURLData {
 export class SQLExploreZone extends Zone<StructDef> {
   keyed: Record<string, SQLBlock> = {};
 
-  referenceBlock(from: ast.SQLStatement, at: Range): void {
+  referenceBlock(from: ast.SQLStatement, at: DocumentRange): void {
     const sql = from.sqlBlock();
     this.reference(sql.name, at);
     this.keyed[sql.name] = sql;
@@ -288,7 +288,8 @@ class ParseStep implements TranslationStep {
       sourceURL: sourceURL,
       root: parseFunc.call(malloyParser) as ParseTree,
       tokens: tokenStream,
-      malloyVersion: "?.?.?-????", // TODO put the real version here
+      // TODO put the real version here
+      malloyVersion: "?.?.?-????",
     };
   }
 }
@@ -446,7 +447,7 @@ class ASTStep implements TranslationStep {
       if (sqlExplore.ref && sqlExplore.def) {
         that.root.sqlQueryZone.referenceBlock(
           sqlExplore.def,
-          sqlExplore.def.location
+          sqlExplore.def.location.range
         );
       }
     }

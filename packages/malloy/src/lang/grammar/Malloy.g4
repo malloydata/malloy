@@ -26,12 +26,20 @@ defineExploreStatement
   ;
 
 defineQuery
-  : QUERY topLevelQueryDefs  # namedQueries_stub
-  | QUERY query              # anonymousQuery
+  : QUERY topLevelQueryDefs      # namedQueries_stub
+  | QUERY topLevelAnonQueryDef   # anonymousQuery
+  ;
+
+topLevelAnonQueryDef
+  : query
   ;
 
 defineSQLStatement
-  : SQL (sqlCommandNameDef IS)? sqlBlock (ON connectionName)?
+  : SQL sqlStatementDef
+  ;
+
+sqlStatementDef
+  : (sqlCommandNameDef IS)? sqlBlock (ON connectionName)?
   ;
 
 importStatement
@@ -121,9 +129,18 @@ exploreStatement
   | JOIN_CROSS joinList                # defJoinCross
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
-  | RENAME fieldName IS fieldName      # defExploreRename
+  | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
+  ;
+
+renameList
+  : OBRACK (exploreRenameDef COMMA?)* CBRACK
+  | exploreRenameDef
+  ;
+
+exploreRenameDef
+  : fieldName IS fieldName
   ;
 
 dimensionDefList

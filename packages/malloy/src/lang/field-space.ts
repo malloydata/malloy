@@ -47,6 +47,7 @@ import {
   SpaceEntry,
   AbstractParameter,
   SpaceParam,
+  RenameSpaceField,
 } from "./space-field";
 
 type FieldMap = Record<string, SpaceEntry>;
@@ -245,8 +246,10 @@ export class NewFieldSpace extends StructSpace {
         }
         const oldValue = this.entry(def.oldName);
         if (oldValue instanceof SpaceField) {
-          oldValue.rename(def.newName);
-          this.setEntry(def.newName, oldValue);
+          this.setEntry(
+            def.newName,
+            new RenameSpaceField(oldValue, def.newName, def.location)
+          );
           this.dropEntry(def.oldName);
         } else {
           def.log(`Can't rename '${def.oldName}', no such field`);

@@ -16,7 +16,17 @@ import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
-import { TestTranslator, pretty, aTableDef } from "./test-translator";
+import {
+  TestTranslator,
+  pretty,
+  aTableDef,
+  getExplore,
+  getField,
+  getQueryField,
+  getModelQuery,
+  getJoinField,
+  markSource,
+} from "./test-translator";
 
 const inspectCompile = false;
 
@@ -693,4 +703,225 @@ describe("error handling", () => {
   //   const firstError = errList[0];
   //   expect(firstError.message).toBe("Expressions in queries must have names");
   // });
+});
+
+describe("source locations", () => {
+  test("renamed explore location", () => {
+    const source = markSource`explore: ${"na is a"}`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(getExplore(m.modelDef, "na").location).toMatchObject(
+      source.locations[0]
+    );
+  });
+
+  test("refined explore location", () => {
+    const source = markSource`explore: ${"na is a {}"}`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(getExplore(m.modelDef, "na").location).toMatchObject(
+      source.locations[0]
+    );
+  });
+
+  test("location of defined dimension", () => {
+    const source = markSource`explore: na is a { dimension: ${"x is 1"} }`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getField(na, "x");
+    expect(x.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of defined measure", () => {
+    const source = markSource`explore: na is a { measure: ${"x is count()"} }`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getField(na, "x");
+    expect(x.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of defined query", () => {
+    const source = markSource`explore: na is a { query: ${"x is { group_by: y is 1 }"} }`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getField(na, "x");
+    expect(x.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of defined field inside a query", () => {
+    const source = markSource`
+      explore: na is a {
+        query: x is {
+          group_by: ${"y is 1"}
+        }
+      }`;
+
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getQueryField(na, "x");
+    const y = getField(x.pipeline[0], "y");
+    expect(y.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of filtered field inside a query", () => {
+    const source = markSource`
+      explore: na is a {
+        measure: y is count()
+        query: x is {
+          group_by: ${"z is y { where: true }"}
+        }
+      }`;
+
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getQueryField(na, "x");
+    const z = getField(x.pipeline[0], "z");
+    expect(z.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of field inherited from table", () => {
+    const source = markSource`explore: na is ${"table('aTable')"}`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const abool = getField(na, "abool");
+    expect(abool.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of field inherited from sql block", () => {
+    const source = markSource`
+      sql: ${"s is || SELECT 1 as one ;;"}
+
+      explore: na is from_sql(s)
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    const sqlBlock = (result.sqlStructs || [])[0];
+    m.update({
+      sqlStructs: {
+        [sqlBlock.name]: {
+          type: "struct",
+          name: sqlBlock.name,
+          dialect: "bigquery",
+          structSource: {
+            type: "sql",
+            method: "subquery",
+            sqlBlock,
+          },
+          structRelationship: { type: "basetable", connectionName: "bigquery" },
+          fields: [{ type: "number", name: "one" }],
+        },
+      },
+    });
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const one = getField(na, "one");
+    expect(one.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of fields inherited from a query", () => {
+    const source = markSource`
+      explore: na is from(
+        ${"table('aTable')"} -> {
+          group_by: [
+            abool
+            ${"y is 1"}
+          ]
+        }
+      )
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const abool = getField(na, "abool");
+    expect(abool.location).toMatchObject(source.locations[0]);
+    const y = getField(na, "y");
+    expect(y.location).toMatchObject(source.locations[1]);
+  });
+
+  test("location of named query", () => {
+    const source = markSource`query: ${"q is table('aTable') -> { project: * }"}`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const q = getExplore(m.modelDef, "q");
+    expect(q.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of field in named query", () => {
+    const source = markSource`query: q is table('aTable') -> { group_by: ${"a is 1"} }`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const q = getModelQuery(m.modelDef, "q");
+    const a = getField(q.pipeline[0], "a");
+    expect(a.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of named SQL block", () => {
+    const source = markSource`sql: ${"s is || SELECT 1 ;;"}`;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const s = m.sqlBlocks[0];
+    expect(s.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of renamed field", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        rename: ${"bbool is abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const bbool = getField(na, "bbool");
+    expect(bbool.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of join on", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"x is table('aTable') { primary_key: abool } on abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getField(na, "x");
+    expect(x.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of join with", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"x is table('aTable') { primary_key: abool } with astr"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getField(na, "x");
+    expect(x.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of field in join", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: x is table('aTable') {
+          primary_key: abool
+          dimension: ${"y is 1"}
+        } on abool
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getJoinField(na, "x");
+    const y = getField(x, "y");
+    expect(y.location).toMatchObject(source.locations[0]);
+  });
 });
