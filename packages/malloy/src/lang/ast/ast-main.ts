@@ -756,6 +756,7 @@ export class KeyJoin extends Join {
         type: "foreignKey",
         foreignKey: this.key,
       },
+      location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -813,6 +814,7 @@ export class ExpressionJoin extends Join {
     const joinStruct: model.StructDef = {
       ...sourceDef,
       structRelationship: { type: this.joinType },
+      location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved

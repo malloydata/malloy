@@ -855,10 +855,23 @@ describe("source locations", () => {
     expect(bbool.location).toMatchObject(source.locations[0]);
   });
 
-  test("location of join", () => {
+  test("location of join on", () => {
     const source = markSource`
       explore: na is table('aTable') {
-        join_one: x is ${"table('aTable') { primary_key: abool }"} on abool
+        join_one: ${"x is table('aTable') { primary_key: abool } on abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    const na = getExplore(m.modelDef, "na");
+    const x = getField(na, "x");
+    expect(x.location).toMatchObject(source.locations[0]);
+  });
+
+  test("location of join with", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"x is table('aTable') { primary_key: abool } with astr"}
       }
     `;
     const m = new BetaModel(source.code);
