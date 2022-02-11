@@ -15,7 +15,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloydata/malloy";
-import { Connection, EmptyURLReader } from "@malloydata/malloy";
+import { EmptyURLReader } from "@malloydata/malloy";
 import { BigQueryTestConnection, PostgresTestConnection } from "./runtimes";
 
 const bqConnection = new BigQueryTestConnection(
@@ -27,7 +27,7 @@ const postgresConnection = new PostgresTestConnection("postgres");
 const files = new EmptyURLReader();
 
 const connectionMap = new malloy.FixedConnectionMap(
-  new Map<string, Connection>(
+  new Map(
     Object.entries({
       bigquery: bqConnection,
       postgres: postgresConnection,

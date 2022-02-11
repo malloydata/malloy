@@ -34,7 +34,7 @@ async function validateCompilation(
       throw new Error(`Unknown database ${databaseName}`);
     }
     await (
-      await runtime.lookupSQLRunner.lookupSQLRunner(databaseName)
+      await runtime.connections.lookupConnection(databaseName)
     ).runSQL(`WITH test AS(\n${sql}) SELECT 1`);
   } catch (e) {
     console.log(`SQL: didn't compile\n=============\n${sql}`);

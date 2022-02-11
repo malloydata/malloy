@@ -15,16 +15,9 @@ import unified from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import { Markdown } from "./markdown_types";
-import { MALLOY_GRAMMAR } from "./malloy_prism";
-import Prism from "prismjs";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-sql";
 import { runCode } from "./run_code";
 import { log } from "./log";
-import { Malloy } from "@malloydata/malloy";
-import { BigQueryConnection } from "@malloydata/db-bigquery";
-
-Malloy.db = new BigQueryConnection("docs");
+import { highlight } from "./highlighter";
 
 /*
  * A Renderer is capable of converting a parsed `Markdown` document into HTML,
@@ -55,48 +48,40 @@ class Renderer {
   ) {
     const lang = (infostring || "").trim();
     let showCode = code;
-
-    const grammar =
-      lang === "malloy"
-        ? MALLOY_GRAMMAR
-        : Prism.languages[lang] || Prism.languages.text;
-
     let hidden = false;
-    if (grammar) {
-      let result = "";
-      if (lang === "malloy") {
-        if (code.startsWith("--!")) {
-          try {
-            const options = JSON.parse(
-              code.split("\n")[0].substring("--! ".length).trim()
-            );
-            showCode = showCode.split("\n").slice(1).join("\n");
-            if (options.isHidden) {
-              hidden = true;
-            }
-            if (options.isRunnable) {
-              result = await runCode(showCode, this.path, options, this.models);
-            } else if (options.isModel) {
-              let modelCode = showCode;
-              if (options.source) {
-                const prefix = this.models.get(options.source);
-                if (prefix === undefined) {
-                  throw new Error(`can't find source ${options.source}`);
-                }
-                modelCode = prefix + "\n" + showCode;
-              }
-              this.setModel(options.modelPath, modelCode);
-            }
-          } catch (error) {
-            log(`  !! Error: ${error.toString()}`);
-            result = `<div class="error">Error: ${error.toString()}</div>`;
-            this._errors.push({ snippet: code, error: error.message });
+
+    let result = "";
+    if (lang === "malloy") {
+      if (code.startsWith("--!")) {
+        try {
+          const options = JSON.parse(
+            code.split("\n")[0].substring("--! ".length).trim()
+          );
+          showCode = showCode.split("\n").slice(1).join("\n");
+          if (options.isHidden) {
+            hidden = true;
           }
+          if (options.isRunnable) {
+            result = await runCode(showCode, this.path, options, this.models);
+          } else if (options.isModel) {
+            let modelCode = showCode;
+            if (options.source) {
+              const prefix = this.models.get(options.source);
+              if (prefix === undefined) {
+                throw new Error(`can't find source ${options.source}`);
+              }
+              modelCode = prefix + "\n" + showCode;
+            }
+            this.setModel(options.modelPath, modelCode);
+          }
+        } catch (error) {
+          log(`  !! Error: ${error.toString()}`);
+          result = `<div class="error">Error: ${error.toString()}</div>`;
+          this._errors.push({ snippet: code, error: error.message });
         }
       }
 
-      const highlighted = Prism.highlight(showCode, grammar, lang);
-      const codeBlock = `<pre class="language-${lang}">${highlighted}</pre>`;
+      const codeBlock = await highlight(showCode, lang);
       return `${hidden ? "" : codeBlock}${result}`;
     }
 
@@ -276,8 +261,7 @@ class Renderer {
   }
 
   protected async codeSpan(text: string) {
-    const highlighted = Prism.highlight(text, MALLOY_GRAMMAR, "malloy");
-    return `<code class="language-malloy">${highlighted}</code>`;
+    return highlight(text, "malloy", { inline: true });
   }
 
   protected async break() {

@@ -13,7 +13,11 @@
 
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
-import { Connection, FixedConnectionMap } from "@malloydata/malloy";
+import {
+  FixedConnectionMap,
+  Connection,
+  TestableConnection,
+} from "@malloydata/malloy";
 import {
   ConnectionBackend,
   ConnectionConfig,
@@ -76,7 +80,7 @@ export class ConnectionManager {
 
   public async connectionForConfig(
     connectionConfig: ConnectionConfig
-  ): Promise<Connection> {
+  ): Promise<TestableConnection> {
     switch (connectionConfig.backend) {
       case ConnectionBackend.BigQuery:
         return new BigQueryConnection(

@@ -15,13 +15,13 @@ import * as crypto from "crypto";
 import {
   StructDef,
   MalloyQueryData,
-  Connection,
   NamedStructDefs,
   AtomicFieldType,
   QueryData,
   PooledConnection,
   parseTableURL,
   SQLBlock,
+  Connection,
 } from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
@@ -75,21 +75,22 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
-export class PostgresConnection extends Connection {
+export class PostgresConnection implements Connection {
   private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<string, StructDef>();
   private sqlSchemaCache = new Map<string, StructDef>();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
+  public readonly name;
 
   constructor(
     name: string,
     queryConfigReader: PostgresQueryConfigurationReader = {},
     configReader: PostgresConnectionConfigurationReader = {}
   ) {
-    super(name);
     this.queryConfigReader = queryConfigReader;
     this.configReader = configReader;
+    this.name = name;
   }
 
   private async readQueryConfig(): Promise<PostgresQueryConfiguration> {
@@ -145,6 +146,18 @@ export class PostgresConnection extends Connection {
       tableStructDefs[key] = inCache;
     }
     return tableStructDefs;
+  }
+
+  public async runSQLBlockAndFetchResultSchema(
+    // TODO feature-sql-block Implement an actual version of this that does these simultaneously
+    sqlBlock: SQLBlock,
+    options?: { rowLimit?: number | undefined }
+  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
+    const data = await this.runSQL(sqlBlock.select, options);
+    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock]))[
+      sqlBlock.name
+    ];
+    return { data, schema };
   }
 
   protected async runPostgresQuery(

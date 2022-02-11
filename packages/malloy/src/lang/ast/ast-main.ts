@@ -1336,30 +1336,50 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   protected computeType(): QOPType {
     let firstGuess: QOPType | undefined;
+    if (this.refineThis) {
+      if (this.refineThis.type == "reduce") {
+        firstGuess = "grouping";
+      } else {
+        firstGuess = this.refineThis.type;
+      }
+    }
     let anyGrouping = false;
     for (const el of this.list) {
       if (el instanceof Index) {
         firstGuess ||= "index";
         if (firstGuess !== "index") {
-          el.log(`index: not legal in ${firstGuess} segment`);
+          el.log(`index: not legal in ${firstGuess} query`);
         }
-      } else if (el instanceof GroupBy) {
+      } else if (
+        el instanceof Nests ||
+        el instanceof NestDefinition ||
+        el instanceof NestReference ||
+        el instanceof GroupBy
+      ) {
         firstGuess ||= "grouping";
         anyGrouping = true;
         if (firstGuess === "project" || firstGuess === "index") {
-          el.log(`group_by: not legal in ${firstGuess}: segment`);
+          el.log(`group_by: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof Aggregate) {
         firstGuess ||= "aggregate";
         if (firstGuess === "project" || firstGuess === "index") {
-          el.log(`aggregate: not legal in ${firstGuess}: segment`);
+          el.log(`aggregate: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof ProjectStatement) {
         firstGuess ||= "project";
+        if (firstGuess !== "project") {
+          el.log(`project: not legal in ${firstGuess} query`);
+        }
       }
     }
     if (firstGuess === "aggregate" && anyGrouping) {
       firstGuess = "grouping";
+    }
+    if (!firstGuess) {
+      this.log(
+        "Can't determine query type (group_by/aggregate/nest,project,index)"
+      );
     }
     const guessType = firstGuess || "grouping";
     this.opType = guessType;
