@@ -683,10 +683,7 @@ describe("error handling", () => {
   );
   test(
     "undefined field ref in query",
-    badModel(
-      `query: ab -> { aggregate: xyzzy }`,
-      "Reference to undefined 'xyzzy'"
-    )
+    badModel(`query: ab -> { aggregate: xyzzy }`, "'xyzzy' is not defined")
   );
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
