@@ -56,10 +56,19 @@ type FieldMap = Record<string, SpaceEntry>;
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
  * are fields. A FieldSpace can lookup fields, and generate a StructDef
  */
+interface LookupFound {
+  found: SpaceEntry;
+  error: undefined;
+}
+interface LookupError {
+  error: string;
+  found: undefined;
+}
+export type LookupResult = LookupFound | LookupError;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  findEntry(symbol: string): SpaceEntry | undefined;
+  lookup(symbol: string): LookupResult;
   getDialect(): Dialect;
 }
 
@@ -146,20 +155,22 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  findEntry(fieldPath: string): SpaceEntry | undefined {
-    const split = FieldPath.of(fieldPath);
-    const ref = this.entry(split.head);
-    if (ref) {
-      if (ref instanceof StructSpaceField) {
-        return ref.fieldSpace.findEntry(split.tail);
+  lookup(fieldPath: string): LookupResult {
+    const step = FieldPath.walk(fieldPath);
+    const found = this.entry(step.head);
+    if (step.tail) {
+      if (found instanceof StructSpaceField) {
+        return found.fieldSpace.lookup(step.tail);
       }
-      if (split.tail === "") {
-        return ref;
-      }
-      throw new Error(`'${split.head}' cannot contain a '${split.tail}'`);
-    } else {
-      return undefined;
+      return {
+        error: `'${step.head}' cannot contain a '${step.tail}'`,
+        found: undefined,
+      };
     }
+    if (found) {
+      return { found, error: undefined };
+    }
+    return { error: `'${step.head}' is not defined`, found };
   }
 }
 
@@ -335,8 +346,8 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  findEntry(fieldPath: string): SpaceEntry | undefined {
-    return this.inputSpace.findEntry(fieldPath);
+  lookup(fieldPath: string): LookupResult {
+    return this.inputSpace.lookup(fieldPath);
   }
 
   /**
@@ -351,7 +362,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
       if (qi instanceof FieldName || qi instanceof NestReference) {
-        this.addReference(qi.name);
+        this.addReference(qi, qi.name);
       } else if (qi instanceof ExprFieldDecl) {
         this.addField(qi);
       } else if (qi instanceof NestDefinition) {
@@ -365,7 +376,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        this.addReference(member.name);
+        this.addReference(member, member.name);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
@@ -374,7 +385,12 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
   }
 
-  addReference(ref: string): void {
+  addReference(astEl: MalloyElement, ref: string): void {
+    const refIs = this.lookup(ref);
+    if (refIs.error) {
+      astEl.log(refIs.error);
+      return;
+    }
     this.setEntry(ref, new FANSPaceField(ref, this));
   }
 
@@ -475,12 +491,15 @@ export class CircleSpace implements FieldSpace {
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  findEntry(symbol: string): SpaceEntry | undefined {
+  lookup(symbol: string): LookupResult {
     if (symbol === this.circular.defineName) {
       this.foundCircle = true;
-      return undefined;
+      return {
+        error: `Circular reference to '${this.circular.defineName}' in definition`,
+        found: undefined,
+      };
     }
-    return this.realFS.findEntry(symbol);
+    return this.realFS.lookup(symbol);
   }
   getDialect(): Dialect {
     return this.realFS.getDialect();

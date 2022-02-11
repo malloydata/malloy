@@ -488,8 +488,9 @@ export class RefinedExplore extends Mallobj {
       fs.addParameters(pList);
     }
     if (primaryKey) {
-      if (!fs.findEntry(primaryKey.field.name)) {
-        primaryKey.log(`Undefined field '${primaryKey.field.name}'`);
+      const keyDef = fs.lookup(primaryKey.field.name);
+      if (keyDef.error) {
+        primaryKey.log(keyDef.error);
       }
     }
     const retStruct = fs.structDef();
@@ -1687,13 +1688,13 @@ export class PipelineDesc extends MalloyElement {
   getPipelineForExplore(exploreFS: FieldSpace): model.Pipeline {
     const modelPipe: model.Pipeline = { pipeline: [] };
     if (this.headName && this.headRefinement) {
-      const headEnt = exploreFS.findEntry(this.headName);
+      const headEnt = exploreFS.lookup(this.headName);
       let reportWrongType = true;
-      if (!headEnt) {
-        this.log(`Reference to undefined query '${this.headName}'`);
+      if (headEnt.error) {
+        this.log(headEnt.error);
         reportWrongType = false;
-      } else if (headEnt instanceof QueryField) {
-        const headDef = headEnt.queryFieldDef();
+      } else if (headEnt.found instanceof QueryField) {
+        const headDef = headEnt.found.queryFieldDef();
         if (isTurtle(headDef)) {
           const newPipe = this.refinePipeline(exploreFS, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];

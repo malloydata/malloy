@@ -136,8 +136,18 @@ function modelOK(s: string): TestFunc {
   };
 }
 
+function badModel(s: string, e: string): TestFunc {
+  return () => {
+    const m = new BetaModel(s);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    const firstError = errList[0];
+    expect(firstError.message).toBe(e);
+    return undefined;
+  };
+}
+
 describe("model statements", () => {
-  test("empty model", modelOK(""));
   describe("explore:", () => {
     test("explore table", modelOK(`explore: testA is table('aTable')`));
     test(
@@ -637,65 +647,54 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
-  test("query reference to undefined explore", () => {
-    const m = new BetaModel("query: x->{ group_by: y }");
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe("Undefined data source 'x'");
-  });
-
-  test("join reference before definition", () => {
-    const m = new BetaModel(`
-    explore: newAB is a { join_one: newB is bb on astring }
-    explore: newB is b
-    `);
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe("Undefined data source 'bb'");
-  });
-  test("non-rename rename", () => {
-    const m = new BetaModel("explore: na is a { rename: astr is astr }");
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe("Can't rename field to itself");
-  });
-  test("reference to field in its definition", () => {
-    const m = new BetaModel(`
-      explore: na is a {
-        dimension: astr is UPPER(astr)
-      }
-    `);
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe(
+  test(
+    "query reference to undefined explore",
+    badModel("query: x->{ group_by: y }", "Undefined data source 'x'")
+  );
+  test(
+    "join reference before definition",
+    badModel(
+      `
+        explore: newAB is a { join_one: newB is bb on astring }
+        explore: newB is b
+      `,
+      "Undefined data source 'bb'"
+    )
+  );
+  test(
+    "non-rename rename",
+    badModel(
+      "explore: na is a { rename: astr is astr }",
+      "Can't rename field to itself"
+    )
+  );
+  test(
+    "reference to field in its definition",
+    badModel(
+      `explore: na is a { dimension: astr is UPPER(astr) } `,
       "Circular reference to 'astr' in definition"
-    );
-  });
-  test("empty document", modelOK("\n"));
-  test("query without fields", () => {
-    const m = new BetaModel(`
-      query: a -> { top: 5 }
-    `);
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe(
+    )
+  );
+  test("empty model", modelOK(""));
+  test("one line model ", modelOK("\n"));
+  test(
+    "query without fields",
+    badModel(
+      `query: a -> { top: 5 }`,
       "Can't determine query type (group_by/aggregate/nest,project,index)"
-    );
-  });
-  test("refine can't change query type", () => {
-    const m = new BetaModel(`
-      query: ab -> aturtle { project: astr }
-    `);
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe("project: not legal in grouping query");
-  });
+    )
+  );
+  test(
+    "refine can't change query type",
+    badModel(
+      `query: ab -> aturtle { project: astr }`,
+      "project: not legal in grouping query"
+    )
+  );
+  test(
+    "undefined field ref in query",
+    badModel(`query: ab -> { aggregate: xyzzy }`, "'xyzzy' is not defined")
+  );
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
   //   expect(m).not.toCompile();
