@@ -50,6 +50,7 @@ export {
   TimestampTimeframe,
   Result,
   parseTableURL,
+  QueryMaterializer,
 } from "./malloy";
 export type {
   Explore,
@@ -68,22 +69,21 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
-  QueryMaterializer,
   PreparedResultMaterializer,
+  SQLBlockMaterializer,
   ExploreMaterializer,
 } from "./malloy";
 export type {
   URLReader,
-  SchemaReader,
-  LookupSchemaReader,
-  SQLRunner,
-  LookupSQLRunner,
+  InfoConnection,
+  LookupConnection,
+  Connection,
   QueryString,
   ModelString,
   QueryURL,
   ModelURL,
+  PooledConnection,
+  TestableConnection,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
-export { Connection } from "./connection";
-export type { PooledConnection } from "./connection";
 export type { Loggable } from "./malloy";

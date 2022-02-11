@@ -31,8 +31,8 @@ import {
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
-  Connection,
   SQLBlock,
+  Connection,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -95,7 +95,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection extends Connection {
+export class BigQueryConnection implements Connection {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -105,7 +105,10 @@ export class BigQueryConnection extends Connection {
   private temporaryTables = new Map<string, string>();
   private defaultProject;
 
-  private resultCache = new Map<string, MalloyQueryData>();
+  private resultCache = new Map<
+    string,
+    { data: MalloyQueryData; schema: bigquery.ITableFieldSchema }
+  >();
   private schemaCache = new Map<string, StructDef>();
   private sqlSchemaCache = new Map<string, StructDef>();
 
@@ -114,6 +117,8 @@ export class BigQueryConnection extends Connection {
   private config: BigQueryConnectionConfiguration;
 
   private location: string;
+
+  public readonly name: string;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -139,7 +144,7 @@ export class BigQueryConnection extends Connection {
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
-    super(name);
+    this.name = name;
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
@@ -176,11 +181,11 @@ export class BigQueryConnection extends Connection {
     return false;
   }
 
-  public async runSQL(
+  private async _runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
-  ): Promise<MalloyQueryData> {
+  ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
     const hash = crypto
@@ -189,9 +194,10 @@ export class BigQueryConnection extends Connection {
       .update(String(pageSize))
       .update(String(rowIndex))
       .digest("hex");
-    let result;
-    if ((result = this.resultCache.get(hash)) !== undefined) {
-      return result;
+
+    const cached = this.resultCache.get(hash);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
@@ -210,13 +216,40 @@ export class BigQueryConnection extends Connection {
         ? jobResult[2].totalRows
         : "0");
 
+      if (jobResult[2]?.schema === undefined) {
+        throw new Error("Schema not present");
+      }
+
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      result = { rows: jobResult[0], totalRows };
-      this.resultCache.set(hash, result);
-      return result;
+      const data = { rows: jobResult[0], totalRows };
+      const schema = jobResult[2]?.schema;
+
+      this.resultCache.set(hash, { data, schema });
+      return { data, schema };
     } catch (e) {
       throw maybeRewriteError(e);
     }
+  }
+
+  public async runSQL(
+    sqlCommand: string,
+    options: Partial<BigQueryQueryOptions> = {},
+    rowIndex = 0
+  ): Promise<MalloyQueryData> {
+    const { data } = await this._runSQL(sqlCommand, options, rowIndex);
+    return data;
+  }
+
+  public async runSQLBlockAndFetchResultSchema(
+    sqlBlock: SQLBlock,
+    options?: { rowLimit?: number | undefined }
+  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
+    const { data, schema: schemaRaw } = await this._runSQL(
+      sqlBlock.select,
+      options
+    );
+    const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
+    return { data, schema };
   }
 
   public async downloadMalloyQuery(
@@ -275,16 +308,17 @@ export class BigQueryConnection extends Connection {
         `Improper table path: ${tableName}. A table path requires 2 or 3 segments`
       );
 
-    // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
-    // temporarily tell BigQuery SDK to use the passed project ID so that API routes are correct.
-    // once we're done, set it back to our project ID.
-    if (projectId) this.bigQuery.projectId = projectId;
-
-    const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
-
     try {
-      const [metadata] = await table.getMetadata();
+      // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
+      //      instance. So we hack it until a better way exists: we set the `this.bigQuery.projectId`
+      //      to the `projectId` for the dataset, then put it back when we're done. Importantly, we
+      //      set it back _before_ we await the promise, thus avoiding a "concurrency" issue. We've decided
+      //      this is better than creating a new BQ instance every time we need to get a table schema.
+      if (projectId) this.bigQuery.projectId = projectId;
+      const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
+      const metadataPromise = table.getMetadata();
       this.bigQuery.projectId = this.projectId;
+      const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
         needsPartitionPsuedoColumn:
@@ -519,17 +553,26 @@ export class BigQueryConnection extends Connection {
   }
 
   private async getSQLBlockSchema(sqlRef: SQLBlock) {
-    const [job] = await this.bigQuery.createQueryJob({
-      location: this.config.location || "US",
-      query: sqlRef.select,
-      dryRun: true,
-    });
+    // We do a simple retry-loop here, as a temporary fix for a transient
+    // error in which sometimes requesting results from a job yields an
+    // access denied error. It seems that in these cases, simply trying again
+    // solves the problem. This is being currently investigated by
+    // @christopherswenson and @lloydtabb. Same as below.
+    let lastFetchError;
+    for (let retries = 0; retries < 3; retries++) {
+      try {
+        const [job] = await this.bigQuery.createQueryJob({
+          location: this.location,
+          query: sqlRef.select,
+          dryRun: true,
+        });
 
-    try {
-      return job.metadata.statistics.query.schema;
-    } catch (e) {
-      throw maybeRewriteError(e);
+        return job.metadata.statistics.query.schema;
+      } catch (fetchError) {
+        lastFetchError = fetchError;
+      }
     }
+    throw lastFetchError;
   }
 
   public async fetchSchemaForSQLBlocks(
@@ -538,7 +581,6 @@ export class BigQueryConnection extends Connection {
     const tableStructDefs: NamedStructDefs = {};
 
     for (const sqlRef of sqlRefs) {
-      // TODO feature-sql-block sqlRef key should not be nullable here
       const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {
@@ -556,7 +598,7 @@ export class BigQueryConnection extends Connection {
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<PagedResponse<any, Query, bigquery.ITableDataList>> {
+  ): Promise<PagedResponse<any, Query, bigquery.IGetQueryResultsResponse>> {
     try {
       const job = await this.createBigQueryJob({
         query: sqlCommand,

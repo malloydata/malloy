@@ -15,7 +15,7 @@ import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
-import { URL, Runtime, URLReader } from "@malloydata/malloy";
+import { URL, Runtime, URLReader, QueryMaterializer } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
@@ -79,7 +79,24 @@ interface QueryFileSpec {
   file: vscode.TextDocument;
 }
 
-type QuerySpec = NamedQuerySpec | QueryStringSpec | QueryFileSpec;
+interface NamedSQLQuerySpec {
+  type: "named_sql";
+  name: string;
+  file: vscode.TextDocument;
+}
+
+interface UnnamedSQLQuerySpec {
+  type: "unnamed_sql";
+  index: number;
+  file: vscode.TextDocument;
+}
+
+type QuerySpec =
+  | NamedQuerySpec
+  | QueryStringSpec
+  | QueryFileSpec
+  | NamedSQLQuerySpec
+  | UnnamedSQLQuerySpec;
 
 // TODO Come up with a better way to handle data styles. Perhaps this is
 //      an in-language understanding of model "metadata". For now,
@@ -213,32 +230,37 @@ export function runMalloyQuery(
           });
           progress.report({ increment: 20, message: "Compiling" });
 
-          let queryMaterializer;
+          let runnable;
           let styles: DataStyles = {};
+          const queryFileURL = URL.fromString(
+            "file://" + query.file.uri.fsPath
+          );
           if (query.type === "string") {
-            queryMaterializer = runtime
-              .loadModel(URL.fromString("file://" + query.file.uri.fsPath))
-              .loadQuery(query.text);
+            runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
           } else if (query.type === "named") {
-            queryMaterializer = runtime.loadQueryByName(
-              URL.fromString("file://" + query.file.uri.fsPath),
-              query.name
-            );
-          } else if (query.index === -1) {
-            queryMaterializer = runtime.loadQuery(
-              URL.fromString("file://" + query.file.uri.fsPath)
-            );
+            runnable = runtime.loadQueryByName(queryFileURL, query.name);
+          } else if (query.type === "file") {
+            if (query.index === -1) {
+              runnable = runtime.loadQuery(queryFileURL);
+            } else {
+              runnable = runtime.loadQueryByIndex(queryFileURL, query.index);
+            }
+          } else if (query.type === "named_sql") {
+            runnable = runtime.loadSQLBlockByName(queryFileURL, query.name);
+          } else if (query.type === "unnamed_sql") {
+            runnable = runtime.loadSQLBlockByIndex(queryFileURL, query.index);
           } else {
-            queryMaterializer = runtime.loadQueryByIndex(
-              URL.fromString("file://" + query.file.uri.fsPath),
-              query.index
-            );
+            throw new Error("Internal Error: Unexpected query type");
           }
 
-          let preparedResult;
+          // Set the row limit to the limit provided in the final stage of the query, if present
+          const rowLimit =
+            runnable instanceof QueryMaterializer
+              ? (await runnable.getPreparedResult()).resultExplore.limit
+              : undefined;
+
           try {
-            preparedResult = await queryMaterializer.getPreparedResult();
-            const sql = preparedResult.sql;
+            const sql = await runnable.getSQL();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
             if (canceled) return;
@@ -262,10 +284,7 @@ export function runMalloyQuery(
             status: QueryRunStatus.Running,
           });
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await queryMaterializer.run({
-            // Set the row limit to the limit provided in the final stage of the query, if present
-            rowLimit: preparedResult.resultExplore.limit,
-          });
+          const queryResult = await runnable.run({ rowLimit });
           if (canceled) return;
 
           const runEnd = performance.now();

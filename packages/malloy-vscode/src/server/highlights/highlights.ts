@@ -39,6 +39,12 @@ export const TOKEN_TYPES = [
 
 export const TOKEN_MODIFIERS = ["declaration", "documentation"];
 
+export function stubMalloyHighlights(_document: TextDocument): SemanticTokens {
+  return new SemanticTokensBuilder().build();
+}
+
+// TODO Currently semantic highlights are disabled. Either remove `getMalloyHighlights`
+//      or call it instead of `stubMalloyHighlights`.
 export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const tokensBuilder = new SemanticTokensBuilder();
 

@@ -19,11 +19,11 @@
  */
 import { DataStyles, HTMLView } from "@malloydata/render";
 import {
-  Malloy,
   Runtime,
   URL,
   URLReader,
   QueryMaterializer,
+  SQLBlockMaterializer,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import path from "path";
@@ -31,8 +31,8 @@ import { promises as fs } from "fs";
 import { performance } from "perf_hooks";
 import { timeString } from "./utils";
 import { log } from "./log";
-import Prism from "prismjs";
 import { JSDOM } from "jsdom";
+import { highlight } from "./highlighter";
 
 const SAMPLES_PATH = path.join(__dirname, "../../../samples");
 
@@ -64,6 +64,7 @@ interface RunOptions {
   dataStyles: DataStyles;
   showAs?: "html" | "json" | "sql";
   queryName?: string;
+  sqlBlockName?: string;
   exploreName?: string;
   isHidden?: boolean;
 }
@@ -181,28 +182,23 @@ export async function runCode(
   // imports don't work. It shouldn't be necessary to show relative imports
   // in runnable docs. If this changes, the `urlReader` will need to be able to
   // handle reading a fake URL for the query as well as real URLs for local files.
-  let loadedQuery: QueryMaterializer;
-  if (options.queryName && options.exploreName) {
-    loadedQuery = runtime
+  let runnable: SQLBlockMaterializer | QueryMaterializer;
+  if (options.sqlBlockName) {
+    runnable = runtime
+      .loadModel(fullCode)
+      .loadSQLBlockByName(options.sqlBlockName);
+  } else if (options.queryName && options.exploreName) {
+    runnable = runtime
       .loadModel(fullCode)
       .loadExploreByName(options.exploreName)
       .loadQueryByName(options.queryName);
   } else if (options.queryName) {
-    loadedQuery = runtime
-      .loadModel(fullCode)
-      .loadQueryByName(options.queryName);
+    runnable = runtime.loadModel(fullCode).loadQueryByName(options.queryName);
   } else {
-    loadedQuery = runtime.loadQuery(fullCode);
+    runnable = runtime.loadQuery(fullCode);
   }
-  const preparedResult = await loadedQuery.getPreparedResult();
-  const queryResult = await Malloy.run({
-    sqlRunner: {
-      runSQL: (sql: string) =>
-        BIGQUERY_CONNECTION.runSQL(sql, {
-          rowLimit: options.pageSize || 5,
-        }),
-    },
-    preparedResult,
+  const queryResult = await runnable.run({
+    rowLimit: options.pageSize || 5,
   });
 
   log(
@@ -219,21 +215,17 @@ export async function runCode(
 
   const showAs = options.showAs || "html";
 
-  const jsonResult = Prism.highlight(
+  const jsonResult = await highlight(
     JSON.stringify(queryResult.data.toObject(), null, 2),
-    Prism.languages["json"],
     "json"
   );
+
   const document = new JSDOM().window.document;
   const element = await new HTMLView(document).render(queryResult.data, {
     dataStyles,
   });
   const htmlResult = element.outerHTML;
-  const sqlResult = Prism.highlight(
-    queryResult.sql,
-    Prism.languages["sql"],
-    "sql"
-  );
+  const sqlResult = await highlight(queryResult.sql, "sql");
 
   const htmlSelected = showAs === "html" ? "selected" : "";
   const jsonSelected = showAs === "json" ? "selected" : "";
