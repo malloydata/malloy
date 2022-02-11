@@ -13,11 +13,7 @@
 
 const DOCS_ROOT = "https://looker-open-source.github.io/malloy/documentation";
 
-export const COMPLETION_DOCS: {
-  [kind: string]: { [property: string]: string };
-} = {
-  model_property: {
-    explore: `Use \`explore\` to name, describe, and augment a data source.
+const MODEL_EXPLORE_DOC = `Use \`explore\` to name, describe, and augment a data source.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -26,8 +22,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/explore.html).
-`,
-    query: `Use \`query\` to define a top-level query which can be run within this document.
+`;
+
+const MODEL_QUERY_DOC = `Use \`query\` to define a top-level query which can be run within this document.
 
 \`\`\`malloy
 query: flights -> {
@@ -37,8 +34,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/query.html).
-`,
-    sql: `Use \`sql\` to declare a block of SQL code.
+`;
+
+const MODEL_SQL_DOC = `Use \`sql\` to declare a block of SQL code.
 
 \`\`\`malloy
 sql: users_sample is ||
@@ -52,10 +50,9 @@ sql: users_sample is ||
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/sql_blocks.html).
-`,
-  },
-  query_property: {
-    group_by: `Use the \`group_by\` clause to specify dimensions by which to group aggregate calculations.
+`;
+
+const QUERY_GROUP_BY_DOC = `Use the \`group_by\` clause to specify dimensions by which to group aggregate calculations.
 
 \`\`\`malloy
 query: flights -> {
@@ -63,8 +60,9 @@ query: flights -> {
   aggregate: flight_count
 }
 \`\`\`
-    `,
-    order_by: `Use \`order_by\` to control the ordering of results.
+`;
+
+const QUERY_ORDER_BY_DOC = `Use \`order_by\` to control the ordering of results.
 
 \`\`\`malloy
 query: flights -> {
@@ -74,8 +72,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/order_by.html#explicit-ordering).
-`,
-    project: `Use \`project\` to retrieve dimensional values without grouping or aggregating.
+`;
+
+const QUERY_PROJECT_DOC = `Use \`project\` to retrieve dimensional values without grouping or aggregating.
 
 \`\`\`malloy
 query: flights -> {
@@ -85,8 +84,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/basic.html#project).
-`,
-    index: `Use \`index\` to produce a search index.
+`;
+
+const QUERY_INDEX_DOC = `Use \`index\` to produce a search index.
 
 \`\`\`malloy
 query: flights -> {
@@ -95,8 +95,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}).
-`,
-    aggregate: `Use \`aggregate\` to perform aggregate computations like \`count()\` or \`sum()\`.
+`;
+
+const QUERY_AGGREGATE_DOC = `Use \`aggregate\` to perform aggregate computations like \`count()\` or \`sum()\`.
 
 \`\`\`malloy
 query: flights -> {
@@ -109,8 +110,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/aggregates.html).
-`,
-    top: `Use \`top\` to restrict the number of results returned.
+`;
+
+const QUERY_TOP_DOC = `Use \`top\` to restrict the number of results returned.
 
 \`\`\`malloy
 query: flights -> {
@@ -121,8 +123,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/order_by.html#limiting).
-`,
-    limit: `Use \`limit\` to restrict the number of results returned.
+`;
+
+const QUERY_LIMIT_DOC = `Use \`limit\` to restrict the number of results returned.
 
 \`\`\`malloy
 query: flights -> {
@@ -132,8 +135,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/order_by.html#limiting).
-`,
-    where: `Use \`where\` to narrow down results.
+`;
+
+const QUERY_WHERE_DOC = `Use \`where\` to narrow down results.
 
 \`\`\`malloy
 query: flights -> {
@@ -143,8 +147,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/filters.html).
-`,
-    having: `Use \`having\` to narrow down results based on conditions of aggregate values.
+`;
+
+const QUERY_HAVING_DOC = `Use \`having\` to narrow down results based on conditions of aggregate values.
 
 \`\`\`malloy
 query: flights -> {
@@ -155,8 +160,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/filters.html).
-`,
-    nest: `Use \`nest\` to include a nested query.
+`;
+
+const QUERY_NEST_DOC = `Use \`nest\` to include a nested query.
 
 \`\`\`malloy
 query: flights -> {
@@ -169,10 +175,9 @@ query: flights -> {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/nesting.html).
-`,
-  },
-  explore_property: {
-    dimension: `Use \`dimension\` to define a non-aggregate calculation.
+`;
+
+const EXPLORE_DIMENSION_DOC = `Use \`dimension\` to define a non-aggregate calculation.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -181,8 +186,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/fields.html#dimensions).
-`,
-    measure: `Use \`measure\` to define an aggregate calculation.
+`;
+
+const EXPLORE_MEASURE_DOC = `Use \`measure\` to define an aggregate calculation.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -191,8 +197,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/fields.html#measures).
-`,
-    query: `Use \`query\` to define a named query which can be referenced and/or refined.
+`;
+
+const EXPLORE_QUERY_DOC = `Use \`query\` to define a named query which can be referenced and/or refined.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -204,8 +211,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/fields.html#queries).
-`,
-    join_one: `Use \`join_one\` to define a joined explore which has one row for each row in the source table.
+`;
+
+const EXPLORE_JOIN_ONE_DOC = `Use \`join_one\` to define a joined explore which has one row for each row in the source table.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -215,8 +223,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/join.html).
-`,
-    join_many: `Use \`join_many\` to define a joined explore which has many rows for each row in the source table.
+`;
+
+const EXPLORE_JOIN_MANY_DOC = `Use \`join_many\` to define a joined explore which has many rows for each row in the source table.
 
 \`\`\`malloy
 explore: users is table('users') {
@@ -225,12 +234,14 @@ explore: users is table('users') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/join.html).
-`,
-    join_cross: `Use \`join_cross\` to define a join via a cross product, resulting in many rows on each side of the join.
+`;
+
+const EXPLORE_JOIN_CROSS_DOC = `Use \`join_cross\` to define a join via a cross product, resulting in many rows on each side of the join.
 
 View [the full documentation](${DOCS_ROOT}/language/join.html).
-`,
-    where: `Use \`where\` to limit the limit the rows of an explore.
+`;
+
+const EXPLORE_WHERE_DOC = `Use \`where\` to limit the limit the rows of an explore.
 
 \`\`\`malloy
 explore: long_flights is flights {
@@ -239,8 +250,9 @@ explore: long_flights is flights {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/filters.html).
-`,
-    primary_key: `Use \`primary_key\` to specify a primary key for joining.
+`;
+
+const EXPLORE_PRIMARY_KEY_DOC = `Use \`primary_key\` to specify a primary key for joining.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -249,8 +261,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/explore.html#primary-keys).
-`,
-    rename: `Use \`rename\` to rename a field from the source explore/table.
+`;
+
+const EXPLORE_RENAME_DOC = `Use \`rename\` to rename a field from the source explore/table.
 
 \`\`\`malloy
 explore: flights is table('malloy-data.faa.flights') {
@@ -259,8 +272,9 @@ explore: flights is table('malloy-data.faa.flights') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/explore.html#renaming-fields).
-`,
-    accept: `Use \`accept\` to specify which fields to include from the source explore/table.
+`;
+
+const EXPLORE_ACCEPT_DOC = `Use \`accept\` to specify which fields to include from the source explore/table.
 
 \`\`\`malloy
 explore: airports is table('malloy-data.faa.airports') {
@@ -269,8 +283,9 @@ explore: airports is table('malloy-data.faa.airports') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/explore.html#limiting-access-to-fields).
-`,
-    except: `Use \`except\` to specify which fields to exclude from the source explore/table.
+`;
+
+const EXPLORE_EXCEPT_DOC = `Use \`except\` to specify which fields to exclude from the source explore/table.
 
 \`\`\`malloy
 explore: airports is table('malloy-data.faa.airports') {
@@ -279,6 +294,39 @@ explore: airports is table('malloy-data.faa.airports') {
 \`\`\`
 
 View [the full documentation](${DOCS_ROOT}/language/explore.html#limiting-access-to-fields).
-`,
+`;
+
+export const COMPLETION_DOCS: {
+  [kind: string]: { [property: string]: string };
+} = {
+  model_property: {
+    explore: MODEL_EXPLORE_DOC,
+    query: MODEL_QUERY_DOC,
+    sql: MODEL_SQL_DOC,
+  },
+  query_property: {
+    group_by: QUERY_GROUP_BY_DOC,
+    order_by: QUERY_ORDER_BY_DOC,
+    project: QUERY_PROJECT_DOC,
+    index: QUERY_INDEX_DOC,
+    aggregate: QUERY_AGGREGATE_DOC,
+    top: QUERY_TOP_DOC,
+    limit: QUERY_LIMIT_DOC,
+    where: QUERY_WHERE_DOC,
+    having: QUERY_HAVING_DOC,
+    nest: QUERY_NEST_DOC,
+  },
+  explore_property: {
+    dimension: EXPLORE_DIMENSION_DOC,
+    measure: EXPLORE_MEASURE_DOC,
+    query: EXPLORE_QUERY_DOC,
+    join_one: EXPLORE_JOIN_ONE_DOC,
+    join_many: EXPLORE_JOIN_MANY_DOC,
+    join_cross: EXPLORE_JOIN_CROSS_DOC,
+    where: EXPLORE_WHERE_DOC,
+    primary_key: EXPLORE_PRIMARY_KEY_DOC,
+    rename: EXPLORE_RENAME_DOC,
+    accept: EXPLORE_ACCEPT_DOC,
+    except: EXPLORE_EXCEPT_DOC,
   },
 };
