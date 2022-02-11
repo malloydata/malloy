@@ -963,50 +963,162 @@ describe("source references", () => {
   });
 
   test("reference to joined field in expression", () => {
-    // TODO jump-to-definition We would really like `self.astr` to be _two_ references, one to `self`
-    //      and the other to `self.astr`.
     const source = markSource`
-      explore: na is ${"table('aTable')" /* 0 */} {
-        join_one: self is ${"table('aTable')" /* 1 */}
-          on ${"astr" /* 2 */} = ${"self.astr" /* 3 */}
+      explore: na is table('aTable') {
+        join_one: self is ${"table('aTable')"}
+          on astr = self.astr
       }
-      query: na -> { project: bstr is ${"self.astr" /* 4 */} }
+      query: na -> { project: bstr is self.${"astr"} }
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
     // TODO jump-to-definition Reference at location 3 reference appears twice. `addReference` may
     //      want to be one-time-use, or the calling function should be memoized.
-    expect(m.references.length).toBe(5);
-    expect(m.referenceAt(...pos(source.locations[2]))).toMatchObject({
-      location: source.locations[2],
+    console.log(m.references);
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
       type: "fieldReference",
       text: "astr",
       definition: {
         location: source.locations[0],
       },
     });
-    expect(m.referenceAt(...pos(source.locations[3]))).toMatchObject({
-      location: source.locations[3],
-      type: "fieldReference",
-      text: "self.astr",
+  });
+
+  test("reference to joined join in expression", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"self is table('aTable') on astr = self.astr"}
+      }
+      query: na -> { project: bstr is ${"self"}.astr }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
       definition: {
-        location: source.locations[1],
-      },
-    });
-    expect(m.referenceAt(...pos(source.locations[4]))).toMatchObject({
-      location: source.locations[4],
-      type: "fieldReference",
-      text: "self.astr",
-      definition: {
-        location: source.locations[1],
+        location: source.locations[0],
       },
     });
   });
 
-  test.skip("reference to field not in expression", () => {
+  test("reference to field not in expression (group by)", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> { group_by: ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field not in expression (project)", () => {
     const source = markSource`
       explore: na is ${"table('aTable')"}
       query: na -> { project: ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in order by", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> {
+        group_by: abool
+        order_by: ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in aggregate", () => {
+    const source = markSource`
+      query: table('aTable') { measure: ${"c is count()"} } -> {
+        group_by: abool
+        aggregate: ${"c"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "c",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in measure", () => {
+    const source = markSource`
+      explore: e is table('aTable') {
+        measure: ${"c is count()"}
+        measure: c2 is ${"c"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "c",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in top", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> {
+        group_by: abool
+        top: 10 by ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in filter", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> {
+        group_by: abool
+        where: ${"abool"}
+      }
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
@@ -1047,6 +1159,25 @@ describe("source references", () => {
         join_one: ${"self is table('aTable') on astr = self.astr"}
       }
       query: na -> { aggregate: ai_sum is ${"self"}.sum(self.ai) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to join in aggregate in expr", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"self is table('aTable') on astr = self.astr"}
+      }
+      query: na -> { aggregate: ai_sum is self.sum(${"self"}.ai) }
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();

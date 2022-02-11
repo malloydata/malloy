@@ -244,20 +244,6 @@ export class MalloyToAST
     return new ast.Filter([el]);
   }
 
-  protected getFieldPath(pcx: parse.FieldPathContext): string {
-    const nameCx = pcx.fieldName();
-    const tailCx = pcx.joinField();
-    const parts: string[] = [];
-    if (nameCx) {
-      parts.push(this.getIdText(nameCx));
-    } else if (tailCx) {
-      const joins = pcx.joinPath()?.joinName() || [];
-      parts.push(...joins.map((jcx) => this.getIdText(jcx)));
-      parts.push(this.getIdText(tailCx));
-    }
-    return parts.join(".");
-  }
-
   protected getExploreSource(pcx: parse.ExploreSourceContext): ast.Mallobj {
     const element = this.visit(pcx);
     if (element instanceof ast.Mallobj) {
@@ -505,7 +491,7 @@ export class MalloyToAST
 
   visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldReference {
     if (pcx.STAR()) {
-      return this.astAt(new ast.Wildcard("", "*"), pcx);
+      return this.astAt(new ast.Wildcard(undefined, "*"), pcx);
     }
     const fcx = pcx.fieldName();
     if (fcx) {
@@ -548,7 +534,16 @@ export class MalloyToAST
   }
 
   visitFieldPath(pcx: parse.FieldPathContext): ast.FieldName {
-    return this.astAt(new ast.FieldName(this.getFieldPath(pcx)), pcx);
+    const restCx = pcx.fieldPath();
+    const nameCx = pcx.fieldName();
+    const name = nameCx.id().text;
+    const astName = this.astAt(new ast.FieldName(name), nameCx);
+    if (restCx) {
+      const rest = this.visitFieldPath(restCx);
+      return this.astAt(new ast.FieldPath(astName, rest), pcx);
+    } else {
+      return astName;
+    }
   }
 
   visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
@@ -605,7 +600,7 @@ export class MalloyToAST
   visitWildMember(pcx: parse.WildMemberContext): ast.FieldReference {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? "*" : "**";
-    const join = nameCx ? this.getFieldPath(nameCx) : "";
+    const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
     return new ast.Wildcard(join, stars);
   }
 
@@ -670,7 +665,10 @@ export class MalloyToAST
     const qp = new ast.PipelineDesc();
     const nameCx = pcx.exploreQueryName();
     if (nameCx) {
-      qp.headName = this.getIdText(nameCx);
+      qp.headPath = this.astAt(
+        new ast.FieldName(this.getIdText(nameCx)),
+        nameCx
+      );
     }
     const propsCx = pcx.queryProperties();
     if (propsCx) {
@@ -699,7 +697,11 @@ export class MalloyToAST
 
   visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
     const pipe = new ast.PipelineDesc();
-    pipe.headName = this.getIdText(pcx.queryName());
+    const queryNameCx = pcx.queryName();
+    pipe.headPath = this.astAt(
+      new ast.FieldName(this.getIdText(queryNameCx)),
+      queryNameCx
+    );
     const refCx = pcx.queryProperties();
     if (refCx) {
       pipe.refineHead(this.visitQueryProperties(refCx));
@@ -837,7 +839,7 @@ export class MalloyToAST
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
-    const idRef = new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    const idRef = new ast.ExprIdReference(this.visitFieldPath(pcx.fieldPath()));
     return this.astAt(idRef, pcx);
   }
 
@@ -888,11 +890,8 @@ export class MalloyToAST
 
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
-    const path = pathCx ? this.getFieldPath(pathCx) : undefined;
-    const source =
-      pathCx && path
-        ? this.astAt(new ast.ExprIdReference(path), pathCx)
-        : undefined;
+    const path = pathCx ? this.visitFieldPath(pathCx) : undefined;
+    const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
 
     const exprDef = pcx.fieldExpr();
     if (pcx.aggregate().COUNT()) {

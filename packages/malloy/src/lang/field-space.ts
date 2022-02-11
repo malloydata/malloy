@@ -28,10 +28,8 @@ import {
   FieldCollectionMember,
   QueryItem,
   NestDefinition,
-  NestReference,
   MalloyElement,
 } from "./ast";
-import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
@@ -59,7 +57,7 @@ type FieldMap = Record<string, SpaceEntry>;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  findEntry(symbol: string): SpaceEntry | undefined;
+  findEntry(symbol: FieldName): SpaceEntry | undefined;
   getDialect(): Dialect;
 }
 
@@ -146,17 +144,35 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  findEntry(fieldPath: string): SpaceEntry | undefined {
-    const split = FieldPath.of(fieldPath);
-    const ref = this.entry(split.head);
+  findEntry(fieldPath: FieldName): SpaceEntry | undefined {
+    const split = { head: fieldPath.head, tail: fieldPath.rest };
+    const ref = this.entry(split.head.name);
     if (ref) {
-      if (split.tail === "") {
+      if (ref instanceof SpaceField) {
+        const definition = ref.fieldDef();
+        if (definition) {
+          fieldPath.addReference({
+            type:
+              ref instanceof StructSpaceField
+                ? "joinReference"
+                : "fieldReference",
+            definition,
+            location: split.head.location,
+            text: split.head.name,
+          });
+        }
+      }
+
+      if (split.tail === undefined) {
         return ref;
       }
       if (ref instanceof StructSpaceField) {
-        return ref.fieldSpace.findEntry(split.tail);
+        const restEntry = ref.fieldSpace.findEntry(split.tail);
+        return restEntry;
       }
-      throw new Error(`'${split.head}' cannot contain a '${split.tail}'`);
+      throw new Error(
+        `'${split.head}' cannot contain a '${split.tail.refString}'`
+      );
     } else {
       return undefined;
     }
@@ -335,7 +351,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  findEntry(fieldPath: string): SpaceEntry | undefined {
+  findEntry(fieldPath: FieldName): SpaceEntry | undefined {
     return this.inputSpace.findEntry(fieldPath);
   }
 
@@ -350,8 +366,10 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldName || qi instanceof NestReference) {
-        this.addReference(qi.name);
+      if (qi instanceof FieldName) {
+        // TODO jump-to-definition Maybe use _foo to trigger error
+        const _foo = this.findEntry(qi);
+        this.addReference(qi);
       } else if (qi instanceof ExprFieldDecl) {
         this.addField(qi);
       } else if (qi instanceof NestDefinition) {
@@ -365,7 +383,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        this.addReference(member.name);
+        // TODO jump-to-definition Maybe use _foo to trigger error
+        const _foo = this.findEntry(member);
+        this.addReference(member);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
@@ -374,8 +394,8 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
   }
 
-  addReference(ref: string): void {
-    this.setEntry(ref, new FANSPaceField(ref, this));
+  addReference(ref: FieldName): void {
+    this.setEntry(ref.refString, new FANSPaceField(ref, this));
   }
 
   conContain(_qd: model.QueryFieldDef): boolean {
@@ -475,8 +495,8 @@ export class CircleSpace implements FieldSpace {
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  findEntry(symbol: string): SpaceEntry | undefined {
-    if (symbol === this.circular.defineName) {
+  findEntry(symbol: FieldName): SpaceEntry | undefined {
+    if (symbol.refString === this.circular.defineName) {
       this.foundCircle = true;
       return undefined;
     }

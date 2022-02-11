@@ -391,17 +391,11 @@ collectionMember
   | fieldDef                          # newMember
   ;
 
-// Possibly wasted work adding semantics to "id" references
 fieldPath
   : fieldName
-  | joinPath DOT joinField
+  | fieldName DOT fieldPath
   ;
 
-joinPath
-  : joinName (DOT joinName)*
-  ;
-
-joinField: id;
 joinName: id;
 fieldName: id;
 

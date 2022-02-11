@@ -19,6 +19,7 @@ import {
   TurtleDecl,
   HasParameter,
   Join,
+  FieldName,
 } from "./ast";
 
 // "Space Fields" are a field in a field space
@@ -226,7 +227,7 @@ export class FANSPaceField extends SpaceField {
   as?: string;
   filterList?: model.FilterExpression[];
   constructor(
-    readonly ref: string,
+    readonly ref: FieldName,
     readonly inSpace: FieldSpace,
     refInit?: Partial<model.FilteredAliasedName>
   ) {
@@ -235,7 +236,7 @@ export class FANSPaceField extends SpaceField {
   }
 
   name(): string {
-    return this.as || this.ref;
+    return this.as || this.ref.refString;
   }
 
   private filtersPresent() {
@@ -259,11 +260,11 @@ export class FANSPaceField extends SpaceField {
         return {
           type: fieldType,
           name: this.as,
-          e: [{ type: "parameter", path: this.ref }],
+          e: [{ type: "parameter", path: this.ref.refString }],
           aggregate: false,
         };
       }
-      let fieldExpr: model.Expr = [{ type: "field", path: this.ref }];
+      let fieldExpr: model.Expr = [{ type: "field", path: this.ref.refString }];
       if (this.filtersPresent() && this.filterList) {
         const newfieldExpr: model.Expr = [
           {
@@ -287,14 +288,14 @@ export class FANSPaceField extends SpaceField {
   queryFieldDef(): model.QueryFieldDef {
     // TODO if this reference is to a field which does not exist
     // it needs to be an error SOMEWHERE
-    const n: model.FilteredAliasedName = { name: this.ref };
+    const n: model.FilteredAliasedName = { name: this.ref.refString };
     if (this.filtersPresent()) {
       n.filterList = this.filterList;
     }
     if (this.as) {
       n.as = this.as;
     }
-    return n.as || n.filterList ? n : this.ref;
+    return n.as || n.filterList ? n : this.ref.refString;
   }
 
   type(): FieldType {

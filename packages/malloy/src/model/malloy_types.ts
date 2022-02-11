@@ -63,7 +63,7 @@ export interface DocumentExploreReference extends DocumentReferenceBase {
   definition: StructDef;
 }
 
-export interface DocumentJoineference extends DocumentReferenceBase {
+export interface DocumentJoinReference extends DocumentReferenceBase {
   type: "joinReference";
   definition: FieldDef;
 }
@@ -88,7 +88,7 @@ export type DocumentReference =
   | DocumentQueryReference
   | DocumentSQLBlockReference
   | DocumentFieldReference
-  | DocumentJoineference;
+  | DocumentJoinReference;
 
 /** put location into the parse tree. */
 export interface HasLocation {
