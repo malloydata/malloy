@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 
+import { DocumentLocation, DocumentPosition } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
@@ -934,7 +935,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
-    expect(m.references[0]).toMatchObject({
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "exploreReference",
       text: "na",
@@ -951,7 +952,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
-    expect(m.references[1]).toMatchObject({
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -973,16 +974,10 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    // TODO jump-to-definition Reference at location 3 reference appears twice. `addReference` may
+    //      want to be one-time-use, or the calling function should be memoized.
     expect(m.references.length).toBe(5);
-    expect(m.references[0]).toMatchObject({
-      location: source.locations[3],
-      type: "fieldReference",
-      text: "self.astr",
-      definition: {
-        location: source.locations[1],
-      },
-    });
-    expect(m.references[1]).toMatchObject({
+    expect(m.referenceAt(...pos(source.locations[2]))).toMatchObject({
       location: source.locations[2],
       type: "fieldReference",
       text: "astr",
@@ -990,9 +985,7 @@ describe("source references", () => {
         location: source.locations[0],
       },
     });
-    // TODO jump-to-definition This reference appears twice. `addReference` may want to be one-time-use, or
-    //      the calling function should be memoized.
-    expect(m.references[2]).toMatchObject({
+    expect(m.referenceAt(...pos(source.locations[3]))).toMatchObject({
       location: source.locations[3],
       type: "fieldReference",
       text: "self.astr",
@@ -1000,10 +993,7 @@ describe("source references", () => {
         location: source.locations[1],
       },
     });
-    expect(m.references[3]).toMatchObject({
-      text: "na",
-    });
-    expect(m.references[4]).toMatchObject({
+    expect(m.referenceAt(...pos(source.locations[4]))).toMatchObject({
       location: source.locations[4],
       type: "fieldReference",
       text: "self.astr",
@@ -1020,10 +1010,89 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
-    expect(m.references[1]).toMatchObject({
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in aggregate source", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { aggregate: ai_sum is ${"ai"}.sum() }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "ai",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  function pos(location: DocumentLocation): [string, DocumentPosition] {
+    return [location.url, location.range.start];
+  }
+
+  test("reference to join in aggregate source", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"self is table('aTable') on astr = self.astr"}
+      }
+      query: na -> { aggregate: ai_sum is ${"self"}.sum(self.ai) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in aggregate (in expr)", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { aggregate: ai_sum is sum(${"ai"}) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "ai",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  // TODO jump-to-definition this gives a weird error
+  //      Correct:  Reference to undefined value dsf
+  //      Additionally (incorrect): Cannot define ai_sum, unexpected type unknown
+  test.skip("reference to join in aggregate source", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        join_one: ${"self is table('aTable') on astr = self.astr"}
+      }
+      query: na -> { aggregate: ai_sum is ${"dsf"}.sum(self.ai) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
       definition: {
         location: source.locations[0],
       },

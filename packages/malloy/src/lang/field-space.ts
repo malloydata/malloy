@@ -150,11 +150,11 @@ export class StructSpace implements FieldSpace {
     const split = FieldPath.of(fieldPath);
     const ref = this.entry(split.head);
     if (ref) {
-      if (ref instanceof StructSpaceField) {
-        return ref.fieldSpace.findEntry(split.tail);
-      }
       if (split.tail === "") {
         return ref;
+      }
+      if (ref instanceof StructSpaceField) {
+        return ref.fieldSpace.findEntry(split.tail);
       }
       throw new Error(`'${split.head}' cannot contain a '${split.tail}'`);
     } else {

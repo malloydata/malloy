@@ -176,7 +176,13 @@ export abstract class MalloyElement {
   }
 
   addReference(reference: model.DocumentReference): void {
-    this.translator()?.addReference(reference);
+    const translator = this.translator();
+    if (translator === undefined) {
+      throw new Error(
+        "Internal Error: translator undefined when adding reference"
+      );
+    }
+    translator.addReference(reference);
   }
 
   private get sourceURL() {

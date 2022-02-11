@@ -889,13 +889,17 @@ export class MalloyToAST
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
     const path = pathCx ? this.getFieldPath(pathCx) : undefined;
+    const source =
+      pathCx && path
+        ? this.astAt(new ast.ExprIdReference(path), pathCx)
+        : undefined;
 
     const exprDef = pcx.fieldExpr();
     if (pcx.aggregate().COUNT()) {
       if (exprDef) {
         this.contextError(exprDef, "Ignored expression inside COUNT()");
       }
-      return new ast.ExprCount(path);
+      return new ast.ExprCount(source);
     }
 
     // * was ok in count, not ok now ... this should be in grammer but at
@@ -924,9 +928,9 @@ export class MalloyToAST
         this.contextError(pcx, "Missing expression for max");
       }
     } else if (pcx.aggregate().AVG()) {
-      return new ast.ExprAvg(expr, path);
+      return new ast.ExprAvg(expr, source);
     } else if (pcx.aggregate().SUM()) {
-      return new ast.ExprSum(expr, path);
+      return new ast.ExprSum(expr, source);
     }
     return new ast.ExprNULL();
   }

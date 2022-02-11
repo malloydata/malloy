@@ -28,6 +28,7 @@ import {
   SQLBlock,
   DocumentRange,
   DocumentReference,
+  DocumentPosition,
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
@@ -645,6 +646,25 @@ export abstract class MalloyTranslation {
 
   addReference(reference: DocumentReference): void {
     this.references.push(reference);
+  }
+
+  referenceAt(
+    url: string,
+    position: DocumentPosition
+  ): DocumentReference | undefined {
+    // TODO jump-to-definition Store references in sorted order, and do a binary search to
+    //      find them.
+    return this.references.find((reference) => {
+      return (
+        reference.location.url === url &&
+        reference.location.range.start.line <= position.line &&
+        reference.location.range.end.line >= position.line &&
+        (position.line !== reference.location.range.start.line ||
+          position.character >= reference.location.range.start.character) &&
+        (position.line !== reference.location.range.end.line ||
+          position.character <= reference.location.range.end.character)
+      );
+    });
   }
 
   fatalErrors(): FatalResponse {

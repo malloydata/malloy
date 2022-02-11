@@ -38,8 +38,13 @@ export function paramHasValue(p: Parameter): boolean {
 }
 
 export interface DocumentRange {
-  start: { line: number; character: number };
-  end: { line: number; character: number };
+  start: DocumentPosition;
+  end: DocumentPosition;
+}
+
+export interface DocumentPosition {
+  line: number;
+  character: number;
 }
 
 export interface DocumentLocation {
@@ -56,6 +61,11 @@ interface DocumentReferenceBase {
 export interface DocumentExploreReference extends DocumentReferenceBase {
   type: "exploreReference";
   definition: StructDef;
+}
+
+export interface DocumentJoineference extends DocumentReferenceBase {
+  type: "joinReference";
+  definition: FieldDef;
 }
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
@@ -77,7 +87,8 @@ export type DocumentReference =
   | DocumentExploreReference
   | DocumentQueryReference
   | DocumentSQLBlockReference
-  | DocumentFieldReference;
+  | DocumentFieldReference
+  | DocumentJoineference;
 
 /** put location into the parse tree. */
 export interface HasLocation {
