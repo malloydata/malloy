@@ -18,12 +18,15 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
-  isDateTimeframe,
   TimestampTimeframe,
 } from "./dialect";
 
 const timeTruncMap: { [key: string]: string } = {
   date: "day",
+};
+
+const castMap: Record<string, string> = {
+  number: "float64",
 };
 
 export class StandardSQLDialect extends Dialect {
@@ -272,17 +275,26 @@ ${indent(sql)}
     return [`DATE_TRUNC(`, expr, `, ${units})`];
   }
 
+  // sqlTimestampTrunc(
+  //   expr: unknown,
+  //   timeframe: TimestampTimeframe,
+  //   timezone: string
+  // ): DialectExpr {
+  //   const units = StandardSQLDialect.mapTimeframe(timeframe);
+  //   if (isDateTimeframe(timeframe)) {
+  //     return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
+  //   } else {
+  //     return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
+  //   }
+  // }
+
   sqlTimestampTrunc(
     expr: unknown,
     timeframe: TimestampTimeframe,
-    timezone: string
+    _timezone: string
   ): DialectExpr {
     const units = StandardSQLDialect.mapTimeframe(timeframe);
-    if (isDateTimeframe(timeframe)) {
-      return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
-    } else {
-      return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
-    }
+    return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
   }
 
   sqlExtractDateTimeframe(
@@ -337,5 +349,27 @@ ${indent(sql)}
 
   ignoreInProject(fieldName: string): boolean {
     return fieldName === "_PARTITIONTIME";
+  }
+
+  sqlCast(expr: unknown, castTo: string, safe: boolean): DialectExpr {
+    return [
+      `${safe ? "SAFE_" : ""}CAST(`,
+      expr,
+      ` AS ${castMap[castTo] || castTo})`,
+    ];
+  }
+
+  sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    timezone: string
+  ): string {
+    if (type === "date") {
+      return `DATE('${timeString}')`;
+    } else if (type === "timestamp") {
+      return `TIMESTAMP('${timeString}', '${timezone}')`;
+    } else {
+      throw new Error(`Unknown Liternal time format ${type}`);
+    }
   }
 }

@@ -25,6 +25,7 @@ import {
   isAtomicFieldType,
   isConditionParameter,
   StructDef,
+  Expr,
 } from "../../model/malloy_types";
 import { CircleSpace, FieldSpace } from "../field-space";
 import * as FieldPath from "../field-path";
@@ -109,11 +110,11 @@ export abstract class ExpressionDef extends MalloyElement {
     return applyBinary(fs, left, op, this);
   }
 
-  thisValueToTimestamp(selfValue: ExprValue): ExpressionDef {
+  thisValueToTimestamp(selfValue: ExprValue, d: Dialect): ExpressionDef {
     if (selfValue.dataType === "timestamp") {
       return this;
     }
-    const tsSelf = compressExpr(["TIMESTAMP(", ...selfValue.value, ")"]);
+    const tsSelf = compressExpr(d.sqlTimestampCast(selfValue.value) as Expr);
     return new ExprTime("timestamp", tsSelf, selfValue.aggregate);
   }
 }
@@ -320,7 +321,7 @@ export class ExprTime extends ExpressionDef {
     this.translationValue = {
       dataType: timeType,
       aggregate: aggregate,
-      value: typeof value === "string" ? [`'${value}'`] : value,
+      value: typeof value === "string" ? [value] : value,
     };
   }
 
@@ -841,11 +842,15 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    const castTo = this.castType === "number" ? "float64" : this.castType;
-    const cast = this.safe ? "safe_cast" : "cast";
-    let castValue = [`${cast}(`, ...expr.value, ` as ${castTo})`];
+    const castTo =
+      this.castType === "number"
+        ? fs.getDialect().defaultNumberType
+        : this.castType;
+    let castValue = fs
+      .getDialect()
+      .sqlCast(expr.value, castTo, this.safe) as Expr;
     if (castTo === "timestamp" && expr.dataType === "date") {
-      castValue = ["TIMESTAMP(", ...expr.value, ")"];
+      castValue = fs.getDialect().sqlTimestampCast(expr.value) as Expr;
     }
     if (castTo === "date" && expr.dataType === "timestamp") {
       // Give date cast timestamps a granularity
@@ -853,7 +858,7 @@ export class ExprCast extends ExpressionDef {
         dataType: "date",
         aggregate: expr.aggregate,
         timeframe: "day",
-        value: compressExpr(["DATE(", ...expr.value, ")"]),
+        value: compressExpr(fs.getDialect().sqlDateCast(expr.value) as Expr),
       };
     }
     return {
