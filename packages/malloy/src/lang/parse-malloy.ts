@@ -421,10 +421,10 @@ class ASTStep implements TranslationStep {
     if (!this.walked) {
       newAst.walk((walkedTo: ast.MalloyElement): void => {
         if (walkedTo instanceof ast.SQLSource) {
-          if (!sqlExplores[walkedTo.name]) {
-            sqlExplores[walkedTo.name] = {};
+          if (!sqlExplores[walkedTo.ref.name]) {
+            sqlExplores[walkedTo.ref.name] = {};
           }
-          sqlExplores[walkedTo.name].ref = walkedTo;
+          sqlExplores[walkedTo.ref.name].ref = walkedTo;
         } else if (walkedTo instanceof ast.SQLStatement && walkedTo.is) {
           if (!sqlExplores[walkedTo.is]) {
             sqlExplores[walkedTo.is] = {};

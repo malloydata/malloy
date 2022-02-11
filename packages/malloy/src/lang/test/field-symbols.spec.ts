@@ -18,6 +18,7 @@ import {
   QueryFieldStruct,
 } from "../space-field";
 import { StructSpace } from "../field-space";
+import { FieldName, FieldPath } from "../ast";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
@@ -43,7 +44,11 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
+    // TODO jump-to-definition I'd like to leave these tests here, but it also feels bad to construct
+    //      ast nodes like this in a test...
+    expect(space.findEntry(new FieldName("t"))).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -56,7 +61,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
+    expect(space.findEntry(new FieldName("t"))).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -69,7 +76,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
+    expect(space.findEntry(new FieldName("t"))).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -81,7 +90,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t")).toBeInstanceOf(ColumnSpaceField);
+    expect(space.findEntry(new FieldName("t"))).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -97,7 +108,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t.b")).toBeInstanceOf(ColumnSpaceField);
+    expect(
+      space.findEntry(new FieldPath(new FieldName("t"), new FieldName("b")))
+    ).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -113,7 +126,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t.a")).toBeInstanceOf(ColumnSpaceField);
+    expect(
+      space.findEntry(new FieldPath(new FieldName("t"), new FieldName("a")))
+    ).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -129,7 +144,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t.a")).toBeInstanceOf(ColumnSpaceField);
+    expect(
+      space.findEntry(new FieldPath(new FieldName("t"), new FieldName("a")))
+    ).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -147,7 +164,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.findEntry("t")).toBeInstanceOf(QueryFieldStruct);
+    expect(space.findEntry(new FieldName("t"))).toBeInstanceOf(
+      QueryFieldStruct
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -169,7 +188,11 @@ describe("structdef comprehension", () => {
       },
     };
     const space = new StructSpace(struct);
-    expect(space.findEntry("cReqStr")).toBeInstanceOf(DefinedParameter);
-    expect(space.findEntry("cOptStr")).toBeInstanceOf(DefinedParameter);
+    expect(space.findEntry(new FieldName("cReqStr"))).toBeInstanceOf(
+      DefinedParameter
+    );
+    expect(space.findEntry(new FieldName("cOptStr"))).toBeInstanceOf(
+      DefinedParameter
+    );
   });
 });

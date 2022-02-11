@@ -306,10 +306,12 @@ export class MalloyToAST
   }
 
   visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
-    return this.astAt(
-      new ast.SQLSource(this.getIdText(pcx.sqlExploreNameRef())),
-      pcx
+    const nameCx = pcx.sqlExploreNameRef();
+    const name = this.astAt(
+      new ast.NamedSourceId(this.getIdText(nameCx)),
+      nameCx
     );
+    return this.astAt(new ast.SQLSource(name), pcx);
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
@@ -383,7 +385,8 @@ export class MalloyToAST
     if (ecx) {
       return this.visitExplore(ecx);
     }
-    return new ast.NamedSource(name);
+    // TODO jump-to-definition
+    return new ast.NamedSource({ name });
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
@@ -536,7 +539,7 @@ export class MalloyToAST
   visitFieldPath(pcx: parse.FieldPathContext): ast.FieldName {
     const restCx = pcx.fieldPath();
     const nameCx = pcx.fieldName();
-    const name = nameCx.id().text;
+    const name = this.getIdText(nameCx);
     const astName = this.astAt(new ast.FieldName(name), nameCx);
     if (restCx) {
       const rest = this.visitFieldPath(restCx);
@@ -626,7 +629,11 @@ export class MalloyToAST
     }
     const fieldCx = pcx.fieldName();
     if (fieldCx) {
-      return new ast.OrderBy(this.getIdText(fieldCx), dir);
+      const fieldName = this.astAt(
+        new ast.FieldName(this.getIdText(fieldCx)),
+        fieldCx
+      );
+      return new ast.OrderBy(fieldName, dir);
     }
     throw this.internalError(pcx, "can't parse order_by specification");
   }
@@ -643,11 +650,15 @@ export class MalloyToAST
     if (byCx) {
       const nameCx = byCx.fieldName();
       if (nameCx) {
-        top = new ast.Top(topN, { byString: this.getIdText(nameCx) });
+        const name = this.astAt(
+          new ast.FieldName(this.getIdText(nameCx)),
+          nameCx
+        );
+        top = new ast.Top(topN, name);
       }
       const exprCx = byCx.fieldExpr();
       if (exprCx) {
-        top = new ast.Top(topN, { byExpr: this.getFieldExpr(exprCx) });
+        top = new ast.Top(topN, this.getFieldExpr(exprCx));
       }
     }
     if (!top) {
@@ -657,7 +668,11 @@ export class MalloyToAST
   }
 
   visitExploreName(pcx: parse.ExploreNameContext): ast.NamedSource {
-    const name = this.getIdText(pcx.id());
+    const nameCx = pcx.id();
+    const name = this.astAt(
+      new ast.NamedSourceId(this.getIdText(nameCx)),
+      nameCx
+    );
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
@@ -1032,7 +1047,11 @@ export class MalloyToAST
   }
 
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
-    const name = this.getIdText(pcx.exploreName());
+    const nameCx = pcx.exploreName();
+    const name = this.astAt(
+      new ast.NamedSourceId(this.getIdText(nameCx)),
+      nameCx
+    );
     // Parameters ... coming ...
     // const paramListCx = pcx.isParam();
     // if (paramListCx) {

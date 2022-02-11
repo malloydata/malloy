@@ -132,7 +132,6 @@ export abstract class MalloyElement {
     if (this.parent) {
       return this.parent.location;
     }
-    this.log("Location not set during parse");
     return {
       url: this.sourceURL,
       range: {
@@ -176,13 +175,8 @@ export abstract class MalloyElement {
   }
 
   addReference(reference: model.DocumentReference): void {
-    const translator = this.translator();
-    if (translator === undefined) {
-      throw new Error(
-        "Internal Error: translator undefined when adding reference"
-      );
-    }
-    translator.addReference(reference);
+    // TODO jump-to-definition It would be nice to throw an error here if no translator can be found
+    this.translator()?.addReference(reference);
   }
 
   private get sourceURL() {
@@ -373,17 +367,26 @@ export abstract class Mallobj extends MalloyElement {
 
 class QueryHeadStruct extends Mallobj {
   elementType = "internalOnlyQueryHead";
-  constructor(readonly fromRef: model.StructRef) {
+  constructor(readonly fromRef: NamedSourceId | model.StructRef) {
     super();
   }
+
   structRef(): model.StructRef {
-    return this.fromRef;
+    return this.fromRef instanceof NamedSourceId
+      ? this.fromRef.name
+      : this.fromRef;
   }
+
   structDef(): model.StructDef {
+    if (this.fromRef instanceof NamedSourceId) {
+      const ns = new NamedSource(this.fromRef);
+      this.has({ exploreReference: ns });
+      return ns.structDef();
+    }
     if (model.refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
-    const ns = new NamedSource(this.fromRef);
+    const ns = new NamedSource({ name: this.fromRef });
     this.has({ exploreReference: ns });
     return ns.structDef();
   }
@@ -570,12 +573,20 @@ export class IsValueBlock extends MalloyElement {
   }
 }
 
+export class NamedSourceId extends MalloyElement {
+  elementType = "namedSourceId";
+
+  constructor(readonly name: string) {
+    super();
+  }
+}
+
 export class NamedSource extends Mallobj {
   elementType = "namedSource";
   protected isBlock?: IsValueBlock;
 
   constructor(
-    readonly name: string,
+    readonly ref: NamedSourceId | { name: string },
     paramValues: Record<string, ConstantSubExpression> = {}
   ) {
     super();
@@ -589,28 +600,30 @@ export class NamedSource extends Mallobj {
     if (this.isBlock) {
       return this.structDef();
     }
-    return this.name;
+    return this.ref.name;
   }
 
   modelStruct(): model.StructDef | undefined {
-    const modelEnt = this.modelEntry(this.name)?.entry;
+    const modelEnt = this.modelEntry(this.ref.name)?.entry;
     if (!modelEnt) {
-      this.log(`Undefined data source '${this.name}'`);
+      this.log(`Undefined data source '${this.ref.name}'`);
       return;
     }
     if (modelEnt.type === "query") {
-      this.log(`Must use 'from()' to explore query '${this.name}`);
+      this.log(`Must use 'from()' to explore query '${this.ref.name}`);
       return;
     } else if (modelEnt.type === "sqlBlock") {
-      this.log(`Must use 'from_sql()' to explore sql query '${this.name}`);
+      this.log(`Must use 'from_sql()' to explore sql query '${this.ref.name}`);
       return;
     }
     const result = { ...modelEnt };
     this.addReference({
       type: "exploreReference",
-      text: this.name,
+      text: this.ref.name,
       definition: result,
-      location: this.location,
+      // TODO jump-to-definition This feels so very wrong.
+      location:
+        this.ref instanceof NamedSourceId ? this.ref.location : this.location,
     });
     return result;
   }
@@ -685,47 +698,58 @@ export class SQLSource extends NamedSource {
     return this.structDef();
   }
   modelStruct(): model.StructDef | undefined {
-    const modelEnt = this.modelEntry(this.name)?.entry;
+    const modelEnt = this.modelEntry(this.ref.name)?.entry;
     if (!modelEnt) {
-      this.log(`Undefined from_sql source '${this.name}'`);
+      this.log(`Undefined from_sql source '${this.ref.name}'`);
       return;
     }
     if (modelEnt.type === "query") {
-      this.log(`Cannot use 'from_sql()' to explore query '${this.name}'`);
+      this.log(`Cannot use 'from_sql()' to explore query '${this.ref.name}'`);
       return;
     } else if (modelEnt.type === "struct") {
-      this.log(`Cannot use 'from_sql()' to explore '${this.name}'`);
+      this.log(`Cannot use 'from_sql()' to explore '${this.ref.name}'`);
       return;
     }
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {
-      this.log(`Cant't look up schema for sql block '${this.name}'`);
+      this.log(`Cant't look up schema for sql block '${this.ref.name}'`);
       return;
     }
     if (modelEnt.type == "sqlBlock") {
       const key = modelEnt.name;
       const lookup = sqlDefEntry.getEntry(key);
-      let msg = `Schema read failure for sql query '${this.name}'`;
+      let msg = `Schema read failure for sql query '${this.ref.name}'`;
       if (lookup) {
         if (lookup.status == "present") {
           const structDef = lookup.value;
-          return {
+          const ret = {
             ...structDef,
             fields: structDef.fields.map((field) => ({
               ...field,
               location: modelEnt.location,
             })),
           };
+          this.addReference({
+            type: "sqlBlockReference",
+            text: this.ref.name,
+            definition: modelEnt,
+            // TODO jump-to-definition This feels so very wrong.
+            location:
+              this.ref instanceof NamedSourceId
+                ? this.ref.location
+                : this.location,
+          });
+          return ret;
         }
         if (lookup.status == "error") {
-          msg = lookup.message.includes(this.name)
+          msg = lookup.message.includes(this.ref.name)
             ? `'Schema error: ${lookup.message}`
-            : `Schema error '${this.name}': ${lookup.message}`;
+            : `Schema error '${this.ref.name}': ${lookup.message}`;
         }
         this.log(msg);
       }
     } else {
-      this.log(`Mis-typed definition for'${this.name}'`);
+      this.log(`Mis-typed definition for'${this.ref.name}'`);
     }
   }
 }
@@ -1188,6 +1212,7 @@ class ReduceExecutor implements QueryExecutor {
         qp.log("Query operation already sorted");
       } else {
         this.order = qp;
+        qp.checkReferences(this.outputFS);
       }
     } else {
       return false;
@@ -1572,16 +1597,33 @@ export class Wildcard extends MalloyElement implements FieldReferenceInterface {
 
 export class OrderBy extends MalloyElement {
   elementType = "orderBy";
-  constructor(readonly field: number | string, readonly dir?: "asc" | "desc") {
+  constructor(
+    readonly field: number | FieldName,
+    readonly dir?: "asc" | "desc"
+  ) {
     super();
+    if (field instanceof FieldName) {
+      this.has({ field });
+    }
+  }
+
+  get modelField(): string | number {
+    return typeof this.field === "number" ? this.field : this.field.refString;
   }
 
   byElement(): model.OrderBy {
-    const orderElement: model.OrderBy = { field: this.field };
+    const orderElement: model.OrderBy = { field: this.modelField };
     if (this.dir) {
       orderElement.dir = this.dir;
     }
     return orderElement;
+  }
+
+  checkReferences(fs: FieldSpace): void {
+    if (this.field instanceof FieldName) {
+      // TODO jump-to-definition Maybe use _foo to trigger error
+      const _foo = fs.findEntry(this.field);
+    }
   }
 }
 
@@ -1592,6 +1634,10 @@ export class Ordering extends ListOf<OrderBy> {
 
   orderBy(): model.OrderBy[] {
     return this.list.map((el) => el.byElement());
+  }
+
+  checkReferences(fs: FieldSpace): void {
+    this.list.forEach((orderBy) => orderBy.checkReferences(fs));
   }
 }
 
@@ -1708,7 +1754,7 @@ export class PipelineDesc extends MalloyElement {
     }
     const pipeline: model.PipeSegment[] = [];
     if (modelPipe.pipeHead) {
-      const turtlePipe = this.importTurtle(
+      const { pipeline: turtlePipe } = this.importTurtle(
         modelPipe.pipeHead.name,
         fs.structDef()
       );
@@ -1726,16 +1772,19 @@ export class PipelineDesc extends MalloyElement {
   protected importTurtle(
     turtleName: string,
     fromStruct: model.StructDef
-  ): model.PipeSegment[] {
+  ): {
+    pipeline: model.PipeSegment[];
+    location: model.DocumentLocation | undefined;
+  } {
     const turtle = getStructFieldDef(fromStruct, turtleName);
     if (!turtle) {
       this.log(`Reference to undefined explore query '${turtleName}'`);
     } else if (turtle.type !== "turtle") {
       this.log(`'${turtleName}' is not a query`);
     } else {
-      return turtle.pipeline;
+      return { pipeline: turtle.pipeline, location: turtle.location };
     }
-    return [];
+    return { pipeline: [], location: undefined };
   }
 
   protected getOutputStruct(
@@ -1824,7 +1873,6 @@ export class PipelineDesc extends MalloyElement {
       type: "query",
       structRef,
       pipeline: [],
-      location: this.location,
     };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
@@ -1832,7 +1880,11 @@ export class PipelineDesc extends MalloyElement {
     let pipeFs = new StructSpace(structDef);
 
     if (this.headPath) {
-      const pipeline = this.importTurtle(this.headPath.refString, structDef);
+      const { pipeline, location } = this.importTurtle(
+        this.headPath.refString,
+        structDef
+      );
+      destQuery.location = location;
       const refined = this.refinePipeline(pipeFs, { pipeline }).pipeline;
       if (this.headRefinement) {
         // TODO there is an issue with losing the name of the turtle
@@ -1844,6 +1896,12 @@ export class PipelineDesc extends MalloyElement {
       }
       const pipeStruct = this.getOutputStruct(structDef, refined);
       pipeFs = new StructSpace(pipeStruct);
+      this.addReference({
+        type: "queryReference",
+        text: this.headPath.name,
+        definition: destQuery,
+        location: this.location,
+      });
     }
     const outputStruct = this.appendOps(destQuery.pipeline, pipeFs);
     return { outputStruct, query: destQuery };
@@ -1970,31 +2028,28 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
   }
 }
 
-interface TopByExpr {
-  byExpr: ExpressionDef;
-}
-type TopInit = { byString: string } | TopByExpr;
-function isByExpr(t: TopInit): t is TopByExpr {
-  return (t as TopByExpr).byExpr !== undefined;
-}
+type TopInit = FieldName | ExpressionDef;
 
 export class Top extends MalloyElement {
   elementType = "top";
   constructor(readonly limit: number, readonly by?: TopInit) {
     super();
-    this.has({ byExpression: (by as TopByExpr)?.byExpr });
+    this.has({ by });
   }
 
   getBy(fs: FieldSpace): model.By | undefined {
     if (this.by) {
-      if (isByExpr(this.by)) {
-        const byExpr = this.by.byExpr.getExpression(fs);
+      if (this.by instanceof FieldName) {
+        // TODO jump-to-definition Maybe use this to create an error
+        const _foo = fs.findEntry(this.by);
+        return { by: "name", name: this.by.refString };
+      } else {
+        const byExpr = this.by.getExpression(fs);
         if (!byExpr.aggregate) {
           this.log("top by expression must be an aggregate");
         }
         return { by: "expression", e: compressExpr(byExpr.value) };
       }
-      return { by: "name", name: this.by.byString };
     }
     return undefined;
   }

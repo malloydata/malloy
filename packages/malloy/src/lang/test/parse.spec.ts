@@ -12,7 +12,12 @@
  * GNU General Public License for more details.
  */
 
-import { DocumentLocation, DocumentPosition } from "../../model";
+import {
+  DocumentLocation,
+  DocumentPosition,
+  SQLBlock,
+  StructDef,
+} from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
@@ -706,6 +711,21 @@ describe("error handling", () => {
   // });
 });
 
+function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
+  return {
+    type: "struct",
+    name: sqlBlock.name,
+    dialect: "bigquery",
+    structSource: {
+      type: "sql",
+      method: "subquery",
+      sqlBlock,
+    },
+    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    fields: [{ type: "number", name: "one" }],
+  };
+}
+
 describe("source locations", () => {
   test("renamed explore location", () => {
     const source = markSource`explore: ${"na is a"}`;
@@ -805,18 +825,7 @@ describe("source locations", () => {
     const sqlBlock = (result.sqlStructs || [])[0];
     m.update({
       sqlStructs: {
-        [sqlBlock.name]: {
-          type: "struct",
-          name: sqlBlock.name,
-          dialect: "bigquery",
-          structSource: {
-            type: "sql",
-            method: "subquery",
-            sqlBlock,
-          },
-          structRelationship: { type: "basetable", connectionName: "bigquery" },
-          fields: [{ type: "number", name: "one" }],
-        },
+        [sqlBlock.name]: getSelectOneStruct(sqlBlock),
       },
     });
     expect(m).toCompile();
@@ -863,7 +872,7 @@ describe("source locations", () => {
   });
 
   test("location of named SQL block", () => {
-    const source = markSource`sql: ${"s is || SELECT 1 ;;"}`;
+    const source = markSource`sql: ${"s is || SELECT 1 as one ;;"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
     const s = m.sqlBlocks[0];
@@ -945,6 +954,66 @@ describe("source references", () => {
     });
   });
 
+  test("reference to query in query", () => {
+    const source = markSource`
+      explore: t is table('aTable') {
+        query: ${"q is { project: * }"}
+      }
+      query: t -> ${"q"}
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in query (version 2)", () => {
+    const source = markSource`
+      explore: na is a { query: ${"x is { group_by: y is 1 }"} }
+      query: na -> ${"x"}
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "x",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to sql block", () => {
+    const source = markSource`
+      sql: ${"s is || SELECT 1 as one ;;"}
+      explore: na is from_sql(${"s"})
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    const sqlBlock = (result.sqlStructs || [])[0];
+    m.update({
+      sqlStructs: {
+        [sqlBlock.name]: getSelectOneStruct(sqlBlock),
+      },
+    });
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "sqlBlockReference",
+      text: "s",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
   test("reference to field in expression", () => {
     const source = markSource`
       explore: na is ${"table('aTable')"}
@@ -956,6 +1025,25 @@ describe("source references", () => {
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to quoted field in expression", () => {
+    const source = markSource`
+      explore: na is table('aTable') {
+        dimension: ${"`name` is 'name'"}
+      }
+      query: na -> { project: ${"`name`"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "name",
       definition: {
         location: source.locations[0],
       },
@@ -974,7 +1062,6 @@ describe("source references", () => {
     expect(m).toCompile();
     // TODO jump-to-definition Reference at location 3 reference appears twice. `addReference` may
     //      want to be one-time-use, or the calling function should be memoized.
-    console.log(m.references);
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
