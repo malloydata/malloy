@@ -158,6 +158,9 @@ export class StructSpace implements FieldSpace {
   lookup(fieldPath: string): LookupResult {
     const step = FieldPath.walk(fieldPath);
     const found = this.entry(step.head);
+    if (!found) {
+      return { error: `'${step.head}' is not defined`, found };
+    }
     if (step.tail) {
       if (found instanceof StructSpaceField) {
         return found.fieldSpace.lookup(step.tail);
@@ -167,10 +170,7 @@ export class StructSpace implements FieldSpace {
         found: undefined,
       };
     }
-    if (found) {
-      return { found, error: undefined };
-    }
-    return { error: `'${step.head}' is not defined`, found };
+    return { found, error: undefined };
   }
 }
 
