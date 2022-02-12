@@ -499,27 +499,29 @@ describe("expression tests", () => {
     const result = await runQuery(
       faa,
       `
-    query: table_airports->{
-      where: faa_region:'AEA'|'AGL'
-      order_by: 1
-      group_by: faa_region
-      aggregate: airport_count is COUNT(*)
-      nest: state is {
-        where: state:'CA'|'NY'
-        group_by: state
-        nest: code is {
-          where: major:'Y'
-          top: 10
-          order_by: 1
-          group_by: code
+      query: table('malloytest.airports')->{
+        where: faa_region: ~'A%'
+        order_by: 1
+        group_by: faa_region
+        aggregate: airport_count is COUNT(*)
+        nest: state is {
+          where: state:'CA'|'NY'
+          group_by: state
+          nest: code is {
+            where: major='Y'
+            top: 10
+            order_by: 1
+            group_by: code
+          }
         }
       }
-    } -> {
-      group_by: state.code.code
-    }
+      -> {
+        where: state.code.code != null
+        group_by: state.code.code
+      }
     `
     );
-    expect(result.data.value[0].code).toBe("ALB");
+    expect(result.data.value[0].code).toBe("ACV");
   });
 
   it("flights.search_index", async () => {
