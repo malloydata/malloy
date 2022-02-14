@@ -34,16 +34,21 @@ export async function highlight(
   { inline }: { inline?: boolean } = {}
 ): Promise<string> {
   const highlighter = await HIGHLIGHTER;
+  if (!highlighter.getLoadedLanguages().includes(lang as shiki.Lang)) {
+    lang = "txt";
+  }
   const highlightedRaw = highlighter.codeToHtml(code, { lang });
   if (inline) {
     return highlightedRaw
       .replace(/^<pre class="shiki"/, `<code class="language-${lang}"`)
       .replace("<code>", "")
-      .replace(/<\/pre>$/, "");
+      .replace(/<\/pre>$/, "")
+      .replace("background-color: #FFFFFF", "background-color: #FBFBFB");
   } else {
     return highlightedRaw
       .replace(/^<pre class="shiki"/, `<pre class="language-${lang}"`)
       .replace("<code>", "")
-      .replace(/<\/code><\/pre>$/, "</pre>");
+      .replace(/<\/code><\/pre>$/, "</pre>")
+      .replace("background-color: #FFFFFF", "background-color: #FBFBFB");
   }
 }
