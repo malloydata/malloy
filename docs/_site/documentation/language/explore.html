@@ -142,6 +142,12 @@
                 Imports
               </a>
             </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
           </div>
       </div>
 <div>
@@ -389,20 +395,20 @@ everything from the original source and all its extensions can be referenced.</p
         </a>
       </h3>
     <p>An explore can be created from a SQL table or view from a connected database.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}</pre><p>When defining an explore in this way, all the columns from
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>When defining an explore in this way, all the columns from
 the source table are available for use in field definitions
 or queries.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token comment">// Columns from the source table are available</span>
-  <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-    carrier
-    origin
-  <span class="token punctuation">]</span>
-  <span class="token keyword">aggregate</span>: flight_count
-  <span class="token keyword">limit</span>: <span class="token number">3</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// Columns from the source table are available</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">origin</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -413,64 +419,41 @@ or queries.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">origin</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,248,319</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">967,916</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">755,020</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">origin</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ATL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,248,319</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DFW</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>967,916</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ORD</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>755,020</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-    <span class="token property">"origin"</span><span class="token operator">:</span> <span class="token string">"ATL"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1248319</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"origin"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">967916</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-    <span class="token property">"origin"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">755020</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;origin&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ATL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1248319</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;origin&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">967916</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;origin&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">755020</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   flights<span class="token punctuation">.</span>origin <span class="token keyword">as</span> origin<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">3</span> <span class="token keyword">desc</span>
-<span class="token keyword">LIMIT</span> <span class="token number">3</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   flights.origin </span><span style="color: #0000FF">as</span><span style="color: #000000"> origin,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -483,19 +466,19 @@ or queries.</p>
 to add fields, impose filters, or restrict available fields.
 This is useful for performing in-depth analysis without altering
 the base explore with modifications only relevant in that specific context.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}
-
-<span class="token comment">// new explore 'my_flights' adds total_distance and carrier_stats to flights</span>
-<span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
-  <span class="token keyword">measure</span>: total_distance <span class="token keyword">is</span> distance<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-
-  <span class="token keyword">query</span>: carrier_stats <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: carrier
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span> total_distance<span class="token punctuation">,</span> flight_count <span class="token punctuation">]</span>
-  }
-}</pre><pre class="language-malloy"><span class="token keyword">query</span>: my_flights <span class="token operator">-</span><span class="token operator">></span> carrier_stats { <span class="token keyword">limit</span>: <span class="token number">3</span> }</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// new explore &#39;my_flights&#39; adds total_distance and carrier_stats to flights</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">total_distance</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">distance</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">carrier_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [ </span><span style="color: #001080">total_distance</span><span style="color: #000000">, </span><span style="color: #001080">flight_count</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">carrier_stats</span><span style="color: #000000"> { </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span><span style="color: #000000"> }</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -506,64 +489,41 @@ the base explore with modifications only relevant in that specific context.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;distance</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,600,336,769</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,662,207,108</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,555,868,325</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">total_​distance</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,600,336,769</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,662,207,108</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,654,646</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,555,868,325</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">4600336769</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">3662207108</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">3555868325</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4600336769</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3662207108</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3654646</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3555868325</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   my_flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   <span class="token function">SUM</span><span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>distance<span class="token punctuation">)</span> <span class="token keyword">as</span> total_distance<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> my_flights
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token keyword">LIMIT</span> <span class="token number">3</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   my_flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">SUM</span><span style="color: #000000">(my_flights.distance) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_distance,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> my_flights</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -579,22 +539,22 @@ explore.</p>
 <p>When defining an explore from a query, the query can either
 be defined inline or referenced by name.</p>
 <p><strong>Inline query as explore source</strong></p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}
-
-<span class="token keyword">explore</span>: carrier_facts <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>
-  flights <span class="token operator">-</span><span class="token operator">></span> {
-    <span class="token keyword">group_by</span>: carrier
-    <span class="token keyword">aggregate</span>: lifetime_flights <span class="token keyword">is</span> flight_count
-  }
-<span class="token punctuation">)</span> {
-  <span class="token keyword">dimension</span>: lifetime_flights_bucketed <span class="token keyword">is</span> <span class="token function">floor</span><span class="token punctuation">(</span>lifetime_flights <span class="token operator">/</span> <span class="token number">10000</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10000</span>
-}
-</pre><pre class="language-malloy"><span class="token keyword">query</span>: carrier_facts <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">project</span>: <span class="token punctuation">[</span> carrier<span class="token punctuation">,</span> lifetime_flights_bucketed<span class="token punctuation">,</span> lifetime_flights <span class="token punctuation">]</span>
-  <span class="token keyword">limit</span>: <span class="token number">3</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">floor</span><span style="color: #000000">(</span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> / </span><span style="color: #098658">10000</span><span style="color: #000000">) * </span><span style="color: #098658">10000</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span></pre><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [ </span><span style="color: #001080">carrier</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -605,87 +565,64 @@ be defined inline or referenced by name.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_&#8203;flights_&#8203;bucketed</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_&#8203;flights</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,770,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,470,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,430,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights_​bucketed</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,770,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,470,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,430,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">5770000</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">5775777</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4470000</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4477929</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4430000</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4434727</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5770000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4470000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4430000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span> 
-     flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-     <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> lifetime_flights
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span> 
-   carrier_facts<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   <span class="token punctuation">(</span>floor<span class="token punctuation">(</span>carrier_facts<span class="token punctuation">.</span>lifetime_flights<span class="token operator">/</span><span class="token number">10000</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10000</span> <span class="token keyword">as</span> lifetime_flights_bucketed<span class="token punctuation">,</span>
-   carrier_facts<span class="token punctuation">.</span>lifetime_flights <span class="token keyword">as</span> lifetime_flights
-<span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> carrier_facts
-<span class="token keyword">LIMIT</span> <span class="token number">3</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   (</span><span style="color: #795E26">floor</span><span style="color: #000000">(carrier_facts.lifetime_flights/</span><span style="color: #098658">10000</span><span style="color: #000000">))*</span><span style="color: #098658">10000</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights_bucketed,</span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.lifetime_flights </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier_facts</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p><strong>Named query as explore source</strong></p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">query</span>: by_carrier <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: carrier
-    <span class="token keyword">aggregate</span>: lifetime_flights <span class="token keyword">is</span> flight_count
-  }
-}
-
-<span class="token keyword">explore</span>: carrier_facts <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>flights <span class="token operator">-</span><span class="token operator">></span> by_carrier<span class="token punctuation">)</span> {
-  <span class="token keyword">dimension</span>: lifetime_flights_bucketed <span class="token keyword">is</span> <span class="token function">floor</span><span class="token punctuation">(</span>lifetime_flights <span class="token operator">/</span> <span class="token number">10000</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10000</span>
-}</pre><pre class="language-malloy"><span class="token keyword">query</span>: carrier_facts <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">project</span>: <span class="token punctuation">[</span> carrier<span class="token punctuation">,</span> lifetime_flights_bucketed<span class="token punctuation">,</span> lifetime_flights <span class="token punctuation">]</span>
-  <span class="token keyword">limit</span>: <span class="token number">3</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">by_carrier</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">floor</span><span style="color: #000000">(</span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> / </span><span style="color: #098658">10000</span><span style="color: #000000">) * </span><span style="color: #098658">10000</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [ </span><span style="color: #001080">carrier</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -696,74 +633,112 @@ be defined inline or referenced by name.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_&#8203;flights_&#8203;bucketed</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_&#8203;flights</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,770,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,470,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,430,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights_​bucketed</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,770,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,470,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,430,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">5770000</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">5775777</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4470000</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4477929</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights_bucketed"</span><span class="token operator">:</span> <span class="token number">4430000</span><span class="token punctuation">,</span>
-    <span class="token property">"lifetime_flights"</span><span class="token operator">:</span> <span class="token number">4434727</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5770000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4470000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4430000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span> 
-     flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-     <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> lifetime_flights
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span> 
-   carrier_facts<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   <span class="token punctuation">(</span>floor<span class="token punctuation">(</span>carrier_facts<span class="token punctuation">.</span>lifetime_flights<span class="token operator">/</span><span class="token number">10000</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10000</span> <span class="token keyword">as</span> lifetime_flights_bucketed<span class="token punctuation">,</span>
-   carrier_facts<span class="token punctuation">.</span>lifetime_flights <span class="token keyword">as</span> lifetime_flights
-<span class="token keyword">FROM</span> __stage0 <span class="token keyword">as</span> carrier_facts
-<span class="token keyword">LIMIT</span> <span class="token number">3</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   (</span><span style="color: #795E26">floor</span><span style="color: #000000">(carrier_facts.lifetime_flights/</span><span style="color: #098658">10000</span><span style="color: #000000">))*</span><span style="color: #098658">10000</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights_bucketed,</span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.lifetime_flights </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier_facts</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>For more information about named queries appearing in models, see the <a href="statement.html">Models</a> section.</p>
 
+      <h3>
+        <a id="explores-from-sql-blocks" class="header-link anchor" href="#explores-from-sql-blocks">
+          Explores from SQL Blocks
+        </a>
+      </h3>
+    <p>Explores can be created from a SQL block, e.g.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    first_name,</span></span>
+<span class="line"><span style="color: #000000">    last_name,</span></span>
+<span class="line"><span style="color: #000000">    gender</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">;;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">limited_users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from_sql</span><span style="color: #000000">(</span><span style="color: #001080">my_sql_query</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">user_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">limited_users</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">user_count</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control"  data-result-kind="html">HTML</button>
+        <button class="result-control" selected data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" >
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">user_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>10</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" selected>
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;user_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    first_name,</span></span>
+<span class="line"><span style="color: #000000">    last_name,</span></span>
+<span class="line"><span style="color: #000000">    gender</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> limited_users</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
       <h2>
         <a id="explore-modifications" class="header-link anchor" href="#explore-modifications">
           Explore Modifications
@@ -771,7 +746,7 @@ be defined inline or referenced by name.</p>
       </h2>
     <p>An explore can introduce a number of different
 modifications or additions to its source, including adding
-filters, specifying a <code class="language-malloy">primary <span class="token keyword">key</span></code>, adding fields and
+filters, specifying a <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">primary</span><span style="color: #000000"> </span><span style="color: #001080">key</span></span></code>, adding fields and
 joins, renaming fields, or limiting which fields are
 available.</p>
 
@@ -781,13 +756,13 @@ available.</p>
         </a>
       </h3>
     <p>When an explore is defined, filters which apply to any query against the new explore may be added.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}
-
-<span class="token keyword">explore</span>: long_sfo_flights <span class="token keyword">is</span> flights {
-  <span class="token keyword">where</span>: origin <span class="token operator">=</span> <span class="token string">'SFO'</span> <span class="token keyword">and</span> distance <span class="token operator">></span> <span class="token number">1000</span>
-}</pre><pre class="language-malloy"><span class="token keyword">query</span>: long_sfo_flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">group_by</span>: destination<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count<span class="token punctuation">;</span> <span class="token keyword">limit</span>: <span class="token number">3</span> }</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">long_sfo_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">long_sfo_flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">destination</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000">; </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span><span style="color: #000000"> }</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -798,57 +773,38 @@ available.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">41,026</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">JFK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">31,108</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">28,158</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">destination</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ORD</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>41,026</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>JFK</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>31,108</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DFW</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>28,158</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">41026</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"JFK"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">31108</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">28158</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">41026</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;JFK&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">31108</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">28158</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   long_sfo_flights<span class="token punctuation">.</span>destination <span class="token keyword">as</span> destination<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> long_sfo_flights
-<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>long_sfo_flights<span class="token punctuation">.</span>origin<span class="token operator">=</span><span class="token string">'SFO'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>long_sfo_flights<span class="token punctuation">.</span>distance<span class="token operator">></span><span class="token number">1000</span><span class="token punctuation">)</span>
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token keyword">LIMIT</span> <span class="token number">3</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   long_sfo_flights.destination </span><span style="color: #0000FF">as</span><span style="color: #000000"> destination,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> long_sfo_flights</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (long_sfo_flights.origin=</span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000">)</span><span style="color: #0000FF">and</span><span style="color: #000000">(long_sfo_flights.distance&gt;</span><span style="color: #098658">1000</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -859,27 +815,27 @@ available.</p>
       </h3>
     <p>To be used in joins to other explores, an explore must
 have a primary key specified.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">primary_key</span>: code
-}</pre>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.carriers&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
       <h3>
         <a id="joins" class="header-link anchor" href="#joins">
           Joins
         </a>
       </h3>
     <p>When explores are joined as part of their definition, queries can reference fields in the joined explores without having to specify the join relationship each time.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: carriers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.carriers'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">primary_key</span>: code
-}
-
-<span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">join_one</span>: carriers <span class="token keyword">with</span> carrier
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}</pre><pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">group_by</span>: carriers<span class="token punctuation">.</span>nickname
-  <span class="token keyword">aggregate</span>: flight_count
-  <span class="token keyword">limit</span>: <span class="token number">3</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.carriers&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000">.</span><span style="color: #001080">nickname</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -890,57 +846,39 @@ have a primary key specified.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Southwest</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Delta</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">American</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Southwest</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Delta</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>American</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"Southwest"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5775777</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"Delta"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"nickname"</span><span class="token operator">:</span> <span class="token string">"American"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Southwest&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Delta&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;American&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   carriers_0<span class="token punctuation">.</span>nickname <span class="token keyword">as</span> nickname<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>carriers<span class="token punctuation">`</span> <span class="token keyword">AS</span> carriers_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>carrier <span class="token operator">=</span> carriers_0<span class="token punctuation">.</span>code
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token keyword">LIMIT</span> <span class="token number">3</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carriers_0.nickname </span><span style="color: #0000FF">as</span><span style="color: #000000"> nickname,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.carriers`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> carriers_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.carrier = carriers_0.code</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>See the <a href="join.html">Joins</a> section for more information on working with joins.</p>
@@ -953,19 +891,19 @@ have a primary key specified.</p>
     <p>Fields—dimensions, measures, and queries—may be defined as
 part of an explore, allowing for them to be used in any
 query against the explore.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
-  <span class="token comment">// A dimension</span>
-  <span class="token keyword">dimension</span>: has_control_tower <span class="token keyword">is</span> cntl_twr <span class="token operator">=</span> <span class="token string">'Y'</span>
-
-  <span class="token comment">// A measure</span>
-  <span class="token keyword">measure</span>: average_elevation <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>elevation<span class="token punctuation">)</span>
-
-  <span class="token comment">// A query</span>
-  <span class="token keyword">query</span>: average_elevation_by_control_tower <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: has_control_tower
-    <span class="token keyword">nest</span>: average_elevation
-  }
-}</pre>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// A dimension</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">has_control_tower</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">cntl_twr</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Y&#39;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// A measure</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">average_elevation</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">elevation</span><span style="color: #000000">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// A query</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">average_elevation_by_control_tower</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">has_control_tower</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">average_elevation</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
       <h3>
         <a id="renaming-fields" class="header-link anchor" href="#renaming-fields">
           Renaming Fields
@@ -973,31 +911,31 @@ query against the explore.</p>
       </h3>
     <p>Fields from an explore's source may be renamed in the context of the
 new explore. This is useful when the original name is not descriptive, or has a different meaning in the new explore.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">rename</span>: facility_type <span class="token keyword">is</span> fac_type
-  <span class="token keyword">rename</span>: origin_code <span class="token keyword">is</span> origin
-
-  <span class="token keyword">join_one</span>: origin <span class="token keyword">is</span> airports <span class="token keyword">with</span> origin_code
-}</pre>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">rename</span><span style="color: #000000">: </span><span style="color: #001080">facility_type</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">fac_type</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">rename</span><span style="color: #000000">: </span><span style="color: #001080">origin_code</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">origin</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">origin_code</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
       <h3>
         <a id="limiting-access-to-fields" class="header-link anchor" href="#limiting-access-to-fields">
           Limiting Access to Fields
         </a>
       </h3>
     <p>The list of fields available in an explore from its source
-can be limited. This can be done either by <code class="language-malloy"><span class="token keyword">accept</span></code>ing a
+can be limited. This can be done either by <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">accept</span></span></code>ing a
 list of fields to include (in which case any other field
 from the source is excluded, i.e. an "allow list") or by
-<code class="language-malloy"><span class="token keyword">except</span></code>ing a list of fields to exclude (any other field
+<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">except</span></span></code>ing a list of fields to exclude (any other field
 is included, i.e. a "deny list"). These cannot be used in
 conjunction with one another.</p>
 <p><strong>Accepting fields</strong></p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">accept</span>: <span class="token punctuation">[</span> id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> code<span class="token punctuation">,</span> city<span class="token punctuation">,</span> state<span class="token punctuation">,</span> elevation <span class="token punctuation">]</span>
-}</pre><p><strong>Excepting fields</strong></p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: airports <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.airports'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">except</span>: <span class="token punctuation">[</span> c_ldg_rts<span class="token punctuation">,</span> aero_cht<span class="token punctuation">,</span> cntl_twr <span class="token punctuation">]</span>
-}</pre></div>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">accept</span><span style="color: #000000">: [ </span><span style="color: #001080">id</span><span style="color: #000000">, </span><span style="color: #001080">name</span><span style="color: #000000">, </span><span style="color: #001080">code</span><span style="color: #000000">, </span><span style="color: #001080">city</span><span style="color: #000000">, </span><span style="color: #001080">state</span><span style="color: #000000">, </span><span style="color: #001080">elevation</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p><strong>Excepting fields</strong></p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">except</span><span style="color: #000000">: [ </span><span style="color: #001080">c_ldg_rts</span><span style="color: #000000">, </span><span style="color: #001080">aero_cht</span><span style="color: #000000">, </span><span style="color: #001080">cntl_twr</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre></div>
           </div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>

@@ -18,8 +18,8 @@ footer: /generated/footers/language/filters.html
         </a>
       </h2>
     <p>Regardless of the placement of a filter, the syntax looks the same.</p>
-<pre class="language-malloy">source { <span class="token keyword">where</span>: <span class="token punctuation">[</span> filter_one<span class="token punctuation">,</span> filter_two <span class="token punctuation">]</span> }</pre><p>Each filter be any expression of type <code class="language-malloy"><span class="token type">boolean</span></code>, whether that's a boolean field <code class="language-malloy">is_commercial_flight</code>, a comparison <code class="language-malloy">distance <span class="token operator">></span> <span class="token number">1000</span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
-<p>Logically, the comma-separated list of filters are <code class="language-malloy"><span class="token keyword">and</span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">source</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: [ </span><span style="color: #001080">filter_one</span><span style="color: #000000">, </span><span style="color: #001080">filter_two</span><span style="color: #000000"> ] }</span></span></pre><p>Each filter be any expression of type <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">boolean</span></span></code>, whether that's a boolean field <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">is_commercial_flight</span></span></code>, a comparison <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
+<p>Logically, the comma-separated list of filters are <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">and</span></span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
 <!--
 TODO "see where vs having for more information on how Malloy generates SQL for filters"
 -->
@@ -36,7 +36,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: distance <span class="token operator">></span> <span class="token number">1000</span> } <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">aggregate</span>: flight_count }</pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> } -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -47,37 +47,26 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,784,806</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8,784,806</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">8784806</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8784806</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">WHERE</span> flights<span class="token punctuation">.</span>distance<span class="token operator">></span><span class="token number">1000</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> flights.distance&gt;</span><span style="color: #098658">1000</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -87,13 +76,13 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>A filter can also be applied to an individual query stage.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">group_by</span>: carrier
-  <span class="token keyword">aggregate</span>: flight_count
-} <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">where</span>: carrier: <span class="token string">'UA'</span> <span class="token operator">|</span> <span class="token string">'AA'</span>
-  <span class="token keyword">project</span>: <span class="token punctuation">[</span> carrier<span class="token punctuation">,</span> flight_count <span class="token punctuation">]</span>
-}</pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;UA&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;AA&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [ </span><span style="color: #001080">carrier</span><span style="color: #000000">, </span><span style="color: #001080">flight_count</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -104,55 +93,39 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,654,646</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3654646</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span> 
-     flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-     <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span> 
-   base<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   base<span class="token punctuation">.</span>flight_count <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage0<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>base<span class="token punctuation">.</span>carrier<span class="token operator">=</span><span class="token string">'UA'</span><span class="token punctuation">)</span><span class="token operator">or</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>carrier<span class="token operator">=</span><span class="token string">'AA'</span><span class="token punctuation">)</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   base.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   base.flight_count </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage0`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (base.carrier=</span><span style="color: #A31515">&#39;UA&#39;</span><span style="color: #000000">)</span><span style="color: #0000FF">or</span><span style="color: #000000">(base.carrier=</span><span style="color: #A31515">&#39;AA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -162,13 +135,13 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>Any measure can be filtered by adding a where clause.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    ca_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
-    ny_flights <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
-    avg_km_from_ca <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>distance <span class="token operator">/</span> <span class="token number">0.621371</span><span class="token punctuation">)</span> { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_km_from_ca</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">distance</span><span style="color: #000000"> / </span><span style="color: #098658">0.621371</span><span style="color: #000000">) { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -179,45 +152,31 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;km_&#8203;from_&#8203;ca</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,617,694</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,385.174</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​km_​from_​ca</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,617,694</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,385.174</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"ca_flights"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
-    <span class="token property">"ny_flights"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
-    <span class="token property">"avg_km_from_ca"</span><span class="token operator">:</span> <span class="token number">1385.1741412354852</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_km_from_ca&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1385.174141235507</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_flights<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_flights<span class="token punctuation">,</span>
-   <span class="token function">AVG</span><span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> flights<span class="token punctuation">.</span>distance<span class="token operator">/</span><span class="token number">0.621371</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> avg_km_from_ca
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> flights.distance/</span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">621371</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_km_from_ca</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -228,22 +187,22 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy"><span class="token comment">// add a couple of measures to the `flights` explore</span>
-<span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
-  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: dep_delay <span class="token operator">></span> <span class="token number">30</span> }
-  <span class="token keyword">measure</span>: percent_delayed <span class="token keyword">is</span> delayed_flights <span class="token operator">/</span> flight_count
-}
-
-<span class="token keyword">query</span>: my_flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    ca_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
-    ca_delayed_flights <span class="token keyword">is</span> delayed_flights { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
-    ca_percent_delayed <span class="token keyword">is</span> percent_delayed { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
-    ny_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
-    ny_delayed_flights <span class="token keyword">is</span> delayed_flights { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
-    ny_percent_delayed <span class="token keyword">is</span> percent_delayed { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> / </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -254,61 +213,41 @@ measure and then create that as a percent of total.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;delayed_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ca_&#8203;percent_&#8203;delayed</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;delayed_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">ny_&#8203;percent_&#8203;delayed</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">371,416</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.083</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,617,694</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,338</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.095</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​percent_​delayed</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​percent_​delayed</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>371,416</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.083</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,617,694</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>154,338</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.095</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"ca_flights"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
-    <span class="token property">"ca_delayed_flights"</span><span class="token operator">:</span> <span class="token number">371416</span><span class="token punctuation">,</span>
-    <span class="token property">"ca_percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.08251035722513228</span><span class="token punctuation">,</span>
-    <span class="token property">"ny_flights"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
-    <span class="token property">"ny_delayed_flights"</span><span class="token operator">:</span> <span class="token number">154338</span><span class="token punctuation">,</span>
-    <span class="token property">"ny_percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.09540617694075641</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">371416</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.08251035722513228</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">154338</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.09540617694075641</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_flights<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span>
-  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_delayed_flights<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span>
-  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_percent_delayed<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_flights<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span><span class="token punctuation">)</span>
-  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_delayed_flights<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> <span class="token punctuation">(</span>origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span><span class="token punctuation">)</span>
-  <span class="token operator">AND</span> <span class="token punctuation">(</span>my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span><span class="token punctuation">)</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_percent_delayed
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> my_flights
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> my_flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_delayed_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_percent_delayed,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_delayed_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_percent_delayed</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> my_flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> my_flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -319,24 +258,24 @@ measure and then create that as a percent of total.</p>
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy"><span class="token comment">// add a couple of measures to the `flights` explore</span>
-<span class="token keyword">explore</span>: my_flights <span class="token keyword">is</span> flights {
-  <span class="token keyword">measure</span>: delayed_flights <span class="token keyword">is</span> flight_count { <span class="token keyword">where</span>: dep_delay <span class="token operator">></span> <span class="token number">30</span> }
-  <span class="token keyword">query</span>: delay_stats <span class="token keyword">is</span> {
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      flight_count
-      delayed_flights
-      percent_delayed <span class="token keyword">is</span> delayed_flights <span class="token operator">/</span> flight_count
-    <span class="token punctuation">]</span>
-  }
-}
-
-<span class="token keyword">query</span>: my_flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">nest</span>: <span class="token punctuation">[</span>
-    ca_stats <span class="token keyword">is</span> delay_stats { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'CA'</span> }
-    ny_stats <span class="token keyword">is</span> delay_stats { <span class="token keyword">where</span>: origin<span class="token punctuation">.</span>state <span class="token operator">=</span> <span class="token string">'NY'</span> }
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">delayed_flights</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> / </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -347,93 +286,63 @@ measure and then create that as a percent of total.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">ca_&#8203;stats</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">ny_&#8203;stats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">delayed_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">percent_&#8203;delayed</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,501,447</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">371,416</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.083</td>
-</tr>
-
-		</tbody>
-	</table></td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">delayed_&#8203;flights</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">percent_&#8203;delayed</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,617,694</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154,338</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.095</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">ca_​stats</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">ny_​stats</th></tr></thead><tbody><tr><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">percent_​delayed</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>371,416</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.083</span></td></tr></tbody></table></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">percent_​delayed</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,617,694</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>154,338</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.095</span></td></tr></tbody></table></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"ca_stats"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-      <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4501447</span><span class="token punctuation">,</span>
-      <span class="token property">"delayed_flights"</span><span class="token operator">:</span> <span class="token number">371416</span><span class="token punctuation">,</span>
-      <span class="token property">"percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.08251035722513228</span>
-    <span class="token punctuation">}</span><span class="token punctuation">,</span>
-    <span class="token property">"ny_stats"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
-      <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1617694</span><span class="token punctuation">,</span>
-      <span class="token property">"delayed_flights"</span><span class="token operator">:</span> <span class="token number">154338</span><span class="token punctuation">,</span>
-      <span class="token property">"percent_delayed"</span><span class="token operator">:</span> <span class="token number">0.09540617694075641</span>
-    <span class="token punctuation">}</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_stats&quot;</span><span style="color: #000000">: {</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">371416</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.08251035722513228</span></span>
+<span class="line"><span style="color: #000000">    },</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_stats&quot;</span><span style="color: #000000">: {</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">154338</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.09540617694075641</span></span>
+<span class="line"><span style="color: #000000">    }</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    group_set<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> delayed_flights__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> percent_delayed__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__2<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> delayed_flights__2<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> my_flights<span class="token punctuation">.</span>dep_delay<span class="token operator">></span><span class="token number">30</span> <span class="token keyword">THEN</span> <span class="token number">1</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token operator">/</span><span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> percent_delayed__2
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> my_flights
-  <span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>airports<span class="token punctuation">`</span> <span class="token keyword">AS</span> origin_0 <span class="token keyword">ON</span> my_flights<span class="token punctuation">.</span>origin <span class="token operator">=</span> origin_0<span class="token punctuation">.</span>code
-  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>group_set <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">OR</span> <span class="token punctuation">(</span>group_set <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">AND</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token operator">AND</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>group_set <span class="token operator">NOT</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">OR</span> <span class="token punctuation">(</span>group_set <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">AND</span> origin_0<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'NY'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span>
-  <span class="token keyword">COALESCE</span><span class="token punctuation">(</span>ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>flight_count__1 <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> delayed_flights__1 <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> percent_delayed__1 <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token punctuation">,</span> STRUCT<span class="token punctuation">(</span><span class="token boolean">NULL</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ca_stats<span class="token punctuation">,</span>
-  <span class="token keyword">COALESCE</span><span class="token punctuation">(</span>ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">2</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>flight_count__2 <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> delayed_flights__2 <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> percent_delayed__2 <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span> <span class="token keyword">END</span><span class="token punctuation">)</span><span class="token punctuation">,</span> STRUCT<span class="token punctuation">(</span><span class="token boolean">NULL</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> delayed_flights<span class="token punctuation">,</span> <span class="token boolean">NULL</span> <span class="token keyword">as</span> percent_delayed<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> ny_stats
-<span class="token keyword">FROM</span> __stage0
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__2,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights__2,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed__2</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> my_flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">ON</span><span style="color: #000000"> my_flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> ((group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">OR</span><span style="color: #000000"> (group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">AND</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> ((group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">2</span><span style="color: #000000">) </span><span style="color: #0000FF">OR</span><span style="color: #000000"> (group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">2</span><span style="color: #000000">) </span><span style="color: #0000FF">AND</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(flight_count__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, delayed_flights__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, percent_delayed__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed) </span><span style="color: #0000FF">END</span><span style="color: #000000">), STRUCT(</span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_stats,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(flight_count__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, delayed_flights__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, percent_delayed__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed) </span><span style="color: #0000FF">END</span><span style="color: #000000">), STRUCT(</span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_stats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -459,21 +368,21 @@ measure and then create that as a percent of total.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
 
-<td>Does <code class="language-malloy">size</code> equal 10</td>
+<td>Does <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> equal 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size <span class="token operator">></span> <span class="token number">10</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
 
-<td>Is <code class="language-malloy">size</code> > 10</td>
+<td>Is <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> > 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size <span class="token operator">!=</span> <span class="token number">10</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is not equal to 10</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
 </tr>
 </tbody></table>
 
@@ -482,7 +391,7 @@ measure and then create that as a percent of total.</p>
           Combining Filters
         </a>
       </h3>
-    <p>Filters can be logically combined using <code class="language-malloy"><span class="token keyword">and</span></code>, <code class="language-malloy"><span class="token keyword">or</span></code>, and <code class="language-malloy"><span class="token keyword">not</span></code>.</p>
+    <p>Filters can be logically combined using <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">and</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">or</span></span></code>, and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">not</span></span></code>.</p>
 <table>
 <thead>
 <tr>
@@ -494,19 +403,19 @@ measure and then create that as a percent of total.</p>
 <tbody><tr>
 <td>Logical union</td>
 
-<td><code class="language-malloy">distance_miles <span class="token operator">></span> <span class="token number">1000</span> <span class="token keyword">or</span> duration_hours <span class="token operator">></span> <span class="token number">8</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">distance_miles</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> </span><span style="color: #0000FF">or</span><span style="color: #000000"> </span><span style="color: #001080">duration_hours</span><span style="color: #000000"> &gt; </span><span style="color: #098658">8</span></span></code></td>
 </tr>
 
 <tr>
 <td>Logical conjunction</td>
 
-<td><code class="language-malloy">size <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> size <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
 </tr>
 
 <tr>
 <td>Logical negation</td>
 
-<td><code class="language-malloy"><span class="token keyword">not</span> is_commercial_flight</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">not</span><span style="color: #000000"> </span><span style="color: #001080">is_commercial_flight</span></span></code></td>
 </tr>
 </tbody></table>
 
@@ -516,7 +425,7 @@ measure and then create that as a percent of total.</p>
         </a>
       </h3>
     <p>A range of numeric or time values can be constructed
-with the <code class="language-malloy"><span class="token keyword">to</span></code>operator, e.g. <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code>. The <code class="language-malloy"><span class="token operator">~</span></code> operator will check to
+with the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">to</span></span></code>operator, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code>. The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">~</span></span></code> operator will check to
 see if a value is within a range.</p>
 <table>
 <thead>
@@ -527,15 +436,15 @@ see if a value is within a range.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">size <span class="token operator">~</span> <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> ~ </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is in the range [10, 20)</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is in the range [10, 20)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">event_time <span class="token operator">~</span> <span class="token date">@2003</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">event_time</span><span style="color: #000000"> ~ </span><span style="color: #098658">@2003</span></span></code></td>
 
-<td><code class="language-malloy">event_time</code> occurs within the year 2003</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">event_time</span></span></code> occurs within the year 2003</td>
 </tr>
 </tbody></table>
 
@@ -544,7 +453,7 @@ see if a value is within a range.</p>
           String "Like" Matching
         </a>
       </h3>
-    <p>When comparing strings, the <code class="language-malloy"><span class="token operator">=</span></code> operator checks for pure equality, whereas the <code class="language-malloy"><span class="token operator">~</span></code> and <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.</p>
+    <p>When comparing strings, the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">=</span></span></code> operator checks for pure equality, whereas the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">~</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">!~</span></span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.</p>
 <table>
 <thead>
 <tr>
@@ -554,15 +463,15 @@ see if a value is within a range.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">name <span class="token operator">~</span> <span class="token string">'M%'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
 
-<td>The first letter of <code class="language-malloy">name</code> is M</td>
+<td>The first letter of <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> is M</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token string">'%Z%'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%Z%&#39;</span></span></code></td>
 
-<td><code class="language-malloy">name</code> does not contain a Z</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a Z</td>
 </tr>
 </tbody></table>
 <p>In the right hand (pattern) string, the following syntax is used:</p>
@@ -577,7 +486,7 @@ see if a value is within a range.</p>
           Regular Expressions
         </a>
       </h3>
-    <p>When the right hand side of a <code class="language-malloy"><span class="token operator">~</span></code> or <code class="language-malloy"><span class="token operator">!</span><span class="token operator">~</span></code> operator is a regular expression,
+    <p>When the right hand side of a <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">~</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">!~</span></span></code> operator is a regular expression,
 Malloy checks whether the left hand side matches that regular expression. In Standard SQL, Malloy uses the <code>REGEXP_COMPARE</code> function.</p>
 <table>
 <thead>
@@ -588,15 +497,15 @@ Malloy checks whether the left hand side matches that regular expression. In Sta
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">state <span class="token operator">~</span> <span class="token regular_expression">r'^(CA|NY)$'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
 
-<td><code class="language-malloy">state</code> is <code class="language-malloy"><span class="token string">'CA'</span></code> or <code class="language-malloy"><span class="token string">'NY'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span></span></code> is <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;NY&#39;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
 
-<td><code class="language-malloy">name</code> does not end with a Z</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
 </tr>
 </tbody></table>
 
@@ -615,15 +524,15 @@ Malloy checks whether the left hand side matches that regular expression. In Sta
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">color: <span class="token string">'red'</span> <span class="token operator">|</span> <span class="token string">'green'</span> <span class="token operator">|</span> <span class="token string">'blue'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
 
-<td><code class="language-malloy">color</code> is one of the primary colors</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span></span></code> is one of the primary colors</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">email <span class="token operator">~</span> <span class="token string">'%.com'</span> <span class="token operator">|</span> <span class="token string">'%.org'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">email</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;%.com&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;%.org&#39;</span></span></code></td>
 
-<td><code class="language-malloy">email</code> has <code class="language-malloy"><span class="token punctuation">.</span>com</code> or <code class="language-malloy"><span class="token punctuation">.</span>org</code> domain</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">email</span></span></code> has <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">com</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">org</span></span></code> domain</td>
 </tr>
 </tbody></table>
 
@@ -642,99 +551,99 @@ Malloy checks whether the left hand side matches that regular expression. In Sta
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy">size <span class="token operator">=</span> <span class="token number">10</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is equal to 10</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is equal to 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size <span class="token operator">></span> <span class="token number">10</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is greater than 10</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size <span class="token operator">!=</span> <span class="token number">10</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is not equal to 10</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size:  <span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">:  </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is greater than or equal to 10 and less than 100</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size <span class="token operator">>=</span> <span class="token number">10</span> <span class="token keyword">and</span> size <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is greater than or equal to 10 and less than 100</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size: <span class="token operator">>=</span> <span class="token number">10</span> <span class="token operator">&amp;</span> <span class="token operator">&lt;</span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> &amp; &lt; </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is greater than or equal to 10 and less than 100</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">color : <span class="token string">'red'</span> <span class="token operator">|</span> <span class="token string">'green'</span> <span class="token operator">|</span> <span class="token string">'blue'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span><span style="color: #000000"> : </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
 
-<td><code class="language-malloy">color</code> is red, green or blue</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span></span></code> is red, green or blue</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">size: <span class="token number">14</span> <span class="token operator">|</span> <span class="token number">42</span> <span class="token operator">|</span> <span class="token operator">></span> <span class="token number">100</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: </span><span style="color: #098658">14</span><span style="color: #000000"> | </span><span style="color: #098658">42</span><span style="color: #000000"> | &gt; </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy">size</code> is 14, 42, or greater than 100</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is 14, 42, or greater than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">time: <span class="token date">@2003</span> <span class="token keyword">to</span> <span class="token date">@2013</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #098658">@2003 to</span><span style="color: #000000"> </span><span style="color: #098658">@2013</span></span></code></td>
 
-<td><code class="language-malloy">time</code> is between the years 2003 and 2013 (excluding 2013)</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> is between the years 2003 and 2013 (excluding 2013)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">time <span class="token operator">></span> <span class="token number">1591129283</span> <span class="token operator">+</span> <span class="token number">10</span> <span class="token timeframe">hours</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1591129283</span><span style="color: #000000"> + </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">hours</span></span></code></td>
 
-<td><code class="language-malloy">time</code> greater than 10 hours after 1591129283 (epoch timestamp)</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> greater than 10 hours after 1591129283 (epoch timestamp)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">time: now<span class="token punctuation">.</span><span class="token type">date</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #267F99">date</span></span></code></td>
 
-<td><code class="language-malloy">time</code> is today</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> is today</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">time: now<span class="token punctuation">.</span><span class="token timeframe">month</span> <span class="token operator">-</span> <span class="token number">1</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #0000FF">month</span><span style="color: #000000"> - </span><span style="color: #098658">1</span></span></code></td>
 
-<td><code class="language-malloy">time</code> is in the previous calendar month</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> is in the previous calendar month</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">name <span class="token operator">~</span> <span class="token string">'M%'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
 
-<td>first letter of <code class="language-malloy">name</code> is a capital M</td>
+<td>first letter of <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> is a capital M</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token string">'%z%'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%z%&#39;</span></span></code></td>
 
-<td><code class="language-malloy">name</code> does not contain a lower case Z</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a lower case Z</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">state <span class="token operator">~</span> <span class="token regular_expression">r'^(CA|NY)$'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
 
-<td><code class="language-malloy">state</code> is 'CA' or 'NY'</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span></span></code> is 'CA' or 'NY'</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">name <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'Z$'</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
 
-<td><code class="language-malloy">name</code> does not end with a Z</td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
 </tr>
 </tbody></table>
 </div>

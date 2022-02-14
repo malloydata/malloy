@@ -24,11 +24,11 @@ mostly scalar, with a few notable exceptions.</p>
           Numbers
         </a>
       </h3>
-    <p>All numbers in Malloy are of type <code class="language-malloy"><span class="token type">number</span></code>, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.</p>
-<p>Literal <code class="language-malloy"><span class="token type">number</span></code>s consist of one or more digits optionally followed
-by a decimal point <code class="language-malloy"><span class="token punctuation">.</span></code> and more digits, e.g. <code class="language-malloy"><span class="token number">42</span></code> or <code class="language-malloy"><span class="token number">3.14</span></code>.</p>
+    <p>All numbers in Malloy are of type <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">number</span></span></code>, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.</p>
+<p>Literal <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">number</span></span></code>s consist of one or more digits optionally followed
+by a decimal point <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">.</span></span></code> and more digits, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">42</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">3.14</span></span></code>.</p>
 <p>Negative numbers are represented using the unary minus
-operator, e.g. <code class="language-malloy"><span class="token operator">-</span><span class="token number">7</span></code>.</p>
+operator, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">-</span><span style="color: #098658">7</span></span></code>.</p>
 <p>Today, no other forms of literal numbers (e.g. numbers in other
 bases, numbers with thousand separators, exponential notation, etc.) are legal.</p>
 
@@ -37,20 +37,20 @@ bases, numbers with thousand separators, exponential notation, etc.) are legal.<
           Strings
         </a>
       </h3>
-    <p>In Malloy, strings of any length are represented by the <code class="language-malloy"><span class="token type">string</span></code> type.</p>
-<p>Literal strings in Malloy are enclosed in single quotes <code class="language-malloy">'</code>, and may include the escape sequences <code class="language-malloy">\\</code> or <code class="language-malloy">\<span class="token punctuation">.</span></code>, e.g. <code class="language-malloy"><span class="token string">'\'Hello, world\''</span></code>.</p>
+    <p>In Malloy, strings of any length are represented by the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">string</span></span></code> type.</p>
+<p>Literal strings in Malloy are enclosed in single quotes <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;</span></span></code>, and may include the escape sequences <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">\\</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">\.</span></span></code>, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;</span><span style="color: #EE0000">\&#39;</span><span style="color: #A31515">Hello, world</span><span style="color: #EE0000">\&#39;</span><span style="color: #A31515">&#39;</span></span></code>.</p>
 
       <h3>
         <a id="dates-and-timestamps" class="header-link anchor" href="#dates-and-timestamps">
           Dates and Timestamps
         </a>
       </h3>
-    <p>Malloy has two time types, <code class="language-malloy"><span class="token type">date</span></code> and <code class="language-malloy"><span class="token type">timestamp</span></code>.</p>
-<p>Both the <code class="language-malloy"><span class="token type">date</span></code> and <code class="language-malloy"><span class="token type">timestamp</span></code> types may have an associated
-<em>timeframe</em>, which can be <code class="language-malloy"><span class="token timeframe">year</span></code>, <code class="language-malloy"><span class="token timeframe">quarter</span></code>, <code class="language-malloy"><span class="token timeframe">month</span></code>,
-<code class="language-malloy"><span class="token timeframe">week</span></code>, or <code class="language-malloy"><span class="token timeframe">day</span></code>, and for <code class="language-malloy"><span class="token type">timestamp</span></code>s only, additionally
-<code class="language-malloy"><span class="token timeframe">hour</span></code>, <code class="language-malloy"><span class="token timeframe">minute</span></code>, or <code class="language-malloy"><span class="token timeframe">second</span></code>.</p>
-<p>Literals for <code class="language-malloy"><span class="token type">date</span></code> and <code class="language-malloy"><span class="token type">timestamp</span></code> are preceded by the <code class="language-malloy"><span class="token date">@</span></code> character, e.g. <code class="language-malloy"><span class="token date">@2003</span></code> or <code class="language-malloy"><span class="token date">@1983-11-23 10:00:10</span></code>. For all
+    <p>Malloy has two time types, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">date</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">timestamp</span></span></code>.</p>
+<p>Both the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">date</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">timestamp</span></span></code> types may have an associated
+<em>timeframe</em>, which can be <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">year</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">quarter</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">month</span></span></code>,
+<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">week</span></span></code>, or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">day</span></span></code>, and for <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">timestamp</span></span></code>s only, additionally
+<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">hour</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">minute</span></span></code>, or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">second</span></span></code>.</p>
+<p>Literals for <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">date</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">timestamp</span></span></code> are preceded by the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">@</span></span></code> character, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">@2003</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">@1983-11-23 10:00:10</span></span></code>. For all
 variations of time literals and information about their interaction with comparison operators, see the <a href="time-ranges.html#literals">Time Ranges</a> section.</p>
 
       <h3>
@@ -58,8 +58,8 @@ variations of time literals and information about their interaction with compari
           Booleans
         </a>
       </h3>
-    <p>The <code class="language-malloy"><span class="token type">boolean</span></code> type covers both the <code>BOOLEAN</code> and <code>BOOL</code> types from BigQuery.</p>
-<p>In Malloy, the boolean literals are written <code class="language-malloy"><span class="token boolean">true</span></code> and <code class="language-malloy"><span class="token boolean">false</span></code>.</p>
+    <p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">boolean</span></span></code> type covers both the <code>BOOLEAN</code> and <code>BOOL</code> types from BigQuery.</p>
+<p>In Malloy, the boolean literals are written <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">true</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">false</span></span></code>.</p>
 
       <h3>
         <a id="bytes" class="header-link anchor" href="#bytes">
@@ -86,7 +86,7 @@ represented by JSON objects. -->
     <p>The following types are not assignable to fields, and are
 therefore considered <em>intermediate types</em>, in that they are
 primarily used to represent part of a computation that
-yields a regular scalar type, often <code class="language-malloy"><span class="token type">boolean</span></code>.</p>
+yields a regular scalar type, often <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">boolean</span></span></code>.</p>
 
       <h3>
         <a id="regular-expressions" class="header-link anchor" href="#regular-expressions">
@@ -94,21 +94,21 @@ yields a regular scalar type, often <code class="language-malloy"><span class="t
         </a>
       </h3>
     <p>Literal regular expressions are enclosed in single quotation
-marks <code class="language-malloy">'</code> and preceded by either <code class="language-malloy"><span class="token operator">/</span></code> or <code class="language-malloy">r</code>, e.g. <code class="language-malloy"><span class="token regular_expression">/'.*'</span></code> or <code class="language-malloy"><span class="token regular_expression">r'.*'</span></code>. Both syntaxes are semantically equivalent.</p>
+marks <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;</span></span></code> and preceded by either <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">/</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">r</span></span></code>, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #811F3F">/&#39;.*&#39;</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #811F3F">r&#39;.*&#39;</span></span></code>. Both syntaxes are semantically equivalent.</p>
 <p>In the future, the literal regular expressions will likely
 be simply slash-enclosed, e.g <code>/.*/</code>.</p>
-<p>Values of type <code class="language-malloy"><span class="token type">string</span></code> may be compared against regular
-expressions using either the <a href="apply.html">apply operator</a>,<code class="language-malloy">name: <span class="token regular_expression">r'c.*'</span></code> or the like operator, <code class="language-malloy">name <span class="token operator">~</span> <span class="token regular_expression">r'c.*'</span></code>.</p>
+<p>Values of type <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">string</span></span></code> may be compared against regular
+expressions using either the <a href="apply.html">apply operator</a>,<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000">: </span><span style="color: #811F3F">r&#39;c.*&#39;</span></span></code> or the like operator, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;c.*&#39;</span></span></code>.</p>
 
       <h3>
         <a id="ranges" class="header-link anchor" href="#ranges">
           Ranges
         </a>
       </h3>
-    <p>There are three types of ranges today: <code class="language-malloy"><span class="token type">string</span></code> ranges, <code class="language-malloy"><span class="token type">date</span></code> ranges, and <code class="language-malloy"><span class="token type">timestamp</span></code> ranges. The most basic ranges
-are of the form <code class="language-malloy">start <span class="token keyword">to</span> end</code> and represent the inclusive range between <code class="language-malloy">start</code> and <code class="language-malloy">end</code>, e.g. <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span></code> or <code class="language-malloy"><span class="token date">@2004-01</span> <span class="token keyword">to</span> <span class="token date">@2005-05</span></code>.</p>
+    <p>There are three types of ranges today: <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">string</span></span></code> ranges, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">date</span></span></code> ranges, and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">timestamp</span></span></code> ranges. The most basic ranges
+are of the form <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">start</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">end</span></span></code> and represent the inclusive range between <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">start</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">end</span></span></code>, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">@2004-01 to</span><span style="color: #000000"> </span><span style="color: #098658">@2005-05</span></span></code>.</p>
 <p>Ranges may be used in conjunction with the <a href="apply.html">apply operator</a> to test whether a value falls within a given range.</p>
-<p>In the future, other ranges may be allowed, such as <code class="language-malloy"><span class="token type">string</span></code> ranges.</p>
+<p>In the future, other ranges may be allowed, such as <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">string</span></span></code> ranges.</p>
 
       <h3>
         <a id="alternations-and-partials" class="header-link anchor" href="#alternations-and-partials">
@@ -118,20 +118,20 @@ are of the form <code class="language-malloy">start <span class="token keyword">
     <p><em>Partials</em> represent a "part of" a comparison.
 Specifically, a partial is a comparison missing its
 left-hand side, and represents the condition of the
-comparison yielding <code class="language-malloy"><span class="token boolean">true</span></code> if a given value were to be
-filled in for that missing left-hand side. For example, <code class="language-malloy"><span class="token operator">></span> <span class="token number">10</span></code> is a partial that represents the condition "is greater
-than ten." Likewise, <code class="language-malloy"><span class="token operator">!=</span> <span class="token string">'CA'</span></code> is a partial that represents the condition of not being equal to <code class="language-malloy"><span class="token string">'CA'</span></code>.</p>
+comparison yielding <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">true</span></span></code> if a given value were to be
+filled in for that missing left-hand side. For example, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">&gt; </span><span style="color: #098658">10</span></span></code> is a partial that represents the condition "is greater
+than ten." Likewise, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">!= </span><span style="color: #A31515">&#39;CA&#39;</span></span></code> is a partial that represents the condition of not being equal to <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span></span></code>.</p>
 <p><em>Alternations</em> are combinations of partials representing
 either the logical union ("or") or conjunction ("and") of
 their conditions. Alternations are represented using the
-union alternation operator <code class="language-malloy"><span class="token operator">|</span></code> and the conjunction
-alternation operator <code class="language-malloy"><span class="token operator">&amp;</span></code>.</p>
-<p>For example, <code class="language-malloy"><span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token operator">=</span> <span class="token string">'NY'</span></code> represents the condition of being equal to 'CA' or <em>alternatively</em> being equal to 'NY'. On the other hand, <code class="language-malloy"><span class="token operator">!=</span> <span class="token string">'CA'</span> <span class="token operator">&amp;</span> <span class="token operator">!=</span> <span class="token string">'NY'</span></code> represents the condition of being not equal to 'CA' <em>as well as</em> being not equal to 'NY'.</p>
+union alternation operator <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">|</span></span></code> and the conjunction
+alternation operator <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">&amp;</span></span></code>.</p>
+<p>For example, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">= </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> | = </span><span style="color: #A31515">&#39;NY&#39;</span></span></code> represents the condition of being equal to 'CA' or <em>alternatively</em> being equal to 'NY'. On the other hand, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">!= </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> &amp; != </span><span style="color: #A31515">&#39;NY&#39;</span></span></code> represents the condition of being not equal to 'CA' <em>as well as</em> being not equal to 'NY'.</p>
 <p>Scalar values, regular expressions, and
 ranges may also be used in alternations, in which case the
 condition is assumed to be that of equality, matching, and
 inclusion respectively.</p>
-<p>For example, <code class="language-malloy"><span class="token string">'CA'</span> <span class="token operator">|</span> <span class="token regular_expression">r'N.*'</span></code> represents the condition of being equal to 'CA' or starting with 'N', and <code class="language-malloy"><span class="token number">10</span> <span class="token keyword">to</span> <span class="token number">20</span> <span class="token operator">|</span> <span class="token number">20</span> <span class="token keyword">to</span> <span class="token number">30</span></code> represents the condition of being <em>either</em> between 10 and 20 <em>or</em> 20 and 30.</p>
+<p>For example, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> | </span><span style="color: #811F3F">r&#39;N.*&#39;</span></span></code> represents the condition of being equal to 'CA' or starting with 'N', and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span><span style="color: #000000"> | </span><span style="color: #098658">20</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">30</span></span></code> represents the condition of being <em>either</em> between 10 and 20 <em>or</em> 20 and 30.</p>
 <p>Alternations and partials may be used in conjunction with the <a href="apply.html">apply operator</a> to test whether a value meets the given condition.</p>
 
       <h2>
@@ -139,7 +139,7 @@ inclusion respectively.</p>
           Nullability
         </a>
       </h2>
-    <p>Today, all Malloy types include the value <code class="language-malloy"><span class="token keyword">null</span></code>, however
+    <p>Today, all Malloy types include the value <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">null</span></span></code>, however
 in the future Malloy may have a concept of nullable vs.
 non-nullable types.</p>
 </div>

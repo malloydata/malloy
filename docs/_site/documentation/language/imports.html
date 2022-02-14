@@ -142,6 +142,12 @@
                 Imports
               </a>
             </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
           </div>
       </div>
 <div>
@@ -353,7 +359,7 @@
       <a href="aggregates.html"><img src="/malloy/img/previous.svg" alt="previous"/>Aggregates</a>
     </div>
     <div class="item">
-      <a href="../patterns/yoy.html">Year Over Year Analysis<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="sql_blocks.html">SQL Blocks<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
   </div>
             
@@ -394,12 +400,12 @@ only `flights` is part of the file's public namespace.
         </a>
       </h2>
     <p>In order to reuse or extend a explore from another file, you can include all the
-exported explores from another file using <code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"path/to/some/file.malloy"</span></code>.</p>
+exported explores from another file using <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;path/to/some/file.malloy&quot;</span></span></code>.</p>
 <p>For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the
-<code class="language-malloy">flights</code> explore, you could write:</p>
-<pre class="language-malloy"><span class="token keyword">import</span> <span class="token string">"faa/flights.malloy"</span>
-
-<span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> { <span class="token keyword">top</span>: <span class="token number">5</span><span class="token punctuation">;</span> <span class="token keyword">group_by</span>: carrier<span class="token punctuation">;</span> <span class="token keyword">aggregate</span>: flight_count }</pre><!-- Because `airports` is not exported, referencing it here would be invalid. -->
+<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">flights</span></span></code> explore, you could write:</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;faa/flights.malloy&quot;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">5</span><span style="color: #000000">; </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><!-- Because `airports` is not exported, referencing it here would be invalid. -->
       <h3>
         <a id="import-locations" class="header-link anchor" href="#import-locations">
           Import Locations
@@ -411,43 +417,43 @@ exported explores from another file using <code class="language-malloy"><span cl
 <tr>
 <th>Import Statement</th>
 
-<th>Meaning from <code class="language-malloy"><span class="token string">"file:///f1/a.malloy"</span></code></th>
+<th>Meaning from <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/a.malloy&quot;</span></span></code></th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"b.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;b.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy"><span class="token string">"file:///f1/b.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/b.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"./c.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;./c.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy"><span class="token string">"file:///f1/c.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/c.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"/f1/d.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;/f1/d.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy"><span class="token string">"file:///f1/d.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/d.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"file:///f1/e.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;file:///f1/e.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy"><span class="token string">"file:///f1/e.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/e.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"../f2/f.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;../f2/f.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy"><span class="token string">"file:///f2/f.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f2/f.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token keyword">import</span> <span class="token string">"https://example.com/g.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;https://example.com/g.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy"><span class="token string">"https://example.com/g.malloy"</span></code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;https://example.com/g.malloy&quot;</span></span></code></td>
 </tr>
 </tbody></table>
 </div>
