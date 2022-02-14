@@ -1014,6 +1014,40 @@ describe("source references", () => {
     });
   });
 
+  test("reference to query in from", () => {
+    const source = markSource`
+      query: ${"q is table('foo') -> { project: * }"}
+      explore: na is from(-> ${"q"})
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in query head", () => {
+    const source = markSource`
+      query: ${"q is table('foo') -> { project: * }"}
+      query: q2 is -> ${"q"} -> { project: * }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
   test("reference to field in expression", () => {
     const source = markSource`
       explore: na is ${"table('aTable')"}

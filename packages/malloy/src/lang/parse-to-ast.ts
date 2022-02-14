@@ -308,7 +308,7 @@ export class MalloyToAST
   visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
     const nameCx = pcx.sqlExploreNameRef();
     const name = this.astAt(
-      new ast.NamedSourceId(this.getIdText(nameCx)),
+      new ast.ModelEntryReference(this.getIdText(nameCx)),
       nameCx
     );
     return this.astAt(new ast.SQLSource(name), pcx);
@@ -386,7 +386,7 @@ export class MalloyToAST
       return this.visitExplore(ecx);
     }
     // TODO jump-to-definition
-    return new ast.NamedSource({ name });
+    return new ast.NamedSource(name);
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
@@ -670,7 +670,7 @@ export class MalloyToAST
   visitExploreName(pcx: parse.ExploreNameContext): ast.NamedSource {
     const nameCx = pcx.id();
     const name = this.astAt(
-      new ast.NamedSourceId(this.getIdText(nameCx)),
+      new ast.ModelEntryReference(this.getIdText(nameCx)),
       nameCx
     );
     return this.astAt(new ast.NamedSource(name), pcx);
@@ -714,7 +714,7 @@ export class MalloyToAST
     const pipe = new ast.PipelineDesc();
     const queryNameCx = pcx.queryName();
     pipe.headPath = this.astAt(
-      new ast.FieldName(this.getIdText(queryNameCx)),
+      new ast.ModelEntryReference(this.getIdText(queryNameCx)),
       queryNameCx
     );
     const refCx = pcx.queryProperties();
@@ -1049,7 +1049,7 @@ export class MalloyToAST
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
     const nameCx = pcx.exploreName();
     const name = this.astAt(
-      new ast.NamedSourceId(this.getIdText(nameCx)),
+      new ast.ModelEntryReference(this.getIdText(nameCx)),
       nameCx
     );
     // Parameters ... coming ...
