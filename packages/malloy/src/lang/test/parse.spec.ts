@@ -1034,7 +1034,7 @@ describe("source references", () => {
 
   test("reference to query in from", () => {
     const source = markSource`
-      query: ${"q is table('foo') -> { project: * }"}
+      query: ${"q is table('aTable') -> { project: * }"}
       explore: na is from(-> ${"q"})
     `;
     const m = new BetaModel(source.code);
