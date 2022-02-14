@@ -964,7 +964,7 @@ describe("source references", () => {
     expect(m).toCompile();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
-      type: "queryReference",
+      type: "fieldReference",
       text: "q",
       definition: {
         location: source.locations[0],
@@ -981,7 +981,7 @@ describe("source references", () => {
     expect(m).toCompile();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
-      type: "queryReference",
+      type: "fieldReference",
       text: "x",
       definition: {
         location: source.locations[0],
