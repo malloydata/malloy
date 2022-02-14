@@ -8,8 +8,12 @@ The following will install dependencies for the entire set of packages and compi
 
 ```bash
 yarn install
-yarn build-extension
+yarn package-extension
 ```
+
+### VS Code tips
+
+We provide a task in VS Code (.vscode/tasks.json) to watch the entire Malloy repo for typscript changes - this allows VS Code to output typescript errors even when files are closed. The default behavior is for errors to only appear in open files. If you want the watcher task to compile all files in the background, you can either run the task manually (Command Palette -> Tasks -> Run Task -> tsc-compile-watch). If you want to enable this task to always start when you open the project, run Command Palette -> Tasks: Manage Automatic Tasks in Folder -> Allow Automatic Tasks in folder.
 
 ## Malloy VSCode Extension
 
@@ -20,7 +24,7 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
-yarn build-extension
+yarn package-extension
 ```
 
 Next, in VSCode _EITHER_:

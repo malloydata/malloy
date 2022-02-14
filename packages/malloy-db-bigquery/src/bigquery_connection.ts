@@ -31,6 +31,7 @@ import {
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
+  SQLBlock,
   Connection,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
@@ -47,14 +48,18 @@ export interface BigQueryManagerOptions {
 }
 
 export interface BigQueryQueryOptions {
-  pageSize: number;
-  rowIndex: number;
+  rowLimit: number;
 }
 
 interface BigQueryConnectionConfiguration {
   defaultProject?: string;
   serviceAccountKeyPath?: string;
   location?: string;
+}
+
+interface SchemaInfo {
+  schema: bigquery.ITableFieldSchema;
+  needsPartitionPsuedoColumn: boolean;
 }
 
 type QueryOptionsReader =
@@ -90,10 +95,9 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection extends Connection {
+export class BigQueryConnection implements Connection {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
-    pageSize: 10,
-    rowIndex: 0,
+    rowLimit: 10,
   };
 
   private bigQuery: BigQuerySDK;
@@ -101,12 +105,20 @@ export class BigQueryConnection extends Connection {
   private temporaryTables = new Map<string, string>();
   private defaultProject;
 
-  private resultCache = new Map<string, MalloyQueryData>();
+  private resultCache = new Map<
+    string,
+    { data: MalloyQueryData; schema: bigquery.ITableFieldSchema }
+  >();
   private schemaCache = new Map<string, StructDef>();
+  private sqlSchemaCache = new Map<string, StructDef>();
 
   private queryOptions?: QueryOptionsReader;
 
   private config: BigQueryConnectionConfiguration;
+
+  private location: string;
+
+  public readonly name: string;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -115,6 +127,8 @@ export class BigQueryConnection extends Connection {
     INT64: { type: "number", numberType: "integer" },
     FLOAT: { type: "number", numberType: "float" },
     FLOAT64: { type: "number", numberType: "float" },
+    NUMERIC: { type: "number", numberType: "float" },
+    BIGNUMERIC: { type: "number", numberType: "float" },
     TIMESTAMP: { type: "timestamp" },
     BOOLEAN: { type: "boolean" },
     BOOL: { type: "boolean" },
@@ -123,8 +137,6 @@ export class BigQueryConnection extends Connection {
     // DATETIME
     // TIME
     // GEOGRAPHY
-    // NUMERIC
-    // BIGNUMERIC
   };
 
   constructor(
@@ -132,7 +144,7 @@ export class BigQueryConnection extends Connection {
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
-    super(name);
+    this.name = name;
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
@@ -145,6 +157,7 @@ export class BigQueryConnection extends Connection {
 
     this.queryOptions = queryOptions;
     this.config = config;
+    this.location = config.location || "US";
   }
 
   get dialectName(): string {
@@ -168,20 +181,23 @@ export class BigQueryConnection extends Connection {
     return false;
   }
 
-  public async runSQL(
+  private async _runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {}
-  ): Promise<MalloyQueryData> {
-    const { pageSize, rowIndex } = { ...this.readQueryOptions(), ...options };
+    options: Partial<BigQueryQueryOptions> = {},
+    rowIndex = 0
+  ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
+    const defaultOptions = this.readQueryOptions();
+    const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
     const hash = crypto
       .createHash("md5")
       .update(sqlCommand)
       .update(String(pageSize))
       .update(String(rowIndex))
       .digest("hex");
-    let result;
-    if ((result = this.resultCache.get(hash)) !== undefined) {
-      return result;
+
+    const cached = this.resultCache.get(hash);
+    if (cached !== undefined) {
+      return cached;
     }
 
     try {
@@ -200,13 +216,40 @@ export class BigQueryConnection extends Connection {
         ? jobResult[2].totalRows
         : "0");
 
+      if (jobResult[2]?.schema === undefined) {
+        throw new Error("Schema not present");
+      }
+
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      result = { rows: jobResult[0], totalRows };
-      this.resultCache.set(hash, result);
-      return result;
+      const data = { rows: jobResult[0], totalRows };
+      const schema = jobResult[2]?.schema;
+
+      this.resultCache.set(hash, { data, schema });
+      return { data, schema };
     } catch (e) {
       throw maybeRewriteError(e);
     }
+  }
+
+  public async runSQL(
+    sqlCommand: string,
+    options: Partial<BigQueryQueryOptions> = {},
+    rowIndex = 0
+  ): Promise<MalloyQueryData> {
+    const { data } = await this._runSQL(sqlCommand, options, rowIndex);
+    return data;
+  }
+
+  public async runSQLBlockAndFetchResultSchema(
+    sqlBlock: SQLBlock,
+    options?: { rowLimit?: number | undefined }
+  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
+    const { data, schema: schemaRaw } = await this._runSQL(
+      sqlBlock.select,
+      options
+    );
+    const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
+    return { data, schema };
   }
 
   public async downloadMalloyQuery(
@@ -222,7 +265,7 @@ export class BigQueryConnection extends Connection {
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
-        location: this.config.location || "US",
+        location: this.location,
         query: sqlCommand,
         dryRun: true,
       });
@@ -242,15 +285,13 @@ export class BigQueryConnection extends Connection {
     const destinationTable =
       dryRunResults.metadata.configuration.query.destinationTable;
 
-    return this.structDefFromSchema(
+    return this.structDefFromTableSchema(
       `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
       dryRunResults.metadata.statistics.query.schema
     );
   }
 
-  public async getTableFieldSchema(
-    tableURL: string
-  ): Promise<bigquery.ITableFieldSchema> {
+  public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
     const { tablePath: tableName } = parseTableURL(tableURL);
     const segments = tableName.split(".");
 
@@ -267,17 +308,23 @@ export class BigQueryConnection extends Connection {
         `Improper table path: ${tableName}. A table path requires 2 or 3 segments`
       );
 
-    // TODO resolve having to set projectId - this will at some point result in "concurrency" issue
-    // temporarily tell BigQuery SDK to use the passed project ID so that API routes are correct.
-    // once we're done, set it back to our project ID.
-    if (projectId) this.bigQuery.projectId = projectId;
-
-    const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
-
     try {
-      const [metadata] = await table.getMetadata();
+      // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
+      //      instance. So we hack it until a better way exists: we set the `this.bigQuery.projectId`
+      //      to the `projectId` for the dataset, then put it back when we're done. Importantly, we
+      //      set it back _before_ we await the promise, thus avoiding a "concurrency" issue. We've decided
+      //      this is better than creating a new BQ instance every time we need to get a table schema.
+      if (projectId) this.bigQuery.projectId = projectId;
+      const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
+      const metadataPromise = table.getMetadata();
       this.bigQuery.projectId = this.projectId;
-      return metadata.schema;
+      const [metadata] = await metadataPromise;
+      return {
+        schema: metadata.schema,
+        needsPartitionPsuedoColumn:
+          metadata.timePartitioning?.type !== undefined &&
+          metadata.timePartitioning?.field === undefined,
+      };
     } catch (e) {
       throw maybeRewriteError(e);
     }
@@ -319,7 +366,7 @@ export class BigQueryConnection extends Connection {
     } else {
       try {
         const [job] = await this.bigQuery.createQueryJob({
-          location: "US",
+          location: this.location,
           query: sqlCommand,
         });
 
@@ -385,7 +432,7 @@ export class BigQueryConnection extends Connection {
 
     const [job] = await this.bigQuery.createQueryJob({
       query: sqlCommand,
-      location: "US",
+      location: this.location,
       destination: table,
     });
 
@@ -443,9 +490,9 @@ export class BigQueryConnection extends Connection {
     }
   }
 
-  private structDefFromSchema(
+  private structDefFromTableSchema(
     tableURL: string,
-    tableFieldSchema: bigquery.ITableFieldSchema
+    schemaInfo: SchemaInfo
   ): StructDef {
     const structDef: StructDef = {
       type: "struct",
@@ -454,6 +501,32 @@ export class BigQueryConnection extends Connection {
       structSource: {
         type: "table",
         tablePath: this.tableURLtoTablePath(tableURL),
+      },
+      structRelationship: { type: "basetable", connectionName: this.name },
+      fields: [],
+    };
+    this.addFieldsToStructDef(structDef, schemaInfo.schema);
+    if (schemaInfo.needsPartitionPsuedoColumn) {
+      structDef.fields.push({
+        type: "timestamp",
+        name: "_PARTITIONTIME",
+      });
+    }
+    return structDef;
+  }
+
+  private structDefFromSQLSchema(
+    sqlBlock: SQLBlock,
+    tableFieldSchema: bigquery.ITableFieldSchema
+  ): StructDef {
+    const structDef: StructDef = {
+      type: "struct",
+      name: sqlBlock.name,
+      dialect: this.dialectName,
+      structSource: {
+        type: "sql",
+        method: "subquery",
+        sqlBlock,
       },
       structRelationship: { type: "basetable", connectionName: this.name },
       fields: [],
@@ -471,10 +544,51 @@ export class BigQueryConnection extends Connection {
       let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
         const tableFieldSchema = await this.getTableFieldSchema(tableURL);
-        inCache = this.structDefFromSchema(tableURL, tableFieldSchema);
+        inCache = this.structDefFromTableSchema(tableURL, tableFieldSchema);
         this.schemaCache.set(tableURL, inCache);
       }
       tableStructDefs[tableURL] = inCache;
+    }
+    return tableStructDefs;
+  }
+
+  private async getSQLBlockSchema(sqlRef: SQLBlock) {
+    // We do a simple retry-loop here, as a temporary fix for a transient
+    // error in which sometimes requesting results from a job yields an
+    // access denied error. It seems that in these cases, simply trying again
+    // solves the problem. This is being currently investigated by
+    // @christopherswenson and @lloydtabb. Same as below.
+    let lastFetchError;
+    for (let retries = 0; retries < 3; retries++) {
+      try {
+        const [job] = await this.bigQuery.createQueryJob({
+          location: this.location,
+          query: sqlRef.select,
+          dryRun: true,
+        });
+
+        return job.metadata.statistics.query.schema;
+      } catch (fetchError) {
+        lastFetchError = fetchError;
+      }
+    }
+    throw lastFetchError;
+  }
+
+  public async fetchSchemaForSQLBlocks(
+    sqlRefs: SQLBlock[]
+  ): Promise<NamedStructDefs> {
+    const tableStructDefs: NamedStructDefs = {};
+
+    for (const sqlRef of sqlRefs) {
+      const key = sqlRef.name;
+      let inCache = this.sqlSchemaCache.get(key);
+      if (!inCache) {
+        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
+        inCache = this.structDefFromSQLSchema(sqlRef, tableFieldSchema);
+        this.schemaCache.set(key, inCache);
+      }
+      tableStructDefs[key] = inCache;
     }
     return tableStructDefs;
   }
@@ -484,7 +598,7 @@ export class BigQueryConnection extends Connection {
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<PagedResponse<any, Query, bigquery.ITableDataList>> {
+  ): Promise<PagedResponse<any, Query, bigquery.IGetQueryResultsResponse>> {
     try {
       const job = await this.createBigQueryJob({
         query: sqlCommand,
@@ -516,7 +630,7 @@ export class BigQueryConnection extends Connection {
 
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
     const [job] = await this.bigQuery.createQueryJob({
-      location: "US",
+      location: this.location,
       maximumBytesBilled: String(25 * 1024 * 1024 * 1024),
       ...createQueryJobOptions,
     });

@@ -16,9 +16,10 @@ import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import type { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
-import { Range, rangeFromContext } from "../source-reference";
+import { rangeFromContext } from "../source-reference";
+import { DocumentRange } from "../../model/malloy_types";
 
-type References = Record<string, Range>;
+type References = Record<string, DocumentRange>;
 
 class FindExternalReferences implements MalloyListener {
   needTables: References = {};

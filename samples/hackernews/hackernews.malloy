@@ -1,8 +1,10 @@
 --! styles hackernews.styles.json
 
 explore: stories is table('bigquery-public-data.hacker_news.full') {
-  rename: poster is `by`
-  rename: post_type is `type`
+  rename: [
+    poster is `by`
+    post_type is `type`
+  ]
 
   dimension: [
     threshold is 10

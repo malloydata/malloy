@@ -18,12 +18,15 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
-  isDateTimeframe,
   TimestampTimeframe,
 } from "./dialect";
 
 const timeTruncMap: { [key: string]: string } = {
   date: "day",
+};
+
+const castMap: Record<string, string> = {
+  number: "float64",
 };
 
 export class StandardSQLDialect extends Dialect {
@@ -57,9 +60,9 @@ export class StandardSQLDialect extends Dialect {
       tail += ` LIMIT ${limit}`;
     }
     const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .map((f) => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(", ");
-    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END IGNORE NULLS ${orderBy} ${tail})`;
+    return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy} ${tail})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -101,9 +104,9 @@ export class StandardSQLDialect extends Dialect {
     needDistinctKey: boolean
   ): string {
     if (needDistinctKey) {
-      return `, UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
+      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
-      return `, UNNEST(${source}) as ${alias}`;
+      return `LEFT JOIN UNNEST(${source}) as ${alias}`;
     }
   }
 
@@ -272,17 +275,26 @@ ${indent(sql)}
     return [`DATE_TRUNC(`, expr, `, ${units})`];
   }
 
+  // sqlTimestampTrunc(
+  //   expr: unknown,
+  //   timeframe: TimestampTimeframe,
+  //   timezone: string
+  // ): DialectExpr {
+  //   const units = StandardSQLDialect.mapTimeframe(timeframe);
+  //   if (isDateTimeframe(timeframe)) {
+  //     return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
+  //   } else {
+  //     return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
+  //   }
+  // }
+
   sqlTimestampTrunc(
     expr: unknown,
     timeframe: TimestampTimeframe,
-    timezone: string
+    _timezone: string
   ): DialectExpr {
     const units = StandardSQLDialect.mapTimeframe(timeframe);
-    if (isDateTimeframe(timeframe)) {
-      return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
-    } else {
-      return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
-    }
+    return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
   }
 
   sqlExtractDateTimeframe(
@@ -333,5 +345,31 @@ ${indent(sql)}
     }
     // const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", expr, ")"] : expr;
     return [`TIMESTAMP${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
+  }
+
+  ignoreInProject(fieldName: string): boolean {
+    return fieldName === "_PARTITIONTIME";
+  }
+
+  sqlCast(expr: unknown, castTo: string, safe: boolean): DialectExpr {
+    return [
+      `${safe ? "SAFE_" : ""}CAST(`,
+      expr,
+      ` AS ${castMap[castTo] || castTo})`,
+    ];
+  }
+
+  sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    timezone: string
+  ): string {
+    if (type === "date") {
+      return `DATE('${timeString}')`;
+    } else if (type === "timestamp") {
+      return `TIMESTAMP('${timeString}', '${timezone}')`;
+    } else {
+      throw new Error(`Unknown Liternal time format ${type}`);
+    }
   }
 }

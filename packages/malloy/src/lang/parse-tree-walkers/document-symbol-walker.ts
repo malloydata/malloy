@@ -11,17 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
+import { CommonTokenStream } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
 import * as parser from "../lib/Malloy/MalloyParser";
+import { rangeFromContext } from "../source-reference";
+import { DocumentRange } from "../../model/malloy_types";
 
 export interface DocumentSymbol {
-  range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-  };
+  range: DocumentRange;
   type: string;
   name: string;
   children: DocumentSymbol[];
@@ -42,35 +41,18 @@ class DocumentSymbolWalker implements MalloyListener {
     return this.scopes[this.scopes.length - 1];
   }
 
-  rangeOf(pcx: ParserRuleContext) {
-    const stopToken = pcx.stop || pcx.start;
-    return {
-      start: {
-        line: pcx.start.line - 1,
-        character: pcx.start.charPositionInLine,
-      },
-      end: {
-        line: stopToken.line - 1,
-        character:
-          stopToken.stopIndex -
-          (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
-    };
-  }
-
   enterTopLevelQueryDef(pcx: parser.TopLevelQueryDefContext) {
     this.symbols.push({
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.queryName().text,
       type: "query",
       children: [],
     });
   }
 
-  enterAnonymousQuery(pcx: parser.AnonymousQueryContext) {
+  enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
     this.symbols.push({
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: "unnamed_query",
       type: "unnamed_query",
       children: [],
@@ -79,7 +61,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterExploreDefinition(pcx: parser.ExploreDefinitionContext) {
     this.scopes.push({
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.exploreNameDef().id().text,
       type: "explore",
       children: [],
@@ -95,7 +77,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterExploreQueryDef(pcx: parser.ExploreQueryDefContext) {
     const symbol = {
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.exploreQueryNameDef().id().text,
       type: "query",
       children: [],
@@ -113,7 +95,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterDimensionDef(pcx: parser.DimensionDefContext) {
     const symbol = {
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.fieldDef().fieldNameDef().id().text,
       type: "field",
       children: [],
@@ -126,7 +108,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterMeasureDef(pcx: parser.MeasureDefContext) {
     const symbol = {
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.fieldDef().fieldNameDef().id().text,
       type: "field",
       children: [],
@@ -137,9 +119,9 @@ class DocumentSymbolWalker implements MalloyListener {
     }
   }
 
-  enterDefExploreRename(pcx: parser.DefExploreRenameContext) {
+  enterExploreRenameDef(pcx: parser.ExploreRenameDefContext) {
     const symbol = {
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.fieldName()[0].text,
       type: "field",
       children: [],
@@ -152,7 +134,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterJoinNameDef(pcx: parser.JoinNameDefContext) {
     const symbol = {
-      range: this.rangeOf(pcx),
+      range: rangeFromContext(pcx),
       name: pcx.id().text,
       type: "join",
       children: [],
@@ -161,6 +143,17 @@ class DocumentSymbolWalker implements MalloyListener {
     if (parent) {
       parent.children.push(symbol);
     }
+  }
+
+  enterSqlStatementDef(pcx: parser.SqlStatementDefContext) {
+    const name = pcx.sqlCommandNameDef()?.id().text;
+    const symbol = {
+      range: rangeFromContext(pcx),
+      name: name || "unnamed_sql",
+      type: name === undefined ? "unnamed_sql" : "sql",
+      children: [],
+    };
+    this.symbols.push(symbol);
   }
 }
 

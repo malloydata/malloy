@@ -15,4 +15,5 @@ export {
   TOKEN_TYPES,
   TOKEN_MODIFIERS,
   getMalloyHighlights,
+  stubMalloyHighlights,
 } from "./highlights";

@@ -304,8 +304,14 @@ export class GranularLiteral extends ExpressionDef {
         rangeType = "date";
       }
       const range = new Range(
-        new ExprTime(rangeType, this.moment),
-        new ExprTime(rangeType, this.until)
+        new ExprTime(
+          rangeType,
+          fs.getDialect().sqlLiteralTime(this.moment, rangeType, "UTC")
+        ),
+        new ExprTime(
+          rangeType,
+          fs.getDialect().sqlLiteralTime(this.until, rangeType, "UTC")
+        )
       );
       return range.apply(fs, op, left);
     }
@@ -316,13 +322,13 @@ export class GranularLiteral extends ExpressionDef {
     return this;
   }
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     const dataType = this.timeType || "date";
     return {
       dataType: dataType,
       aggregate: false,
       timeframe: this.units,
-      value: [`'${this.moment}'`],
+      value: [fs.getDialect().sqlLiteralTime(this.moment, dataType, "UTC")],
     };
   }
 }
@@ -528,7 +534,7 @@ export class ForRange extends ExpressionDef {
     let from = startV.value;
     if (startV.dataType === "date") {
       // This gives granular nodes a chance to control how they become timestamps
-      rangeStart = rangeStart.thisValueToTimestamp(startV);
+      rangeStart = rangeStart.thisValueToTimestamp(startV, fs.getDialect());
       from = rangeStart.getExpression(fs).value;
     }
     const to = timestampOffset(fs.getDialect(), from, "+", nV.value, units);

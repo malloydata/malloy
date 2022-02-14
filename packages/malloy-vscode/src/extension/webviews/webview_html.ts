@@ -11,11 +11,21 @@
  * GNU General Public License for more details.
  */
 
-export function getWebviewHtml(entrySrc: string): string {
+import * as vscode from "vscode";
+import { randomInt } from "crypto";
+
+export function getWebviewHtml(
+  entrySrc: string,
+  webview: vscode.Webview
+): string {
+  const cspSrc = webview.cspSource;
+
+  const nonce = getNonce();
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="base-uri 'none'; default-src 'none'; style-src 'unsafe-inline'; img-src ${cspSrc} https:; script-src 'nonce-${nonce}' 'unsafe-eval';">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Malloy Query Results</title>
   </head>
@@ -86,6 +96,19 @@ export function getWebviewHtml(entrySrc: string): string {
       </div>
     </div>
   </body>
-  <script src="${entrySrc}"></script>
+  <script nonce="${nonce}" src="${entrySrc}"></script>
 </html>`;
+}
+
+const NONCE_CHARACTERS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+function randomNonceCharacter() {
+  return NONCE_CHARACTERS.charAt(
+    Math.floor(randomInt(0, NONCE_CHARACTERS.length))
+  );
+}
+
+function getNonce() {
+  return Array.from({ length: 32 }, randomNonceCharacter).join("");
 }

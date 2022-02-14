@@ -18,6 +18,7 @@ import {
   ChartSize,
   StyleDefaults,
 } from "../data_styles";
+import { createErrorElement } from "./utils";
 import { HTMLVegaSpecRenderer, vegaSpecs } from "./vega_spec";
 
 function isOrdninal(field: Field): boolean {
@@ -32,18 +33,28 @@ function isOrdninal(field: Field): boolean {
 
 export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
   size: ChartSize;
-  constructor(styleDefaults: StyleDefaults, options: BarChartRenderOptions) {
-    super(styleDefaults, vegaSpecs["bar_SM"]);
+  constructor(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    options: BarChartRenderOptions
+  ) {
+    super(document, styleDefaults, vegaSpecs["bar_SM"]);
     this.size = options.size || this.styleDefaults.size || "medium";
   }
 
-  async render(table: DataColumn): Promise<string> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray()) {
-      throw new Error("Invalid type for chart renderer");
+      return createErrorElement(
+        this.document,
+        "Invalid type for bar chart renderer"
+      );
     }
     const fields = table.field.intrinsicFields;
     if (fields.length < 2) {
-      return "Need at least 2 fields for a bar chart.";
+      return createErrorElement(
+        this.document,
+        "Need at least 2 fields for a bar chart."
+      );
     }
     let specName = "bar_";
     if (isOrdninal(fields[0])) {
@@ -54,7 +65,10 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
     ) {
       specName += "N";
     } else {
-      return "Invalid type for first field of a bar_chart";
+      return createErrorElement(
+        this.document,
+        "Invalid type for first field of a bar_chart"
+      );
     }
     specName += "M";
     if (fields.length >= 3 && fields[2].isAtomicField()) {
@@ -70,7 +84,10 @@ export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
       spec = vegaSpecs[specName];
     }
     if (spec === undefined) {
-      return `Unknown renderer ${specName}`;
+      return createErrorElement(
+        this.document,
+        `Unknown vega spec '${specName}'`
+      );
     }
     this.spec = spec;
     return super.render(table);

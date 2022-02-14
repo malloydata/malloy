@@ -13,12 +13,20 @@
 
 import { DataColumn } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
+import { createErrorElement } from "./utils";
 
 export class HTMLJSONRenderer implements Renderer {
-  async render(table: DataColumn): Promise<string> {
+  constructor(private readonly document: Document) {}
+
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray() && !table.isRecord()) {
-      return "Invalid data for chart renderer.";
+      createErrorElement(this.document, "Invalid data for chart renderer.");
     }
-    return `<pre>${JSON.stringify(table.value, undefined, 2)}</pre>`;
+
+    const element = this.document.createElement("pre");
+    element.appendChild(
+      this.document.createTextNode(JSON.stringify(table.value, undefined, 2))
+    );
+    return element;
   }
 }

@@ -26,6 +26,7 @@ export type {
   FieldTypeDef,
   // Needed for drills in render
   FilterExpression,
+  SQLBlock,
 } from "./model";
 export {
   // Neede for VSCode extension
@@ -49,6 +50,7 @@ export {
   TimestampTimeframe,
   Result,
   parseTableURL,
+  QueryMaterializer,
 } from "./malloy";
 export type {
   Explore,
@@ -60,28 +62,28 @@ export type {
   ExploreField,
   QueryField,
   DataArray,
+  DataRecord,
   DataColumn,
   DataArrayOrRecord,
   ModelMaterializer,
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
-  QueryMaterializer,
   PreparedResultMaterializer,
+  SQLBlockMaterializer,
   ExploreMaterializer,
 } from "./malloy";
 export type {
   URLReader,
-  SchemaReader,
-  LookupSchemaReader,
-  SQLRunner,
-  LookupSQLRunner,
+  InfoConnection,
+  LookupConnection,
+  Connection,
   QueryString,
   ModelString,
   QueryURL,
   ModelURL,
+  PooledConnection,
+  TestableConnection,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
-export { Connection } from "./connection";
-export type { PooledConnection } from "./connection";
 export type { Loggable } from "./malloy";

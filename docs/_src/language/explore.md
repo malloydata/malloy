@@ -130,6 +130,30 @@ query: carrier_facts -> {
 ```
 For more information about named queries appearing in models, see the [Models](statement.md) section.
 
+### Explores from SQL Blocks
+
+Explores can be created from a SQL block, e.g.
+
+```malloy
+--! {"isRunnable": true, "showAs":"json", "runMode": "auto", "size": "large" }
+sql: my_sql_query is ||
+  SELECT
+    first_name,
+    last_name,
+    gender
+  FROM malloy-data.ecomm.users
+  LIMIT 10
+;;
+
+explore: limited_users is from_sql(my_sql_query) {
+  measure: user_count is count()
+}
+
+query: limited_users -> {
+  aggregate: user_count
+}
+```
+
 ## Explore Modifications
 
 An explore can introduce a number of different

@@ -42,7 +42,7 @@ const joinModelText = `
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  // "postgres", //
+  "postgres", //
 ]);
 
 afterAll(async () => {
@@ -232,6 +232,37 @@ describe("join expression tests", () => {
         )
         .run();
       expect(result.data.value[0].f_sum2).toBe(60462);
+    });
+
+    it(`model: unnest is left join - ${database}`, async () => {
+      const result = await model
+        .loadQuery(
+          `
+          // produce a table with 4 rows that has a nested element
+          query: a_states is table('malloytest.state_facts')-> {
+            where: state: ~ 'A%'
+            group_by: state
+            nest: somthing is {group_by: state}
+          }
+
+          // join the 4 rows and reference the
+          //  nested column. should return all the rows.
+          //  If the unnest is an inner join, we'll get back just 4 rows.
+          query: table('malloytest.state_facts') {
+            join_one: a_states is from(->a_states) with state
+          }
+          -> {
+            group_by: state
+            aggregate: c is count()
+            nest: a is  {
+              group_by: a_states.somthing.state
+            }
+          }
+    `
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.rowCount).toBeGreaterThan(4);
     });
   });
 });

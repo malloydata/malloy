@@ -13,12 +13,26 @@
 
 import { DataColumn } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
+import { createErrorElement, createNullElement } from "./utils";
 
 export class HTMLLinkRenderer implements Renderer {
-  async render(data: DataColumn): Promise<string> {
-    if (data === null) {
-      return `⌀`;
+  constructor(private readonly document: Document) {}
+
+  async render(data: DataColumn): Promise<HTMLElement> {
+    if (data.isNull()) {
+      return createNullElement(this.document);
     }
-    return `<a href="${data}">${data}</a>`;
+
+    if (!data.isString()) {
+      return createErrorElement(
+        this.document,
+        "Invalid type for link renderer."
+      );
+    }
+
+    const element = document.createElement("a");
+    element.href = data.value;
+    element.appendChild(this.document.createTextNode(data.value));
+    return element;
   }
 }

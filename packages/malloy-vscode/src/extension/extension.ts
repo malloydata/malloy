@@ -27,13 +27,16 @@ import {
   copyFieldPathCommand,
   editConnectionsCommand,
   runNamedQuery,
+  runNamedSQLBlock,
   runQueryCommand,
   runQueryFileCommand,
   runQueryWithEdit,
+  runUnnamedSQLBlock,
   showLicensesCommand,
 } from "./commands";
-import { CONNECTION_MANAGER, getConnectionsConfig } from "./state";
+import { CONNECTION_MANAGER } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
+import { HelpViewProvider } from "./webview_views/help_view";
 
 let client: LanguageClient;
 export let extensionModeProduction: boolean;
@@ -62,6 +65,19 @@ export function activate(context: vscode.ExtensionContext): void {
   // Run named query
   context.subscriptions.push(
     vscode.commands.registerCommand("malloy.runNamedQuery", runNamedQuery)
+  );
+
+  // Run named SQL block
+  context.subscriptions.push(
+    vscode.commands.registerCommand("malloy.runNamedSQLBlock", runNamedSQLBlock)
+  );
+
+  // Run unnamed SQL block
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "malloy.runUnnamedSQLBlock",
+      runUnnamedSQLBlock
+    )
   );
 
   // Copy Field Path
@@ -116,10 +132,16 @@ export function activate(context: vscode.ExtensionContext): void {
     )
   );
 
+  const provider = new HelpViewProvider(context.extensionUri);
+
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("malloyHelp", provider)
+  );
+
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration("malloy.connections")) {
-        await CONNECTION_MANAGER.setConnectionsConfig(getConnectionsConfig());
+        await CONNECTION_MANAGER.onConfigurationUpdated();
         connectionsTree.refresh();
       }
     })
