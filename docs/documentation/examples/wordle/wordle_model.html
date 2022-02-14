@@ -10,50 +10,50 @@ footer: /generated/footers/examples/wordle/wordle_model.html
           Code For Wordlebot:
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token comment">// Make a table of 5 letter words</span>
-<span class="token keyword">explore</span>: words <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.words'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">query</span>: five_letter_words <span class="token keyword">is</span> {
-    <span class="token keyword">where</span>: <span class="token function">length</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span> <span class="token keyword">and</span> word <span class="token operator">~</span> <span class="token regular_expression">r'^[a-z]{5}$'</span>
-    <span class="token keyword">project</span>: word <span class="token keyword">is</span> <span class="token function">UPPER</span><span class="token punctuation">(</span>word<span class="token punctuation">)</span>
-  }
-}
-
-<span class="token comment">// table with numbers 1 to 5</span>
-<span class="token keyword">explore</span>: numbers <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.malloytest.numbers'</span><span class="token punctuation">)</span>{
-  <span class="token keyword">where</span>: num <span class="token operator">&lt;=</span> <span class="token number">5</span>
-}
-
-<span class="token comment">// Build a new table of word and each letter in position</span>
-<span class="token keyword">query</span>: words_and_position <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span>words <span class="token operator">-</span><span class="token operator">></span> five_letter_words<span class="token punctuation">)</span> {
-  <span class="token keyword">join_many</span>: numbers <span class="token comment">// cross join numbers</span>
-} <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">group_by</span>: word
-  <span class="token keyword">nest</span>: letters <span class="token keyword">is</span> {
-    <span class="token keyword">order_by</span>: <span class="token number">2</span>
-    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-      letter <span class="token keyword">is</span> <span class="token function">substr</span><span class="token punctuation">(</span>word<span class="token punctuation">,</span> numbers<span class="token punctuation">.</span>num<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
-      position <span class="token keyword">is</span> numbers<span class="token punctuation">.</span>num
-    <span class="token punctuation">]</span>
-  }
-}
-
-
-<span class="token comment">// build a word finder that can generate a score best available guess.</span>
-<span class="token keyword">explore</span>: wordle <span class="token keyword">is</span> <span class="token keyword">from</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token operator">></span> words_and_position<span class="token punctuation">)</span> {
-  <span class="token keyword">where</span>: word <span class="token operator">!</span><span class="token operator">~</span> <span class="token regular_expression">r'(S|ED)$'</span>
-  <span class="token keyword">measure</span>: word_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-
-  <span class="token keyword">query</span>: find_words <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-      letters<span class="token punctuation">.</span>letter
-      letters<span class="token punctuation">.</span>position
-    <span class="token punctuation">]</span>
-    <span class="token keyword">aggregate</span>: word_count
-    <span class="token keyword">nest</span>: words_list <span class="token keyword">is</span> {
-      <span class="token keyword">group_by</span>: word
-    }
-  } <span class="token operator">-</span><span class="token operator">></span> {
-    <span class="token keyword">group_by</span>: words_list<span class="token punctuation">.</span>word
-    <span class="token keyword">aggregate</span>: score <span class="token keyword">is</span> word_count<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  }
-}</pre></div>
+    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// Make a table of 5 letter words</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #795E26">length</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">) = </span><span style="color: #098658">5</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">word</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^[a-z]{5}$&#39;</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">UPPER</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// table with numbers 1 to 5</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.numbers&#39;</span><span style="color: #000000">){</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">num</span><span style="color: #000000"> &lt;= </span><span style="color: #098658">5</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// Build a new table of word and each letter in position</span></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words_and_position</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_many</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> </span><span style="color: #008000">// cross join numbers</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">letters</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #098658">2</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">letter</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">substr</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">, </span><span style="color: #001080">numbers</span><span style="color: #000000">.</span><span style="color: #001080">num</span><span style="color: #000000">, </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">position</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">numbers</span><span style="color: #000000">.</span><span style="color: #001080">num</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// build a word finder that can generate a score best available guess.</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">wordle</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(-&gt; </span><span style="color: #001080">words_and_position</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;(S|ED)$&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">word_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">find_words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">letters</span><span style="color: #000000">.</span><span style="color: #001080">letter</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">letters</span><span style="color: #000000">.</span><span style="color: #001080">position</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">word_count</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">words_list</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
+<span class="line"><span style="color: #000000">    }</span></span>
+<span class="line"><span style="color: #000000">  } -&gt; {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">words_list</span><span style="color: #000000">.</span><span style="color: #001080">word</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">score</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">word_count</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre></div>

@@ -14,28 +14,28 @@ footer: /generated/footers/patterns/cohorts.html
 Fundamentally, cohort analysis is used to group people into sets and to analyze the success,
 attributes or characteristics of that group as compared to the population in general.</p>
 <p>To understand this, we're going to use Social Security Administrations birth/name data.</p>
-<p>We have a table with <code class="language-malloy">name</code>, <code class="language-malloy">gender</code>, <code class="language-malloy"><span class="token identifier">`year`</span></code>, <code class="language-malloy">state</code> and the <code class="language-malloy"><span class="token identifier">`number`</span></code> of people born with those
+<p>We have a table with <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">gender</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">`year`</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span></span></code> and the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">`number`</span></span></code> of people born with those
 characteristics.</p>
 <p>In the simplest form, a cohort calculation is a <a href="percent_of_total.html">percentage of total calculation</a>.
 For example, if we were interested in the name 'Billie' as it relates to location. We could look
 could filter on 'Billie' and look a states as it relates to total population.</p>
 <p>We can see that in the population of the the people named 'Billie', the cohort of the Billies born in
 Texas makes up 18% of the total population of Billies.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">where</span>: name <span class="token operator">=</span> <span class="token string">'Billie'</span>
-  <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: state
-    <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  }
-} <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">project</span>: <span class="token punctuation">[</span>
-    main_query<span class="token punctuation">.</span>state
-    main_query<span class="token punctuation">.</span>total_population
-    state_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population <span class="token operator">/</span> total_population <span class="token operator">*</span> <span class="token number">100.0</span>
-  <span class="token punctuation">]</span>
-  <span class="token keyword">order_by</span>: state_as_percent_of_population <span class="token keyword">desc</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">name</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Billie&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">main_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">state</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">state</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">state_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span><span style="color: #000000"> / </span><span style="color: #001080">total_population</span><span style="color: #000000"> * </span><span style="color: #098658">100.0</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">state_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -46,253 +46,172 @@ Texas makes up 18% of the total population of Billies.</p>
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">state</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">state_&#8203;as_&#8203;percent_&#8203;of_&#8203;population</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">23,052</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">18.644</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OK</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,409</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6.801</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">TN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7,368</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.959</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KY</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,416</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.189</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AR</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,902</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.773</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">NC</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,726</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.631</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,230</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.23</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,986</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.033</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">CA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,830</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.906</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,360</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.526</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OH</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,344</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.513</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,830</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.098</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">GA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,598</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.91</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,411</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.759</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">IN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,926</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.367</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WV</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,863</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.316</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,605</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2.107</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">VA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,467</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.995</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MI</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,340</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.893</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">KS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,192</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.773</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">state</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">total_​population</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">state_​as_​percent_​of_​population</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>TX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>23,052</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>18.644</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>OK</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8,409</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>6.801</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>TN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>7,368</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.959</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>KY</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>6,416</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.189</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AR</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,902</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4.773</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>NC</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,726</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4.631</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,230</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4.23</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>MO</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,986</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4.033</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>CA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,830</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3.906</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>MS</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,360</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3.526</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>OH</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,344</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3.513</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>IL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,830</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3.098</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>GA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,598</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2.91</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>LA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,411</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2.759</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>IN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,926</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2.367</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WV</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,863</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2.316</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>PA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,605</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2.107</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>VA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,467</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1.995</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>MI</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,340</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1.893</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>KS</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,192</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1.773</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"TX"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">23052</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">18.644300838718546</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"OK"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">8409</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">6.80114201599793</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"TN"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">7368</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">5.9591882951448145</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"KY"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">6416</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">5.189217169062042</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"AR"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">5902</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">4.773497464433319</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"NC"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">5726</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">4.631149861291966</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"AL"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">5230</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">4.229988434257245</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"MO"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4986</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">4.032642893538551</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"CA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4830</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">3.906471154390534</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"MS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4360</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">3.5263383505471486</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"OH"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4344</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">3.5133976593524805</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"IL"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3830</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">3.0976779547237565</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"GA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3598</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">2.9100379324010643</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"LA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3411</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">2.758793604063377</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"IN"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">2926</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">2.3665289022249905</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"WV"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">2863</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">2.315574930645983</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"PA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">2605</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">2.1069062851319544</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"VA"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">2467</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">1.9952928235779395</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"MI"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">2340</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">1.8925760872202588</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"state"</span><span class="token operator">:</span> <span class="token string">"KS"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">2192</span><span class="token punctuation">,</span>
-    <span class="token property">"state_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">1.7728746936695756</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;TX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">23052</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">18.644300838718546</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;OK&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8409</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">6.80114201599793</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;TN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">7368</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.9591882951448145</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;KY&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">6416</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.189217169062042</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AR&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5902</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4.773497464433319</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;NC&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5726</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4.631149861291966</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5230</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4.229988434257245</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4986</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4.032642893538551</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;CA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4830</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3.906471154390534</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MS&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4360</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3.5263383505471486</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;OH&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4344</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3.5133976593524805</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;IL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3830</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3.0976779547237565</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;GA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3598</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2.9100379324010643</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3411</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2.758793604063377</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;IN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2926</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2.3665289022249905</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WV&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2863</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2.315574930645983</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2605</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2.1069062851319544</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;VA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2467</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1.9952928235779395</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MI&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2340</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1.8925760872202588</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;KS&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2192</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1.7728746936695756</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    group_set<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> base<span class="token punctuation">.</span>state <span class="token keyword">END</span> <span class="token keyword">as</span> state__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__1
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>bigquery<span class="token operator">-</span><span class="token keyword">public</span><span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>usa_names<span class="token punctuation">.</span>usa_1910_2013<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token keyword">WHERE</span> base<span class="token punctuation">.</span>name<span class="token operator">=</span><span class="token string">'Billie'</span>
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">3</span>
-<span class="token punctuation">)</span>
-<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> total_population__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> total_population<span class="token punctuation">,</span>
-    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>state__1 <span class="token keyword">as</span> state<span class="token punctuation">,</span> total_population__1 <span class="token keyword">as</span> total_population<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  total_population__1 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> main_query
-  <span class="token keyword">FROM</span> __stage0
-  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span> 
-   main_query_0<span class="token punctuation">.</span>state <span class="token keyword">as</span> state<span class="token punctuation">,</span>
-   main_query_0<span class="token punctuation">.</span>total_population <span class="token keyword">as</span> total_population<span class="token punctuation">,</span>
-   <span class="token punctuation">(</span>main_query_0<span class="token punctuation">.</span>total_population<span class="token operator">/</span>base<span class="token punctuation">.</span>total_population<span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">100.0</span> <span class="token keyword">as</span> state_as_percent_of_population
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage1<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-<span class="token punctuation">,</span> UNNEST<span class="token punctuation">(</span>base<span class="token punctuation">.</span>main_query<span class="token punctuation">)</span> <span class="token keyword">as</span> main_query_0
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">3</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(base.number)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      base.state</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> state__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(base.number)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population__1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`bigquery-public-data.usa_names.usa_1910_2013`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> base.name=</span><span style="color: #A31515">&#39;Billie&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">, __stage1 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> total_population__0 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population,</span></span>
+<span class="line"><span style="color: #000000">    ARRAY_AGG(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(</span></span>
+<span class="line"><span style="color: #000000">      state__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">state</span><span style="color: #000000">, </span></span>
+<span class="line"><span style="color: #000000">      total_population__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population</span></span>
+<span class="line"><span style="color: #000000">      ) </span><span style="color: #0000FF">END</span><span style="color: #000000"> IGNORE NULLS  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000">  total_population__1 </span><span style="color: #0000FF">desc</span><span style="color: #000000"> ) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   main_query_0.state </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">state</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">   main_query_0.total_population </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population,</span></span>
+<span class="line"><span style="color: #000000">   (main_query_0.total_population/base.total_population)*</span><span style="color: #098658">100</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> state_as_percent_of_population</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage1`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST(base.main_query) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query_0</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>We could run this same query, but instead look by decade to see when the Billies where born.
 Using the query below we can see that 26% of all Billies were born in the 1930s.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">where</span>: name <span class="token operator">=</span> <span class="token string">'Billie'</span>
-  <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: decade <span class="token keyword">is</span> <span class="token function">floor</span><span class="token punctuation">(</span><span class="token identifier">`year`</span> <span class="token operator">/</span> <span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10</span>
-    <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  }
-} <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">project</span>: <span class="token punctuation">[</span>
-    main_query<span class="token punctuation">.</span>decade
-    main_query<span class="token punctuation">.</span>total_population
-    decade_as_percent_of_population <span class="token keyword">is</span> main_query<span class="token punctuation">.</span>total_population <span class="token operator">/</span> total_population <span class="token operator">*</span> <span class="token number">100.0</span>
-  <span class="token punctuation">]</span>
-  <span class="token keyword">order_by</span>: decade_as_percent_of_population <span class="token keyword">desc</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">name</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Billie&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">main_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">decade</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">floor</span><span style="color: #000000">(</span><span style="color: #001080">`year`</span><span style="color: #000000"> / </span><span style="color: #098658">10</span><span style="color: #000000">) * </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">decade</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">decade_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span><span style="color: #000000"> / </span><span style="color: #001080">total_population</span><span style="color: #000000"> * </span><span style="color: #098658">100.0</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">decade_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -303,153 +222,108 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">decade</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">decade_&#8203;as_&#8203;percent_&#8203;of_&#8203;population</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,930</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,560</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">26.334</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,920</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,559</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">22.29</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,940</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">19,616</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">15.865</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,950</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">13,185</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10.664</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,970</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">10,469</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.467</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,960</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,556</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6.92</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,910</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,349</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4.326</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,980</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,091</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3.309</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,990</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,646</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1.331</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,000</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">456</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.369</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,010</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">154</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.125</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">decade</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">total_​population</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">decade_​as_​percent_​of_​population</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,930</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>32,560</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>26.334</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,920</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>27,559</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>22.29</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,940</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>19,616</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>15.865</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,950</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>13,185</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>10.664</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,970</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>10,469</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8.467</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,960</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8,556</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>6.92</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,910</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,349</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4.326</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,980</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,091</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3.309</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,990</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,646</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1.331</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>456</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.369</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,010</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>154</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.125</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1930</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">32560</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">26.334306581150262</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1920</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">27559</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">22.289531789616714</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1940</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">19616</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">15.865287404663503</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1950</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">13185</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">10.663938337606456</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1970</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">10469</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">8.46725600731149</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1960</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">8556</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">6.9200346163489455</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1910</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">5349</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">4.3262348250175915</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1980</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4091</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">3.3087729798367853</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">1990</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">1646</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">1.3312736066515154</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">2000</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">456</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">0.3688096990480504</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"decade"</span><span class="token operator">:</span> <span class="token number">2010</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">154</span><span class="token punctuation">,</span>
-    <span class="token property">"decade_as_percent_of_population"</span><span class="token operator">:</span> <span class="token number">0.1245541527486837</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1930</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">32560</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">26.334306581150262</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1920</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">27559</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">22.289531789616714</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1940</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">19616</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">15.865287404663503</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1950</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">13185</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">10.663938337606456</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1970</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">10469</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8.46725600731149</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1960</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8556</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">6.9200346163489455</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1910</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5349</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4.3262348250175915</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1980</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4091</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3.3087729798367853</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1990</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1646</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1.3312736066515154</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">456</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.3688096990480504</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2010</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">154</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade_as_percent_of_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.1245541527486837</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    group_set<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token punctuation">(</span>floor<span class="token punctuation">(</span>base<span class="token punctuation">.</span><span class="token keyword">year</span><span class="token operator">/</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">10</span> <span class="token keyword">END</span> <span class="token keyword">as</span> decade__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__1
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>bigquery<span class="token operator">-</span><span class="token keyword">public</span><span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>usa_names<span class="token punctuation">.</span>usa_1910_2013<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token keyword">WHERE</span> base<span class="token punctuation">.</span>name<span class="token operator">=</span><span class="token string">'Billie'</span>
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">3</span>
-<span class="token punctuation">)</span>
-<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> total_population__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> total_population<span class="token punctuation">,</span>
-    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>decade__1 <span class="token keyword">as</span> decade<span class="token punctuation">,</span> total_population__1 <span class="token keyword">as</span> total_population<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  total_population__1 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> main_query
-  <span class="token keyword">FROM</span> __stage0
-  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span> 
-   main_query_0<span class="token punctuation">.</span>decade <span class="token keyword">as</span> decade<span class="token punctuation">,</span>
-   main_query_0<span class="token punctuation">.</span>total_population <span class="token keyword">as</span> total_population<span class="token punctuation">,</span>
-   <span class="token punctuation">(</span>main_query_0<span class="token punctuation">.</span>total_population<span class="token operator">/</span>base<span class="token punctuation">.</span>total_population<span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">100.0</span> <span class="token keyword">as</span> decade_as_percent_of_population
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage1<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-<span class="token punctuation">,</span> UNNEST<span class="token punctuation">(</span>base<span class="token punctuation">.</span>main_query<span class="token punctuation">)</span> <span class="token keyword">as</span> main_query_0
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">3</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(base.number)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      (</span><span style="color: #795E26">floor</span><span style="color: #000000">(base.year/</span><span style="color: #098658">10</span><span style="color: #000000">))*</span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> decade__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(base.number)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population__1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`bigquery-public-data.usa_names.usa_1910_2013`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> base.name=</span><span style="color: #A31515">&#39;Billie&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">, __stage1 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> total_population__0 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population,</span></span>
+<span class="line"><span style="color: #000000">    ARRAY_AGG(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(</span></span>
+<span class="line"><span style="color: #000000">      decade__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> decade, </span></span>
+<span class="line"><span style="color: #000000">      total_population__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population</span></span>
+<span class="line"><span style="color: #000000">      ) </span><span style="color: #0000FF">END</span><span style="color: #000000"> IGNORE NULLS  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000">  total_population__1 </span><span style="color: #0000FF">desc</span><span style="color: #000000"> ) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   main_query_0.decade </span><span style="color: #0000FF">as</span><span style="color: #000000"> decade,</span></span>
+<span class="line"><span style="color: #000000">   main_query_0.total_population </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population,</span></span>
+<span class="line"><span style="color: #000000">   (main_query_0.total_population/base.total_population)*</span><span style="color: #098658">100</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> decade_as_percent_of_population</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage1`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST(base.main_query) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query_0</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -462,21 +336,21 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our population.
 Let's limit our population to California in 1990 and look at the most cohorts (people with a given name).  We are also going
 to measure a little differently.  Instead of looking at a percentage, let's look at births per 100,000 people.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'bigquery-public-data.usa_names.usa_1910_2013'</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">where</span>: state <span class="token operator">=</span> <span class="token string">'CA'</span> <span class="token keyword">and</span> <span class="token identifier">`year`</span> <span class="token operator">=</span> <span class="token number">1990</span>
-  <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token keyword">nest</span>: main_query <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: name
-    <span class="token keyword">aggregate</span>: total_population <span class="token keyword">is</span> <span class="token identifier">`number`</span><span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  }
-} <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">project</span>: <span class="token punctuation">[</span>
-    main_query<span class="token punctuation">.</span>name
-    main_query<span class="token punctuation">.</span>total_population
-    births_per_100k <span class="token keyword">is</span> <span class="token function">FLOOR</span><span class="token punctuation">(</span>main_query<span class="token punctuation">.</span>total_population <span class="token operator">/</span> total_population <span class="token operator">*</span> <span class="token number">100000.0</span><span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-  <span class="token keyword">order_by</span>: births_per_100k <span class="token keyword">desc</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">`year`</span><span style="color: #000000"> = </span><span style="color: #098658">1990</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">main_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">name</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">name</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">births_per_100k</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">FLOOR</span><span style="color: #000000">(</span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span><span style="color: #000000"> / </span><span style="color: #001080">total_population</span><span style="color: #000000"> * </span><span style="color: #098658">100000.0</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">births_per_100k</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -487,234 +361,153 @@ to measure a little differently.  Instead of looking at a percentage, let's look
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">name</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;population</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">births_&#8203;per_&#8203;100k</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Michael</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8,306</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,504</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jessica</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,667</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,207</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Christopher</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">6,665</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,207</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Daniel</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,812</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,052</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">David</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,384</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">975</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jose</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,971</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">900</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Matthew</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,914</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">889</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Andrew</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,576</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">828</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Ashley</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,565</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">826</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Joshua</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,329</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">783</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jonathan</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,137</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">749</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Anthony</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,047</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">732</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Stephanie</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,029</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">729</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Amanda</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,868</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">700</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Ryan</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,686</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">667</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Jennifer</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,634</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">658</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Robert</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,618</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">655</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Joseph</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,595</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">651</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Nicholas</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,481</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">630</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">Kevin</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,334</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">603</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">name</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">total_​population</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">births_​per_​100k</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Michael</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8,306</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,504</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Jessica</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>6,667</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,207</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Christopher</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>6,665</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,207</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Daniel</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,812</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,052</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>David</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,384</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>975</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Jose</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,971</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>900</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Matthew</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,914</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>889</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Andrew</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,576</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>828</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Ashley</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,565</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>826</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Joshua</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,329</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>783</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Jonathan</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,137</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>749</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Anthony</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,047</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>732</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Stephanie</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,029</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>729</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Amanda</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,868</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>700</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Ryan</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,686</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>667</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Jennifer</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,634</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>658</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Robert</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,618</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>655</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Joseph</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,595</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>651</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Nicholas</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,481</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>630</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Kevin</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,334</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>603</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Michael"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">8306</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">1504</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Jessica"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">6667</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">1207</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Christopher"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">6665</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">1207</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Daniel"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">5812</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">1052</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"David"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">5384</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">975</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Jose"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4971</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">900</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Matthew"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4914</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">889</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Andrew"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4576</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">828</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Ashley"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4565</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">826</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Joshua"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4329</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">783</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Jonathan"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4137</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">749</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Anthony"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4047</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">732</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Stephanie"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">4029</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">729</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Amanda"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3868</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">700</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Ryan"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3686</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">667</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Jennifer"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3634</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">658</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Robert"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3618</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">655</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Joseph"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3595</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">651</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Nicholas"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3481</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">630</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Kevin"</span><span class="token punctuation">,</span>
-    <span class="token property">"total_population"</span><span class="token operator">:</span> <span class="token number">3334</span><span class="token punctuation">,</span>
-    <span class="token property">"births_per_100k"</span><span class="token operator">:</span> <span class="token number">603</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Michael&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8306</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1504</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Jessica&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">6667</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1207</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Christopher&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">6665</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1207</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Daniel&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5812</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1052</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;David&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5384</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">975</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Jose&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4971</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">900</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Matthew&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4914</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">889</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Andrew&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4576</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">828</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Ashley&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4565</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">826</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Joshua&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4329</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">783</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Jonathan&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4137</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">749</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Anthony&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4047</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">732</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Stephanie&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4029</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">729</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Amanda&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3868</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">700</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Ryan&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3686</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">667</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Jennifer&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3634</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">658</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Robert&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3618</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">655</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Joseph&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3595</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">651</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Nicholas&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3481</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">630</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Kevin&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3334</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;births_per_100k&quot;</span><span style="color: #000000">: </span><span style="color: #098658">603</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    group_set<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> base<span class="token punctuation">.</span>name <span class="token keyword">END</span> <span class="token keyword">as</span> name__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">SUM</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span>number<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> total_population__1
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>bigquery<span class="token operator">-</span><span class="token keyword">public</span><span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>usa_names<span class="token punctuation">.</span>usa_1910_2013<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token keyword">WHERE</span> <span class="token punctuation">(</span>base<span class="token punctuation">.</span>state<span class="token operator">=</span><span class="token string">'CA'</span><span class="token punctuation">)</span><span class="token operator">and</span><span class="token punctuation">(</span>base<span class="token punctuation">.</span><span class="token keyword">year</span><span class="token operator">=</span><span class="token number">1990</span><span class="token punctuation">)</span>
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">3</span>
-<span class="token punctuation">)</span>
-<span class="token punctuation">,</span> __stage1 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> total_population__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> total_population<span class="token punctuation">,</span>
-    ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>name__1 <span class="token keyword">as</span> name<span class="token punctuation">,</span> total_population__1 <span class="token keyword">as</span> total_population<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  total_population__1 <span class="token keyword">desc</span> <span class="token punctuation">)</span> <span class="token keyword">as</span> main_query
-  <span class="token keyword">FROM</span> __stage0
-  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span> 
-   main_query_0<span class="token punctuation">.</span>name <span class="token keyword">as</span> name<span class="token punctuation">,</span>
-   main_query_0<span class="token punctuation">.</span>total_population <span class="token keyword">as</span> total_population<span class="token punctuation">,</span>
-   FLOOR<span class="token punctuation">(</span><span class="token punctuation">(</span>main_query_0<span class="token punctuation">.</span>total_population<span class="token operator">/</span>base<span class="token punctuation">.</span>total_population<span class="token punctuation">)</span><span class="token operator">*</span><span class="token number">100000.0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> births_per_100k
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>__stage1<span class="token punctuation">`</span> <span class="token keyword">as</span> base
-<span class="token punctuation">,</span> UNNEST<span class="token punctuation">(</span>base<span class="token punctuation">.</span>main_query<span class="token punctuation">)</span> <span class="token keyword">as</span> main_query_0
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">3</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(base.number)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      base.name</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> name__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(base.number)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population__1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`bigquery-public-data.usa_names.usa_1910_2013`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (base.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)</span><span style="color: #0000FF">and</span><span style="color: #000000">(base.year=</span><span style="color: #098658">1990</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">, __stage1 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> total_population__0 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population,</span></span>
+<span class="line"><span style="color: #000000">    ARRAY_AGG(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(</span></span>
+<span class="line"><span style="color: #000000">      name__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">name</span><span style="color: #000000">, </span></span>
+<span class="line"><span style="color: #000000">      total_population__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population</span></span>
+<span class="line"><span style="color: #000000">      ) </span><span style="color: #0000FF">END</span><span style="color: #000000"> IGNORE NULLS  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000">  total_population__1 </span><span style="color: #0000FF">desc</span><span style="color: #000000"> ) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   main_query_0.name </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">name</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">   main_query_0.total_population </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_population,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">FLOOR</span><span style="color: #000000">((main_query_0.total_population/base.total_population)*</span><span style="color: #098658">100000</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> births_per_100k</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage1`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST(base.main_query) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query_0</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div></div>

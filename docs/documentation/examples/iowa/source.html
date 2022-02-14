@@ -11,131 +11,131 @@ footer: /generated/footers/examples/iowa/source.html
         </a>
       </h1>
     <p>This is the malloy model used for the Analysis example.  It should be used as an reference when looking at the <a href="step2.html">following sections</a>.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: iowa <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.iowa_liquor_sales.sales_deduped'</span><span class="token punctuation">)</span>{
-
-  <span class="token comment">-- dimensions</span>
-  <span class="token keyword">dimension</span>: <span class="token punctuation">[</span>
-    gross_margin <span class="token keyword">is</span> <span class="token number">100</span> <span class="token operator">*</span> <span class="token punctuation">(</span>state_bottle_retail <span class="token operator">-</span> state_bottle_cost<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token function">nullif</span><span class="token punctuation">(</span>state_bottle_retail<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span>
-    price_per_100ml <span class="token keyword">is</span> state_bottle_retail <span class="token operator">/</span> <span class="token function">nullif</span><span class="token punctuation">(</span>bottle_volume_ml<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">100</span>
-
-    category_class <span class="token keyword">is</span> category_name :
-      <span class="token keyword">pick</span> <span class="token string">'WHISKIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(WHISK|SCOTCH|BOURBON|RYE)'</span>
-      <span class="token keyword">pick</span> <span class="token string">'VODKAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'VODKA'</span>
-      <span class="token keyword">pick</span> <span class="token string">'RUMS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'RUM'</span>
-      <span class="token keyword">pick</span> <span class="token string">'TEQUILAS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'TEQUILA'</span>
-      <span class="token keyword">pick</span> <span class="token string">'LIQUEURS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'(LIQUE|AMARETTO|TRIPLE SEC)'</span>
-      <span class="token keyword">pick</span> <span class="token string">'BRANDIES'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'BRAND(I|Y)'</span>
-      <span class="token keyword">pick</span> <span class="token string">'GINS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'GIN'</span>
-      <span class="token keyword">pick</span> <span class="token string">'SCHNAPPS'</span> <span class="token keyword">when</span> <span class="token operator">~</span> <span class="token regular_expression">r'SCHNAP'</span>
-      <span class="token keyword">else</span> <span class="token string">'OTHER'</span>
-
-    bottle_size <span class="token keyword">is</span> bottle_volume_ml:
-      <span class="token keyword">pick</span> <span class="token string">'jumbo (over 1000ml)'</span> <span class="token keyword">when</span> <span class="token operator">></span> <span class="token number">1001</span>
-      <span class="token keyword">pick</span> <span class="token string">'liter-ish'</span> <span class="token keyword">when</span> <span class="token operator">>=</span> <span class="token number">750</span>
-      <span class="token keyword">else</span> <span class="token string">'small or mini (under 750ml)'</span>
-  <span class="token punctuation">]</span>
-
-  <span class="token comment">-- measures</span>
-  <span class="token keyword">measure</span>: <span class="token punctuation">[</span>
-    total_sale_dollars <span class="token keyword">is</span> sale_dollars<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> item_number<span class="token punctuation">)</span>
-    total_bottles <span class="token keyword">is</span> bottles_sold<span class="token punctuation">.</span><span class="token function">sum</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    line_item_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    avg_price_per_100ml <span class="token keyword">is</span> price_per_100ml<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-
-  <span class="token comment">-- turtles</span>
-  <span class="token keyword">query</span>: by_month <span class="token keyword">is</span> {
-    <span class="token keyword">order_by</span>: <span class="token number">1</span>
-    <span class="token keyword">group_by</span>: purchase_month <span class="token keyword">is</span> <span class="token identifier">`date`</span><span class="token punctuation">.</span><span class="token timeframe">week</span>
-    <span class="token keyword">aggregate</span>: total_sale_dollars
-  }
-
-  <span class="token keyword">query</span>: top_sellers_by_revenue <span class="token keyword">is</span> {
-    <span class="token keyword">top</span>: <span class="token number">5</span>
-    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-      vendor_name
-      item_description
-      total_sale_dollars
-    <span class="token punctuation">]</span>
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      total_bottles
-      avg_price_per_100ml
-    <span class="token punctuation">]</span>
-  }
-
-  <span class="token keyword">query</span>: most_expensive_products <span class="token keyword">is</span> {
-    <span class="token keyword">top</span>: <span class="token number">10</span>
-    <span class="token keyword">order_by</span>: avg_price_per_100ml <span class="token keyword">desc</span>
-    <span class="token keyword">group_by</span>: <span class="token punctuation">[</span>
-      vendor_name
-      item_description
-    <span class="token punctuation">]</span>
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      total_sale_dollars
-      total_bottles
-      avg_price_per_100ml
-    <span class="token punctuation">]</span>
-  }
-
-  <span class="token keyword">query</span>: by_vendor_bar_chart <span class="token keyword">is</span> {
-    <span class="token keyword">top</span>: <span class="token number">10</span>
-    <span class="token keyword">group_by</span>: vendor_name
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      total_sale_dollars
-      total_bottles
-    <span class="token punctuation">]</span>
-  }
-
-  <span class="token keyword">query</span>: by_class <span class="token keyword">is</span> {
-    <span class="token keyword">top</span>: <span class="token number">10</span>
-    <span class="token keyword">group_by</span>: category_class
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      total_sale_dollars
-      item_count
-    <span class="token punctuation">]</span>
-  }
-
-  <span class="token keyword">query</span>: by_category <span class="token keyword">is</span> {
-    <span class="token keyword">top</span>: <span class="token number">10</span>
-    <span class="token keyword">group_by</span>: category_name
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      total_sale_dollars
-      item_count
-    <span class="token punctuation">]</span>
-  }
-
-  <span class="token keyword">query</span>: by_sku <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: item_description
-    <span class="token keyword">aggregate</span>: total_sale_dollars
-    <span class="token keyword">limit</span>: <span class="token number">5</span>
-  }
-
-  <span class="token keyword">query</span>: vendor_dashboard <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: vendor_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> vendor_number<span class="token punctuation">)</span>
-    <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-      total_sale_dollars
-      total_bottles
-    <span class="token punctuation">]</span>
-    <span class="token keyword">nest</span>: by_month
-    <span class="token keyword">nest</span>: by_class
-    <span class="token keyword">nest</span>: by_vendor_bar_chart
-    <span class="token keyword">nest</span>: top_sellers_by_revenue
-    <span class="token keyword">nest</span>: most_expensive_products
-    <span class="token keyword">nest</span>: by_vendor_dashboard <span class="token keyword">is</span> {
-      <span class="token keyword">top</span>: <span class="token number">10</span>
-      <span class="token keyword">group_by</span>: vendor_name
-      <span class="token keyword">aggregate</span>: total_sale_dollars
-      <span class="token keyword">nest</span>: by_month
-      <span class="token keyword">nest</span>: top_sellers_by_revenue
-      <span class="token keyword">nest</span>: most_expensive_products
-    }
-  }
-}</pre>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">iowa</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.iowa_liquor_sales.sales_deduped&#39;</span><span style="color: #000000">){</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">-- dimensions</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">gross_margin</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #098658">100</span><span style="color: #000000"> * (</span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000"> - </span><span style="color: #001080">state_bottle_cost</span><span style="color: #000000">) / </span><span style="color: #795E26">nullif</span><span style="color: #000000">(</span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000">, </span><span style="color: #098658">0</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000"> / </span><span style="color: #795E26">nullif</span><span style="color: #000000">(</span><span style="color: #001080">bottle_volume_ml</span><span style="color: #000000">, </span><span style="color: #098658">0</span><span style="color: #000000">) * </span><span style="color: #098658">100</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">category_class</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">category_name</span><span style="color: #000000"> :</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;WHISKIES&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;(WHISK|SCOTCH|BOURBON|RYE)&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;VODKAS&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;VODKA&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;RUMS&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;RUM&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;TEQUILAS&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;TEQUILA&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;LIQUEURS&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;(LIQUE|AMARETTO|TRIPLE SEC)&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;BRANDIES&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;BRAND(I|Y)&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;GINS&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;GIN&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;SCHNAPPS&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;SCHNAP&#39;</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">else</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;OTHER&#39;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">bottle_size</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">bottle_volume_ml</span><span style="color: #000000">:</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;jumbo (over 1000ml)&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1001</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;liter-ish&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">750</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">else</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;small or mini (under 750ml)&#39;</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">-- measures</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_sale_dollars</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_dollars</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">item_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #795E26">distinct</span><span style="color: #000000"> </span><span style="color: #001080">item_number</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_bottles</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">bottles_sold</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">line_item_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">-- turtles</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_month</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">purchase_month</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`date`</span><span style="color: #000000">.</span><span style="color: #0000FF">week</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">top_sellers_by_revenue</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">5</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">vendor_name</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">item_description</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_bottles</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">avg_price_per_100ml</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">most_expensive_products</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">vendor_name</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">item_description</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_bottles</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">avg_price_per_100ml</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_vendor_bar_chart</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">vendor_name</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_bottles</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_class</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">category_class</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">item_count</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_category</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">category_name</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">item_count</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_sku</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">item_description</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">5</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">vendor_dashboard</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">vendor_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #795E26">distinct</span><span style="color: #000000"> </span><span style="color: #001080">vendor_number</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">total_bottles</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_month</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_class</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_vendor_bar_chart</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">top_sellers_by_revenue</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">most_expensive_products</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_vendor_dashboard</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">vendor_name</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_sale_dollars</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_month</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">top_sellers_by_revenue</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">most_expensive_products</span></span>
+<span class="line"><span style="color: #000000">    }</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
       <h2>
         <a id="schema-overview" class="header-link anchor" href="#schema-overview">
           Schema Overview
         </a>
       </h2>
-    <p>The schema for the table <code class="language-malloy">bigquery<span class="token operator">-</span>public<span class="token operator">-</span>data<span class="token punctuation">.</span>iowa_liquor_sales<span class="token punctuation">.</span>sales</code> as well as descriptions of each field can be found on the <a href="https://data.iowa.gov/Sales-Distribution/Iowa-Liquor-Sales/m3tr-qhgy">Iowa Data site</a>.</p>
+    <p>The schema for the table <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">bigquery</span><span style="color: #000000">-</span><span style="color: #001080">public</span><span style="color: #000000">-</span><span style="color: #001080">data</span><span style="color: #000000">.</span><span style="color: #001080">iowa_liquor_sales</span><span style="color: #000000">.</span><span style="color: #001080">sales</span></span></code> as well as descriptions of each field can be found on the <a href="https://data.iowa.gov/Sales-Distribution/Iowa-Liquor-Sales/m3tr-qhgy">Iowa Data site</a>.</p>
 </div>

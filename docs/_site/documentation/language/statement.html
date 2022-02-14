@@ -142,6 +142,12 @@
                 Imports
               </a>
             </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
           </div>
       </div>
 <div>
@@ -379,16 +385,16 @@ modeled <em>explore</em>.</p>
       </h2>
     <p>A Malloy model file can contain several <em>explores</em>, which define fields that can be
 used in queries.</p>
-<pre class="language-malloy"><span class="token keyword">explore</span>: flights <span class="token keyword">is</span> <span class="token function">table</span><span class="token punctuation">(</span><span class="token string">'malloy-data.faa.flights'</span><span class="token punctuation">)</span> {
-  <span class="token keyword">dimension</span>: distance_km <span class="token keyword">is</span> distance <span class="token operator">/</span> <span class="token number">1.609344</span>
-
-  <span class="token keyword">measure</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-
-  <span class="token keyword">query</span>: by_carrier <span class="token keyword">is</span> {
-    <span class="token keyword">group_by</span>: carrier
-    <span class="token keyword">aggregate</span>: flight_count
-  }
-}</pre><p>See <a href="explore.html">here</a> for more information on explores.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">distance_km</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">distance</span><span style="color: #000000"> / </span><span style="color: #098658">1.609344</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>See <a href="explore.html">here</a> for more information on explores.</p>
 
       <h2>
         <a id="queries" class="header-link anchor" href="#queries">
@@ -401,7 +407,7 @@ used in queries.</p>
           Using modeled in query.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">by_carrier</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -412,69 +418,44 @@ used in queries.</p>
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5,775,777</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,477,929</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,434,727</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,654,646</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">US</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,205,810</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,654,646</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>US</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,205,810</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">5775777</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4477929</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">4434727</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3654646</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"US"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">3205810</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3654646</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;US&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3205810</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -483,7 +464,7 @@ used in queries.</p>
           Using modeled with a filter.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: origin <span class="token operator">=</span> <span class="token string">'SFO'</span> } <span class="token operator">-</span><span class="token operator">></span> by_carrier</pre><div class="result-outer small">
+    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000"> } -&gt; </span><span style="color: #001080">by_carrier</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -494,71 +475,46 @@ used in queries.</p>
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">338,723</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">105,581</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">82,468</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">44,694</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AS</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">32,351</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>338,723</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>OO</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>105,581</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>82,468</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>44,694</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AS</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>32,351</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">338723</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"OO"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">105581</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">82468</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">44694</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AS"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">32351</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">338723</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;OO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">105581</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">82468</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">44694</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AS&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">32351</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">WHERE</span> <span class="token punctuation">(</span>flights<span class="token punctuation">.</span>origin<span class="token operator">=</span><span class="token string">'SFO'</span><span class="token punctuation">)</span>
-<span class="token operator">AND</span> <span class="token punctuation">(</span>flights<span class="token punctuation">.</span>origin<span class="token operator">=</span><span class="token string">'SFO'</span><span class="token punctuation">)</span>
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (flights.origin=</span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">AND</span><span style="color: #000000"> (flights.origin=</span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -567,7 +523,7 @@ used in queries.</p>
           Setting a limit on the Query
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights { <span class="token keyword">where</span>: origin <span class="token operator">=</span> <span class="token string">'SFO'</span> } <span class="token operator">-</span><span class="token operator">></span> by_carrier { <span class="token keyword">limit</span>: <span class="token number">2</span> }</pre><div class="result-outer small">
+    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000"> } -&gt; </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> { </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000"> }</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -578,50 +534,34 @@ used in queries.</p>
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">338,723</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">OO</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">105,581</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>338,723</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>OO</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>105,581</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">338723</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"OO"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">105581</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">338723</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;OO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">105581</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   flights<span class="token punctuation">.</span>carrier <span class="token keyword">as</span> carrier<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">WHERE</span> flights<span class="token punctuation">.</span>origin<span class="token operator">=</span><span class="token string">'SFO'</span>
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-<span class="token keyword">LIMIT</span> <span class="token number">2</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> flights.origin=</span><span style="color: #A31515">&#39;SFO&#39;</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">2</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -630,13 +570,13 @@ used in queries.</p>
           Creating a brand new Query.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">group_by</span>: destination
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    flight_count
-    average_distance_in_km <span class="token keyword">is</span> distance_km<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer small">
+    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">destination</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">average_distance_in_km</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">distance_km</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -647,81 +587,50 @@ used in queries.</p>
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;distance_&#8203;in_&#8203;km</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,036,343</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">480.732</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,963,535</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">403.987</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,812,062</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">490.644</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,300,241</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">631.292</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,059,054</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">554.576</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">destination</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">average_​distance_​in_​km</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ORD</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,036,343</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>480.732</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ATL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,963,535</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>403.987</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DFW</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,812,062</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>490.644</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>LAX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,300,241</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>631.292</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>PHX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,059,054</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>554.576</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">2036343</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">480.7323051917168</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ATL"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1963535</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">403.9874441585174</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1812062</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">490.6444686103772</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"LAX"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1300241</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">631.2922437299272</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"PHX"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1059054</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">554.5763958814941</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2036343</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">480.7323051917168</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ATL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1963535</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">403.9874441585174</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1812062</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">490.6444686103772</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LAX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1300241</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">631.2922437299273</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PHX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1059054</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">554.5763958814941</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   flights<span class="token punctuation">.</span>destination <span class="token keyword">as</span> destination<span class="token punctuation">,</span>
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span>
-   <span class="token function">AVG</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>distance<span class="token operator">/</span><span class="token number">1.609344</span><span class="token punctuation">)</span> <span class="token keyword">as</span> average_distance_in_km
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.destination </span><span style="color: #0000FF">as</span><span style="color: #000000"> destination,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(flights.distance/</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">609344</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_distance_in_km</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -730,14 +639,14 @@ used in queries.</p>
           Putting it all together.
         </a>
       </h3>
-    <pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">group_by</span>: destination
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    flight_count
-    average_distance_in_km <span class="token keyword">is</span> distance_km<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-  <span class="token keyword">nest</span>: top_carriers <span class="token keyword">is</span> by_carrier { <span class="token keyword">limit</span>: <span class="token number">2</span> }
-}</pre><div class="result-outer small">
+    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">destination</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">average_distance_in_km</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">distance_km</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">top_carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> { </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -748,230 +657,124 @@ used in queries.</p>
     </div>
     <div class="result-middle" data-result-kind="html" >
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">destination</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;distance_&#8203;in_&#8203;km</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">top_&#8203;carriers</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ORD</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">2,036,343</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">480.732</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">754,774</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">597,817</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">ATL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,963,535</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">403.987</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DL</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,247,710</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">EV</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">288,405</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">DFW</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,812,062</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">490.644</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">AA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">968,201</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">MQ</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">379,017</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">LAX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,300,241</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">631.292</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">UA</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">272,279</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">243,946</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">PHX</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">1,059,054</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">554.576</td>
-<td style="padding: 0; vertical-align: top; border-bottom: 1px solid #eaeaea; "><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">HP</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">433,442</td>
-</tr>
-<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; ">WN</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">381,772</td>
-</tr>
-
-		</tbody>
-	</table></td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">destination</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">average_​distance_​in_​km</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">top_​carriers</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ORD</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,036,343</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>480.732</span></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>754,774</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>597,817</span></td></tr></tbody></table></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ATL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,963,535</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>403.987</span></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,247,710</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>EV</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>288,405</span></td></tr></tbody></table></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DFW</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,812,062</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>490.644</span></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>968,201</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>MQ</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>379,017</span></td></tr></tbody></table></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>LAX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,300,241</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>631.292</span></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>272,279</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>243,946</span></td></tr></tbody></table></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>PHX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,059,054</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>554.576</span></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>HP</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>433,442</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>381,772</span></td></tr></tbody></table></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ORD"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">2036343</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">480.73230519171915</span><span class="token punctuation">,</span>
-    <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">754774</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">597817</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"ATL"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1963535</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">403.9874441585162</span><span class="token punctuation">,</span>
-    <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"DL"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1247710</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"EV"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">288405</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"DFW"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1812062</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">490.6444686103778</span><span class="token punctuation">,</span>
-    <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"AA"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">968201</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"MQ"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">379017</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"LAX"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1300241</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">631.2922437299288</span><span class="token punctuation">,</span>
-    <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"UA"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">272279</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">243946</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span><span class="token punctuation">,</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"PHX"</span><span class="token punctuation">,</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">1059054</span><span class="token punctuation">,</span>
-    <span class="token property">"average_distance_in_km"</span><span class="token operator">:</span> <span class="token number">554.5763958814896</span><span class="token punctuation">,</span>
-    <span class="token property">"top_carriers"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"HP"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">433442</span>
-      <span class="token punctuation">}</span><span class="token punctuation">,</span>
-      <span class="token punctuation">{</span>
-        <span class="token property">"carrier"</span><span class="token operator">:</span> <span class="token string">"WN"</span><span class="token punctuation">,</span>
-        <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">381772</span>
-      <span class="token punctuation">}</span>
-    <span class="token punctuation">]</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2036343</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">480.7323051917203</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">754774</span></span>
+<span class="line"><span style="color: #000000">      },</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">597817</span></span>
+<span class="line"><span style="color: #000000">      }</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ATL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1963535</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">403.9874441585166</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1247710</span></span>
+<span class="line"><span style="color: #000000">      },</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;EV&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">288405</span></span>
+<span class="line"><span style="color: #000000">      }</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1812062</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">490.6444686103772</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">968201</span></span>
+<span class="line"><span style="color: #000000">      },</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MQ&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">379017</span></span>
+<span class="line"><span style="color: #000000">      }</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LAX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1300241</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">631.2922437299287</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">272279</span></span>
+<span class="line"><span style="color: #000000">      },</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">243946</span></span>
+<span class="line"><span style="color: #000000">      }</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PHX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1059054</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">554.5763958814894</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;HP&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">433442</span></span>
+<span class="line"><span style="color: #000000">      },</span></span>
+<span class="line"><span style="color: #000000">      {</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">381772</span></span>
+<span class="line"><span style="color: #000000">      }</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">WITH</span> __stage0 <span class="token keyword">AS</span> <span class="token punctuation">(</span>
-  <span class="token keyword">SELECT</span>
-    group_set<span class="token punctuation">,</span>
-    flights<span class="token punctuation">.</span>destination <span class="token keyword">as</span> destination__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> <span class="token function">AVG</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>distance<span class="token operator">/</span><span class="token number">1.609344</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> average_distance_in_km__0<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> flights<span class="token punctuation">.</span>carrier <span class="token keyword">END</span> <span class="token keyword">as</span> carrier__1<span class="token punctuation">,</span>
-    <span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">as</span> flight_count__1
-  <span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-  <span class="token keyword">CROSS</span> <span class="token keyword">JOIN</span> <span class="token punctuation">(</span><span class="token keyword">SELECT</span> row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">OVER</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token number">1</span>  group_set <span class="token keyword">FROM</span> UNNEST<span class="token punctuation">(</span>GENERATE_ARRAY<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
-  <span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">5</span>
-<span class="token punctuation">)</span>
-<span class="token keyword">SELECT</span>
-  destination__0 <span class="token keyword">as</span> destination<span class="token punctuation">,</span>
-  ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> flight_count__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count<span class="token punctuation">,</span>
-  ANY_VALUE<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">0</span> <span class="token keyword">THEN</span> average_distance_in_km__0 <span class="token keyword">END</span><span class="token punctuation">)</span> <span class="token keyword">as</span> average_distance_in_km<span class="token punctuation">,</span>
-  ARRAY_AGG<span class="token punctuation">(</span><span class="token keyword">CASE</span> <span class="token keyword">WHEN</span> group_set<span class="token operator">=</span><span class="token number">1</span> <span class="token keyword">THEN</span> STRUCT<span class="token punctuation">(</span>carrier__1 <span class="token keyword">as</span> carrier<span class="token punctuation">,</span> flight_count__1 <span class="token keyword">as</span> flight_count<span class="token punctuation">)</span> <span class="token keyword">END</span> <span class="token keyword">IGNORE</span> NULLS  <span class="token keyword">ORDER</span> <span class="token keyword">BY</span>  flight_count__1 <span class="token keyword">desc</span>  <span class="token keyword">LIMIT</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token keyword">as</span> top_carriers
-<span class="token keyword">FROM</span> __stage0
-<span class="token keyword">GROUP</span> <span class="token keyword">BY</span> <span class="token number">1</span>
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">2</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    flights.destination </span><span style="color: #0000FF">as</span><span style="color: #000000"> destination__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">AVG</span><span style="color: #000000">(flights.distance/</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">609344</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_distance_in_km__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      flights.carrier</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">5</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  destination__0 </span><span style="color: #0000FF">as</span><span style="color: #000000"> destination,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> flight_count__0 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> average_distance_in_km__0 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_distance_in_km,</span></span>
+<span class="line"><span style="color: #000000">  ARRAY_AGG(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(</span></span>
+<span class="line"><span style="color: #000000">    carrier__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier, </span></span>
+<span class="line"><span style="color: #000000">    flight_count__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #000000">    ) </span><span style="color: #0000FF">END</span><span style="color: #000000"> IGNORE NULLS  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000">  flight_count__1 </span><span style="color: #0000FF">desc</span><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> top_carriers</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>See <a href="query.html">here</a> for more information on queries.</p>

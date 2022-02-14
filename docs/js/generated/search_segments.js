@@ -53,7 +53,7 @@ window.SEARCH_SEGMENTS = [
     "paragraphs": [
       "<em>(Development in progress, date/time support is currently incomplete)</em>",
       "<em>These instructions assume you have already installed the <a href=\"https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode\">Malloy extension</a> in VSCode.</em>",
-      "<em>Replace <code class=\"language-malloy\">{my_project_id}</code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the \"Google Cloud Platform\" text) to view projects you have access to. If you don't already have a project, <a href=\"https://cloud.google.com/resource-manager/docs/creating-managing-projects\">create one</a>.</em>"
+      "<em>Replace <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">{</span><span style=\"color: #001080\">my_project_id</span><span style=\"color: #000000\">}</span></span></code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the \"Google Cloud Platform\" text) to view projects you have access to. If you don't already have a project, <a href=\"https://cloud.google.com/resource-manager/docs/creating-managing-projects\">create one</a>.</em>"
     ],
     "path": "/connection_instructions.md"
   },
@@ -64,7 +64,6 @@ window.SEARCH_SEGMENTS = [
     "paragraphs": [
       "Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.",
       "Let’s illustrate this by asking a straightforward question of a simple ecommerce dataset--how many order items have we sold, broken down by their current status?",
-      "The use of <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span></code> in the above query invokes a <code class=\"language-malloy\">SELECT</code> with a <code class=\"language-malloy\">GROUP <span class=\"token keyword\">BY</span></code> in SQL. Malloy also has a <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code> transformation, which will <code class=\"language-malloy\">SELECT</code> without a <code class=\"language-malloy\">GROUP <span class=\"token keyword\">BY</span></code>.",
       "Notice that after you write this, small \"Run | Render\" code lens will appear above the query. Run will show the JSON result, while Render will show a table by default, or a visualization if you've configured one (more on this later). Click the code lens to run the query. This will produce the following SQL:",
       "<img src=\"https://user-images.githubusercontent.com/7178946/130125702-7049299a-fe0f-4f50-aaed-1c9016835da7.gif\" alt=\"Kapture 2021-08-18 at 17 07 03\"/>",
       "Next question: In 2020, how much did we sell to users in each state? This requires filtering to the year 2020, excluding cancelled and returned orders, as well as joining in the users table.",
@@ -73,10 +72,11 @@ window.SEARCH_SEGMENTS = [
       "Our query is now very simple:",
       "To further simplify, we can add this and a couple other queries we’ll frequently use to our model. Once you define these, the VSCode plugin will supply a “Run” button next to each query:",
       "Allowing us to run the following very simple command next time we want to run any of these queries:",
-      "Note that queries can be filtered at any level, by inserting filter expressions between square brackets. A filter after an explore applies to the whole explore; one before the fields in a <code class=\"language-malloy\"><span class=\"token keyword\">reduce</span></code> or <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code> transformation applies to that transformation; and one after an aggregate field applies to that aggregate only. See filters documentation for more information on filter expressions. Here's an example with a variety of filter usage:",
-      "Queries can contain other nested structures, by including additional transformations as fields, so our named query (<code class=\"language-malloy\">sales_by_month_2020</code>) can also now be called anywhere as a nested structure. Note that these structures can nest infinitely!:",
       "Which can be visualized using a data_style",
-      "Putting a few named queries together as nested structures allows us to produce a dashboard with an overview of sales, having written remarkably little code. Use the <code class=\"language-malloy\">dashboard</code> renderer to format the results like this:",
+      "The use of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code> in the above query invokes a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">SELECT</span></span></code> with a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">GROUP</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">BY</span></span></code> in SQL. Malloy also has a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code> transformation, which will <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">SELECT</span></span></code> without a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">GROUP</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">BY</span></span></code>.",
+      "Note that queries can be filtered at any level, by inserting filter expressions between square brackets. A filter after an explore applies to the whole explore; one before the fields in a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">reduce</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code> transformation applies to that transformation; and one after an aggregate field applies to that aggregate only. See filters documentation for more information on filter expressions. Here's an example with a variety of filter usage:",
+      "Queries can contain other nested structures, by including additional transformations as fields, so our named query (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sales_by_month_2020</span></span></code>) can also now be called anywhere as a nested structure. Note that these structures can nest infinitely!:",
+      "Putting a few named queries together as nested structures allows us to produce a dashboard with an overview of sales, having written remarkably little code. Use the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">dashboard</span></span></code> renderer to format the results like this:",
       "<em>Note: To see the SQL being generated by your query, open up a New Terminal in the top menu, then select Output, and pick “Malloy” from the menu on the right.</em>",
       "<em>The following walk-through covers similar concepts to the <a href=\"https://github.com/looker-open-source/malloy/#quick-start-videos\">Quick Start</a> videos in the README. You can find the complete source code for this model <a href=\"https://github.com/looker-open-source/malloy/blob/docs-release/samples/ecommerce/ecommerce.malloy\">here</a>.</em>"
     ],
@@ -175,8 +175,7 @@ window.SEARCH_SEGMENTS = [
       "Step 1: Understanding the Iowa Liquor Market Using Malloy"
     ],
     "paragraphs": [
-      "Liquor sales in Iowa are state-controlled, with all liquor wholesale run by the state. All purchases and sales of liquor that stores make are a matter of public record. We are going to explore this data set to better understand the Iowa Liquor market.",
-      "All data here is stored in BigQuery, in the table <code class=\"language-malloy\"><span class=\"token string\">'bigquery-public-data.iowa_liquor_sales.sales'</span></code>."
+      "Liquor sales in Iowa are state-controlled, with all liquor wholesale run by the state. All purchases and sales of liquor that stores make are a matter of public record. We are going to explore this data set to better understand the Iowa Liquor market."
     ],
     "path": "/examples/iowa/iowa.md"
   },
@@ -204,12 +203,13 @@ window.SEARCH_SEGMENTS = [
       "First 100 Rows of the data set."
     ],
     "paragraphs": [
-      "<strong>Date/Time information</strong> (<code class=\"language-malloy\"><span class=\"token identifier\">`date`</span></code>)",
-      "<strong>Store and Location</strong> (<code class=\"language-malloy\">store_name</code>, <code class=\"language-malloy\">store_address</code>, <code class=\"language-malloy\">store_location</code>, <code class=\"language-malloy\">city</code>, <code class=\"language-malloy\">county</code>, and <code class=\"language-malloy\">zip_code</code>)",
-      "<strong>Vendor information</strong> (<code class=\"language-malloy\">vendor_name</code>, <code class=\"language-malloy\">vendor_number</code>)",
-      "<strong>Item information</strong> (<code class=\"language-malloy\">item_number</code>, <code class=\"language-malloy\">item_description</code>, <code class=\"language-malloy\">category</code>, <code class=\"language-malloy\">category_name</code>)",
-      "<strong>Volume Information</strong> (<code class=\"language-malloy\">bottle_volume_ml</code>, <code class=\"language-malloy\">bottles_sold</code>, <code class=\"language-malloy\">volume_sold_liters</code>, <code class=\"language-malloy\">volume_sold_gallons</code>)",
-      "<strong>Pricing information</strong> (<code class=\"language-malloy\">state_bottle_cost</code>, <code class=\"language-malloy\">state_bottle_retail</code>, and <code class=\"language-malloy\">sale_dollars</code>)",
+      "All data here is stored in BigQuery, in the table <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;bigquery-public-data.iowa_liquor_sales.sales&#39;</span></span></code>.",
+      "<strong>Date/Time information</strong> (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">`date`</span></span></code>)",
+      "<strong>Store and Location</strong> (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">store_name</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">store_address</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">store_location</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">city</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">county</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">zip_code</span></span></code>)",
+      "<strong>Vendor information</strong> (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">vendor_name</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">vendor_number</span></span></code>)",
+      "<strong>Item information</strong> (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">item_number</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">item_description</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_name</span></span></code>)",
+      "<strong>Volume Information</strong> (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">bottle_volume_ml</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">bottles_sold</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">volume_sold_liters</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">volume_sold_gallons</span></span></code>)",
+      "<strong>Pricing information</strong> (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">state_bottle_cost</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">state_bottle_retail</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sale_dollars</span></span></code>)",
       "<em>The <a href=\"source.html\">Malloy data model</a> can be reviewed in examples under <a href=\"https://github.com/looker-open-source/malloy/blob/docs-release/samples/iowa/iowa.malloy\">'iowa'</a>.</em>"
     ],
     "path": "/examples/iowa/iowa.md"
@@ -228,7 +228,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "This is the malloy model used for the Analysis example.  It should be used as an reference when looking at the <a href=\"step2.html\">following sections</a>.",
-      "The schema for the table <code class=\"language-malloy\">bigquery<span class=\"token operator\">-</span>public<span class=\"token operator\">-</span>data<span class=\"token punctuation\">.</span>iowa_liquor_sales<span class=\"token punctuation\">.</span>sales</code> as well as descriptions of each field can be found on the <a href=\"https://data.iowa.gov/Sales-Distribution/Iowa-Liquor-Sales/m3tr-qhgy\">Iowa Data site</a>."
+      "The schema for the table <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">bigquery</span><span style=\"color: #000000\">-</span><span style=\"color: #001080\">public</span><span style=\"color: #000000\">-</span><span style=\"color: #001080\">data</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">iowa_liquor_sales</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">sales</span></span></code> as well as descriptions of each field can be found on the <a href=\"https://data.iowa.gov/Sales-Distribution/Iowa-Liquor-Sales/m3tr-qhgy\">Iowa Data site</a>."
     ],
     "path": "/examples/iowa/source.md"
   },
@@ -237,16 +237,16 @@ window.SEARCH_SEGMENTS = [
       "Iowa Liquor: Basic Calculations"
     ],
     "paragraphs": [
-      "The calculation <code class=\"language-malloy\">total_sale_dollars</code> will show us the total amount, in dollars, that Iowa State stores sold.",
-      "Having added this to the model, we can now reference <code class=\"language-malloy\">total_sale_dollars</code> to see the top items purchased by Liquor stores.",
       "This lets us understand whether a vendor sells one item, or many different kinds of items.",
       "We can see which Vendors have the greatest breadth of products as it relates to sales volume.",
       "A few observations here: Jim Bean Brands has the greatest variety of items in this dataset. Yahara Bay Distillers Inc sells 275 different items but only has $100K in sales, while Fifth Generation sells only 5 different items, yet has $3M in volume.",
-      "We have both the bottle cost (<code class=\"language-malloy\">state_bottle_cost</code>) and bottle price (<code class=\"language-malloy\">state_bottle_retail</code>), allowing us to calculate percent gross margin on a per-item basis, giving us a new a dimension.",
       "This is basically what a single record represents in this data set.",
       "Given the price of a bottle and its size (in ml), we can compute how much 100ml costs.  This becomes an attribute of an individual line item (a dimension, not a measure).",
-      "Using our newly defined <code class=\"language-malloy\">price_per_100ml</code> as an attribute of a line item in a purchase order, we might like an average that we can use over a group of line items.  This is a simple example using line_items as the denominator, but an argument could be made to use per bottle something more complex.",
-      "<strong>TLDR</strong>: In this section, we will flesh out our model with a few basic calculations: <code class=\"language-malloy\">total_sale_dollars</code>, <code class=\"language-malloy\">item_count</code>, <code class=\"language-malloy\">line_item_count</code>, <code class=\"language-malloy\">price_per_100ml</code> and <code class=\"language-malloy\">avg_price_per_100ml</code>.  These calculations will be use in  subsequent analysis."
+      "The calculation <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">total_sale_dollars</span></span></code> will show us the total amount, in dollars, that Iowa State stores sold.",
+      "Having added this to the model, we can now reference <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">total_sale_dollars</span></span></code> to see the top items purchased by Liquor stores.",
+      "We have both the bottle cost (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">state_bottle_cost</span></span></code>) and bottle price (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">state_bottle_retail</span></span></code>), allowing us to calculate percent gross margin on a per-item basis, giving us a new a dimension.",
+      "Using our newly defined <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">price_per_100ml</span></span></code> as an attribute of a line item in a purchase order, we might like an average that we can use over a group of line items.  This is a simple example using line_items as the denominator, but an argument could be made to use per bottle something more complex.",
+      "<strong>TLDR</strong>: In this section, we will flesh out our model with a few basic calculations: <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">total_sale_dollars</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">item_count</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">line_item_count</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">price_per_100ml</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">avg_price_per_100ml</span></span></code>.  These calculations will be use in  subsequent analysis."
     ],
     "path": "/examples/iowa/step2.md"
   },
@@ -363,11 +363,11 @@ window.SEARCH_SEGMENTS = [
       "Bucketing the data"
     ],
     "paragraphs": [
-      "The <code class=\"language-malloy\">price_per_100ml</code> calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket <code class=\"language-malloy\">price_per_100ml</code> into even dollar amounts, and nest our <code class=\"language-malloy\">top_sellers_by_revenue</code> query to create a subtable for each bucket.",
       "At the top we see our lowest cost options at under $1/mL, with the more pricey beverages appearing as we scroll down.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">price_per_100ml</span></span></code> calculation, defined in the previous section, combines with our new named query to allow for some interesting analysis. Let's take a look at the entire Tequila category, and see the leaders within each price range.  We'll bucket <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">price_per_100ml</span></span></code> into even dollar amounts, and nest our <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">top_sellers_by_revenue</span></span></code> query to create a subtable for each bucket.",
       "<strong>TLDR;</strong> We'll use the measures we defined in the last section to write some basic queries to understand the Vodka market, and answer a few questions:  <em>What are the most popular brands?  Which is the most expensive?  Does a particular county favor expensive or cheap Vodka?</em>  We will then learn how to save a named query and use it as a basic <strong>Nested Query</strong>.",
       "The following sections use these definitions, created in the <a href=\"step2.html\">previous\nsection</a>.",
-      "We start by  <a href=\"../../language/filters.html\">filtering the data</a> to only purchase records where the category name contains <code class=\"language-malloy\"><span class=\"token string\">'VODKA'</span></code>.  We group the data by vendor and description, and calculate the various totals. Note that Malloy <a href=\"../../patterns/order_by.html\">automatically orders</a> the results by the first measure descending (in this case).",
+      "We start by  <a href=\"../../language/filters.html\">filtering the data</a> to only purchase records where the category name contains <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;VODKA&#39;</span></span></code>.  We group the data by vendor and description, and calculate the various totals. Note that Malloy <a href=\"../../patterns/order_by.html\">automatically orders</a> the results by the first measure descending (in this case).",
       "Notice that the greatest sales by dollar volume is <em>Hawkeye Vodka</em>, closely followed by <em>Absolut</em>.  A lot more bottles of <em>Hawkeye</em> were sold, as it is 1/3 the price by volume of <em>Absolut</em>.",
       "Here we can see that <em>Patron Tequila Silver</em> is the most premium brand, followed by <em>Jose Cuervo</em> as a mid-tier  brand, with <em>Juarez Tequila Gold</em> more of an economy brand.",
       "The magic happens when we call a named query in the same way we would use any other field <a href=\"nesting.html\">nesting</a>. In the below query, we can see our vendors (sorted automatically by amount purchased, as well as the top 5 items for each vendor."
@@ -388,19 +388,7 @@ window.SEARCH_SEGMENTS = [
       "Bucketing and Mapping: Categories and Bottles",
       "Testing the category map"
     ],
-    "paragraphs": [
-      "Let's take a look at each category class and see how many individual items it has.  We'll also build a nested query that shows the <code class=\"language-malloy\">category_name</code>s that map into that category class."
-    ],
-    "path": "/examples/iowa/step3.md"
-  },
-  {
-    "titles": [
-      "Bucketing and Mapping: Categories and Bottles",
-      "Looking at the entire market by <code class=\"language-malloy\">category_class</code>"
-    ],
-    "paragraphs": [
-      "With our new lens, we can now see the top sellers in each <code class=\"language-malloy\">category_class</code>, allowing us to get an entire market summary with a single simple query."
-    ],
+    "paragraphs": [],
     "path": "/examples/iowa/step3.md"
   },
   {
@@ -409,7 +397,6 @@ window.SEARCH_SEGMENTS = [
       "Understanding bottle sizes"
     ],
     "paragraphs": [
-      "In this data set, there is a column called <code class=\"language-malloy\">bottle_volume_ml</code>, which is the bottle size in mL. Let's take a look.",
       "A first query reveals that there are 34 distinct bottle sizes in this data set, and that 750ml, 1750ml and 1000ml are by far the most common.",
       "Visualizing this query suggests that we might wish to create 3 distinct buckets to approximate small, medium and large bottles."
     ],
@@ -421,8 +408,20 @@ window.SEARCH_SEGMENTS = [
       "Creating a new Dimension for Bottle Size."
     ],
     "paragraphs": [
-      "Looking at the above chart and table we can see that there are a bunch of small values, several big values at 750 and 1000, and then a bunch of larger values.  We can clean this up by bucketing bottle size into three groups using a Malloy <code class=\"language-malloy\"><span class=\"token keyword\">pick</span></code> expression that maps these values to strings.",
-      "Look at the data through the new mapping."
+      "Look at the data through the new mapping.",
+      "Let's take a look at each category class and see how many individual items it has.  We'll also build a nested query that shows the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_name</span></span></code>s that map into that category class."
+    ],
+    "path": "/examples/iowa/step3.md"
+  },
+  {
+    "titles": [
+      "Bucketing and Mapping: Categories and Bottles",
+      "Looking at the entire market by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_class</span></span></code>"
+    ],
+    "paragraphs": [
+      "With our new lens, we can now see the top sellers in each <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_class</span></span></code>, allowing us to get an entire market summary with a single simple query.",
+      "In this data set, there is a column called <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">bottle_volume_ml</span></span></code>, which is the bottle size in mL. Let's take a look.",
+      "Looking at the above chart and table we can see that there are a bunch of small values, several big values at 750 and 1000, and then a bunch of larger values.  We can clean this up by bucketing bottle size into three groups using a Malloy <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> expression that maps these values to strings."
     ],
     "path": "/examples/iowa/step3.md"
   },
@@ -433,8 +432,8 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Using the query below, we can see that there are 68 different category names in the data set.  We can notice there is <em>80 Proof Vodka</em>, <em>Flavored Vodka</em> and more.  It would be helpful if we just could have all of these categorized together as vodkas.",
-      "Malloy provides a simple way to map all these values, using <code class=\"language-malloy\"><span class=\"token keyword\">pick</span></code> expressions.  In the <a href=\"source.html\">Malloy Model for this Data Set</a>, you will find the declaration below.  Each pick expression tests <code class=\"language-malloy\">category_name</code> for a regular expression.  If it matches, it returns the name pick'ed.",
-      "<strong>TLDR:</strong> <em>This step builds a couple of useful derivations, <code class=\"language-malloy\">category_class</code> and <code class=\"language-malloy\">bottle_size</code>.  There as 68 different <code class=\"language-malloy\">category_name</code>s in this data set, we reduce that to 9.  There are 34 <em>liter sizes</em>, we make a new dimension, <code class=\"language-malloy\">bottle_size</code> that only has 3 possible values.</em>"
+      "Malloy provides a simple way to map all these values, using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> expressions.  In the <a href=\"source.html\">Malloy Model for this Data Set</a>, you will find the declaration below.  Each pick expression tests <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_name</span></span></code> for a regular expression.  If it matches, it returns the name pick'ed.",
+      "<strong>TLDR:</strong> <em>This step builds a couple of useful derivations, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_class</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">bottle_size</span></span></code>.  There as 68 different <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">category_name</span></span></code>s in this data set, we reduce that to 9.  There are 34 <em>liter sizes</em>, we make a new dimension, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">bottle_size</span></span></code> that only has 3 possible values.</em>"
     ],
     "path": "/examples/iowa/step3.md"
   },
@@ -459,6 +458,403 @@ window.SEARCH_SEGMENTS = [
   },
   {
     "titles": [
+      "Malloy By Example"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "The 3 Types of SELECT"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "The 3 Types of SELECT",
+      "Select with no GROUP BY"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "The 3 Types of SELECT",
+      "SELECT with only Aggregate Functions"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "The 3 Types of SELECT",
+      "SELECT with GROUP BY"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Explore: adding calculations to tables"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Querying against an Explore"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Dimensional calculations are no different than columns"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Declaring queries inside Explores"
+    ],
+    "paragraphs": [
+      "Queries can be declared inside an explore so it can be called by name.  Queries becomes a named\ncalculation on the explore like any other measure or dimension."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Declaring queries inside Explores",
+      "Executing Named Queries."
+    ],
+    "paragraphs": [
+      "We can execute a named query by simply naming"
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Refining a Named Query"
+    ],
+    "paragraphs": [
+      "is the same as"
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Filtering Named Queries"
+    ],
+    "paragraphs": [
+      "filtering a named query is really common."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Adding Fields to Named Queries"
+    ],
+    "paragraphs": [
+      "Adding Fields allow you to get more information into existing queries."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Refining measures"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Composing with Queries"
+    ],
+    "paragraphs": [
+      "For the next section assume the following explore declaration.",
+      "Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.\nIn the case below, the top level query groups by state.  The nested query groups by facility type.\nThis mechanism is really useful for undstanding data and creating complex data structures."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Composing with Queries",
+      "Refinements make nested queries easy to write.  The above query can more easily be written as"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Composing with Queries",
+      "Changing the inner and outer query it around shows something very different"
+    ],
+    "paragraphs": [
+      "Queries can contain multiple nested queries.",
+      "Queries can be nested to any level of depth."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Joining ..."
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Joining ...",
+      "Carrier table"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Joining ...",
+      "Flights table"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Foreign Key / Primary Key Join"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Foreign Key / Primary Key Join",
+      "Query the joined tables"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Aggregates can be computed from anywhere in the Join Tree"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Graph, more complicated Joins"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Calculations work properly regardless of where you are in the graph"
+    ],
+    "paragraphs": [
+      "Malloy has full pathing instead of one level like SQL.  This query is very difficult to express in SQL.\nThe calculations in flights and airports will be accurate even though the join pattern fans out the data."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Pipelines"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Unnesting in a pipeline flattens the table"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Pipelines can be named as queries in explores"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Refining Explores"
+    ],
+    "paragraphs": [
+      "(add section)"
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Explores based on Queries"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Explores based on Queries",
+      "Named Source Query"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Explores based on Queries",
+      "Explore based on a query"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Explores based on Queries",
+      "Querying the Summary explore"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "SQL BLocks"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "Named Queries from SQL Blocks"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "Group by on Joined Subtrees"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "Date/Timestamp filters and Timezones"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "Nested data and Symmetric aggregates"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "import"
+    ],
+    "paragraphs": [],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "Missing examples:",
+      "data styles and rendering"
+    ],
+    "paragraphs": [
+      "In the malloy language, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> creates a new thing.  The '{ }' adds declarations to things.",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">measure</span><span style=\"color: #000000\">:</span></span></code> is an aggregate calculation delaration (and can be used in <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code>)",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">dimension</span><span style=\"color: #000000\">:</span></span></code> is a scalar calculation declaration (and can be used in <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code>)",
+      "Querying against an explore works pretty much the same as a table.  Notice that\nwe don't have to provide a calculations for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">airport_count</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">average_elevation_in_meters</span></span></code>.",
+      "The refine jesture <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">{ }</span></span></code> adds declarations to things.  We can add parameters to a query by refining it.",
+      "For example we can add a limit and an order by to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">by_state</span></span></code>",
+      "The refinement jesture <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">{ }</span></span></code> adds declarations to things.  You can add a where clause to a measure"
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another"
+    ],
+    "paragraphs": [
+      "Join carriers to flights.  Each flight has one carrier so we use <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:</span></span></code>.  We are joining\nwith a primary key in carriers and foreign key in flights so we can use the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">with</span></span></code> keyword\nto name the foreign key in flights.",
+      "Next stage of a pipeline can be a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>.  Calculations can be computed\nreltative to the level of nesting."
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy By Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "Mapping data with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code>"
+    ],
+    "paragraphs": [
+      "<em>Click the SQL Tab to see the equivalent SQL Malloy query</em>",
+      "<em>doucmentation bug: name should not be commented out</em>"
+    ],
+    "path": "/examples/malloy_by_example.md"
+  },
+  {
+    "titles": [
       "Name Game"
     ],
     "paragraphs": [
@@ -472,7 +868,6 @@ window.SEARCH_SEGMENTS = [
       "Grouping a query"
     ],
     "paragraphs": [
-      "In SQL there are basically two kinds of <code>SELECT</code> commands: <code>SELECT ... GROUP BY</code> and <code>SELECT</code> without a grouping.\nIn malloy, these are two different commands.  The command in malloy for <code>SELECT ... GROUP BY</code> is <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span></code>.  Since <code class=\"language-malloy\"><span class=\"token type\">number</span></code>\nand <code class=\"language-malloy\"><span class=\"token timeframe\">year</span></code> are reserved words, we have to quote the names with back-tics.",
       "malloy compiles to SQL.  The SQL query for the above command is."
     ],
     "path": "/examples/names.md"
@@ -510,7 +905,8 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Calculate the births per 100K for a name in general and a name within a state. Compute and sort by a ratio to figure out relative popularity.",
-      "The command above says query the table <code class=\"language-malloy\"><span class=\"token string\">'bigquery-public-data.usa_names.usa_1910_2013'</span></code> and <em>project</em> (show)\nall the columns for the first 10 rows.",
+      "In SQL there are basically two kinds of <code>SELECT</code> commands: <code>SELECT ... GROUP BY</code> and <code>SELECT</code> without a grouping.\nIn malloy, these are two different commands.  The command in malloy for <code>SELECT ... GROUP BY</code> is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code>.  Since <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">number</span></span></code>\nand <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code> are reserved words, we have to quote the names with back-tics.",
+      "The command above says query the table <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span></span></code> and <em>project</em> (show)\nall the columns for the first 10 rows.",
       "<em>You can find the complete source code for this model <a href=\"https://github.com/looker-open-source/malloy/blob/docs-release/samples/names/names.malloy\">here</a>.</em>"
     ],
     "path": "/examples/names.md"
@@ -528,7 +924,6 @@ window.SEARCH_SEGMENTS = [
       "Step 1 - Raw Materials"
     ],
     "paragraphs": [
-      "The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be\nfound at <code class=\"language-malloy\"><span class=\"token operator\">/</span>usr<span class=\"token operator\">/</span>share<span class=\"token operator\">/</span>dict<span class=\"token operator\">/</span>words</code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)\ninto BigQuery.",
       "We are only interested in 5 letter words so create a query for that and\nlimit the results to 5 letter words.",
       "Notice that there are a bunch of proper names?  Let's look for only lowercase words as input\nand Uppercase words in the output of our query.",
       "and the query:"
@@ -575,6 +970,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Find words that do NOT contain S,L,O,P, or E",
+      "The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be\nfound at <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">/</span><span style=\"color: #001080\">usr</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">share</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">dict</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">words</span></span></code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)\ninto BigQuery.",
       "<a href=\"https://www.powerlanguage.co.uk/wordle/\">Wordle</a> is an interesting, challenging and fun word game.  If you aren't familiar with it, I suggest that you play it before reading this article"
     ],
     "path": "/examples/wordle/wordle.md"
@@ -601,14 +997,6 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Understanding Letter Frequency"
-    ],
-    "paragraphs": [],
-    "path": "/examples/wordle/wordle2.md"
-  },
-  {
-    "titles": [
-      "Understanding Letter Frequency",
-      "Create a new explore <code class=\"language-malloy\">wordle</code> to query the data in this form."
     ],
     "paragraphs": [],
     "path": "/examples/wordle/wordle2.md"
@@ -653,6 +1041,14 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Understanding Letter Frequency",
       "Now how many 5 letter words are there?"
+    ],
+    "paragraphs": [],
+    "path": "/examples/wordle/wordle2.md"
+  },
+  {
+    "titles": [
+      "Understanding Letter Frequency",
+      "Create a new explore <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">wordle</span></span></code> to query the data in this form."
     ],
     "paragraphs": [
       "Starting with the <a href=\"wordle1a.html\">query we built in step one</a>, we built a query that produces a table of words with subtable where\neach row is the letter and position in that row."
@@ -1048,19 +1444,19 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Letters and Positions",
-      "This looks pretty useful, lets make <code class=\"language-malloy\">find_words</code> return a score."
-    ],
-    "paragraphs": [],
-    "path": "/examples/wordle/wordle3.md"
-  },
-  {
-    "titles": [
-      "Letters and Positions",
       "How many words with have an 'O' in the second position have a 'Y' and don't have 'SLA'"
     ],
     "paragraphs": [
       "The score should give us then best pick."
     ],
+    "path": "/examples/wordle/wordle3.md"
+  },
+  {
+    "titles": [
+      "Letters and Positions",
+      "This looks pretty useful, lets make <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">find_words</span></span></code> return a score."
+    ],
+    "paragraphs": [],
     "path": "/examples/wordle/wordle3.md"
   },
   {
@@ -1212,8 +1608,6 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Our primary users will all be familiar with SQL. We should make their life no harder than it needs to be. That said, Malloy is actually describing a different type of operation than SQL does, and so in some places we are deliberately different from SQL because we want people to be unfamiliar, to learn how Malloy works.",
-      "For example <code class=\"language-malloy\">name <span class=\"token keyword\">is</span> expression</code>, vs <code class=\"language-malloy\">expression <span class=\"token keyword\">as</span> name</code>. In SQL the naming on an expression sits as a casual afterthought \"oh by the way, give this really important expression a name\". In Malloy, the name of a thing is important, you are building complex things from smaller pieces. When you look at a model, you will often want to scan the file looking for names, they belong on the left hand side.",
-      "However, we in general try to have the \"feel\" of SQL. We use <code class=\"language-malloy\"><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code> for structuring instead of <code class=\"language-malloy\">{}</code> like LookML or JavaScript do, or indentation like Python does. We use <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code> and <code class=\"language-malloy\"><span class=\"token keyword\">define</span></code> instead of <code class=\"language-malloy\">:</code> like LookML or <code class=\"language-malloy\"><span class=\"token operator\">=</span></code> like JavaScript. We use SQL words for things (like <code class=\"language-malloy\">join</code>) where it makes sense.",
       "The intention was always that there is some context, command line or editor, which handles a single document with mixed Malloy and SQL, either because they are one merged language, or there is some JSX-like escaping between the contexts."
     ],
     "path": "/index.md"
@@ -1273,9 +1667,7 @@ window.SEARCH_SEGMENTS = [
       "The Tao of Malloy",
       "… is helpful"
     ],
-    "paragraphs": [
-      "Malloy tries to \"do the right thing\" that most people want, by default, while still allowing non default expressions to be written. The treatment of <code class=\"language-malloy\"><span class=\"token keyword\">null</span></code> and booleans, and the sorting rules for \"reduce\" stages would be two examples of this."
-    ],
+    "paragraphs": [],
     "path": "/index.md"
   },
   {
@@ -1295,6 +1687,9 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "The Malloy user is not someone who writes one sentence in Malloy, and then never sees the language again. Malloy is an invitation into a \"way\" for people who are passionate about decision making based on data, and good decision making is iterative, and ongoing.",
+      "For example <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">name</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">is</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">expression</span></span></code>, vs <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">expression</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">as</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">name</span></span></code>. In SQL the naming on an expression sits as a casual afterthought \"oh by the way, give this really important expression a name\". In Malloy, the name of a thing is important, you are building complex things from smaller pieces. When you look at a model, you will often want to scan the file looking for names, they belong on the left hand side.",
+      "However, we in general try to have the \"feel\" of SQL. We use <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">()</span></span></code> for structuring instead of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">{}</span></span></code> like LookML or JavaScript do, or indentation like Python does. We use <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">define</span></span></code> instead of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">:</span></span></code> like LookML or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code> like JavaScript. We use SQL words for things (like <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">join</span></span></code>) where it makes sense.",
+      "Malloy tries to \"do the right thing\" that most people want, by default, while still allowing non default expressions to be written. The treatment of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">null</span></span></code> and booleans, and the sorting rules for \"reduce\" stages would be two examples of this.",
       "<em>Tao is the natural order of the universe whose character one's human intuition must discern in order to realize the potential for individual wisdom. This intuitive knowing of \"life\" cannot be grasped as a concept; it is known through actual living experience of one's everyday being.</em> — <a href=\"https://en.wikipedia.org/wiki/Tao\">Wikipedia \"Tao\"</a>"
     ],
     "path": "/index.md"
@@ -1331,9 +1726,7 @@ window.SEARCH_SEGMENTS = [
       "Basic Syntax",
       "Counts"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\">count</code> aggregate function may be used to count the number of records appearing in an explore."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1353,9 +1746,7 @@ window.SEARCH_SEGMENTS = [
       "Basic Syntax",
       "Sums"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\">sum</code> function may be used to compute the sum of all records of a particular field."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1364,9 +1755,7 @@ window.SEARCH_SEGMENTS = [
       "Basic Syntax",
       "Averages"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\">avg</code> function may be used to compute the average of all records of a particular field."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1375,9 +1764,7 @@ window.SEARCH_SEGMENTS = [
       "Basic Syntax",
       "Minima"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\">min</code> function may be used to compute the minimum of all records of a particular field."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1386,9 +1773,7 @@ window.SEARCH_SEGMENTS = [
       "Basic Syntax",
       "Maxima"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\">max</code> function may be used to compute the maximum of all records of a particular field."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1409,9 +1794,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Suppose you were interested in learning more about the number of seats on\ncommercial aircraft. First you might look at the average number of seats\non all registered aircraft.",
-      "To do this, you would start with the <code class=\"language-malloy\">aircraft</code> table and join in <code class=\"language-malloy\">aircraft_models</code> to get access to the number of seats, then take\nthe average of <code class=\"language-malloy\">aircraft_models<span class=\"token punctuation\">.</span>seats</code>.",
-      "You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.",
-      "To do this, you might decide to start with the <code class=\"language-malloy\">aircraft_models</code> table instead."
+      "You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft."
     ],
     "path": "/language/aggregates.md"
   },
@@ -1421,9 +1804,7 @@ window.SEARCH_SEGMENTS = [
       "Aggregate Locality",
       "The Solution"
     ],
-    "paragraphs": [
-      "For convenience, <code class=\"language-malloy\">aircraft_models<span class=\"token punctuation\">.</span><span class=\"token function\">avg</span><span class=\"token punctuation\">(</span>aircraft_models<span class=\"token punctuation\">.</span>seats<span class=\"token punctuation\">)</span></code> can be written as <code class=\"language-malloy\">aircraft_models<span class=\"token punctuation\">.</span>seats<span class=\"token punctuation\">.</span><span class=\"token function\">avg</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1444,10 +1825,7 @@ window.SEARCH_SEGMENTS = [
       "Aggregate Locality",
       "Aggregates that Support Locality"
     ],
-    "paragraphs": [
-      "The aggregate functions that support locality are <code class=\"language-malloy\">count</code>, <code class=\"language-malloy\">sum</code>, and <code class=\"language-malloy\">avg</code>.",
-      "The <code class=\"language-malloy\">min</code> and <code class=\"language-malloy\">max</code> aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once."
-    ],
+    "paragraphs": [],
     "path": "/language/aggregates.md"
   },
   {
@@ -1457,11 +1835,21 @@ window.SEARCH_SEGMENTS = [
       "Aggregates on Fields"
     ],
     "paragraphs": [
-      "Aggregating \"on a field,\" e.g. <code class=\"language-malloy\">aircraft_models<span class=\"token punctuation\">.</span>seats<span class=\"token punctuation\">.</span><span class=\"token function\">avg</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class=\"language-malloy\">aircraft_models<span class=\"token punctuation\">.</span><span class=\"token function\">avg</span><span class=\"token punctuation\">(</span>aircraft_models<span class=\"token punctuation\">.</span>seats<span class=\"token punctuation\">)</span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class=\"language-malloy\">avg</code> and <code class=\"language-malloy\">sum</code>.",
-      "Malloy supports the standard aggregate functions <code class=\"language-malloy\">count</code>, <code class=\"language-malloy\">sum</code>, <code class=\"language-malloy\">avg</code>, <code class=\"language-malloy\">min</code>, and <code class=\"language-malloy\">max</code>. When these are used in a field's definition, they make that field a <a href=\"fields.html#measures\">measure</a>.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">count</span></span></code> aggregate function may be used to count the number of records appearing in an explore.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sum</span></span></code> function may be used to compute the sum of all records of a particular field.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">avg</span></span></code> function may be used to compute the average of all records of a particular field.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">min</span></span></code> function may be used to compute the minimum of all records of a particular field.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">max</span></span></code> function may be used to compute the maximum of all records of a particular field.",
+      "To do this, you would start with the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft</span></span></code> table and join in <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span></span></code> to get access to the number of seats, then take\nthe average of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">seats</span></span></code>.",
+      "To do this, you might decide to start with the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span></span></code> table instead.",
+      "For convenience, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #795E26\">avg</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">seats</span><span style=\"color: #000000\">)</span></span></code> can be written as <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">seats</span><span style=\"color: #000000\">.</span><span style=\"color: #795E26\">avg</span><span style=\"color: #000000\">()</span></span></code>.",
+      "The aggregate functions that support locality are <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">count</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sum</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">avg</span></span></code>.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">min</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">max</span></span></code> aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once.",
+      "Aggregating \"on a field,\" e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">seats</span><span style=\"color: #000000\">.</span><span style=\"color: #795E26\">avg</span><span style=\"color: #000000\">()</span></span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #795E26\">avg</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">seats</span><span style=\"color: #000000\">)</span></span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">avg</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sum</span></span></code>.",
+      "Malloy supports the standard aggregate functions <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">count</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sum</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">avg</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">min</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">max</span></span></code>. When these are used in a field's definition, they make that field a <a href=\"fields.html#measures\">measure</a>.",
       "However, this isn't actually the number you were interested in, because this measures the average number of seats across <em>all</em> aircraft models, not just the ones with actively-registered aircraft.",
       "Unfortunately, SQL doesn't have any native constructs to compute this value, and in practice analysts often resort to complicated <a href=\"https://www.zentut.com/data-warehouse/fact-table/\">fact tables</a> to perform this kind of query.",
-      "Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class=\"language-malloy\">average_seats</code> is computed with respect to <code class=\"language-malloy\">aircraft_models</code>,\nyielding the the average number of seats on aircraft models of aircraft listed in the <code class=\"language-malloy\">aircraft</code> table."
+      "Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">average_seats</span></span></code> is computed with respect to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span></span></code>,\nyielding the the average number of seats on aircraft models of aircraft listed in the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft</span></span></code> table."
     ],
     "path": "/language/aggregates.md"
   },
@@ -1471,7 +1859,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "The apply operator takes one expression and applies it to another.\nThe primary us of apply is to \"apply\" a value to a partial comparison,\nbut there are a number of other powerful gestures which use this operator.",
-      "For an expression matching the pattern <code class=\"language-malloy\">x : expression</code>, the following table outlines the various meanings.",
+      "For an expression matching the pattern <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">x</span><span style=\"color: #000000\"> : </span><span style=\"color: #001080\">expression</span></span></code>, the following table outlines the various meanings.",
       "In addition it is very common to use <a href=\"time-ranges.html\">Time Ranges</a>\nwith the apply operator, which operate similar to the numeric range\nexample above."
     ],
     "path": "/language/apply.md"
@@ -1480,7 +1868,9 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Malloy Quickstart"
     ],
-    "paragraphs": [],
+    "paragraphs": [
+      "If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there."
+    ],
     "path": "/language/basic.md"
   },
   {
@@ -1496,11 +1886,7 @@ window.SEARCH_SEGMENTS = [
       "Malloy Quickstart",
       "Query Operators"
     ],
-    "paragraphs": [
-      "In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, the query operator for this is <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span>:</code>.  Calculation about data in the group are made using <code class=\"language-malloy\"><span class=\"token keyword\">aggregate</span>:</code>.",
-      "The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called <code class=\"language-malloy\"><span class=\"token keyword\">project</span>:</code>.",
-      "In the query below, the data will be grouped by <code class=\"language-malloy\">state</code> and will produce an aggregate calculation for <code class=\"language-malloy\">airport_count</code> and <code class=\"language-malloy\">average_elevation</code>.  <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span>:</code>. The <code class=\"language-malloy\"><span class=\"token keyword\">aggregate</span>:</code> list can contain references to existing aggregate fields or add new aggregate computations."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1509,9 +1895,7 @@ window.SEARCH_SEGMENTS = [
       "Query Operators",
       "Multiple Field Operations"
     ],
-    "paragraphs": [
-      "Multiple <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span>:</code> and <code class=\"language-malloy\"><span class=\"token keyword\">aggregate</span>:</code> statements can appear in the same query operation.  This can be helpful in rendering when the order of fields in the query output is significant."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1520,9 +1904,7 @@ window.SEARCH_SEGMENTS = [
       "Query Operators",
       "Project"
     ],
-    "paragraphs": [
-      "<code class=\"language-malloy\"><span class=\"token keyword\">project</span></code> produces a list of fields.  For every row in the input table, there is a row in the output table."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1530,9 +1912,7 @@ window.SEARCH_SEGMENTS = [
       "Malloy Quickstart",
       "Everything has a Name"
     ],
-    "paragraphs": [
-      "Named objects, like columns from a table, and fields defined in an explore, can be included\nin field lists without an <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code>"
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1541,8 +1921,7 @@ window.SEARCH_SEGMENTS = [
       "Expressions"
     ],
     "paragraphs": [
-      "Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand, given a knowledge of SQL.",
-      "The basic types of Malloy expressions are <code class=\"language-malloy\"><span class=\"token type\">string</span></code>, <code class=\"language-malloy\"><span class=\"token type\">number</span></code>, <code class=\"language-malloy\"><span class=\"token type\">boolean</span></code>, <code class=\"language-malloy\"><span class=\"token type\">date</span></code>, and <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code>."
+      "Many SQL expressions will work unchanged in Malloy, and many functions available in Standard SQL are usable in Malloy as well. This makes expressions fairly straightforward to understand, given a knowledge of SQL."
     ],
     "path": "/language/basic.md"
   },
@@ -1559,10 +1938,7 @@ window.SEARCH_SEGMENTS = [
       "Malloy Quickstart",
       "Ordering and Limiting"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\"><span class=\"token keyword\">top</span>:</code> and <code class=\"language-malloy\"><span class=\"token keyword\">limit</span>:</code> statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure descending--in this case, <code class=\"language-malloy\">airport_count</code>.",
-      "Default ordering can be overridden with <code class=\"language-malloy\"><span class=\"token keyword\">order_by</span>:</code>, as in the following query, which shows the states in alphabetical order.  <code class=\"language-malloy\"><span class=\"token keyword\">order_by</span>:</code> can take a field index number or the name of a field."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1579,10 +1955,19 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Malloy Quickstart",
       "Filtering",
-      "Filtering Tables"
+      "Filtering the Source"
+    ],
+    "paragraphs": [],
+    "path": "/language/basic.md"
+  },
+  {
+    "titles": [
+      "Malloy Quickstart",
+      "Filtering",
+      "Filtering Query Stages"
     ],
     "paragraphs": [
-      "A filter on a data source table narrows down which data is included to be passed to the Query Operation. This translates\nto a <code>WHERE</code> clause in SQL.\nIn this case, the data from the table is filtered to just airports in California."
+      "A note on filtering the source vs filtering in query stages: The below queries are both valid and produce identical SQL."
     ],
     "path": "/language/basic.md"
   },
@@ -1593,17 +1978,6 @@ window.SEARCH_SEGMENTS = [
       "Filtering Measures"
     ],
     "paragraphs": [],
-    "path": "/language/basic.md"
-  },
-  {
-    "titles": [
-      "Malloy Quickstart",
-      "Filtering",
-      "Filtering in Query Stages"
-    ],
-    "paragraphs": [
-      "Filters can also be applied to any Query Operation. When using a filter in this way, it only applies to\nthe data for that operation alone. (More on this later, in the section on <code class=\"language-malloy\"><span class=\"token keyword\">nest</span>:</code> operations in queries.)"
-    ],
     "path": "/language/basic.md"
   },
   {
@@ -1621,9 +1995,7 @@ window.SEARCH_SEGMENTS = [
       "Time Literals"
     ],
     "paragraphs": [
-      "Literals of type <code class=\"language-malloy\"><span class=\"token type\">date</span></code> and <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code> are notated with an <code class=\"language-malloy\"><span class=\"token date\">@</span></code>, e.g. <code class=\"language-malloy\"><span class=\"token date\">@2003-03-29</span></code> or <code class=\"language-malloy\"><span class=\"token date\">@1994-07-14 10:23:59</span></code>. Similarly, years (<code class=\"language-malloy\"><span class=\"token date\">@2021</span></code>), quarters (<code class=\"language-malloy\"><span class=\"token date\">@2020-Q1</span></code>), months (<code class=\"language-malloy\"><span class=\"token date\">@2019-03</span></code>), weeks (<code class=\"language-malloy\"><span class=\"token date\">@WK2021-08-01</span></code>), and minutes (<code class=\"language-malloy\"><span class=\"token date\">@2017-01-01 10:53</span></code>) can be expressed.",
-      "Time literals can be used as values, but are more often useful in filters. For example, the following query\nshows the number of flights in 2003.",
-      "There is a special time literal <code class=\"language-malloy\">now</code>, referring to the current timestamp, which allows for relative time filters."
+      "Time literals can be used as values, but are more often useful in filters. For example, the following query\nshows the number of flights in 2003."
     ],
     "path": "/language/basic.md"
   },
@@ -1633,9 +2005,7 @@ window.SEARCH_SEGMENTS = [
       "Dates and Timestamps",
       "Truncation"
     ],
-    "paragraphs": [
-      "Time values can be truncated to a given timeframe, which can be <code class=\"language-malloy\"><span class=\"token timeframe\">second</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">minute</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">hour</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">day</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">week</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">month</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">quarter</span></code>, or <code class=\"language-malloy\"><span class=\"token timeframe\">year</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1653,11 +2023,7 @@ window.SEARCH_SEGMENTS = [
       "Dates and Timestamps",
       "Time Ranges"
     ],
-    "paragraphs": [
-      "Two kinds of time ranges are given special syntax: the range between two times and the range starting at some time for some duration. These are represented like <code class=\"language-malloy\"><span class=\"token date\">@2003</span> <span class=\"token keyword\">to</span> <span class=\"token date\">@2005</span></code> and <code class=\"language-malloy\"><span class=\"token date\">@2004-Q1</span> <span class=\"token keyword\">for</span> <span class=\"token number\">6</span> <span class=\"token timeframe\">quarters</span></code> respectively. These ranges can be used in filters just like time literals.",
-      "Time literals and truncations can also behave like time ranges. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. <code class=\"language-malloy\"><span class=\"token date\">@2003</span></code> represents the whole of the year 2003, and <code class=\"language-malloy\"><span class=\"token date\">@2004-Q1</span></code> lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the\ntimeframe from the truncation, e.g. <code class=\"language-malloy\">now<span class=\"token punctuation\">.</span><span class=\"token timeframe\">month</span></code> means the entirety of the current month.",
-      "When a time range is used in a comparison, <code class=\"language-malloy\"><span class=\"token operator\">=</span></code> checks for \"is in the range\", <code class=\"language-malloy\"><span class=\"token operator\">></span></code> \"is after\", and <code class=\"language-malloy\"><span class=\"token operator\">&lt;</span></code> \"is before.\" So <code class=\"language-malloy\">some_time <span class=\"token operator\">></span> <span class=\"token date\">@2003</span></code> filters dates starting on January 1, 2004, while <code class=\"language-malloy\">some_time <span class=\"token operator\">=</span> <span class=\"token date\">@2003</span></code> filters to dates in the year 2003."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1677,7 +2043,6 @@ window.SEARCH_SEGMENTS = [
       "Aggregating Subqueries"
     ],
     "paragraphs": [
-      "Here we can see that the <code class=\"language-malloy\">by_facility</code> column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.",
       "Queries can be nested infinitely, allowing for rich, complex output structures. A query may always include another nested query, regardless of depth."
     ],
     "path": "/language/basic.md"
@@ -1694,10 +2059,9 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Malloy Quickstart",
-      "Piping and Multi-stage Queries"
+      "Pipelines and Multi-stage Queries"
     ],
     "paragraphs": [
-      "The output from one stage of a query can be \"piped\" into another stage using <code class=\"language-malloy\"><span class=\"token operator\">|</span></code>. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.",
       "Next, we'll use the output of that query as the input to another, where we determine which counties have the highest\npercentage of airports compared to the whole state, taking advantage of the nested structure of the data to to so."
     ],
     "path": "/language/basic.md"
@@ -1707,10 +2071,7 @@ window.SEARCH_SEGMENTS = [
       "Malloy Quickstart",
       "Joins"
     ],
-    "paragraphs": [
-      "Joins are declared as part of an explore, and link primary and foreign keys.",
-      "In this example, the <code class=\"language-malloy\">airports</code> explore is joined to <code class=\"language-malloy\">flights</code>, linking the foreign key <code class=\"language-malloy\">origin</code> of <code class=\"language-malloy\">flights</code> to the primary key <code class=\"language-malloy\">code</code> of <code class=\"language-malloy\">airports</code>. The resulting joined explore is aliased as <code class=\"language-malloy\">origin_airport</code> within <code class=\"language-malloy\">flights</code>."
-    ],
+    "paragraphs": [],
     "path": "/language/basic.md"
   },
   {
@@ -1727,22 +2088,42 @@ window.SEARCH_SEGMENTS = [
       "Comments"
     ],
     "paragraphs": [
-      "Malloy code can include both line and block comments. Line comments, which begin with <code class=\"language-malloy\"><span class=\"token comment\">--</span></code> or <code class=\"language-malloy\"><span class=\"token comment\">//</span></code>,\nmay appear anywhere within a line, and cause all subsequent characters on that line to be ignored.\nBlock comments, which are enclosed between <code>/*</code> and <code>*/</code>, cause all enclosed characters to be ignored\nand may span multiple lines.",
-      "This guide will introduce the basics of querying and modeling with Malloy.  Results here are shown in JSON.  Malloy has a rendering system that can render <a href=\"../visualizations/dashboards.html\">results as tables, charts or dashboards</a>, but fundamentally the Malloy just returns data.",
-      "<em>Note: If you'd like to follow along with this guide, you can create a new <code>.malloy</code> file and run these queries there.</em>",
-      "Queries are of the form \"<em>source</em> <code class=\"language-malloy\"><span class=\"token operator\">-</span><span class=\"token operator\">></span></code> <em>operation</em>\"",
+      "In SQL, the <code>SELECT</code> command does two very different things.  A <code>SELECT</code> with a <code>GROUP BY</code> aggregates data according to the <code>GROUP BY</code> clause and produces aggregate calculation against every calculation not in the <code>GROUP BY</code>.  In Malloy, the query operator for this is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code>.  Calculation about data in the group are made using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code>.",
+      "The second type of <code>SELECT</code> in SQL does not perform any aggregation;  All rows in the input table, unless filtered in some way, show up in the output table. In Malloy, this command is called <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span><span style=\"color: #000000\">:</span></span></code>.",
+      "In the query below, the data will be grouped by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">state</span></span></code> and will produce an aggregate calculation for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">airport_count</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">average_elevation</span></span></code>.  <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code>. The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code> list can contain references to existing aggregate fields or add new aggregate computations.",
+      "Multiple <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code> statements can appear in the same query operation.  This can be helpful in rendering when the order of fields in the query output is significant.",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code> produces a list of fields.  For every row in the input table, there is a row in the output table.",
+      "Named objects, like columns from a table, and fields defined in an explore, can be included\nin field lists without an <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code>",
+      "The basic types of Malloy expressions are <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">string</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">number</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">boolean</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code>.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">top</span><span style=\"color: #000000\">:</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">limit</span><span style=\"color: #000000\">:</span></span></code> statements are synonyms and limits the number of rows returned. Results below are sorted by the first measure descending--in this case, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">airport_count</span></span></code>.",
+      "Default ordering can be overridden with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">order_by</span><span style=\"color: #000000\">:</span></span></code>, as in the following query, which shows the states in alphabetical order.  <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">order_by</span><span style=\"color: #000000\">:</span></span></code> can take a field index number or the name of a field.",
+      "Literals of type <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code> are notated with an <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code>, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003-03-29</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@1994-07-14 10:23:59</span></span></code>. Similarly, years (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2021</span></span></code>), quarters (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2020-Q1</span></span></code>), months (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2019-03</span></span></code>), weeks (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@WK2021-08-01</span></span></code>), and minutes (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2017-01-01 10:53</span></span></code>) can be expressed.",
+      "There is a special time literal <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">now</span></span></code>, referring to the current timestamp, which allows for relative time filters.",
+      "Time values can be truncated to a given timeframe, which can be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">second</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">minute</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">hour</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">day</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">week</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">month</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">quarter</span></span></code>, or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code>.",
+      "Two kinds of time ranges are given special syntax: the range between two times and the range starting at some time for some duration. These are represented like <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2005</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2004-Q1 fo</span><span style=\"color: #000000\">r </span><span style=\"color: #098658\">6</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">quarters</span></span></code> respectively. These ranges can be used in filters just like time literals.",
+      "Time literals and truncations can also behave like time ranges. Each kind of time literal has an implied duration that takes effect when it is used in a comparison, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003</span></span></code> represents the whole of the year 2003, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2004-Q1</span></span></code> lasts the whole 3 months of the quarter. Similarly, when a time value is truncated, it takes on the\ntimeframe from the truncation, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">now</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">month</span></span></code> means the entirety of the current month.",
+      "When a time range is used in a comparison, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code> checks for \"is in the range\", <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt;</span></span></code> \"is after\", and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&lt;</span></span></code> \"is before.\" So <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">some_time</span><span style=\"color: #000000\"> &gt; </span><span style=\"color: #098658\">@2003</span></span></code> filters dates starting on January 1, 2004, while <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">some_time</span><span style=\"color: #000000\"> = </span><span style=\"color: #098658\">@2003</span></span></code> filters to dates in the year 2003.",
+      "Here we can see that the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">by_facility</span></span></code> column of the output table contains nested subtables on each row. When interpreting these inner tables, all of the dimensional values from outer rows still apply to each of the inner rows.",
+      "The output from one stage of a query can be passed into another stage using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code>. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.",
+      "In this example, the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft</span></span></code> explore is joined to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code>, and aircraft_models is joined via aircraft. These examples explicitly name both keys--this same syntax can be used to write more complex joins.",
+      "Malloy code can include both line and block comments. Line comments, which begin with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #008000\">--</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #008000\">//</span></span></code>,\nmay appear anywhere within a line, and cause all subsequent characters on that line to be ignored.\nBlock comments, which are enclosed between <code>/*</code> and <code>*/</code>, cause all enclosed characters to be ignored\nand may span multiple lines.",
+      "This guide introduces the basics of querying and modeling with Malloy. Malloy has a redering system that can render <a href=\"../visualizations/dashboards.html\">results as tables, charts or dashboards</a>, but fundamentally the Malloy just returns data. Buttons on the top right of any \"Query Result\" box allow you to toggle between rendered results (HTML), raw data (JSON), and the SQL generated by the malloy model.",
+      "Queries are of the form: <em>source</em> <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code> <em>operation</em>",
       "In Malloy, the source of a query is either a raw table, a <a href=\"explore.html\">modeled explore</a>, or another query.",
-      "In this example the <code class=\"language-malloy\"><span class=\"token function\">table</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code> function provides the query <em>source</em> from a table (or view) in the database.\nThey query <em>operation</em> is explicit about which fields are grouped, aggregated or projected.",
+      "In this example, the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #795E26\">table</span><span style=\"color: #000000\">()</span></span></code> function provides the query <em>source</em> from a table (or view) in the database.\nThe query <em>operation</em> is explicit about which fields are grouped, aggregated or projected.",
       "In Malloy, all output fields have names. This means that any time a query\nintroduces a new aggregate computation, it must be named. <em>(unlike SQL,\nwhich allows un-named expressions)</em>",
-      "Notice that Malloy uses the form \"<em>name</em> <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code> <em>value</em>\" instead of SQL's \"<em>value</em> <code class=\"language-malloy\"><span class=\"token keyword\">as</span></code> <em>name</em>\".\nHaving the output column name written first makes it easier for someone reading\nthe code to visualize the resulting query structure.",
-      "One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create an <em>explore</em> object named <code class=\"language-malloy\">airports</code> and\nadd a <code class=\"language-malloy\"><span class=\"token keyword\">dimension</span>:</code> calculation for <code class=\"language-malloy\">county_and_state</code> and <code class=\"language-malloy\"><span class=\"token keyword\">measure</span>:</code> calculation for <code class=\"language-malloy\">airport_count</code>.  Dimensions can be used in <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span>:</code>, <code class=\"language-malloy\"><span class=\"token keyword\">project</span>:</code> and <code class=\"language-malloy\"><span class=\"token keyword\">where</span>:</code>.  Measures can be used in <code class=\"language-malloy\"><span class=\"token keyword\">aggregate</span>:</code> and <code class=\"language-malloy\"><span class=\"token keyword\">having</span>:</code>.",
+      "Notice that Malloy uses the form \"<em>name</em> <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> <em>value</em>\" instead of SQL's \"<em>value</em> <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">as</span></span></code> <em>name</em>\".\nHaving the output column name written first makes it easier for someone reading\nthe code to visualize the resulting query structure.",
+      "One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create an <em>explore</em> object named <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> and\nadd a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">dimension</span><span style=\"color: #000000\">:</span></span></code> calculation for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">county_and_state</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">measure</span><span style=\"color: #000000\">:</span></span></code> calculation for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">airport_count</span></span></code>.  Dimensions can be used in <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span><span style=\"color: #000000\">:</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">where</span><span style=\"color: #000000\">:</span></span></code>.  Measures can be used in <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">having</span><span style=\"color: #000000\">:</span></span></code>.",
       "In Malloy, ordering and limiting work pretty much the same way they do in SQL, though Malloy introduces some <a href=\"order_by.html\">reasonable defaults</a>.",
-      "A filter on an aggregate calculation (a <em>measure</em>) narrows down the data used in that specific calculation. In the example below, the calculations for <code class=\"language-malloy\">airports</code> and <code class=\"language-malloy\">heliports</code> are filtered separately.",
+      "A filter on a data source table narrows down which data is included to be passed to the query <em>operation</em>. This translates\nto a <code>WHERE</code> clause in SQL.\nIn this case, the data from the table is filtered to just airports in California.",
+      "Filters can also be applied to any query <em>operation</em>. When using a filter in this way, it only applies to\nthe data for that operation alone. (More on this later, in the section on <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> operations in queries.)",
+      "A filter on an aggregate calculation (a <em>measure</em>) narrows down the data used in that specific calculation. In the example below, the calculations for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">heliports</span></span></code> are filtered separately.",
       "Working with time in data is often needlessly complex; Malloy has built in constructs to simplify many time-related operations. This section gives a brief introduction to some of these tools, but for more details see the <a href=\"time-ranges.html\">Time Ranges</a> section.",
-      "Numeric values can be extracted from time values, e.g. <code class=\"language-malloy\"><span class=\"token timeframe\">day_of_year</span><span class=\"token punctuation\">(</span>some_date<span class=\"token punctuation\">)</span></code> or <code class=\"language-malloy\"><span class=\"token timeframe\">minute</span><span class=\"token punctuation\">(</span>some_time<span class=\"token punctuation\">)</span></code>. See the full list of extraction functions <a href=\"time-ranges.html#extraction\">here</a>.",
+      "Numeric values can be extracted from time values, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">day_of_year</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">some_date</span><span style=\"color: #000000\">)</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #795E26\">minute</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">some_time</span><span style=\"color: #000000\">)</span></span></code>. See the full list of extraction functions <a href=\"time-ranges.html#extraction\">here</a>.",
       "In Malloy, queries can be <a href=\"nesting.html\">nested</a> to produce subtables on each output row. Such nested queries are called <em>aggregating subqueries</em>, or simply \"nested queries.\" When a query is nested inside another query, each output row of the outer query will have a nested table for the inner query which only includes data limited to that row.",
-      "Filters can be isolated to any level of nesting. In the following example, we limit the <code class=\"language-malloy\">major_facilities</code> query to only airports where <code class=\"language-malloy\">major</code> is <code class=\"language-malloy\"><span class=\"token string\">'Y'</span></code>. This particular filter applies <em>only</em> to <code class=\"language-malloy\">major_facilities</code>, and not to other parts of the outer query.",
-      "As in SQL, aggregate functions <code class=\"language-malloy\">sum</code>, <code class=\"language-malloy\">count</code>, and <code class=\"language-malloy\">avg</code> are available, and their use in\nan expression identifies the corresponding field as a <a href=\"fields.html#measures\">measure</a>.",
+      "Filters can be isolated to any level of nesting. In the following example, we limit the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">major_facilities</span></span></code> query to only airports where <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">major</span></span></code> is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;Y&#39;</span></span></code>. This particular filter applies <em>only</em> to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">major_facilities</span></span></code>, and not to other parts of the outer query.",
+      "<a href=\"join.html\">Joins</a> are declared as part of an explore. When joining an explore to another, it brings with it all child joins.",
+      "As in SQL, aggregate functions <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">sum</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">count</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">avg</span></span></code> are available, and their use in\nan expression identifies the corresponding field as a <a href=\"fields.html#measures\">measure</a>.",
       "Aggregates may be computed with respect to any joined explore, allowing for a wider variety of measurements to be calculated than is possible in SQL. See the <a href=\"aggregates.html#aggregate-locality\">Aggregate Locality</a> section for more information."
     ],
     "path": "/language/basic.md"
@@ -1807,11 +2188,20 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Explores",
-      "Explore Modifications"
+      "Explore Sources",
+      "Explores from SQL Blocks"
     ],
     "paragraphs": [
-      "An explore can introduce a number of different\nmodifications or additions to its source, including adding\nfilters, specifying a <code class=\"language-malloy\">primary <span class=\"token keyword\">key</span></code>, adding fields and\njoins, renaming fields, or limiting which fields are\navailable."
+      "Explores can be created from a SQL block, e.g."
     ],
+    "path": "/language/explore.md"
+  },
+  {
+    "titles": [
+      "Explores",
+      "Explore Modifications"
+    ],
+    "paragraphs": [],
     "path": "/language/explore.md"
   },
   {
@@ -1876,7 +2266,8 @@ window.SEARCH_SEGMENTS = [
       "Limiting Access to Fields"
     ],
     "paragraphs": [
-      "The list of fields available in an explore from its source\ncan be limited. This can be done either by <code class=\"language-malloy\"><span class=\"token keyword\">accept</span></code>ing a\nlist of fields to include (in which case any other field\nfrom the source is excluded, i.e. an \"allow list\") or by\n<code class=\"language-malloy\"><span class=\"token keyword\">except</span></code>ing a list of fields to exclude (any other field\nis included, i.e. a \"deny list\"). These cannot be used in\nconjunction with one another.",
+      "An explore can introduce a number of different\nmodifications or additions to its source, including adding\nfilters, specifying a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">primary</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">key</span></span></code>, adding fields and\njoins, renaming fields, or limiting which fields are\navailable.",
+      "The list of fields available in an explore from its source\ncan be limited. This can be done either by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">accept</span></span></code>ing a\nlist of fields to include (in which case any other field\nfrom the source is excluded, i.e. an \"allow list\") or by\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">except</span></span></code>ing a list of fields to exclude (any other field\nis included, i.e. a \"deny list\"). These cannot be used in\nconjunction with one another.",
       "<strong>Inline query as explore source</strong>",
       "<strong>Named query as explore source</strong>",
       "For more information about named queries appearing in models, see the <a href=\"statement.html\">Models</a> section.",
@@ -1900,10 +2291,7 @@ window.SEARCH_SEGMENTS = [
       "Expressions",
       "Identifiers"
     ],
-    "paragraphs": [
-      "Fields may be referenced by name, and fields in joins or nested structures can be described using <code class=\"language-malloy\"><span class=\"token punctuation\">.</span></code>s.",
-      "Identifiers that share a name with a keyword in Malloy must be enclosed in back ticks <code class=\"language-malloy\"><span class=\"token punctuation\">`</span></code>, e.g. <code class=\"language-malloy\"><span class=\"token identifier\">`year`</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -1911,10 +2299,7 @@ window.SEARCH_SEGMENTS = [
       "Expressions",
       "Mathematical Operators"
     ],
-    "paragraphs": [
-      "Typical mathematical operators <code class=\"language-malloy\"><span class=\"token operator\">+</span></code>, <code class=\"language-malloy\"><span class=\"token operator\">-</span></code>, <code class=\"language-malloy\"><span class=\"token operator\">*</span></code>, and <code class=\"language-malloy\"><span class=\"token operator\">/</span></code> work as expected, and parentheses may be used to override precedence, e.g. <code class=\"language-malloy\">six <span class=\"token keyword\">is</span> <span class=\"token number\">10</span> <span class=\"token operator\">*</span> <span class=\"token punctuation\">(</span><span class=\"token number\">3</span> <span class=\"token operator\">-</span> <span class=\"token number\">2</span><span class=\"token punctuation\">)</span> <span class=\"token operator\">/</span> <span class=\"token number\">2</span> <span class=\"token operator\">+</span> <span class=\"token number\">1</span></code>.",
-      "The unary minus / negation operator is also allowed, e.g. <code class=\"language-malloy\">value <span class=\"token keyword\">is</span> <span class=\"token operator\">-</span>cost</code>."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -1931,9 +2316,7 @@ window.SEARCH_SEGMENTS = [
       "Logical Operators",
       "Comparison Operators"
     ],
-    "paragraphs": [
-      "Standard comparison operators <code class=\"language-malloy\"><span class=\"token operator\">></span></code>, <code class=\"language-malloy\"><span class=\"token operator\">&lt;</span></code>, <code class=\"language-malloy\"><span class=\"token operator\">>=</span></code>, <code class=\"language-malloy\"><span class=\"token operator\">&lt;=</span></code>, and <code class=\"language-malloy\"><span class=\"token operator\">=</span></code> are available in Malloy. \"Not equals\" is expressed using the <code class=\"language-malloy\"><span class=\"token operator\">!=</span></code> operator."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -1942,9 +2325,7 @@ window.SEARCH_SEGMENTS = [
       "Logical Operators",
       "Boolean Operators"
     ],
-    "paragraphs": [
-      "Malloy includes the basic binary boolean operators <code class=\"language-malloy\"><span class=\"token keyword\">and</span></code> and <code class=\"language-malloy\"><span class=\"token keyword\">or</span></code>, as well as the unary <code class=\"language-malloy\"><span class=\"token keyword\">not</span></code> operator."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -1952,9 +2333,7 @@ window.SEARCH_SEGMENTS = [
       "Expressions",
       "SQL Functions"
     ],
-    "paragraphs": [
-      "The intention is to be able to call from Malloy any function which\nyou could call from Standard SQL. This is not well implemented at\nthe moment. If you experience type check errors, use the <code class=\"language-malloy\">::type</code>\ntypecast to work around the errors in typing."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -1978,9 +2357,7 @@ window.SEARCH_SEGMENTS = [
       "Expressions",
       "Safe Type Cast"
     ],
-    "paragraphs": [
-      "Safe type casting may be accomplished with the <code class=\"language-malloy\">::type</code> syntax."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -1988,11 +2365,7 @@ window.SEARCH_SEGMENTS = [
       "Expressions",
       "Pick Expressions"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\"><span class=\"token keyword\">pick</span></code> construction in Malloy is similar to <code>CASE</code> statements in SQL.",
-      "Pick can be used to \"clean\" data, combining similar dirty values into one clean value. In the following example, the <code class=\"language-malloy\"><span class=\"token keyword\">pick</span></code> statement collects all the \"this actually\nshipped\" statuses, and because there is no <code class=\"language-malloy\"><span class=\"token keyword\">else</span></code>, leaves the other\nstatus values alone.",
-      "Another common kind of cleaning is to have a small set you want to group\nby and all other values are compressed into <code class=\"language-malloy\"><span class=\"token keyword\">null</span></code>. A <code class=\"language-malloy\"><span class=\"token keyword\">pick</span></code> clause with no value\npicks an applied value when the condition is met."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -2012,9 +2385,7 @@ window.SEARCH_SEGMENTS = [
       "Time Ranges"
     ],
     "paragraphs": [
-      "<a id=\"numeric-ranges\"></a>",
-      "Ranges between a start and end time can be constructed with the <code class=\"language-malloy\"><span class=\"token keyword\">to</span></code> operator, e.g. <code class=\"language-malloy\"><span class=\"token date\">@2003</span> <span class=\"token keyword\">to</span> <span class=\"token date\">@2006</span></code>. This kind of range is also possible for numbers, e.g. <code class=\"language-malloy\"><span class=\"token number\">10</span> <span class=\"token keyword\">to</span> <span class=\"token number\">20</span></code>.",
-      "Time ranges can also be constructed with a start time and duration using the <code class=\"language-malloy\"><span class=\"token keyword\">for</span></code> operator, e.g. <code class=\"language-malloy\"><span class=\"token date\">@2003</span> <span class=\"token keyword\">for</span> <span class=\"token number\">6</span> <span class=\"token timeframe\">years</span></code> or <code class=\"language-malloy\">now <span class=\"token keyword\">for</span> <span class=\"token number\">20</span> <span class=\"token timeframe\">minutes</span></code>."
+      "<a id=\"numeric-ranges\"></a>"
     ],
     "path": "/language/expressions.md"
   },
@@ -2024,11 +2395,7 @@ window.SEARCH_SEGMENTS = [
       "Time Expressions",
       "Time Truncation"
     ],
-    "paragraphs": [
-      "To truncate a time value to a given timeframe, use the <code class=\"language-malloy\"><span class=\"token punctuation\">.</span></code> operator followed by the timeframe, e.g. <code class=\"language-malloy\">event_time<span class=\"token punctuation\">.</span><span class=\"token timeframe\">quarter</span></code> or <code class=\"language-malloy\">now<span class=\"token punctuation\">.</span><span class=\"token timeframe\">year</span></code>.",
-      "By way of example, if the value of <code class=\"language-malloy\">time</code> is <code class=\"language-malloy\"><span class=\"token date\">@2021-08-06 00:36</span></code>, then the below truncations will produce the results on the right:",
-      "A truncation made this way (unlike a truncation make in SQL with\n<code class=\"language-malloy\">TIMESTAMP_TRUNC<span class=\"token function\"></span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code>) can also function as a range. The range begins\nat the moment of truncation and the duration is the timeframe unit\nused to specify the truncation, so for example <code class=\"language-malloy\">time<span class=\"token punctuation\">.</span><span class=\"token timeframe\">year</span></code>\nwould be a range covering the entire year which contains <code class=\"language-malloy\">time</code>."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -2038,8 +2405,7 @@ window.SEARCH_SEGMENTS = [
       "Time Extraction"
     ],
     "paragraphs": [
-      "Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call.",
-      "The \"Result\" column uses a value of <code class=\"language-malloy\"><span class=\"token date\">@2021-08-06 00:55:05</span></code> for <code class=\"language-malloy\">expr</code>."
+      "Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call."
     ],
     "path": "/language/expressions.md"
   },
@@ -2049,10 +2415,7 @@ window.SEARCH_SEGMENTS = [
       "Time Expressions",
       "Time Literals"
     ],
-    "paragraphs": [
-      "Time literals are specified in malloy with the <code class=\"language-malloy\"><span class=\"token date\">@</span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
-      "For example the year <code class=\"language-malloy\"><span class=\"token date\">@2003</span></code> can be used with <code class=\"language-malloy\">event_time: <span class=\"token date\">@2003</span></code> to test if the\nevent happened in the year 2003."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -2069,9 +2432,7 @@ window.SEARCH_SEGMENTS = [
       "Special Filter Expression Syntax",
       "Partial Comparison"
     ],
-    "paragraphs": [
-      "Partial comparisons, or \"partials\" are written with a binary comparison operator followed by a value, e.g. <code class=\"language-malloy\"><span class=\"token operator\">></span> <span class=\"token number\">42</span></code> or <code class=\"language-malloy\"><span class=\"token operator\">!=</span> <span class=\"token keyword\">null</span></code>. These can be thought of as conditions-as-values, or as functions that return a boolean."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -2080,10 +2441,7 @@ window.SEARCH_SEGMENTS = [
       "Special Filter Expression Syntax",
       "Alternation"
     ],
-    "paragraphs": [
-      "Conditions can be logically combined with the two alternation operators, <code class=\"language-malloy\"><span class=\"token operator\">&amp;</span></code> and <code class=\"language-malloy\"><span class=\"token operator\">|</span></code>. These are different from <code class=\"language-malloy\"><span class=\"token keyword\">and</span></code> and <code class=\"language-malloy\"><span class=\"token keyword\">or</span></code> in that they operate on conditions which return boolean values, rather than boolean values directly.",
-      "Values can be used directly with the alternation operators, in which case the operator is assumed to be <code class=\"language-malloy\"><span class=\"token operator\">=</span></code>. For example, <code class=\"language-malloy\"><span class=\"token string\">'CA'</span> <span class=\"token operator\">|</span> <span class=\"token string\">'NY'</span></code> is equivalent to <code class=\"language-malloy\"><span class=\"token operator\">=</span> <span class=\"token string\">'CA'</span> <span class=\"token operator\">|</span> <span class=\"token operator\">=</span> <span class=\"token string\">'NY'</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/expressions.md"
   },
   {
@@ -2093,18 +2451,40 @@ window.SEARCH_SEGMENTS = [
       "Application"
     ],
     "paragraphs": [
-      "The apply operator <code class=\"language-malloy\">:</code> \"applies\" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.",
-      "Applying a value to a condition is like filling in the condition with the given value. For example, <code class=\"language-malloy\">height: <span class=\"token operator\">></span> <span class=\"token number\">5</span> <span class=\"token operator\">&amp;</span> <span class=\"token operator\">&lt;</span> <span class=\"token number\">10</span></code> is equivalent to <code class=\"language-malloy\">height <span class=\"token operator\">></span> <span class=\"token number\">5</span> <span class=\"token keyword\">and</span> height <span class=\"token operator\">&lt;</span> <span class=\"token number\">10</span></code>.",
       "Applying a value to another value applies a default comparison on the two values:",
+      "Fields may be referenced by name, and fields in joins or nested structures can be described using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code>s.",
+      "Identifiers that share a name with a keyword in Malloy must be enclosed in back ticks <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">`</span></span></code>, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">`year`</span></span></code>.",
+      "Typical mathematical operators <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">+</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">-</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">*</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">/</span></span></code> work as expected, and parentheses may be used to override precedence, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">six</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">is</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">10</span><span style=\"color: #000000\"> * (</span><span style=\"color: #098658\">3</span><span style=\"color: #000000\"> - </span><span style=\"color: #098658\">2</span><span style=\"color: #000000\">) / </span><span style=\"color: #098658\">2</span><span style=\"color: #000000\"> + </span><span style=\"color: #098658\">1</span></span></code>.",
+      "The unary minus / negation operator is also allowed, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">value</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">is</span><span style=\"color: #000000\"> -</span><span style=\"color: #001080\">cost</span></span></code>.",
+      "Standard comparison operators <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt;</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&lt;</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt;=</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&lt;=</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code> are available in Malloy. \"Not equals\" is expressed using the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">!=</span></span></code> operator.",
+      "Malloy includes the basic binary boolean operators <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">and</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">or</span></span></code>, as well as the unary <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">not</span></span></code> operator.",
+      "The intention is to be able to call from Malloy any function which\nyou could call from Standard SQL. This is not well implemented at\nthe moment. If you experience type check errors, use the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">::</span><span style=\"color: #001080\">type</span></span></code>\ntypecast to work around the errors in typing.",
+      "Safe type casting may be accomplished with the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">::</span><span style=\"color: #001080\">type</span></span></code> syntax.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> construction in Malloy is similar to <code>CASE</code> statements in SQL.",
+      "Pick can be used to \"clean\" data, combining similar dirty values into one clean value. In the following example, the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> statement collects all the \"this actually\nshipped\" statuses, and because there is no <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">else</span></span></code>, leaves the other\nstatus values alone.",
+      "Another common kind of cleaning is to have a small set you want to group\nby and all other values are compressed into <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">null</span></span></code>. A <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> clause with no value\npicks an applied value when the condition is met.",
+      "Ranges between a start and end time can be constructed with the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">to</span></span></code> operator, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2006</span></span></code>. This kind of range is also possible for numbers, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">10</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">20</span></span></code>.",
+      "Time ranges can also be constructed with a start time and duration using the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">for</span></span></code> operator, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003 fo</span><span style=\"color: #000000\">r </span><span style=\"color: #098658\">6</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">years</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">now</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">for</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">20</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">minutes</span></span></code>.",
+      "To truncate a time value to a given timeframe, use the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code> operator followed by the timeframe, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">event_time</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">quarter</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">now</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>.",
+      "By way of example, if the value of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">time</span></span></code> is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2021-08-06 00:36</span></span></code>, then the below truncations will produce the results on the right:",
+      "A truncation made this way (unlike a truncation make in SQL with\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">TIMESTAMP_TRUNC</span><span style=\"color: #000000\">()</span></span></code>) can also function as a range. The range begins\nat the moment of truncation and the duration is the timeframe unit\nused to specify the truncation, so for example <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">time</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>\nwould be a range covering the entire year which contains <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">time</span></span></code>.",
+      "The \"Result\" column uses a value of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2021-08-06 00:55:05</span></span></code> for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">expr</span></span></code>.",
+      "Time literals are specified in malloy with the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
+      "For example the year <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003</span></span></code> can be used with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">event_time</span><span style=\"color: #000000\">: </span><span style=\"color: #098658\">@2003</span></span></code> to test if the\nevent happened in the year 2003.",
+      "Partial comparisons, or \"partials\" are written with a binary comparison operator followed by a value, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt; </span><span style=\"color: #098658\">42</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">!= </span><span style=\"color: #0000FF\">null</span></span></code>. These can be thought of as conditions-as-values, or as functions that return a boolean.",
+      "Conditions can be logically combined with the two alternation operators, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&amp;</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">|</span></span></code>. These are different from <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">and</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">or</span></span></code> in that they operate on conditions which return boolean values, rather than boolean values directly.",
+      "Values can be used directly with the alternation operators, in which case the operator is assumed to be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code>. For example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;CA&#39;</span><span style=\"color: #000000\"> | </span><span style=\"color: #A31515\">&#39;NY&#39;</span></span></code> is equivalent to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">= </span><span style=\"color: #A31515\">&#39;CA&#39;</span><span style=\"color: #000000\"> | = </span><span style=\"color: #A31515\">&#39;NY&#39;</span></span></code>.",
+      "The apply operator <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">:</span></span></code> \"applies\" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.",
+      "Applying a value to a condition is like filling in the condition with the given value. For example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">height</span><span style=\"color: #000000\">: &gt; </span><span style=\"color: #098658\">5</span><span style=\"color: #000000\"> &amp; &lt; </span><span style=\"color: #098658\">10</span></span></code> is equivalent to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">height</span><span style=\"color: #000000\"> &gt; </span><span style=\"color: #098658\">5</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">and</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">height</span><span style=\"color: #000000\"> &lt; </span><span style=\"color: #098658\">10</span></span></code>.",
       "Many functions available in SQL are available unchanged in Malloy. See <a href=\"https://cloud.google.com/bigquery/docs/reference/standard-sql/syntax\">here</a> for documentation on functions available in BigQuery.",
-      "Aggregations may included in an expression to create <a href=\"fields.html#measures\">measures</a>, e.g. <code class=\"language-malloy\"><span class=\"token function\">count</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code>, <code class=\"language-malloy\"><span class=\"token function\">sum</span><span class=\"token punctuation\">(</span>distance<span class=\"token punctuation\">)</span></code>, or <code class=\"language-malloy\">aircraft_models<span class=\"token punctuation\">.</span>seats<span class=\"token punctuation\">.</span><span class=\"token function\">avg</span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code>. For detailed information, see the <a href=\"aggregates.html\">Aggregates</a> section.",
+      "Aggregations may included in an expression to create <a href=\"fields.html#measures\">measures</a>, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #795E26\">count</span><span style=\"color: #000000\">()</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #795E26\">sum</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">distance</span><span style=\"color: #000000\">)</span></span></code>, or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">seats</span><span style=\"color: #000000\">.</span><span style=\"color: #795E26\">avg</span><span style=\"color: #000000\">()</span></span></code>. For detailed information, see the <a href=\"aggregates.html\">Aggregates</a> section.",
       "Aggregate expressions may be filtered, using the <a href=\"filters.html\">usual filter syntax</a>.",
       "Pick expressions are also compatible with the <a href=\"#apply-operator\">apply operator</a> and partial comparisons.",
-      "A time value can be compared to a range. If the time is within the range it will be <code class=\"language-malloy\"><span class=\"token operator\">=</span></code>, before the range it will be <code class=\"language-malloy\"><span class=\"token operator\">&lt;</span></code>, and after the range it will be <code class=\"language-malloy\"><span class=\"token operator\">></span></code>. If you <a href=\"#apply-operator\">apply</a> a time to a range, (for example, <code class=\"language-malloy\">event_time: <span class=\"token date\">@2003</span> <span class=\"token keyword\">to</span> <span class=\"token date\">@2004</span></code>) that will also check if the value is within the range.",
-      "This is extremely useful with the <a href=\"#apply-operator\">apply operator</a>, <code class=\"language-malloy\">:</code>. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is <code class=\"language-malloy\">one_time: other_time<span class=\"token punctuation\">.</span><span class=\"token timeframe\">year</span></code>.",
+      "A time value can be compared to a range. If the time is within the range it will be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code>, before the range it will be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&lt;</span></span></code>, and after the range it will be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt;</span></span></code>. If you <a href=\"#apply-operator\">apply</a> a time to a range, (for example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">event_time</span><span style=\"color: #000000\">: </span><span style=\"color: #098658\">@2003 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2004</span></span></code>) that will also check if the value is within the range.",
+      "This is extremely useful with the <a href=\"#apply-operator\">apply operator</a>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">:</span></span></code>. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">one_time</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">other_time</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>.",
       "As filtering is an incredibly common operation in data analysis, Malloy has special syntax to make filter expressions succinct and powerful. In addition to regular comparison and boolean operators, Malloy includes <em>partial comparisons</em>, <em>alternation</em>, and <em>application</em>, as described below.",
-      "The <em>union alternation</em> operator <code class=\"language-malloy\"><span class=\"token operator\">|</span></code> represents the logical union of two conditions. An expression like <code class=\"language-malloy\">x <span class=\"token operator\">|</span> y</code> can be read \"if either <code class=\"language-malloy\">x</code> or <code class=\"language-malloy\">y</code>.\" For example <code class=\"language-malloy\"><span class=\"token operator\">=</span> <span class=\"token string\">'CA'</span> <span class=\"token operator\">|</span> <span class=\"token operator\">=</span> <span class=\"token string\">'NY'</span></code> represents the condition \"is either CA or NY\".",
-      "The <em>conjunction alternation</em> operator <code class=\"language-malloy\"><span class=\"token operator\">&amp;</span></code> represents the logical conjunction of two conditions. An expression like \"<code class=\"language-malloy\">x <span class=\"token operator\">&amp;</span> y</code> can be read \"if both <code class=\"language-malloy\">x</code> and <code class=\"language-malloy\">y</code>.\" For example, <code class=\"language-malloy\"><span class=\"token operator\">></span> <span class=\"token number\">5</span> <span class=\"token operator\">&amp;</span> <span class=\"token operator\">&lt;</span> <span class=\"token number\">10</span></code> represents the condition \"is greater than 5 and less than 10\".",
+      "The <em>union alternation</em> operator <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">|</span></span></code> represents the logical union of two conditions. An expression like <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">x</span><span style=\"color: #000000\"> | </span><span style=\"color: #001080\">y</span></span></code> can be read \"if either <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">x</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">y</span></span></code>.\" For example <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">= </span><span style=\"color: #A31515\">&#39;CA&#39;</span><span style=\"color: #000000\"> | = </span><span style=\"color: #A31515\">&#39;NY&#39;</span></span></code> represents the condition \"is either CA or NY\".",
+      "The <em>conjunction alternation</em> operator <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&amp;</span></span></code> represents the logical conjunction of two conditions. An expression like \"<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">x</span><span style=\"color: #000000\"> &amp; </span><span style=\"color: #001080\">y</span></span></code> can be read \"if both <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">x</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">y</span></span></code>.\" For example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt; </span><span style=\"color: #098658\">5</span><span style=\"color: #000000\"> &amp; &lt; </span><span style=\"color: #098658\">10</span></span></code> represents the condition \"is greater than 5 and less than 10\".",
       "Values can be applied to <a href=\"#pick-expressions\">pick expressions</a> to make them more succinct."
     ],
     "path": "/language/expressions.md"
@@ -2123,9 +2503,7 @@ window.SEARCH_SEGMENTS = [
       "Fields",
       "Defining Fields"
     ],
-    "paragraphs": [
-      "Fields are defined in explores are reusable and are <code class=\"language-malloy\"><span class=\"token keyword\">dimension</span></code>, <code class=\"language-malloy\">measures</code> or <code class=\"language-malloy\"><span class=\"token keyword\">query</span></code>.  When these are used in a query, these fields are <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code>, <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span></code>, <code class=\"language-malloy\"><span class=\"token keyword\">aggregate</span></code> or <code class=\"language-malloy\"><span class=\"token keyword\">nest</span></code>.   The definitions are the same way whether part of an\nexplore or a query stage. In either case, they are defined using the <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code> keyword."
-    ],
+    "paragraphs": [],
     "path": "/language/fields.md"
   },
   {
@@ -2133,9 +2511,7 @@ window.SEARCH_SEGMENTS = [
       "Fields",
       "Field Names"
     ],
-    "paragraphs": [
-      "Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in back ticks, e.g. <code class=\"language-malloy\"> <span class=\"token identifier\">`year`</span> <span class=\"token keyword\">is</span> dep_time<span class=\"token punctuation\">.</span><span class=\"token timeframe\">year</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/fields.md"
   },
   {
@@ -2154,8 +2530,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Dimensions are fields representing scalar values. All fields\ninherited directly from a table are dimensions.",
-      "Dimensions are defined using expressions that contain no\naggregate functions.",
-      "Dimensions may be used in both <code class=\"language-malloy\"><span class=\"token keyword\">reduce</span></code> and <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code>\nqueries."
+      "Dimensions are defined using expressions that contain no\naggregate functions."
     ],
     "path": "/language/fields.md"
   },
@@ -2166,8 +2541,7 @@ window.SEARCH_SEGMENTS = [
       "Measures"
     ],
     "paragraphs": [
-      "Measures are fields representing aggregated data over\nmultiple records.",
-      "Measures may not be used in <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code> queries. However, any measures that appear in a <code class=\"language-malloy\"><span class=\"token keyword\">reduce</span></code> query stage are \"dimensionalized\" as part of the query, and are therefore usable as dimensions in subsequent stages."
+      "Measures are fields representing aggregated data over\nmultiple records."
     ],
     "path": "/language/fields.md"
   },
@@ -2180,6 +2554,10 @@ window.SEARCH_SEGMENTS = [
     "paragraphs": [
       "Queries represent a pipelined data transformation including a source and one or more transformation stages. When queries are defined as part of an explore or query stage,\ntheir source is implicit.",
       "A named query's pipeline can always begin with another named query.",
+      "Fields are defined in explores are reusable and are <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">dimension</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">measures</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">query</span></span></code>.  When these are used in a query, these fields are <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span></span></code>.   The definitions are the same way whether part of an\nexplore or a query stage. In either case, they are defined using the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> keyword.",
+      "Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in back ticks, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\"> </span><span style=\"color: #001080\">`year`</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">is</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">dep_time</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>.",
+      "Dimensions may be used in both <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">reduce</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>\nqueries.",
+      "Measures may not be used in <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code> queries. However, any measures that appear in a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">reduce</span></span></code> query stage are \"dimensionalized\" as part of the query, and are therefore usable as dimensions in subsequent stages.",
       "<strong>In an explore</strong>",
       "<strong>In a query stage</strong>",
       "The right hand side of this kind of definition can be any\nfield expression. See the <a href=\"expressions.html\">Expressions</a>\nsection for more information.",
@@ -2204,8 +2582,7 @@ window.SEARCH_SEGMENTS = [
       "Filter Syntax"
     ],
     "paragraphs": [
-      "Regardless of the placement of a filter, the syntax looks the same.",
-      "Logically, the comma-separated list of filters are <code class=\"language-malloy\"><span class=\"token keyword\">and</span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression."
+      "Regardless of the placement of a filter, the syntax looks the same."
     ],
     "path": "/language/filters.md"
   },
@@ -2299,9 +2676,7 @@ window.SEARCH_SEGMENTS = [
       "Common Patterns in Filters",
       "Combining Filters"
     ],
-    "paragraphs": [
-      "Filters can be logically combined using <code class=\"language-malloy\"><span class=\"token keyword\">and</span></code>, <code class=\"language-malloy\"><span class=\"token keyword\">or</span></code>, and <code class=\"language-malloy\"><span class=\"token keyword\">not</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/filters.md"
   },
   {
@@ -2310,9 +2685,7 @@ window.SEARCH_SEGMENTS = [
       "Common Patterns in Filters",
       "Ranges"
     ],
-    "paragraphs": [
-      "A range of numeric or time values can be constructed\nwith the <code class=\"language-malloy\"><span class=\"token keyword\">to</span></code>operator, e.g. <code class=\"language-malloy\"><span class=\"token number\">10</span> <span class=\"token keyword\">to</span> <span class=\"token number\">100</span></code>. The <code class=\"language-malloy\"><span class=\"token operator\">~</span></code> operator will check to\nsee if a value is within a range."
-    ],
+    "paragraphs": [],
     "path": "/language/filters.md"
   },
   {
@@ -2322,7 +2695,6 @@ window.SEARCH_SEGMENTS = [
       "String \"Like\" Matching"
     ],
     "paragraphs": [
-      "When comparing strings, the <code class=\"language-malloy\"><span class=\"token operator\">=</span></code> operator checks for pure equality, whereas the <code class=\"language-malloy\"><span class=\"token operator\">~</span></code> and <code class=\"language-malloy\"><span class=\"token operator\">!</span><span class=\"token operator\">~</span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.",
       "In the right hand (pattern) string, the following syntax is used:",
       "A percent sign <code>%</code> matches any number of characters",
       "An underscore <code>_</code> matches a single character"
@@ -2335,9 +2707,7 @@ window.SEARCH_SEGMENTS = [
       "Common Patterns in Filters",
       "Regular Expressions"
     ],
-    "paragraphs": [
-      "When the right hand side of a <code class=\"language-malloy\"><span class=\"token operator\">~</span></code> or <code class=\"language-malloy\"><span class=\"token operator\">!</span><span class=\"token operator\">~</span></code> operator is a regular expression,\nMalloy checks whether the left hand side matches that regular expression. In Standard SQL, Malloy uses the <code>REGEXP_COMPARE</code> function."
-    ],
+    "paragraphs": [],
     "path": "/language/filters.md"
   },
   {
@@ -2356,7 +2726,12 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Use this table as a quick reference for common types of filter expressions.",
-      "Each filter be any expression of type <code class=\"language-malloy\"><span class=\"token type\">boolean</span></code>, whether that's a boolean field <code class=\"language-malloy\">is_commercial_flight</code>, a comparison <code class=\"language-malloy\">distance <span class=\"token operator\">></span> <span class=\"token number\">1000</span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href=\"#examples-of-filter-expressions\">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href=\"expressions.html\">Expressions</a> section.",
+      "Logically, the comma-separated list of filters are <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">and</span></span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.",
+      "Filters can be logically combined using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">and</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">or</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">not</span></span></code>.",
+      "A range of numeric or time values can be constructed\nwith the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">to</span></span></code>operator, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">10</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">100</span></span></code>. The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">~</span></span></code> operator will check to\nsee if a value is within a range.",
+      "When comparing strings, the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code> operator checks for pure equality, whereas the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">~</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">!~</span></span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.",
+      "When the right hand side of a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">~</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">!~</span></span></code> operator is a regular expression,\nMalloy checks whether the left hand side matches that regular expression. In Standard SQL, Malloy uses the <code>REGEXP_COMPARE</code> function.",
+      "Each filter be any expression of type <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">boolean</span></span></code>, whether that's a boolean field <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">is_commercial_flight</span></span></code>, a comparison <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">distance</span><span style=\"color: #000000\"> &gt; </span><span style=\"color: #098658\">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href=\"#examples-of-filter-expressions\">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href=\"expressions.html\">Expressions</a> section.",
       "This section describes some of the more common patterns used in filter expressions. For a more detailed description of the possible kinds of expressions, see the <a href=\"expressions.html\">Expressions</a> section.",
       "Checking equality against multiple possible values is extremely common, and can be achieved succinctly using the <a href=\"expressions.html#application\">apply operator</a> and <a href=\"expressions.html#alternation\">alternation</a>."
     ],
@@ -2366,10 +2741,7 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Imports"
     ],
-    "paragraphs": [
-      "In order to reuse or extend a explore from another file, you can include all the\nexported explores from another file using <code class=\"language-malloy\"><span class=\"token keyword\">import</span> <span class=\"token string\">\"path/to/some/file.malloy\"</span></code>.",
-      "For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the\n<code class=\"language-malloy\">flights</code> explore, you could write:"
-    ],
+    "paragraphs": [],
     "path": "/language/imports.md"
   },
   {
@@ -2378,7 +2750,9 @@ window.SEARCH_SEGMENTS = [
       "Import Locations"
     ],
     "paragraphs": [
-      "Imported files may be specified with relative or absolute URLs."
+      "Imported files may be specified with relative or absolute URLs.",
+      "In order to reuse or extend a explore from another file, you can include all the\nexported explores from another file using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">import</span><span style=\"color: #000000\"> </span><span style=\"color: #A31515\">&quot;path/to/some/file.malloy&quot;</span></span></code>.",
+      "For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code> explore, you could write:"
     ],
     "path": "/language/imports.md"
   },
@@ -2389,9 +2763,6 @@ window.SEARCH_SEGMENTS = [
     "paragraphs": [
       "Joins in malloy are different than SQL joins.  When two explores are joined,\nMalloy retains the graph nature of the the data relationships. This is unlike\nSQL, which flattens them all into a single table space.",
       "In Malloy syntaxes for join are:",
-      "<code class=\"language-malloy\"><span class=\"token keyword\">join_one</span>:</code> - the table we are joining has one row for each row in the source table.",
-      "<code class=\"language-malloy\"><span class=\"token keyword\">join_many</span>:</code> - the table we are joining has many rows for each row in the source table",
-      "<code class=\"language-malloy\"><span class=\"token keyword\">join_cross</span>:</code> - the join is a cross product and there will be many rows in each side of the join.",
       "Malloy's joins are left outer joins by default.\nSince Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example)."
     ],
     "path": "/language/join.md"
@@ -2410,11 +2781,7 @@ window.SEARCH_SEGMENTS = [
       "Join Types",
       "Foreign Key to Primary Key"
     ],
-    "paragraphs": [
-      "The easiest, most error proof way to perform a join is with <code class=\"language-malloy\"><span class=\"token keyword\">join_one</span>:<span class=\"token operator\">/</span><span class=\"token keyword\">with</span></code>. The basic syntax is:",
-      "<code class=\"language-malloy\"><span class=\"token keyword\">join_one</span>: <span class=\"token operator\">&lt;</span><span class=\"token keyword\">explore</span><span class=\"token operator\">></span> <span class=\"token keyword\">with</span> <span class=\"token operator\">&lt;</span>foreign_key<span class=\"token operator\">></span></code>",
-      "To join a foreign key of the source explore to the <code class=\"language-malloy\">primary <span class=\"token keyword\">key</span></code> of a joined explore, reference the foreign key by name in the <code class=\"language-malloy\"><span class=\"token keyword\">with</span></code> clause."
-    ],
+    "paragraphs": [],
     "path": "/language/join.md"
   },
   {
@@ -2422,10 +2789,7 @@ window.SEARCH_SEGMENTS = [
       "Joins",
       "Naming Joined Explores"
     ],
-    "paragraphs": [
-      "If no name is specified with <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code>, the name of the join will be the name of the\nexplore being joined.",
-      "To give the joined explore a different name within the source explore, use <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code> to specify the name of the explore."
-    ],
+    "paragraphs": [],
     "path": "/language/join.md"
   },
   {
@@ -2433,9 +2797,7 @@ window.SEARCH_SEGMENTS = [
       "Joins",
       "Inlining Joins"
     ],
-    "paragraphs": [
-      "Explores do not need to be named before they are used in a join. if the join\nuses <code class=\"language-malloy\"><span class=\"token keyword\">is</span></code> to give the join a name."
-    ],
+    "paragraphs": [],
     "path": "/language/join.md"
   },
   {
@@ -2444,7 +2806,6 @@ window.SEARCH_SEGMENTS = [
       "Using Fields in Joined Explores"
     ],
     "paragraphs": [
-      "When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class=\"language-malloy\"><span class=\"token punctuation\">.</span></code>.",
       "Measures and queries defined in joined explores may be used in addition to dimensions."
     ],
     "path": "/language/join.md"
@@ -2454,10 +2815,7 @@ window.SEARCH_SEGMENTS = [
       "Joins",
       "Join Example"
     ],
-    "paragraphs": [
-      "This example demonstrates the definition of several different joins in a model and their use in a query.\nEntire subtrees of data can be joined.  In the example below, <code class=\"language-malloy\">aircraft</code> joins <code class=\"language-malloy\">aircraft_models</code>.  <code class=\"language-malloy\">flights</code>\njoins aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship\nretained.",
-      "<code class=\"language-malloy\"><span class=\"token keyword\">group_by</span>: aircraft<span class=\"token punctuation\">.</span>aircraft_models<span class=\"token punctuation\">.</span>manufacturer</code>"
-    ],
+    "paragraphs": [],
     "path": "/language/join.md"
   },
   {
@@ -2467,6 +2825,18 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Inner join are joins where the the joined table has rows. The example below, suppose we only want users that have at least one row in the orders table. The following is the equivalent of a SQL <code>INNER JOIN</code>.",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:</span></span></code> - the table we are joining has one row for each row in the source table.",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">join_many</span><span style=\"color: #000000\">:</span></span></code> - the table we are joining has many rows for each row in the source table",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">join_cross</span><span style=\"color: #000000\">:</span></span></code> - the join is a cross product and there will be many rows in each side of the join.",
+      "The easiest, most error proof way to perform a join is with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:/</span><span style=\"color: #AF00DB\">with</span></span></code>. The basic syntax is:",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">: &lt;</span><span style=\"color: #AF00DB\">explore</span><span style=\"color: #000000\">&gt; </span><span style=\"color: #AF00DB\">with</span><span style=\"color: #000000\"> &lt;</span><span style=\"color: #001080\">foreign_key</span><span style=\"color: #000000\">&gt;</span></span></code>",
+      "To join a foreign key of the source explore to the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">primary</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">key</span></span></code> of a joined explore, reference the foreign key by name in the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">with</span></span></code> clause.",
+      "If no name is specified with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code>, the name of the join will be the name of the\nexplore being joined.",
+      "To give the joined explore a different name within the source explore, use <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> to specify the name of the explore.",
+      "Explores do not need to be named before they are used in a join. if the join\nuses <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> to give the join a name.",
+      "When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code>.",
+      "This example demonstrates the definition of several different joins in a model and their use in a query.\nEntire subtrees of data can be joined.  In the example below, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft</span></span></code> joins <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span></span></code>.  <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code>\njoins aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship\nretained.",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">aircraft</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">manufacturer</span></span></code>",
       "<a href=\"aggregates.html\">Aggregate calculations</a> use this graph to deduce\na locality of computation, so they always work regardless of join pattern.",
       "For more examples and how to reason about aggregation across joins, review the <a href=\"aggregates.html\">Aggregates</a> section."
     ],
@@ -2534,9 +2904,7 @@ window.SEARCH_SEGMENTS = [
       "Implicit Ordering",
       "Rule 2: Largest first"
     ],
-    "paragraphs": [
-      "In the following example, Rule 1 doesn't apply, so the default behavior is to sort by first aggregate, <code class=\"language-malloy\">flight_count</code> with the largest values first."
-    ],
+    "paragraphs": [],
     "path": "/language/order_by.md"
   },
   {
@@ -2544,11 +2912,7 @@ window.SEARCH_SEGMENTS = [
       "Ordering and Limiting",
       "Explicit Ordering"
     ],
-    "paragraphs": [
-      "You can be explicit about result ordering by using the <code class=\"language-malloy\"><span class=\"token keyword\">order</span> <span class=\"token keyword\">by</span></code> clause.",
-      "In the following example, the results are ordered by <code class=\"language-malloy\">carrier</code> in reverse alphabetical order.",
-      "Like in SQL, Malloy's <code class=\"language-malloy\"><span class=\"token keyword\">order</span> <span class=\"token keyword\">by</span></code> always defaults to ascending order when <code class=\"language-malloy\"><span class=\"token keyword\">desc</span></code> is omitted. This is true for any column of any type. In the example below,\nthe results are ordered by <code class=\"language-malloy\">carrier</code> in alphabetical order."
-    ],
+    "paragraphs": [],
     "path": "/language/order_by.md"
   },
   {
@@ -2557,8 +2921,12 @@ window.SEARCH_SEGMENTS = [
       "Limiting"
     ],
     "paragraphs": [
-      "In Malloy, you can limit the number of results returned using a <code class=\"language-malloy\"><span class=\"token keyword\">top</span>: n</code> or <code class=\"language-malloy\"><span class=\"token keyword\">limit</span>: n</code>.  Both are provided for readability.",
-      "In the example below, the results are limited to 2 rows, which are sorted by <code class=\"language-malloy\">dep_month</code> with newest results first (due to Rule 1).",
+      "In the following example, Rule 1 doesn't apply, so the default behavior is to sort by first aggregate, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">flight_count</span></span></code> with the largest values first.",
+      "You can be explicit about result ordering by using the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">order</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">by</span></span></code> clause.",
+      "In the following example, the results are ordered by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">carrier</span></span></code> in reverse alphabetical order.",
+      "Like in SQL, Malloy's <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">order</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">by</span></span></code> always defaults to ascending order when <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">desc</span></span></code> is omitted. This is true for any column of any type. In the example below,\nthe results are ordered by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">carrier</span></span></code> in alphabetical order.",
+      "In Malloy, you can limit the number of results returned using a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">top</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">n</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">limit</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">n</span></span></code>.  Both are provided for readability.",
+      "In the example below, the results are limited to 2 rows, which are sorted by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">dep_month</span></span></code> with newest results first (due to Rule 1).",
       "The following uses the <a href=\"../examples/faa.html\">NTSB Flight Model</a> for examples.",
       "If a query stage has a <a href=\"fields.html#dimensions\">dimensional</a> column that represents a point in time, it is usually the most\nimportant concept in the query.  Because the most recent data is usually the most relevant, Malloy sorts the newest data first.",
       "If there is a <a href=\"fields.html#measures\">measure</a> involved, Malloy sorts larger values first."
@@ -2602,8 +2970,7 @@ window.SEARCH_SEGMENTS = [
       "Pipelines"
     ],
     "paragraphs": [
-      "A pipeline transforms the shape of an explore, and is made up of a series of stages.",
-      "A typical stage is has either <code class=\"language-malloy\"><span class=\"token keyword\">group_by</span></code>/<code class=\"language-malloy\"><span class=\"token keyword\">aggregate</span></code> or <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code>, or <code class=\"language-malloy\"><span class=\"token keyword\">index</span></code> transformation consisting of a set of fields, and optionally filters and ordering/limiting specification."
+      "A pipeline transforms the shape of an explore, and is made up of a series of stages."
     ],
     "path": "/language/query.md"
   },
@@ -2614,8 +2981,7 @@ window.SEARCH_SEGMENTS = [
       "Fields"
     ],
     "paragraphs": [
-      "In a query stage, fields (dimensions, measures, or\nqueries) may be specified either by referencing an existing\nname or defining them inline.",
-      "When referencing existing fields, wildcard expressions <code class=\"language-malloy\"><span class=\"token operator\">*</span></code>, <code class=\"language-malloy\"><span class=\"token operator\">*</span><span class=\"token operator\">*</span></code>, and <code class=\"language-malloy\">some_join<span class=\"token punctuation\">.</span><span class=\"token operator\">*</span></code> may be used."
+      "In a query stage, fields (dimensions, measures, or\nqueries) may be specified either by referencing an existing\nname or defining them inline."
     ],
     "path": "/language/query.md"
   },
@@ -2640,7 +3006,9 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Query stages may also include ordering and limiting\nspecifications.",
-      "The basic syntax for a query in Malloy consists of a source\nand a \"pipeline\" of one or more <em>stages</em> separated by <code class=\"language-malloy\"><span class=\"token operator\">-</span><span class=\"token operator\">></span></code>. The shape of the data defined in the original explore is transformed by each stage.",
+      "A typical stage is has either <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code>/<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>, or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">index</span></span></code> transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.",
+      "When referencing existing fields, wildcard expressions <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">*</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">**</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">some_join</span><span style=\"color: #000000\">.*</span></span></code> may be used.",
+      "The basic syntax for a query in Malloy consists of a source\nand a \"pipeline\" of one or more <em>stages</em> separated by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code>. The shape of the data defined in the original explore is transformed by each stage.",
       "The source of a query can be a table, an <a href=\"explore.html\">explore</a>, or a <a href=\"statement.html#queries\">named query</a>.",
       "<strong>A query against a table</strong>",
       "<strong>A query against an explore</strong>",
@@ -2652,6 +3020,24 @@ window.SEARCH_SEGMENTS = [
       "For detailed information on ordering and limiting, see the <a href=\"order_by.html\">Ordering and Limiting</a> section."
     ],
     "path": "/language/query.md"
+  },
+  {
+    "titles": [
+      "SQL Blocks"
+    ],
+    "paragraphs": [],
+    "path": "/language/sql_blocks.md"
+  },
+  {
+    "titles": [
+      "SQL Blocks",
+      "Explores from SQL Blocks"
+    ],
+    "paragraphs": [
+      "Explores can be created from a SQL block, e.g.",
+      "Sometimes it is useful to add SQL statements into a Malloy file. You can do so by using the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">sql</span><span style=\"color: #000000\">:</span></span></code> keyword in combination with SQL literals, which are enclosed between an\nopening <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">||</span></span></code> and a closing <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">;;</span></span></code>."
+    ],
+    "path": "/language/sql_blocks.md"
   },
   {
     "titles": [
@@ -2749,8 +3135,7 @@ window.SEARCH_SEGMENTS = [
       "Range shortcuts"
     ],
     "paragraphs": [
-      "Because grouping and filtering by specific time ranges is such a common operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts.",
-      "Malloy supports two time-related types, <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code> and <code class=\"language-malloy\"><span class=\"token type\">date</span></code>.\nBoth of these can be used with these techniques, though the exact\ntruncations or extractions available will vary depending on the\ndata type (e.g. it would make no sense to attempt to truncate a <code class=\"language-malloy\"><span class=\"token type\">date</span></code> object by <code class=\"language-malloy\"><span class=\"token timeframe\">minute</span></code>)."
+      "Because grouping and filtering by specific time ranges is such a common operation for a data transformation task, Malloy has a number of expressive short cuts. The full power of the underlying SQL engine is also available for any type of truncation or extraction not supported by these shortcuts."
     ],
     "path": "/language/time-ranges.md"
   },
@@ -2759,10 +3144,7 @@ window.SEARCH_SEGMENTS = [
       "Malloy time range expressions",
       "Truncation"
     ],
-    "paragraphs": [
-      "To create truncation, use the <code class=\"language-malloy\"><span class=\"token punctuation\">.</span></code> operator followed by the desired timeframe.",
-      "By way of example, if the value of <code class=\"language-malloy\">expr</code> is <code class=\"language-malloy\"><span class=\"token date\">@2021-08-06 00:36</span></code>, then the below truncations will produce the results on the right:"
-    ],
+    "paragraphs": [],
     "path": "/language/time-ranges.md"
   },
   {
@@ -2771,9 +3153,7 @@ window.SEARCH_SEGMENTS = [
       "Truncation",
       "Truncations as ranges"
     ],
-    "paragraphs": [
-      "A truncation made this way (unlike a truncation make in SQL with\n<code class=\"language-malloy\">TIMESTAMP_TRUNC<span class=\"token function\"></span><span class=\"token punctuation\">(</span><span class=\"token punctuation\">)</span></code>) can also function as a range. The range begins\nat the moment of truncation and the duration is the timeframe unit\nused to specify the truncation, so for example <code class=\"language-malloy\">eventDate<span class=\"token punctuation\">.</span><span class=\"token timeframe\">year</span></code>\nwould be a range covering the entire year which contains <code class=\"language-malloy\">eventDate</code>"
-    ],
+    "paragraphs": [],
     "path": "/language/time-ranges.md"
   },
   {
@@ -2782,8 +3162,7 @@ window.SEARCH_SEGMENTS = [
       "Extraction"
     ],
     "paragraphs": [
-      "Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call.",
-      "The \"Result\" column uses a value of <code class=\"language-malloy\"><span class=\"token number\">2021</span><span class=\"token operator\">-</span><span class=\"token number\">08</span><span class=\"token operator\">-</span><span class=\"token number\">06</span> <span class=\"token number\">00</span>:<span class=\"token number\">55</span>:<span class=\"token number\">05</span></code> for <code class=\"language-malloy\">expr</code>."
+      "Another very common grouping for time related data is by particular components, and this extraction of a single component as an integer. In Malloy this gesture looks like a function call."
     ],
     "path": "/language/time-ranges.md"
   },
@@ -2792,10 +3171,7 @@ window.SEARCH_SEGMENTS = [
       "Malloy time range expressions",
       "Literals"
     ],
-    "paragraphs": [
-      "Time literals are specified in malloy with the <code class=\"language-malloy\"><span class=\"token date\">@</span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
-      "For example the year <code class=\"language-malloy\"><span class=\"token date\">@2003</span></code> can be used with <code class=\"language-malloy\">eventTime : <span class=\"token date\">@2003</span></code> to test if the\nevent happened in the year 2003."
-    ],
+    "paragraphs": [],
     "path": "/language/time-ranges.md"
   },
   {
@@ -2806,11 +3182,18 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "These are the time units currently supported by Malloy.",
-      "<code class=\"language-malloy\"><span class=\"token timeframe\">second</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">minute</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">hour</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">week</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">month</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">quarter</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">year</span></code>",
-      "<em>expr</em> <code class=\"language-malloy\"><span class=\"token keyword\">to</span></code> <em>expr</em> ( <code class=\"language-malloy\"><span class=\"token date\">@2001</span> <span class=\"token keyword\">to</span> <span class=\"token date\">@2003</span></code>)",
-      "<em>expr</em> <code class=\"language-malloy\"><span class=\"token keyword\">for</span></code> <code class=\"language-malloy\">N</code> <em>units</em> ( <code class=\"language-malloy\">now <span class=\"token keyword\">for</span> <span class=\"token number\">15</span> <span class=\"token timeframe\">minutes</span></code> )",
-      "A timestamp can be compared to a range. If the time stamp is within\nthe range it will be <code class=\"language-malloy\"><span class=\"token operator\">=</span></code>. Before the range it will be <code class=\"language-malloy\"><span class=\"token operator\">&lt;</span></code> and after\nthe range it will be <code class=\"language-malloy\"><span class=\"token operator\">></span></code>. If you <a href=\"apply.html\">apply</a> a range, (for example, <code class=\"language-malloy\">eventDate: <span class=\"token date\">@2003</span> <span class=\"token keyword\">to</span> <span class=\"token date\">@2004</span></code>) that will also check if the value is within the range.",
-      "This is extremely useful with the <a href=\"apply.html\">Apply operator</a>, <code class=\"language-malloy\">:</code>. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is <code class=\"language-malloy\">oneEvent: otherEvent<span class=\"token punctuation\">.</span><span class=\"token timeframe\">year</span></code>"
+      "Malloy supports two time-related types, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code>.\nBoth of these can be used with these techniques, though the exact\ntruncations or extractions available will vary depending on the\ndata type (e.g. it would make no sense to attempt to truncate a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code> object by <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">minute</span></span></code>).",
+      "To create truncation, use the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code> operator followed by the desired timeframe.",
+      "By way of example, if the value of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">expr</span></span></code> is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2021-08-06 00:36</span></span></code>, then the below truncations will produce the results on the right:",
+      "A truncation made this way (unlike a truncation make in SQL with\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">TIMESTAMP_TRUNC</span><span style=\"color: #000000\">()</span></span></code>) can also function as a range. The range begins\nat the moment of truncation and the duration is the timeframe unit\nused to specify the truncation, so for example <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">eventDate</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>\nwould be a range covering the entire year which contains <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">eventDate</span></span></code>",
+      "The \"Result\" column uses a value of <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">2021</span><span style=\"color: #000000\">-08-06 00:</span><span style=\"color: #098658\">55</span><span style=\"color: #000000\">:05</span></span></code> for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">expr</span></span></code>.",
+      "Time literals are specified in malloy with the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
+      "For example the year <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003</span></span></code> can be used with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">eventTime</span><span style=\"color: #000000\"> : </span><span style=\"color: #098658\">@2003</span></span></code> to test if the\nevent happened in the year 2003.",
+      "<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">second</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">minute</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">hour</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">week</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">month</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">quarter</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code>",
+      "<em>expr</em> <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">to</span></span></code> <em>expr</em> ( <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2001 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2003</span></span></code>)",
+      "<em>expr</em> <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">for</span></span></code> <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">N</span></span></code> <em>units</em> ( <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">now</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">for</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">15</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">minutes</span></span></code> )",
+      "A timestamp can be compared to a range. If the time stamp is within\nthe range it will be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">=</span></span></code>. Before the range it will be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&lt;</span></span></code> and after\nthe range it will be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt;</span></span></code>. If you <a href=\"apply.html\">apply</a> a range, (for example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">eventDate</span><span style=\"color: #000000\">: </span><span style=\"color: #098658\">@2003 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2004</span></span></code>) that will also check if the value is within the range.",
+      "This is extremely useful with the <a href=\"apply.html\">Apply operator</a>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">:</span></span></code>. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">oneEvent</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">otherEvent</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>"
     ],
     "path": "/language/time-ranges.md"
   },
@@ -2838,9 +3221,6 @@ window.SEARCH_SEGMENTS = [
       "Numbers"
     ],
     "paragraphs": [
-      "All numbers in Malloy are of type <code class=\"language-malloy\"><span class=\"token type\">number</span></code>, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.",
-      "Literal <code class=\"language-malloy\"><span class=\"token type\">number</span></code>s consist of one or more digits optionally followed\nby a decimal point <code class=\"language-malloy\"><span class=\"token punctuation\">.</span></code> and more digits, e.g. <code class=\"language-malloy\"><span class=\"token number\">42</span></code> or <code class=\"language-malloy\"><span class=\"token number\">3.14</span></code>.",
-      "Negative numbers are represented using the unary minus\noperator, e.g. <code class=\"language-malloy\"><span class=\"token operator\">-</span><span class=\"token number\">7</span></code>.",
       "Today, no other forms of literal numbers (e.g. numbers in other\nbases, numbers with thousand separators, exponential notation, etc.) are legal."
     ],
     "path": "/language/types.md"
@@ -2851,10 +3231,7 @@ window.SEARCH_SEGMENTS = [
       "Scalar Types",
       "Strings"
     ],
-    "paragraphs": [
-      "In Malloy, strings of any length are represented by the <code class=\"language-malloy\"><span class=\"token type\">string</span></code> type.",
-      "Literal strings in Malloy are enclosed in single quotes <code class=\"language-malloy\">'</code>, and may include the escape sequences <code class=\"language-malloy\">\\\\</code> or <code class=\"language-malloy\">\\<span class=\"token punctuation\">.</span></code>, e.g. <code class=\"language-malloy\"><span class=\"token string\">'\\'Hello, world\\''</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/types.md"
   },
   {
@@ -2863,9 +3240,7 @@ window.SEARCH_SEGMENTS = [
       "Scalar Types",
       "Dates and Timestamps"
     ],
-    "paragraphs": [
-      "Malloy has two time types, <code class=\"language-malloy\"><span class=\"token type\">date</span></code> and <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/types.md"
   },
   {
@@ -2874,10 +3249,7 @@ window.SEARCH_SEGMENTS = [
       "Scalar Types",
       "Booleans"
     ],
-    "paragraphs": [
-      "The <code class=\"language-malloy\"><span class=\"token type\">boolean</span></code> type covers both the <code>BOOLEAN</code> and <code>BOOL</code> types from BigQuery.",
-      "In Malloy, the boolean literals are written <code class=\"language-malloy\"><span class=\"token boolean\">true</span></code> and <code class=\"language-malloy\"><span class=\"token boolean\">false</span></code>."
-    ],
+    "paragraphs": [],
     "path": "/language/types.md"
   },
   {
@@ -2907,7 +3279,6 @@ window.SEARCH_SEGMENTS = [
       "Regular Expressions"
     ],
     "paragraphs": [
-      "Literal regular expressions are enclosed in single quotation\nmarks <code class=\"language-malloy\">'</code> and preceded by either <code class=\"language-malloy\"><span class=\"token operator\">/</span></code> or <code class=\"language-malloy\">r</code>, e.g. <code class=\"language-malloy\"><span class=\"token regular_expression\">/'.*'</span></code> or <code class=\"language-malloy\"><span class=\"token regular_expression\">r'.*'</span></code>. Both syntaxes are semantically equivalent.",
       "In the future, the literal regular expressions will likely\nbe simply slash-enclosed, e.g <code>/.*/</code>."
     ],
     "path": "/language/types.md"
@@ -2918,10 +3289,7 @@ window.SEARCH_SEGMENTS = [
       "Intermediate Types",
       "Ranges"
     ],
-    "paragraphs": [
-      "There are three types of ranges today: <code class=\"language-malloy\"><span class=\"token type\">string</span></code> ranges, <code class=\"language-malloy\"><span class=\"token type\">date</span></code> ranges, and <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code> ranges. The most basic ranges\nare of the form <code class=\"language-malloy\">start <span class=\"token keyword\">to</span> end</code> and represent the inclusive range between <code class=\"language-malloy\">start</code> and <code class=\"language-malloy\">end</code>, e.g. <code class=\"language-malloy\"><span class=\"token number\">10</span> <span class=\"token keyword\">to</span> <span class=\"token number\">20</span></code> or <code class=\"language-malloy\"><span class=\"token date\">@2004-01</span> <span class=\"token keyword\">to</span> <span class=\"token date\">@2005-05</span></code>.",
-      "In the future, other ranges may be allowed, such as <code class=\"language-malloy\"><span class=\"token type\">string</span></code> ranges."
-    ],
+    "paragraphs": [],
     "path": "/language/types.md"
   },
   {
@@ -2941,16 +3309,27 @@ window.SEARCH_SEGMENTS = [
       "Nullability"
     ],
     "paragraphs": [
-      "Today, all Malloy types include the value <code class=\"language-malloy\"><span class=\"token keyword\">null</span></code>, however\nin the future Malloy may have a concept of nullable vs.\nnon-nullable types.",
-      "Both the <code class=\"language-malloy\"><span class=\"token type\">date</span></code> and <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code> types may have an associated\n<em>timeframe</em>, which can be <code class=\"language-malloy\"><span class=\"token timeframe\">year</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">quarter</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">month</span></code>,\n<code class=\"language-malloy\"><span class=\"token timeframe\">week</span></code>, or <code class=\"language-malloy\"><span class=\"token timeframe\">day</span></code>, and for <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code>s only, additionally\n<code class=\"language-malloy\"><span class=\"token timeframe\">hour</span></code>, <code class=\"language-malloy\"><span class=\"token timeframe\">minute</span></code>, or <code class=\"language-malloy\"><span class=\"token timeframe\">second</span></code>.",
-      "Literals for <code class=\"language-malloy\"><span class=\"token type\">date</span></code> and <code class=\"language-malloy\"><span class=\"token type\">timestamp</span></code> are preceded by the <code class=\"language-malloy\"><span class=\"token date\">@</span></code> character, e.g. <code class=\"language-malloy\"><span class=\"token date\">@2003</span></code> or <code class=\"language-malloy\"><span class=\"token date\">@1983-11-23 10:00:10</span></code>. For all\nvariations of time literals and information about their interaction with comparison operators, see the <a href=\"time-ranges.html#literals\">Time Ranges</a> section.",
-      "The following types are not assignable to fields, and are\ntherefore considered <em>intermediate types</em>, in that they are\nprimarily used to represent part of a computation that\nyields a regular scalar type, often <code class=\"language-malloy\"><span class=\"token type\">boolean</span></code>.",
-      "Values of type <code class=\"language-malloy\"><span class=\"token type\">string</span></code> may be compared against regular\nexpressions using either the <a href=\"apply.html\">apply operator</a>,<code class=\"language-malloy\">name: <span class=\"token regular_expression\">r'c.*'</span></code> or the like operator, <code class=\"language-malloy\">name <span class=\"token operator\">~</span> <span class=\"token regular_expression\">r'c.*'</span></code>.",
+      "All numbers in Malloy are of type <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">number</span></span></code>, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.",
+      "Literal <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">number</span></span></code>s consist of one or more digits optionally followed\nby a decimal point <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code> and more digits, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">42</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">3.14</span></span></code>.",
+      "Negative numbers are represented using the unary minus\noperator, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">-</span><span style=\"color: #098658\">7</span></span></code>.",
+      "In Malloy, strings of any length are represented by the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">string</span></span></code> type.",
+      "Literal strings in Malloy are enclosed in single quotes <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;</span></span></code>, and may include the escape sequences <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">\\\\</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">\\.</span></span></code>, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;</span><span style=\"color: #EE0000\">\\&#39;</span><span style=\"color: #A31515\">Hello, world</span><span style=\"color: #EE0000\">\\&#39;</span><span style=\"color: #A31515\">&#39;</span></span></code>.",
+      "Malloy has two time types, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code>.",
+      "The <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">boolean</span></span></code> type covers both the <code>BOOLEAN</code> and <code>BOOL</code> types from BigQuery.",
+      "In Malloy, the boolean literals are written <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">true</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">false</span></span></code>.",
+      "Literal regular expressions are enclosed in single quotation\nmarks <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;</span></span></code> and preceded by either <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">/</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">r</span></span></code>, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #811F3F\">/&#39;.*&#39;</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #811F3F\">r&#39;.*&#39;</span></span></code>. Both syntaxes are semantically equivalent.",
+      "There are three types of ranges today: <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">string</span></span></code> ranges, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code> ranges, and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code> ranges. The most basic ranges\nare of the form <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">start</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">end</span></span></code> and represent the inclusive range between <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">start</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">end</span></span></code>, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">10</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">20</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2004-01 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2005-05</span></span></code>.",
+      "In the future, other ranges may be allowed, such as <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">string</span></span></code> ranges.",
+      "Today, all Malloy types include the value <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">null</span></span></code>, however\nin the future Malloy may have a concept of nullable vs.\nnon-nullable types.",
+      "Both the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code> types may have an associated\n<em>timeframe</em>, which can be <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">quarter</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">month</span></span></code>,\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">week</span></span></code>, or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">day</span></span></code>, and for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code>s only, additionally\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">hour</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">minute</span></span></code>, or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">second</span></span></code>.",
+      "Literals for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">date</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">timestamp</span></span></code> are preceded by the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character, e.g. <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@2003</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">@1983-11-23 10:00:10</span></span></code>. For all\nvariations of time literals and information about their interaction with comparison operators, see the <a href=\"time-ranges.html#literals\">Time Ranges</a> section.",
+      "The following types are not assignable to fields, and are\ntherefore considered <em>intermediate types</em>, in that they are\nprimarily used to represent part of a computation that\nyields a regular scalar type, often <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">boolean</span></span></code>.",
+      "Values of type <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #267F99\">string</span></span></code> may be compared against regular\nexpressions using either the <a href=\"apply.html\">apply operator</a>,<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">name</span><span style=\"color: #000000\">: </span><span style=\"color: #811F3F\">r&#39;c.*&#39;</span></span></code> or the like operator, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">name</span><span style=\"color: #000000\"> ~ </span><span style=\"color: #811F3F\">r&#39;c.*&#39;</span></span></code>.",
       "Ranges may be used in conjunction with the <a href=\"apply.html\">apply operator</a> to test whether a value falls within a given range.",
-      "<em>Partials</em> represent a \"part of\" a comparison.\nSpecifically, a partial is a comparison missing its\nleft-hand side, and represents the condition of the\ncomparison yielding <code class=\"language-malloy\"><span class=\"token boolean\">true</span></code> if a given value were to be\nfilled in for that missing left-hand side. For example, <code class=\"language-malloy\"><span class=\"token operator\">></span> <span class=\"token number\">10</span></code> is a partial that represents the condition \"is greater\nthan ten.\" Likewise, <code class=\"language-malloy\"><span class=\"token operator\">!=</span> <span class=\"token string\">'CA'</span></code> is a partial that represents the condition of not being equal to <code class=\"language-malloy\"><span class=\"token string\">'CA'</span></code>.",
-      "<em>Alternations</em> are combinations of partials representing\neither the logical union (\"or\") or conjunction (\"and\") of\ntheir conditions. Alternations are represented using the\nunion alternation operator <code class=\"language-malloy\"><span class=\"token operator\">|</span></code> and the conjunction\nalternation operator <code class=\"language-malloy\"><span class=\"token operator\">&amp;</span></code>.",
-      "For example, <code class=\"language-malloy\"><span class=\"token operator\">=</span> <span class=\"token string\">'CA'</span> <span class=\"token operator\">|</span> <span class=\"token operator\">=</span> <span class=\"token string\">'NY'</span></code> represents the condition of being equal to 'CA' or <em>alternatively</em> being equal to 'NY'. On the other hand, <code class=\"language-malloy\"><span class=\"token operator\">!=</span> <span class=\"token string\">'CA'</span> <span class=\"token operator\">&amp;</span> <span class=\"token operator\">!=</span> <span class=\"token string\">'NY'</span></code> represents the condition of being not equal to 'CA' <em>as well as</em> being not equal to 'NY'.",
-      "For example, <code class=\"language-malloy\"><span class=\"token string\">'CA'</span> <span class=\"token operator\">|</span> <span class=\"token regular_expression\">r'N.*'</span></code> represents the condition of being equal to 'CA' or starting with 'N', and <code class=\"language-malloy\"><span class=\"token number\">10</span> <span class=\"token keyword\">to</span> <span class=\"token number\">20</span> <span class=\"token operator\">|</span> <span class=\"token number\">20</span> <span class=\"token keyword\">to</span> <span class=\"token number\">30</span></code> represents the condition of being <em>either</em> between 10 and 20 <em>or</em> 20 and 30.",
+      "<em>Partials</em> represent a \"part of\" a comparison.\nSpecifically, a partial is a comparison missing its\nleft-hand side, and represents the condition of the\ncomparison yielding <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #0000FF\">true</span></span></code> if a given value were to be\nfilled in for that missing left-hand side. For example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&gt; </span><span style=\"color: #098658\">10</span></span></code> is a partial that represents the condition \"is greater\nthan ten.\" Likewise, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">!= </span><span style=\"color: #A31515\">&#39;CA&#39;</span></span></code> is a partial that represents the condition of not being equal to <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;CA&#39;</span></span></code>.",
+      "<em>Alternations</em> are combinations of partials representing\neither the logical union (\"or\") or conjunction (\"and\") of\ntheir conditions. Alternations are represented using the\nunion alternation operator <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">|</span></span></code> and the conjunction\nalternation operator <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">&amp;</span></span></code>.",
+      "For example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">= </span><span style=\"color: #A31515\">&#39;CA&#39;</span><span style=\"color: #000000\"> | = </span><span style=\"color: #A31515\">&#39;NY&#39;</span></span></code> represents the condition of being equal to 'CA' or <em>alternatively</em> being equal to 'NY'. On the other hand, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #000000\">!= </span><span style=\"color: #A31515\">&#39;CA&#39;</span><span style=\"color: #000000\"> &amp; != </span><span style=\"color: #A31515\">&#39;NY&#39;</span></span></code> represents the condition of being not equal to 'CA' <em>as well as</em> being not equal to 'NY'.",
+      "For example, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #A31515\">&#39;CA&#39;</span><span style=\"color: #000000\"> | </span><span style=\"color: #811F3F\">r&#39;N.*&#39;</span></span></code> represents the condition of being equal to 'CA' or starting with 'N', and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #098658\">10</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">20</span><span style=\"color: #000000\"> | </span><span style=\"color: #098658\">20</span><span style=\"color: #000000\"> </span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">30</span></span></code> represents the condition of being <em>either</em> between 10 and 20 <em>or</em> 20 and 30.",
       "Alternations and partials may be used in conjunction with the <a href=\"apply.html\">apply operator</a> to test whether a value meets the given condition."
     ],
     "path": "/language/types.md"
@@ -2961,7 +3340,6 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "To understand this, we're going to use Social Security Administrations birth/name data.",
-      "We have a table with <code class=\"language-malloy\">name</code>, <code class=\"language-malloy\">gender</code>, <code class=\"language-malloy\"><span class=\"token identifier\">`year`</span></code>, <code class=\"language-malloy\">state</code> and the <code class=\"language-malloy\"><span class=\"token identifier\">`number`</span></code> of people born with those\ncharacteristics.",
       "We can see that in the population of the the people named 'Billie', the cohort of the Billies born in\nTexas makes up 18% of the total population of Billies.",
       "We could run this same query, but instead look by decade to see when the Billies where born.\nUsing the query below we can see that 26% of all Billies were born in the 1930s."
     ],
@@ -2973,6 +3351,7 @@ window.SEARCH_SEGMENTS = [
       "Names as Cohorts"
     ],
     "paragraphs": [
+      "We have a table with <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">name</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">gender</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">`year`</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">state</span></span></code> and the <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">`number`</span></span></code> of people born with those\ncharacteristics.",
       "One of the most powerful way of understanding what is happening using data is to use <em>cohort analysis</em>.\nFundamentally, cohort analysis is used to group people into sets and to analyze the success,\nattributes or characteristics of that group as compared to the population in general.",
       "In the simplest form, a cohort calculation is a <a href=\"percent_of_total.html\">percentage of total calculation</a>.\nFor example, if we were interested in the name 'Billie' as it relates to location. We could look\ncould filter on 'Billie' and look a states as it relates to total population.",
       "In the above example, the population was <em>People named Billie</em> and we used <em>state</em> or <em>year</em> for our cohort (grouping).\nLets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our population.\nLet's limit our population to California in 1990 and look at the most cohorts (people with a given name).  We are also going\nto measure a little differently.  Instead of looking at a percentage, let's look at births per 100,000 people."
@@ -2984,7 +3363,7 @@ window.SEARCH_SEGMENTS = [
       "Foreign Sums"
     ],
     "paragraphs": [
-      "Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model.\n<code class=\"language-malloy\">aircraft_model</code> has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree."
+      "Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model.\n<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">aircraft_model</span></span></code> has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree."
     ],
     "path": "/patterns/foreign_sums.md"
   },
@@ -3012,9 +3391,9 @@ window.SEARCH_SEGMENTS = [
       "Query for Flights By Carrier"
     ],
     "paragraphs": [
-      "The results are returned as a single row in a table with two columns, <code class=\"language-malloy\">flight_count</code> and <code class=\"language-malloy\">main_query</code>.",
-      "Using a pipeline with a <code class=\"language-malloy\"><span class=\"token keyword\">project</span></code> calculation to combine (essentially cross joining) the queries back into a single table.\nWe also add an additional column, the percentage of total calculation.",
-      "We can use a wildcard against the nested query to to make this pattern easier to write."
+      "We can use a wildcard against the nested query to to make this pattern easier to write.",
+      "The results are returned as a single row in a table with two columns, <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">flight_count</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">main_query</span></span></code>.",
+      "Using a pipeline with a <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code> calculation to combine (essentially cross joining) the queries back into a single table.\nWe also add an additional column, the percentage of total calculation."
     ],
     "path": "/patterns/percent_of_total.md"
   },
@@ -3110,7 +3489,7 @@ window.SEARCH_SEGMENTS = [
       "Sessionized Data"
     ],
     "paragraphs": [
-      "Flight data contains time, carrier, origin, destination and the plane that made the flight (<code class=\"language-malloy\">tail_num</code>).  Take the\nflight data and sessionize it by carrier and date.  Compute statistics and the session, plane and flight level.\nRetain the original flight events."
+      "Flight data contains time, carrier, origin, destination and the plane that made the flight (<code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">tail_num</span></span></code>).  Take the\nflight data and sessionize it by carrier and date.  Compute statistics and the session, plane and flight level.\nRetain the original flight events."
     ],
     "path": "/patterns/sessionize.md"
   },
@@ -3128,9 +3507,7 @@ window.SEARCH_SEGMENTS = [
       "Year Over Year Analysis",
       "Method 1: Pivoting a Visualization"
     ],
-    "paragraphs": [
-      "Compare performance of different years on the same scale.  Line charts take the X-Axis, Y-Axis and Dimensional Axis as parameters.\nIn this Case, the X-Axis is <code class=\"language-malloy\">month_of_year</code>, the Y-Axis is <code class=\"language-malloy\">flight_count</code> and the Dimensional Axis is the year."
-    ],
+    "paragraphs": [],
     "path": "/patterns/yoy.md"
   },
   {
@@ -3160,6 +3537,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "We can rewrite the query so it is more reusable.  The declarations after the explore are temporary additions to this order_items table for the sake of just this query.",
+      "Compare performance of different years on the same scale.  Line charts take the X-Axis, Y-Axis and Dimensional Axis as parameters.\nIn this Case, the X-Axis is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">month_of_year</span></span></code>, the Y-Axis is <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">flight_count</span></span></code> and the Dimensional Axis is the year.",
       "Often you want to show up-to-date information.  You can write timeframes relatively so the queries always show\ncurrent data.  Read more about it in the <a href=\"filter_expressions.html\">filters</a> section."
     ],
     "path": "/patterns/yoy.md"
@@ -3351,8 +3729,8 @@ window.SEARCH_SEGMENTS = [
       "Charting."
     ],
     "paragraphs": [
-      "Add styles for <code class=\"language-malloy\">by_fac_type</code> and <code class=\"language-malloy\">by_county</code>",
       "Data Style:",
+      "Add styles for <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">by_fac_type</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FFFFFF\"><span class=\"line\"><span style=\"color: #001080\">by_county</span></span></code>",
       "The Malloy Renderer uses <a href=\"https://vega.github.io/vega-lite/\">Vega</a> for charting.  Including some style information (that gets returned with the results) allows the renderer to\nstyle nested queries using charts and more."
     ],
     "path": "/visualizations/dashboards.md"

@@ -142,6 +142,12 @@
                 Imports
               </a>
             </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
           </div>
       </div>
 <div>
@@ -365,7 +371,7 @@
           Aggregates
         </a>
       </h1>
-    <p>Malloy supports the standard aggregate functions <code class="language-malloy">count</code>, <code class="language-malloy">sum</code>, <code class="language-malloy">avg</code>, <code class="language-malloy">min</code>, and <code class="language-malloy">max</code>. When these are used in a field's definition, they make that field a <a href="fields.html#measures">measure</a>.</p>
+    <p>Malloy supports the standard aggregate functions <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">count</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">sum</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">avg</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">min</span></span></code>, and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">max</span></span></code>. When these are used in a field's definition, they make that field a <a href="fields.html#measures">measure</a>.</p>
 
       <h2>
         <a id="basic-syntax" class="header-link anchor" href="#basic-syntax">
@@ -378,10 +384,10 @@
           Counts
         </a>
       </h3>
-    <p>The <code class="language-malloy">count</code> aggregate function may be used to count the number of records appearing in an explore.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: flight_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+    <p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">count</span></span></code> aggregate function may be used to count the number of records appearing in an explore.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -392,36 +398,25 @@
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">flight_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">37,561,525</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>37,561,525</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"flight_count"</span><span class="token operator">:</span> <span class="token number">37561525</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">37561525</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">COUNT</span><span class="token punctuation">(</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">as</span> flight_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -431,9 +426,9 @@
         </a>
       </h3>
     <p>Distinct counts may be used to count the number of distinct values of a particular field within an explore.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: order_items <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: order_count <span class="token keyword">is</span> <span class="token function">count</span><span class="token punctuation">(</span><span class="token function_keyword">distinct</span> order_id<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">order_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #795E26">distinct</span><span style="color: #000000"> </span><span style="color: #001080">order_id</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -444,36 +439,25 @@
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">order_&#8203;count</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">227,957</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">order_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>227,957</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"order_count"</span><span class="token operator">:</span> <span class="token number">227957</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;order_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">227957</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">count</span><span class="token punctuation">(</span><span class="token keyword">distinct</span> order_items<span class="token punctuation">.</span>order_id<span class="token punctuation">)</span> <span class="token keyword">as</span> order_count
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> order_items
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #0000FF">distinct</span><span style="color: #000000"> order_items.order_id) </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.order_items`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_items</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -482,10 +466,10 @@
           Sums
         </a>
       </h3>
-    <p>The <code class="language-malloy">sum</code> function may be used to compute the sum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: total_distance <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+    <p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">sum</span></span></code> function may be used to compute the sum of all records of a particular field.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_distance</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">distance</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -496,36 +480,25 @@
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">total_&#8203;distance</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">27,540,298,839</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">total_​distance</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>27,540,298,839</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"total_distance"</span><span class="token operator">:</span> <span class="token number">27540298839</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">27540298839</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">SUM</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>distance<span class="token punctuation">)</span> <span class="token keyword">as</span> total_distance
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">SUM</span><span style="color: #000000">(flights.distance) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_distance</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -534,10 +507,10 @@
           Averages
         </a>
       </h3>
-    <p>The <code class="language-malloy">avg</code> function may be used to compute the average of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">sum</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+    <p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">avg</span></span></code> function may be used to compute the average of all records of a particular field.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">average_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -548,37 +521,27 @@
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">3,013,033</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">average_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,013,033</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"average_seats"</span><span class="token operator">:</span> <span class="token number">3013033</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3013033</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">SUM</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">)</span> <span class="token keyword">as</span> average_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">SUM</span><span style="color: #000000">(aircraft_models_0.seats) </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -587,10 +550,10 @@
           Minima
         </a>
       </h3>
-    <p>The <code class="language-malloy">min</code> function may be used to compute the minimum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: order_items <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: cheapest_price <span class="token keyword">is</span> <span class="token function">min</span><span class="token punctuation">(</span>sale_price<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+    <p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">min</span></span></code> function may be used to compute the minimum of all records of a particular field.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">cheapest_price</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">min</span><span style="color: #000000">(</span><span style="color: #001080">sale_price</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -601,36 +564,25 @@
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">cheapest_&#8203;price</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">0.02</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">cheapest_​price</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.02</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"cheapest_price"</span><span class="token operator">:</span> <span class="token number">0.019999999552965164</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;cheapest_price&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.019999999552965164</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">min</span><span class="token punctuation">(</span>order_items<span class="token punctuation">.</span>sale_price<span class="token punctuation">)</span> <span class="token keyword">as</span> cheapest_price
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>ecomm<span class="token punctuation">.</span>order_items<span class="token punctuation">`</span> <span class="token keyword">as</span> order_items
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">min</span><span style="color: #000000">(order_items.sale_price) </span><span style="color: #0000FF">as</span><span style="color: #000000"> cheapest_price</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.order_items`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_items</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -639,10 +591,10 @@
           Maxima
         </a>
       </h3>
-    <p>The <code class="language-malloy">max</code> function may be used to compute the maximum of all records of a particular field.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: longest_distance <span class="token keyword">is</span> <span class="token function">max</span><span class="token punctuation">(</span>distance<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+    <p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">max</span></span></code> function may be used to compute the maximum of all records of a particular field.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">longest_distance</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">max</span><span style="color: #000000">(</span><span style="color: #001080">distance</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -653,36 +605,25 @@
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">longest_&#8203;distance</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">4,962</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">longest_​distance</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,962</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"longest_distance"</span><span class="token operator">:</span> <span class="token number">4962</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;longest_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4962</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">max</span><span class="token punctuation">(</span>flights<span class="token punctuation">.</span>distance<span class="token punctuation">)</span> <span class="token keyword">as</span> longest_distance
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">max</span><span style="color: #000000">(flights.distance) </span><span style="color: #0000FF">as</span><span style="color: #000000"> longest_distance</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div>
@@ -703,15 +644,12 @@ expressed much more easily.</p>
     <p>Suppose you were interested in learning more about the number of seats on
 commercial aircraft. First you might look at the average number of seats
 on all registered aircraft.</p>
-<p>To do this, you would start with the <code class="language-malloy">aircraft</code> table and join in <code class="language-malloy">aircraft_models</code> to get access to the number of seats, then take
-the average of <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats</code>.</p>
-<pre class="language-sql"><span class="token keyword">SELECT</span>
-  <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-<span class="token keyword">FROM</span> aircraft
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> aircraft_models
-  <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models<span class="token punctuation">.</span>aircraft_model_code</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+<p>To do this, you would start with the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft</span></span></code> table and join in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span></span></code> to get access to the number of seats, then take
+the average of <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span></span></code>.</p>
+<pre><code class="language-sql">SELECT%0A%20%20AVG%28aircraft_models.seats%29%0AFROM%20aircraft%0ALEFT%20JOIN%20aircraft_models%0A%20%20ON%20aircraft.aircraft_model_code%20%3D%20aircraft_models.aircraft_model_code%0A</code></pre>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">average_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -722,45 +660,35 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">average_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8.373</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"average_seats"</span><span class="token operator">:</span> <span class="token number">8.372722397134547</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8.372722397134547</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">)</span> <span class="token keyword">as</span> average_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(aircraft_models_0.seats) </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>You're also interested in knowing the average number of seats on the kinds of aircraft that are in use, or in other words, the average number of seats of the aircraft models of registered aircraft.</p>
-<p>To do this, you might decide to start with the <code class="language-malloy">aircraft_models</code> table instead.</p>
-<pre class="language-sql"><span class="token keyword">SELECT</span> <span class="token function">AVG</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
-<span class="token keyword">FROM</span> aircraft_models</pre><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+<p>To do this, you might decide to start with the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span></span></code> table instead.</p>
+<pre><code class="language-sql">SELECT%20AVG%28seats%29%0AFROM%20aircraft_models%0A</code></pre>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_models</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">average_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -771,36 +699,25 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7.483</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">average_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>7.483</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"average_seats"</span><span class="token operator">:</span> <span class="token number">7.4827574800284555</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">7.4827574800284555</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span> <span class="token keyword">as</span> average_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft_models
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(aircraft_models.seats) </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_models</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>However, this isn't actually the number you were interested in, because this measures the average number of seats across <em>all</em> aircraft models, not just the ones with actively-registered aircraft.</p>
@@ -811,11 +728,11 @@ the average of <code class="language-malloy">aircraft_models<span class="token p
           The Solution
         </a>
       </h3>
-    <p>Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class="language-malloy">average_seats</code> is computed with respect to <code class="language-malloy">aircraft_models</code>,
-yielding the the average number of seats on aircraft models of aircraft listed in the <code class="language-malloy">aircraft</code> table.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: average_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+    <p>Malloy introduces the concept of <em>aggregate locality</em>, meaning that aggregates can be computed with respect to different points in the data graph. In the following query, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">average_seats</span></span></code> is computed with respect to <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span></span></code>,
+yielding the the average number of seats on aircraft models of aircraft listed in the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft</span></span></code> table.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">average_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -826,48 +743,38 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">average_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">average_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"average_seats"</span><span class="token operator">:</span> <span class="token number">5.145145145145145</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   CAST<span class="token punctuation">(</span><span class="token punctuation">(</span>
-    <span class="token punctuation">(</span>
-      <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span>
-        <span class="token punctuation">(</span>CAST<span class="token punctuation">(</span><span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token keyword">COALESCE</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> <span class="token keyword">NUMERIC</span><span class="token punctuation">)</span> <span class="token operator">+</span>
-        <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span>
-      <span class="token punctuation">)</span><span class="token punctuation">)</span>
-      <span class="token operator">-</span>
-       <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span><span class="token punctuation">)</span>
-    <span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> FLOAT64<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span><span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> average_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
+<span class="line"><span style="color: #000000">    (</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">CAST</span><span style="color: #000000">(</span><span style="color: #795E26">ROUND</span><span style="color: #000000">(</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(aircraft_models_0.seats,</span><span style="color: #098658">0</span><span style="color: #000000">)*(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">), </span><span style="color: #098658">9</span><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> </span><span style="color: #0000FF">NUMERIC</span><span style="color: #000000">) +</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span></span>
+<span class="line"><span style="color: #000000">      ))</span></span>
+<span class="line"><span style="color: #000000">      -</span></span>
+<span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> average_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
-  </div><p>For convenience, <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code> can be written as <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code>.</p>
+  </div><p>For convenience, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code> can be written as <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span></code>.</p>
 
       <h3>
         <a id="examples" class="header-link anchor" href="#examples">
@@ -875,13 +782,13 @@ yielding the the average number of seats on aircraft models of aircraft listed i
         </a>
       </h3>
     <p>The following queries show six ways of calculating the average number of seats.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: flights <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    aircraft_models_avg_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    aircraft_avg_models_seats <span class="token keyword">is</span> aircraft<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-    avg_aircraft_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer small">
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">aircraft_models_avg_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">aircraft_avg_models_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_aircraft_models_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -892,70 +799,57 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;models_&#8203;avg_&#8203;seats</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_&#8203;avg_&#8203;models_&#8203;seats</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;aircraft_&#8203;models_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">108.427</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">142.71</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">134.414</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_​models_​avg_​seats</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_​avg_​models_​seats</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​aircraft_​models_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>108.427</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>142.71</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>134.414</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"aircraft_models_avg_seats"</span><span class="token operator">:</span> <span class="token number">108.4267515923567</span><span class="token punctuation">,</span>
-    <span class="token property">"aircraft_avg_models_seats"</span><span class="token operator">:</span> <span class="token number">142.71036061820263</span><span class="token punctuation">,</span>
-    <span class="token property">"avg_aircraft_models_seats"</span><span class="token operator">:</span> <span class="token number">134.41402455240592</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_models_avg_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">108.4267515923567</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_avg_models_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">142.71036061820263</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_aircraft_models_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">134.41402455240592</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   CAST<span class="token punctuation">(</span><span class="token punctuation">(</span>
-    <span class="token punctuation">(</span>
-      <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span>
-        <span class="token punctuation">(</span>CAST<span class="token punctuation">(</span><span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token keyword">COALESCE</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> <span class="token keyword">NUMERIC</span><span class="token punctuation">)</span> <span class="token operator">+</span>
-        <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span>
-      <span class="token punctuation">)</span><span class="token punctuation">)</span>
-      <span class="token operator">-</span>
-       <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span><span class="token punctuation">)</span>
-    <span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> FLOAT64<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span><span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> aircraft_models_avg_seats<span class="token punctuation">,</span>
-   CAST<span class="token punctuation">(</span><span class="token punctuation">(</span>
-    <span class="token punctuation">(</span>
-      <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span>
-        <span class="token punctuation">(</span>CAST<span class="token punctuation">(</span><span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token keyword">COALESCE</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> <span class="token keyword">NUMERIC</span><span class="token punctuation">)</span> <span class="token operator">+</span>
-        <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_0<span class="token punctuation">.</span>tail_num <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_0<span class="token punctuation">.</span>tail_num <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span>
-      <span class="token punctuation">)</span><span class="token punctuation">)</span>
-      <span class="token operator">-</span>
-       <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_0<span class="token punctuation">.</span>tail_num <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_0<span class="token punctuation">.</span>tail_num <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span><span class="token punctuation">)</span>
-    <span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> FLOAT64<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span><span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_0<span class="token punctuation">.</span>tail_num<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> aircraft_avg_models_seats<span class="token punctuation">,</span>
-   <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">)</span> <span class="token keyword">as</span> avg_aircraft_models_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>flights<span class="token punctuation">`</span> <span class="token keyword">as</span> flights
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_0 <span class="token keyword">ON</span> flights<span class="token punctuation">.</span>tail_num <span class="token operator">=</span> aircraft_0<span class="token punctuation">.</span>tail_num
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft_0<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
+<span class="line"><span style="color: #000000">    (</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">CAST</span><span style="color: #000000">(</span><span style="color: #795E26">ROUND</span><span style="color: #000000">(</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(aircraft_models_0.seats,</span><span style="color: #098658">0</span><span style="color: #000000">)*(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">), </span><span style="color: #098658">9</span><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> </span><span style="color: #0000FF">NUMERIC</span><span style="color: #000000">) +</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span></span>
+<span class="line"><span style="color: #000000">      ))</span></span>
+<span class="line"><span style="color: #000000">      -</span></span>
+<span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_models_avg_seats,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
+<span class="line"><span style="color: #000000">    (</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">CAST</span><span style="color: #000000">(</span><span style="color: #795E26">ROUND</span><span style="color: #000000">(</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(aircraft_models_0.seats,</span><span style="color: #098658">0</span><span style="color: #000000">)*(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">), </span><span style="color: #098658">9</span><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> </span><span style="color: #0000FF">NUMERIC</span><span style="color: #000000">) +</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_0.tail_num </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_0.tail_num </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span></span>
+<span class="line"><span style="color: #000000">      ))</span></span>
+<span class="line"><span style="color: #000000">      -</span></span>
+<span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_0.tail_num </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_0.tail_num </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_0.tail_num),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_avg_models_seats,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(aircraft_models_0.seats) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_aircraft_models_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.tail_num = aircraft_0.tail_num</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft_0.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    models_avg_seats <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-    avg_models_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer small">
+  </div><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">models_avg_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_models_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -966,54 +860,42 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">models_&#8203;avg_&#8203;seats</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;models_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">8.373</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">models_​avg_​seats</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​models_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8.373</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"models_avg_seats"</span><span class="token operator">:</span> <span class="token number">5.145145145145145</span><span class="token punctuation">,</span>
-    <span class="token property">"avg_models_seats"</span><span class="token operator">:</span> <span class="token number">8.372722397134547</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;models_avg_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_models_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8.372722397134547</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   CAST<span class="token punctuation">(</span><span class="token punctuation">(</span>
-    <span class="token punctuation">(</span>
-      <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span>
-        <span class="token punctuation">(</span>CAST<span class="token punctuation">(</span><span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token keyword">COALESCE</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> <span class="token keyword">NUMERIC</span><span class="token punctuation">)</span> <span class="token operator">+</span>
-        <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span>
-      <span class="token punctuation">)</span><span class="token punctuation">)</span>
-      <span class="token operator">-</span>
-       <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span><span class="token punctuation">)</span>
-    <span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> FLOAT64<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span><span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> models_avg_seats<span class="token punctuation">,</span>
-   <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">)</span> <span class="token keyword">as</span> avg_models_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
+<span class="line"><span style="color: #000000">    (</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">CAST</span><span style="color: #000000">(</span><span style="color: #795E26">ROUND</span><span style="color: #000000">(</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(aircraft_models_0.seats,</span><span style="color: #098658">0</span><span style="color: #000000">)*(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">), </span><span style="color: #098658">9</span><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> </span><span style="color: #0000FF">NUMERIC</span><span style="color: #000000">) +</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span></span>
+<span class="line"><span style="color: #000000">      ))</span></span>
+<span class="line"><span style="color: #000000">      -</span></span>
+<span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> models_avg_seats,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(aircraft_models_0.seats) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_models_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
-  </div><pre class="language-malloy"><span class="token keyword">query</span>: aircraft_models <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: avg_seats <span class="token keyword">is</span> <span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span>
-}</pre><div class="result-outer small">
+  </div><pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_models</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">avg_seats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -1024,36 +906,25 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;seats</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">7.483</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​seats</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>7.483</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"avg_seats"</span><span class="token operator">:</span> <span class="token number">7.4827574800284555</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_seats&quot;</span><span style="color: #000000">: </span><span style="color: #098658">7.4827574800284555</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   <span class="token function">AVG</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span> <span class="token keyword">as</span> avg_seats
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft_models
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(aircraft_models.seats) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_seats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_models</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><p>This table summarizes the meaning of each of these calculations.</p>
@@ -1066,37 +937,37 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy"><span class="token function">avg</span><span class="token punctuation">(</span>seats<span class="token punctuation">)</span></code> in <code class="language-malloy">aircraft_models</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code> in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span></span></code></td>
 
 <td>...of all aircraft models.</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code> in <code class="language-malloy">aircraft</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code> in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft</span></span></code></td>
 
 <td>...on aircraft.</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> in <code class="language-malloy">aircraft</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span></code> in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft</span></span></code></td>
 
 <td>...of the aircraft models of aircraft.</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy"><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code> in <code class="language-malloy">flights</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code> in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">flights</span></span></code></td>
 
 <td>...on flights.</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">aircraft<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code> in <code class="language-malloy">flights</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code> in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">flights</span></span></code></td>
 
 <td>...on aircraft that fly.</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy">aircraft<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> in <code class="language-malloy">flights</code></td>
+<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span></code> in <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">flights</span></span></code></td>
 
 <td>...of the aircraft models of aircraft that fly.</td>
 </tr>
@@ -1107,21 +978,21 @@ yielding the the average number of seats on aircraft models of aircraft listed i
           Aggregates that Support Locality
         </a>
       </h3>
-    <p>The aggregate functions that support locality are <code class="language-malloy">count</code>, <code class="language-malloy">sum</code>, and <code class="language-malloy">avg</code>.</p>
-<p>The <code class="language-malloy">min</code> and <code class="language-malloy">max</code> aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once.</p>
+    <p>The aggregate functions that support locality are <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">count</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">sum</span></span></code>, and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">avg</span></span></code>.</p>
+<p>The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">min</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">max</span></span></code> aggregates do not support aggregate locality because the minimum and maximum values are the same regardless of where they are computed. Local aggregation removes duplicate values (those corresponding to the same row in the aggregate source location), and minimum and maximum values do not change if values are repeated more than once.</p>
 
       <h3>
         <a id="aggregates-on-fields" class="header-link anchor" href="#aggregates-on-fields">
           Aggregates on Fields
         </a>
       </h3>
-    <p>Aggregating "on a field," e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class="language-malloy">aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy">avg</code> and <code class="language-malloy">sum</code>.</p>
-<pre class="language-malloy"><span class="token keyword">query</span>: aircraft <span class="token operator">-</span><span class="token operator">></span> {
-  <span class="token keyword">aggregate</span>: <span class="token punctuation">[</span>
-    avg_on_explore <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span>aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">)</span>
-    avg_on_field <span class="token keyword">is</span> aircraft_models<span class="token punctuation">.</span>seats<span class="token punctuation">.</span><span class="token function">avg</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
-  <span class="token punctuation">]</span>
-}</pre><div class="result-outer small">
+    <p>Aggregating "on a field," e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">avg</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">sum</span></span></code>.</p>
+<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_on_explore</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_on_field</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -1132,57 +1003,45 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;on_&#8203;explore</th>
-<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: right;">avg_&#8203;on_&#8203;field</th>
-      </tr>
-		</thead>
-		<tbody>
-			<tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-<td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;">5.145</td>
-</tr>
-
-		</tbody>
-	</table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​on_​explore</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​on_​field</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><span class="token punctuation">[</span>
-  <span class="token punctuation">{</span>
-    <span class="token property">"avg_on_explore"</span><span class="token operator">:</span> <span class="token number">5.145145145145145</span><span class="token punctuation">,</span>
-    <span class="token property">"avg_on_field"</span><span class="token operator">:</span> <span class="token number">5.145145145145145</span>
-  <span class="token punctuation">}</span>
-<span class="token punctuation">]</span></pre>
+        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_on_explore&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_on_field&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><span class="token keyword">SELECT</span> 
-   CAST<span class="token punctuation">(</span><span class="token punctuation">(</span>
-    <span class="token punctuation">(</span>
-      <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span>
-        <span class="token punctuation">(</span>CAST<span class="token punctuation">(</span><span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token keyword">COALESCE</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> <span class="token keyword">NUMERIC</span><span class="token punctuation">)</span> <span class="token operator">+</span>
-        <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span>
-      <span class="token punctuation">)</span><span class="token punctuation">)</span>
-      <span class="token operator">-</span>
-       <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span><span class="token punctuation">)</span>
-    <span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> FLOAT64<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span><span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> avg_on_explore<span class="token punctuation">,</span>
-   CAST<span class="token punctuation">(</span><span class="token punctuation">(</span>
-    <span class="token punctuation">(</span>
-      <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span>
-        <span class="token punctuation">(</span>CAST<span class="token punctuation">(</span><span class="token function">ROUND</span><span class="token punctuation">(</span><span class="token keyword">COALESCE</span><span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>seats<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span> <span class="token keyword">AS</span> <span class="token keyword">NUMERIC</span><span class="token punctuation">)</span> <span class="token operator">+</span>
-        <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span>
-      <span class="token punctuation">)</span><span class="token punctuation">)</span>
-      <span class="token operator">-</span>
-       <span class="token function">SUM</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> <span class="token punctuation">(</span>cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">15</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4294967296</span> <span class="token operator">+</span> cast<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>concat<span class="token punctuation">(</span><span class="token string">'0x'</span><span class="token punctuation">,</span> substr<span class="token punctuation">(</span>to_hex<span class="token punctuation">(</span>md5<span class="token punctuation">(</span>CAST<span class="token punctuation">(</span>aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code <span class="token keyword">AS</span> STRING<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> int64<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token keyword">numeric</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">0.000000001</span><span class="token punctuation">)</span>
-    <span class="token punctuation">)</span><span class="token operator">/</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token operator">*</span><span class="token number">1.0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> FLOAT64<span class="token punctuation">)</span><span class="token operator">/</span><span class="token keyword">NULLIF</span><span class="token punctuation">(</span><span class="token function">COUNT</span><span class="token punctuation">(</span><span class="token keyword">DISTINCT</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">as</span> avg_on_field
-<span class="token keyword">FROM</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft<span class="token punctuation">`</span> <span class="token keyword">as</span> aircraft
-<span class="token keyword">LEFT</span> <span class="token keyword">JOIN</span> <span class="token punctuation">`</span>malloy<span class="token operator">-</span><span class="token keyword">data</span><span class="token punctuation">.</span>faa<span class="token punctuation">.</span>aircraft_models<span class="token punctuation">`</span> <span class="token keyword">AS</span> aircraft_models_0 <span class="token keyword">ON</span> aircraft<span class="token punctuation">.</span>aircraft_model_code <span class="token operator">=</span> aircraft_models_0<span class="token punctuation">.</span>aircraft_model_code
-<span class="token keyword">ORDER</span> <span class="token keyword">BY</span> <span class="token number">1</span> <span class="token keyword">desc</span>
-</pre>
+        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
+<span class="line"><span style="color: #000000">    (</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">CAST</span><span style="color: #000000">(</span><span style="color: #795E26">ROUND</span><span style="color: #000000">(</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(aircraft_models_0.seats,</span><span style="color: #098658">0</span><span style="color: #000000">)*(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">), </span><span style="color: #098658">9</span><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> </span><span style="color: #0000FF">NUMERIC</span><span style="color: #000000">) +</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span></span>
+<span class="line"><span style="color: #000000">      ))</span></span>
+<span class="line"><span style="color: #000000">      -</span></span>
+<span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_on_explore,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
+<span class="line"><span style="color: #000000">    (</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">CAST</span><span style="color: #000000">(</span><span style="color: #795E26">ROUND</span><span style="color: #000000">(</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(aircraft_models_0.seats,</span><span style="color: #098658">0</span><span style="color: #000000">)*(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">), </span><span style="color: #098658">9</span><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> </span><span style="color: #0000FF">NUMERIC</span><span style="color: #000000">) +</span></span>
+<span class="line"><span style="color: #000000">        (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span></span>
+<span class="line"><span style="color: #000000">      ))</span></span>
+<span class="line"><span style="color: #000000">      -</span></span>
+<span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_on_field</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
       </div>
     </div>
   </div><!--
