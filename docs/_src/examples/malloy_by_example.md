@@ -58,6 +58,9 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ## Querying against an Explore
 
+[fabio]: what does the arrow mean?
+[fabio]: array vs double declarations.
+
 Queries can be run against `explore:` objects and can utilize the built in calculations.
 
 ```malloy
@@ -74,6 +77,8 @@ query: airports -> {
 ```
 
 ## Dimensional calculations are no different than columns
+
+[fabio]: had to jump back to the explore definition
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
@@ -130,6 +135,8 @@ query: airports  {
 
 Measures can also be filtered.
 
+[fabio]: what id the difference between an aggrgate and a measure?
+
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
 query: airports -> {
@@ -163,6 +170,8 @@ explore: airports is table('malloy-data.faa.airports') {
 ```
 
 ## The `nest:` property embeds one query in another
+
+[fabio]: anytime want a limit, I want an order by?
 
 Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
 In the case below, the top level query groups by state.  The nested query groups by facility type.
@@ -252,6 +261,9 @@ query: airports -> by_facility_type {
 }
 ```
 
+[fabio]: go further in refinent examples and deep nesting.  Reproduce the nested example more simply
+
+
 ### You can add a measure or dimension
 
 ```malloy
@@ -282,6 +294,8 @@ query: airports-> by_facility_type {
 
 ## Joining ...
 
+First let's setup some simple tables...
+
 ### Carrier table
 
 ```malloy
@@ -310,6 +324,8 @@ query: flights -> {
 ```
 
 ## Foreign Key / Primary Key Join
+
+[fabio]: cardinality of joins is hard...
 
 Join carriers to flights.  Each flight has one carrier so we use `join_one:`.  We are joining
 with a primary key in carriers and foreign key in flights so we can use the `with` keyword
@@ -370,6 +386,11 @@ query: flights -> {
 ```
 
 ## Graph, more complicated Joins
+
+[fabio]: simplify model, get rid of extraneos stuff.
+[fabio]: graph isn't introduce.
+[fabio]: warning if need to generate a primary key.
+[fabio]: symmetric should be 'correct calculation'
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/join2.malloy", "isHidden": false}
@@ -445,6 +466,9 @@ query: airports -> {
 }
 ```
 ## Unnesting in a pipeline flattens the table
+[fabio]: still don't know what a pipeline is
+[fabio]: setup section is not obvious
+
 Next stage of a pipeline can be a `group_by` or `project`.  Calculations can be computed
 reltative to the level of nesting.
 
@@ -600,7 +624,7 @@ query: airport_facts -> flights_by_origin
 
 ### Named Queries from SQL Blocks
 
-### Mapping data with `pick`
+### Case statement improved with  `pick`
 
 ### Group by on Joined Subtrees
 
