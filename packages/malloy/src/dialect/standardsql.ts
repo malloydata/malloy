@@ -104,9 +104,9 @@ export class StandardSQLDialect extends Dialect {
     needDistinctKey: boolean
   ): string {
     if (needDistinctKey) {
-      return `, UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
+      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
-      return `, UNNEST(${source}) as ${alias}`;
+      return `LEFT JOIN UNNEST(${source}) as ${alias}`;
     }
   }
 

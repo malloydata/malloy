@@ -27,7 +27,8 @@ import {
   StructDef,
   Expr,
 } from "../../model/malloy_types";
-import { CircleSpace, FieldSpace } from "../field-space";
+import { CircleSpace, FieldSpace, LookupResult } from "../field-space";
+import * as FieldPathTODO from "../field-path";
 import {
   Filter,
   MalloyElement,
@@ -46,7 +47,6 @@ import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
 import { FieldName, FieldPath } from "./ast-main";
-import * as FieldPathTODO from "../field-path";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -151,8 +151,11 @@ class ConstantFieldSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     return { ...this.structDef(), fields: [] };
   }
-  findEntry(_name: FieldPath): undefined {
-    return undefined;
+  lookup(_name: FieldPath): LookupResult {
+    return {
+      error: "Only constants allowed in parameter expressions",
+      found: undefined,
+    };
   }
   getDialect(): Dialect {
     // well dialects totally make this wrong and broken and stupid and useless
@@ -414,29 +417,21 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const entry = fs.findEntry(this.fieldPath);
-    if (entry) {
+    const def = fs.lookup(this.fieldPath);
+    if (def.found) {
       // TODO if type is a query or a struct this should fail nicely
-      const typeMixin = entry.type();
+      const typeMixin = def.found.type();
       const dataType = typeMixin.type;
       const aggregate = !!typeMixin.aggregate;
-      const value = [{ type: entry.refType, path: this.refString }];
+      const value = [{ type: def.found.refType, path: this.refString }];
       return { dataType, aggregate, value };
     }
-    if (
-      fs instanceof CircleSpace &&
-      fs.foundCircle &&
-      this.refString === fs.circular.defineName
-    ) {
-      this.log(`Circular reference to '${this.refString}' in definition`);
-    } else {
-      this.log(`Reference to '${this.refString}' with no definition`);
-    }
-    return errorFor(`undefined ${this.refString}`);
+    this.log(def.error);
+    return errorFor(def.error);
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = fs.findEntry(this.fieldPath);
+    const entry = fs.lookup(this.fieldPath);
     if (entry instanceof SpaceParam) {
       const cParam = entry.parameter();
       if (isConditionParameter(cParam)) {
@@ -588,7 +583,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
     const source = this.source;
     let sourceRefString = this.source?.refString;
     if (source) {
-      const sourceFoot = fs.findEntry(source);
+      const sourceFoot = fs.lookup(source).found;
       if (sourceFoot) {
         const footType = sourceFoot.type();
         if (isAtomicFieldType(footType.type)) {
@@ -598,7 +593,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
             value: [{ type: "field", path: source.refString }],
           };
 
-          const body = FieldPathTODO.body(source.refString);
+          const body = FieldPathTODO.path(source.refString);
           if (body.length > 0) {
             sourceRefString = body;
           } else {
@@ -679,7 +674,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
 
   defaultFieldName(): undefined | string {
     if (this.source && this.expr === undefined) {
-      const tag = FieldPathTODO.foot(this.source.refString);
+      const tag = FieldPathTODO.field(this.source.refString);
       switch (this.func) {
         case "sum":
           return `total_${tag}`;
@@ -700,7 +695,8 @@ export class ExprCount extends ExprAggregateFunction {
 
   defaultFieldName(): string | undefined {
     if (this.source) {
-      return "count_" + FieldPathTODO.foot(this.source.refString);
+      // TODO jump-to-definition
+      return "count_" + FieldPathTODO.field(this.source.refString);
     }
     return undefined;
   }

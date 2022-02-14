@@ -132,6 +132,7 @@ export abstract class MalloyElement {
     if (this.parent) {
       return this.parent.location;
     }
+    this.log("Location not set during parse");
     return {
       url: this.sourceURL,
       range: {
@@ -528,8 +529,9 @@ export class RefinedExplore extends Mallobj {
       fs.addParameters(pList);
     }
     if (primaryKey) {
-      if (!fs.findEntry(primaryKey.field)) {
-        primaryKey.log(`Undefined field '${primaryKey.field.name}'`);
+      const keyDef = fs.lookup(primaryKey.field);
+      if (keyDef.error) {
+        primaryKey.log(keyDef.error);
       }
     }
     const retStruct = fs.structDef();
@@ -1049,6 +1051,10 @@ export class FieldName
 
   get rest(): FieldName | undefined {
     return undefined;
+  }
+
+  toString(): string {
+    return this.refString;
   }
 }
 
@@ -1638,7 +1644,7 @@ export class OrderBy extends MalloyElement {
   checkReferences(fs: FieldSpace): void {
     if (this.field instanceof FieldName) {
       // TODO jump-to-definition Maybe use _foo to trigger error
-      const _foo = fs.findEntry(this.field);
+      const _foo = fs.lookup(this.field);
     }
   }
 }
@@ -1820,13 +1826,13 @@ export class PipelineDesc extends MalloyElement {
         this.log(`Cannot reference model entry here.`);
         return modelPipe;
       }
-      const headEnt = exploreFS.findEntry(this.headPath);
+      const headEnt = exploreFS.lookup(this.headPath);
       let reportWrongType = true;
-      if (!headEnt) {
-        this.log(`Reference to undefined query '${this.headPath}'`);
+      if (headEnt.error) {
+        this.log(headEnt.error);
         reportWrongType = false;
-      } else if (headEnt instanceof QueryField) {
-        const headDef = headEnt.queryFieldDef();
+      } else if (headEnt.found instanceof QueryField) {
+        const headDef = headEnt.found.queryFieldDef();
         if (isTurtle(headDef)) {
           const newPipe = this.refinePipeline(exploreFS, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];
@@ -1849,7 +1855,6 @@ export class PipelineDesc extends MalloyElement {
   }
 
   queryFromQuery(): QueryComp {
-    console.log("FOO");
     if (!this.headPath) {
       throw this.internalError("can't make query from nameless query");
     }
@@ -1894,6 +1899,7 @@ export class PipelineDesc extends MalloyElement {
       type: "query",
       structRef,
       pipeline: [],
+      location: this.location,
     };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
@@ -2056,7 +2062,7 @@ export class Top extends MalloyElement {
     if (this.by) {
       if (this.by instanceof FieldName) {
         // TODO jump-to-definition Maybe use this to create an error
-        const _foo = fs.findEntry(this.by);
+        const _foo = fs.lookup(this.by);
         return { by: "name", name: this.by.refString };
       } else {
         const byExpr = this.by.getExpression(fs);

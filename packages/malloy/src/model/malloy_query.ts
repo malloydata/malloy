@@ -1814,7 +1814,7 @@ class QueryQuery extends QueryField {
         qs.parent.fieldDef.structRelationship.type === "nested"
       );
       // we need to generate primary key.  If parent has a primary key combine
-      s += `${this.parent.dialect.sqlUnnestAlias(
+      s += `\n${this.parent.dialect.sqlUnnestAlias(
         fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),

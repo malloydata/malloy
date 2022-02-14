@@ -136,9 +136,10 @@ export class PostgresDialect extends Dialect {
   ): string {
     if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
-      return `CROSS JOIN LATERAL UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias}`;
+      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
-      return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
+      // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
+      return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
     }
   }
 

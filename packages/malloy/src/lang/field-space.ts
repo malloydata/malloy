@@ -29,6 +29,7 @@ import {
   QueryItem,
   NestDefinition,
   MalloyElement,
+  NestReference,
 } from "./ast";
 import {
   SpaceField,
@@ -54,10 +55,19 @@ type FieldMap = Record<string, SpaceEntry>;
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
  * are fields. A FieldSpace can lookup fields, and generate a StructDef
  */
+interface LookupFound {
+  found: SpaceEntry;
+  error: undefined;
+}
+interface LookupError {
+  error: string;
+  found: undefined;
+}
+export type LookupResult = LookupFound | LookupError;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  findEntry(symbol: FieldName): SpaceEntry | undefined;
+  lookup(symbol: FieldName): LookupResult;
   getDialect(): Dialect;
 }
 
@@ -144,38 +154,36 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  findEntry(fieldPath: FieldName): SpaceEntry | undefined {
-    const split = { head: fieldPath.head, tail: fieldPath.rest };
-    const ref = this.entry(split.head.name);
-    if (ref) {
-      if (ref instanceof SpaceField) {
-        const definition = ref.fieldDef();
+  lookup(fieldPath: FieldName): LookupResult {
+    const step = { head: fieldPath.head, tail: fieldPath.rest };
+    const found = this.entry(step.head.name);
+    if (!found) {
+      return { error: `'${step.head}' is not defined`, found };
+    }
+    if (step.tail) {
+      if (found instanceof StructSpaceField) {
+        return found.fieldSpace.lookup(step.tail);
+      }
+      if (found instanceof SpaceField) {
+        const definition = found.fieldDef();
         if (definition) {
           fieldPath.addReference({
             type:
-              ref instanceof StructSpaceField
+              found instanceof StructSpaceField
                 ? "joinReference"
                 : "fieldReference",
             definition,
-            location: split.head.location,
-            text: split.head.name,
+            location: step.head.location,
+            text: step.head.name,
           });
         }
       }
-
-      if (split.tail === undefined) {
-        return ref;
-      }
-      if (ref instanceof StructSpaceField) {
-        const restEntry = ref.fieldSpace.findEntry(split.tail);
-        return restEntry;
-      }
-      throw new Error(
-        `'${split.head}' cannot contain a '${split.tail.refString}'`
-      );
-    } else {
-      return undefined;
+      return {
+        error: `'${step.head}' cannot contain a '${step.tail}'`,
+        found: undefined,
+      };
     }
+    return { found, error: undefined };
   }
 }
 
@@ -260,7 +268,7 @@ export class NewFieldSpace extends StructSpace {
           def.log("Can't rename field to itself");
           continue;
         }
-        const oldValue = this.findEntry(def.oldName);
+        const oldValue = this.lookup(def.oldName);
         if (oldValue instanceof SpaceField) {
           this.setEntry(
             def.newName,
@@ -351,8 +359,8 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  findEntry(fieldPath: FieldName): SpaceEntry | undefined {
-    return this.inputSpace.findEntry(fieldPath);
+  lookup(fieldPath: FieldName): LookupResult {
+    return this.inputSpace.lookup(fieldPath);
   }
 
   /**
@@ -366,9 +374,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldName) {
-        // TODO jump-to-definition Maybe use _foo to trigger error
-        const _foo = this.findEntry(qi);
+      if (qi instanceof FieldName || qi instanceof NestReference) {
         this.addReference(qi);
       } else if (qi instanceof ExprFieldDecl) {
         this.addField(qi);
@@ -383,8 +389,6 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldName) {
-        // TODO jump-to-definition Maybe use _foo to trigger error
-        const _foo = this.findEntry(member);
         this.addReference(member);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
@@ -395,6 +399,11 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   }
 
   addReference(ref: FieldName): void {
+    const refIs = this.lookup(ref);
+    if (refIs.error) {
+      ref.log(refIs.error);
+      return;
+    }
     this.setEntry(ref.refString, new FANSPaceField(ref, this));
   }
 
@@ -495,12 +504,15 @@ export class CircleSpace implements FieldSpace {
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  findEntry(symbol: FieldName): SpaceEntry | undefined {
+  lookup(symbol: FieldName): LookupResult {
     if (symbol.refString === this.circular.defineName) {
       this.foundCircle = true;
-      return undefined;
+      return {
+        error: `Circular reference to '${this.circular.defineName}' in definition`,
+        found: undefined,
+      };
     }
-    return this.realFS.findEntry(symbol);
+    return this.realFS.lookup(symbol);
   }
   getDialect(): Dialect {
     return this.realFS.getDialect();
