@@ -19,6 +19,7 @@ import {
   TextDocumentSyncKind,
   InitializeResult,
   SemanticTokensBuilder,
+  CompletionItem,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -27,10 +28,14 @@ import { getMalloySymbols } from "./symbols";
 import {
   TOKEN_TYPES,
   TOKEN_MODIFIERS,
-  getMalloyHighlights,
+  stubMalloyHighlights,
 } from "./highlights";
 import { getMalloyLenses } from "./lenses";
 import { CONNECTION_MANAGER } from "./connections";
+import {
+  getCompletionItems,
+  resolveCompletionItem,
+} from "./completions/completions";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -45,6 +50,9 @@ connection.onInitialize((params: InitializeParams) => {
       documentSymbolProvider: true,
       codeLensProvider: {
         resolveProvider: false,
+      },
+      completionProvider: {
+        resolveProvider: true,
       },
       semanticTokensProvider: {
         full: true,
@@ -96,7 +104,7 @@ connection.onDocumentSymbol((handler) => {
 connection.languages.semanticTokens.on((handler) => {
   const document = documents.get(handler.textDocument.uri);
   return document
-    ? getMalloyHighlights(document)
+    ? stubMalloyHighlights(document)
     : new SemanticTokensBuilder().build();
 });
 
@@ -111,6 +119,18 @@ connection.onDidChangeConfiguration(async (change) => {
   );
   haveConnectionsBeenSet = true;
   documents.all().forEach(diagnoseDocument);
+});
+
+// This handler provides the initial list of the completion items.
+connection.onCompletion((params): CompletionItem[] => {
+  const document = documents.get(params.textDocument.uri);
+  return document ? getCompletionItems(document, params) : [];
+});
+
+// This handler resolves additional information for the item selected in
+// the completion list.
+connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
+  return resolveCompletionItem(item);
 });
 
 documents.listen(connection);

@@ -31,7 +31,7 @@ describe("db:BigQuery", () => {
 
   it("gets table schema", async () => {
     const res = await bq.getTableFieldSchema(`malloy-data.faa.carriers`);
-    expect(res).toStrictEqual({
+    expect(res.schema).toStrictEqual({
       fields: [
         { name: "code", type: "STRING" },
         { name: "name", type: "STRING" },

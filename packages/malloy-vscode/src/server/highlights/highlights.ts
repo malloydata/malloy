@@ -39,6 +39,12 @@ export const TOKEN_TYPES = [
 
 export const TOKEN_MODIFIERS = ["declaration", "documentation"];
 
+export function stubMalloyHighlights(_document: TextDocument): SemanticTokens {
+  return new SemanticTokensBuilder().build();
+}
+
+// TODO Currently semantic highlights are disabled. Either remove `getMalloyHighlights`
+//      or call it instead of `stubMalloyHighlights`.
 export function getMalloyHighlights(document: TextDocument): SemanticTokens {
   const tokensBuilder = new SemanticTokensBuilder();
 
@@ -151,9 +157,11 @@ function mapTypes(type: string) {
     case HighlightType.Property.Rename:
     case HighlightType.Property.Top:
     case HighlightType.Property.Where:
+    case HighlightType.Property.SQL:
       return "keyword";
     case HighlightType.Call.Table:
     case HighlightType.Call.From:
+    case HighlightType.Call.FromSQL:
     case HighlightType.Call.Function:
       return "function";
     default:

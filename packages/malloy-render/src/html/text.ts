@@ -13,17 +13,23 @@
 
 import { DataColumn } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
+import { createNullElement } from "./utils";
 
 export class HTMLTextRenderer implements Renderer {
+  constructor(private readonly document: Document) {}
+
   getText(data: DataColumn): string | null {
     return `${data.value}`;
   }
 
-  async render(data: DataColumn): Promise<string> {
+  async render(data: DataColumn): Promise<HTMLElement> {
     const text = this.getText(data);
     if (text === null) {
-      return `⌀`;
+      return createNullElement(this.document);
     }
-    return text;
+
+    const element = this.document.createElement("span");
+    element.appendChild(this.document.createTextNode(text));
+    return element;
   }
 }

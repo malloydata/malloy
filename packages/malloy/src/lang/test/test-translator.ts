@@ -13,9 +13,20 @@
 
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { inspect } from "util";
-import { StructDef, NamedModelObject, ModelDef } from "../model/malloy_types";
-import { MalloyElement, ModelEntry, NameSpace } from "./ast";
-import { MalloyTranslator, TranslateResponse } from "./parse-malloy";
+import {
+  StructDef,
+  NamedModelObject,
+  ModelDef,
+  Query,
+  QueryFieldDef,
+  FieldDef,
+  isFilteredAliasedName,
+  PipeSegment,
+  TurtleDef,
+  DocumentLocation,
+} from "../../model/malloy_types";
+import { MalloyElement, ModelEntry, NameSpace } from "../ast";
+import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -126,7 +137,7 @@ export class TestTranslator extends MalloyTranslator {
   }
 
   ast(): MalloyElement | undefined {
-    const astAsk = this.getASTResponse();
+    const astAsk = this.astStep.step(this);
     if (astAsk.ast) {
       if (this.grammarRule !== "malloyDocument") {
         this.testRoot = new TestRoot(astAsk.ast, this, this.internalModel);
@@ -176,4 +187,76 @@ export class TestTranslator extends MalloyTranslator {
     }
     throw new Error(`Expected model to contain explore '${exploreName}'`);
   }
+}
+
+export function getExplore(modelDef: ModelDef, name: string): StructDef {
+  return modelDef.contents[name] as StructDef;
+}
+
+export function getModelQuery(modelDef: ModelDef, name: string): Query {
+  return modelDef.contents[name] as Query;
+}
+
+export function getField(
+  thing: StructDef | PipeSegment,
+  name: string
+): FieldDef {
+  const result = thing.fields.find(
+    (field: QueryFieldDef) =>
+      typeof field !== "string" && (field.as || field.name) === name
+  );
+  if (typeof result === "string") {
+    throw new Error("Expected a def, got a ref.");
+  }
+  if (result === undefined) {
+    throw new Error("Expected a field, not undefined");
+  }
+  if (isFilteredAliasedName(result)) {
+    throw new Error("Ignoring these for now");
+  }
+  return result;
+}
+
+export function getQueryField(structDef: StructDef, name: string) {
+  return getField(structDef, name) as TurtleDef;
+}
+
+export function getJoinField(structDef: StructDef, name: string) {
+  return getField(structDef, name) as StructDef;
+}
+
+export function markSource(
+  unmarked: TemplateStringsArray,
+  ...marked: string[]
+): {
+  code: string;
+  locations: DocumentLocation[];
+} {
+  let code = "";
+  const locations: DocumentLocation[] = [];
+  for (let index = 0; index < marked.length; index++) {
+    const mark = marked[index];
+    code += unmarked[index];
+    const lines = code.split("\n");
+    const start = {
+      line: lines.length - 1,
+      character: lines[lines.length - 1].length,
+    };
+    const bitLines = mark.split("\n");
+    const location = {
+      url: "internal://test/root",
+      range: {
+        start,
+        end: {
+          line: start.line + bitLines.length - 1,
+          character:
+            bitLines.length === 1 ? start.character + mark.length : mark.length,
+        },
+      },
+    };
+    locations.push(location);
+    code += mark;
+  }
+  code += unmarked[marked.length];
+  return { code, locations };
 }

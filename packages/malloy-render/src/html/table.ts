@@ -13,59 +13,74 @@
 
 import { DataColumn } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
-// import { getDrillPath, getDrillQuery } from "../drill";
+import { getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLNumberRenderer } from "./number";
-import { yieldTask } from "./utils";
+import { createDrillIcon, yieldTask } from "./utils";
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "small",
   };
 
-  async render(table: DataColumn): Promise<string> {
+  async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray() && !table.isRecord()) {
       throw new Error("Invalid type for Table Renderer");
     }
-    const header = table.field.intrinsicFields
-      .map((field) => {
-        const name = field.name;
-        const childRenderer = this.childRenderers[name];
-        const isNumeric = childRenderer instanceof HTMLNumberRenderer;
-        return `<th style="padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
-          isNumeric ? "right" : "left"
-        };">${name.replace(/_/g, "_&#8203;")}</th>`;
-      })
-      .join("\n");
-    let renderedBody = "";
+    const header = this.document.createElement("tr");
+    table.field.intrinsicFields.forEach((field) => {
+      const name = field.name;
+      const childRenderer = this.childRenderers[name];
+      const isNumeric = childRenderer instanceof HTMLNumberRenderer;
+      const headerCell = this.document.createElement("th");
+      headerCell.style.cssText = `padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
+        isNumeric ? "right" : "left"
+      };`;
+      headerCell.innerHTML = name.replace(/_/g, "_&#8203;");
+      header.appendChild(headerCell);
+    });
+    if (this.options.isDrillingEnabled) {
+      const drillHeader = this.document.createElement("th");
+      drillHeader.style.cssText = `padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; width: 25px;`;
+      header.appendChild(drillHeader);
+    }
+
+    const tableBody = this.document.createElement("tbody");
+
     for (const row of table) {
-      let renderedRow = "";
+      const rowElement = this.document.createElement("tr");
       for (const field of table.field.intrinsicFields) {
         const childRenderer = this.childRenderers[field.name];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
         await yieldTask();
         const rendered = await childRenderer.render(row.cell(field));
-        renderedRow += `<td style="padding: ${
+        const cellElement = this.document.createElement("td");
+        cellElement.style.cssText = `padding: ${
           childRenderer instanceof HTMLTableRenderer ? "0" : "8px"
         }; vertical-align: top; border-bottom: 1px solid #eaeaea; ${
           isNumeric ? "text-align: right;" : ""
-        }">${rendered}</td>\n`;
+        }`;
+        cellElement.appendChild(rendered);
+        rowElement.appendChild(cellElement);
       }
-      // const drillPath = getDrillPath(ref, rowNum);
-      // const drillQuery = getDrillQuery(table.root(), drillPath);
-      // const debugDrill = `<td><pre>${drillQuery}</pre></td>`;
-      const debugDrill = "";
-      renderedBody += `<tr>${renderedRow}${debugDrill}</tr>\n`;
+      if (this.options.isDrillingEnabled) {
+        const drillCell = this.document.createElement("td");
+        const drillIcon = createDrillIcon(this.document);
+        drillCell.appendChild(drillIcon);
+        drillCell.style.cssText = `padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; width: 25px; cursor: pointer`;
+        drillCell.onclick = () =>
+          this.options.onDrill &&
+          this.options.onDrill(getDrillQuery(row), drillIcon);
+        rowElement.appendChild(drillCell);
+      }
+      tableBody.appendChild(rowElement);
     }
-    return `<table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;">
-		<thead>
-			<tr>
-				${header}
-      </tr>
-		</thead>
-		<tbody>
-			${renderedBody}
-		</tbody>
-	</table>`;
+    const tableElement = this.document.createElement("table");
+    tableElement.style.cssText = `border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;`;
+    const tableHead = this.document.createElement("thead");
+    tableHead.appendChild(header);
+    tableElement.appendChild(tableHead);
+    tableElement.appendChild(tableBody);
+    return tableElement;
   }
 }

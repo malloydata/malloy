@@ -20,8 +20,12 @@ import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  // "postgres", //
+  "postgres", //
 ]);
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   // Issue: #151
@@ -30,6 +34,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
         query: q is table('malloytest.aircraft')->{
+          where: state != null
           group_by: state
         }
 
@@ -217,7 +222,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].right_sum).toBe(1560);
   });
 
-  it(`limit - provided`, async () => {
+  it(`limit - provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
@@ -235,7 +240,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
-  it(`limit - not provided`, async () => {
+  it(`limit - not provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
@@ -252,7 +257,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(undefined);
   });
 
-  it(`limit pipeline - provided`, async () => {
+  it(`limit pipeline - provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
@@ -271,5 +276,39 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.resultExplore.limit).toBe(3);
+  });
+
+  it(`sql_block - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      explore: eone is  from_sql(one) {}
+
+      query: eone -> { project: a }
+      `
+      )
+      .run();
+    expect(result.data.value[0].a).toBe(1);
+  });
+
+  it(`sql_block no explore- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      query: from_sql(one) -> { project: a }
+      `
+      )
+      .run();
+    expect(result.data.value[0].a).toBe(1);
   });
 });

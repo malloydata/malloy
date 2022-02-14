@@ -404,8 +404,12 @@ export function isDataContainer(a: unknown): a is DataContainer {
 export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   spec: lite.TopLevelSpec;
 
-  constructor(styleDefaults: StyleDefaults, spec: lite.TopLevelSpec) {
-    super(styleDefaults);
+  constructor(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    spec: lite.TopLevelSpec
+  ) {
+    super(document, styleDefaults);
     this.spec = spec;
   }
 

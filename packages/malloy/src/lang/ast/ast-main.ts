@@ -10,7 +10,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-
 import { URL } from "url";
 import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
@@ -24,10 +23,8 @@ import {
   QueryFieldSpace,
   IndexFieldSpace,
 } from "../field-space";
-import * as Source from "../source-reference";
 import { LogMessage, MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
-// import { toTimestampV } from "./time-utils";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -35,6 +32,7 @@ import {
   ExpressionDef,
 } from "./index";
 import { QueryField } from "../space-field";
+import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -92,7 +90,7 @@ type ElementChildren = Record<string, ChildBody>;
 
 export abstract class MalloyElement {
   abstract elementType: string;
-  codeLocation?: Source.Range;
+  codeLocation?: model.DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
   private logger?: MessageLogger;
@@ -127,17 +125,24 @@ export abstract class MalloyElement {
     }
   }
 
-  get location(): Source.Range | undefined {
+  get location(): model.DocumentLocation {
     if (this.codeLocation) {
       return this.codeLocation;
     }
     if (this.parent) {
       return this.parent.location;
     }
-    return undefined;
+    this.log("Location not set during parse");
+    return {
+      url: this.sourceURL,
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      },
+    };
   }
 
-  set location(loc: Source.Range | undefined) {
+  set location(loc: model.DocumentLocation | undefined) {
     this.codeLocation = loc;
   }
 
@@ -170,16 +175,21 @@ export abstract class MalloyElement {
     this.xlate = x;
   }
 
+  private get sourceURL() {
+    const trans = this.translator();
+    return trans?.sourceURL || "(missing)";
+  }
+
   log(logString: string): void {
     const trans = this.translator();
     const msg: LogMessage = {
-      sourceURL: trans?.sourceURL || "(missing)",
+      sourceURL: this.sourceURL,
       message: logString,
     };
     const loc = this.location;
     if (loc) {
-      msg.begin = loc.begin;
-      msg.end = loc.end;
+      msg.begin = loc.range.start;
+      msg.end = loc.range.end;
     }
     const logTo = trans?.root.logger;
     if (logTo) {
@@ -224,6 +234,20 @@ export abstract class MalloyElement {
       }
     }
     return asString;
+  }
+
+  walk(callBack: (node: MalloyElement) => void): void {
+    callBack(this);
+    for (const kidLabel of Object.keys(this.children)) {
+      const kiddle = this.children[kidLabel];
+      if (kiddle instanceof MalloyElement) {
+        kiddle.walk(callBack);
+      } else {
+        for (const k of kiddle) {
+          k.walk(callBack);
+        }
+      }
+    }
   }
 
   private varInfo(): string {
@@ -283,6 +307,7 @@ export class ListOf<ET extends MalloyElement> extends MalloyElement {
 
 export class Unimplemented extends MalloyElement {
   elementType = "unimplemented";
+  reported = false;
 }
 
 function getStructFieldDef(
@@ -394,6 +419,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
       const struct = {
         ...this.mallobj.withParameters(this.parameters),
         as: this.name,
+        location: this.location,
       };
       doc.setEntry(this.name, {
         entry: struct,
@@ -437,13 +463,12 @@ export class RefinedExplore extends Mallobj {
           el.log("Too many accept/except statements");
         }
         fieldListEdit = el;
-      } else if (el instanceof RenameField) {
-        fields.push(el);
       } else if (
         el instanceof Measures ||
         el instanceof Dimensions ||
         el instanceof Joins ||
-        el instanceof Turtles
+        el instanceof Turtles ||
+        el instanceof Renames
       ) {
         fields.push(...el.list);
       } else if (el instanceof Filter) {
@@ -463,8 +488,9 @@ export class RefinedExplore extends Mallobj {
       fs.addParameters(pList);
     }
     if (primaryKey) {
-      if (!fs.findEntry(primaryKey.field.name)) {
-        primaryKey.log(`Undefined field '${primaryKey.field.name}'`);
+      const keyDef = fs.lookup(primaryKey.field.name);
+      if (keyDef.error) {
+        primaryKey.log(keyDef.error);
       }
     }
     const retStruct = fs.structDef();
@@ -502,7 +528,18 @@ export class TableSource extends Mallobj {
     let msg = `Schema read failure for table '${this.name}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status == "present") {
-        return tableDefEntry.value;
+        tableDefEntry.value.location = this.location;
+        tableDefEntry.value.fields.forEach(
+          (field) => (field.location = this.location)
+        );
+        return {
+          ...tableDefEntry.value,
+          fields: tableDefEntry.value.fields.map((field) => ({
+            ...field,
+            location: this.location,
+          })),
+          location: this.location,
+        };
       }
       if (tableDefEntry.status == "error") {
         msg = tableDefEntry.message.includes(this.name)
@@ -546,6 +583,22 @@ export class NamedSource extends Mallobj {
     return this.name;
   }
 
+  modelStruct(): model.StructDef | undefined {
+    const modelEnt = this.modelEntry(this.name)?.entry;
+    if (!modelEnt) {
+      this.log(`Undefined data source '${this.name}'`);
+      return;
+    }
+    if (modelEnt.type === "query") {
+      this.log(`Must use 'from()' to explore query '${this.name}`);
+      return;
+    } else if (modelEnt.type === "sqlBlock") {
+      this.log(`Must use 'from_sql()' to explore sql query '${this.name}`);
+      return;
+    }
+    return { ...modelEnt };
+  }
+
   structDef(): model.StructDef {
     /*
       Can't really generate the callback list until after all the
@@ -561,16 +614,10 @@ export class NamedSource extends Mallobj {
       which might result in a full translation.
     */
 
-    const modelEnt = this.modelEntry(this.name)?.entry;
-    if (!modelEnt) {
-      this.log(`Undefined data source '${this.name}'`);
+    const ret = this.modelStruct();
+    if (!ret) {
       return ErrorFactory.structDef;
     }
-    if (modelEnt.type === "query") {
-      this.log(`Expected explore as data source, '${this.name}', is a query`);
-      return ErrorFactory.structDef;
-    }
-    const ret = { ...modelEnt };
     const declared = { ...ret.parameters } || {};
 
     const makeWith = this.isBlock?.isMap || {};
@@ -613,6 +660,57 @@ export class NamedSource extends Mallobj {
       }
     }
     return ret;
+  }
+}
+
+export class SQLSource extends NamedSource {
+  elementType = "sqlSource";
+  structRef(): model.StructRef {
+    return this.structDef();
+  }
+  modelStruct(): model.StructDef | undefined {
+    const modelEnt = this.modelEntry(this.name)?.entry;
+    if (!modelEnt) {
+      this.log(`Undefined from_sql source '${this.name}'`);
+      return;
+    }
+    if (modelEnt.type === "query") {
+      this.log(`Cannot use 'from_sql()' to explore query '${this.name}'`);
+      return;
+    } else if (modelEnt.type === "struct") {
+      this.log(`Cannot use 'from_sql()' to explore '${this.name}'`);
+      return;
+    }
+    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
+    if (!sqlDefEntry) {
+      this.log(`Cant't look up schema for sql block '${this.name}'`);
+      return;
+    }
+    if (modelEnt.type == "sqlBlock") {
+      const key = modelEnt.name;
+      const lookup = sqlDefEntry.getEntry(key);
+      let msg = `Schema read failure for sql query '${this.name}'`;
+      if (lookup) {
+        if (lookup.status == "present") {
+          const structDef = lookup.value;
+          return {
+            ...structDef,
+            fields: structDef.fields.map((field) => ({
+              ...field,
+              location: modelEnt.location,
+            })),
+          };
+        }
+        if (lookup.status == "error") {
+          msg = lookup.message.includes(this.name)
+            ? `'Schema error: ${lookup.message}`
+            : `Schema error '${this.name}': ${lookup.message}`;
+        }
+        this.log(msg);
+      }
+    } else {
+      this.log(`Mis-typed definition for'${this.name}'`);
+    }
   }
 }
 
@@ -659,6 +757,7 @@ export class KeyJoin extends Join {
         type: "foreignKey",
         foreignKey: this.key,
       },
+      location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -716,6 +815,7 @@ export class ExpressionJoin extends Join {
     const joinStruct: model.StructDef = {
       ...sourceDef,
       structRelationship: { type: this.joinType },
+      location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -767,7 +867,7 @@ export type ExploreProperty =
   | Measures
   | Dimensions
   | FieldListEdit
-  | RenameField
+  | Renames
   | PrimaryKey
   | Turtles;
 export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
@@ -777,7 +877,7 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
     p instanceof Measures ||
     p instanceof Dimensions ||
     p instanceof FieldListEdit ||
-    p instanceof RenameField ||
+    p instanceof Renames ||
     p instanceof PrimaryKey ||
     p instanceof Turtles
   );
@@ -868,6 +968,12 @@ export class Dimensions extends ListOf<ExprFieldDecl> {
   }
 }
 
+export class Renames extends ListOf<RenameField> {
+  constructor(renames: RenameField[]) {
+    super("renameField", renames);
+  }
+}
+
 export class FieldName
   extends MalloyElement
   implements FieldReferenceInterface
@@ -932,12 +1038,22 @@ export type QueryItem =
 export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("groupBy", members);
+    for (const el of members) {
+      if (el instanceof ExprFieldDecl) {
+        el.isMeasure = false;
+      }
+    }
   }
 }
 
 export class Aggregate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("aggregate", members);
+    for (const el of members) {
+      if (el instanceof ExprFieldDecl) {
+        el.isMeasure = true;
+      }
+    }
   }
 }
 
@@ -955,7 +1071,7 @@ function getRefinedFields(
   if (!exisitingFields) {
     return addingFields;
   }
-  const newFields = [...addingFields];
+  const newFields: model.QueryFieldDef[] = [];
   const newDefinition: Record<string, boolean> = {};
   for (const field of newFields) {
     const fieldName = nameOf(field);
@@ -967,6 +1083,7 @@ function getRefinedFields(
       newFields.push(field);
     }
   }
+  newFields.push(...addingFields);
   return newFields;
 }
 
@@ -1220,30 +1337,50 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   protected computeType(): QOPType {
     let firstGuess: QOPType | undefined;
+    if (this.refineThis) {
+      if (this.refineThis.type == "reduce") {
+        firstGuess = "grouping";
+      } else {
+        firstGuess = this.refineThis.type;
+      }
+    }
     let anyGrouping = false;
     for (const el of this.list) {
       if (el instanceof Index) {
         firstGuess ||= "index";
         if (firstGuess !== "index") {
-          el.log(`index: not legal in ${firstGuess} segment`);
+          el.log(`index: not legal in ${firstGuess} query`);
         }
-      } else if (el instanceof GroupBy) {
+      } else if (
+        el instanceof Nests ||
+        el instanceof NestDefinition ||
+        el instanceof NestReference ||
+        el instanceof GroupBy
+      ) {
         firstGuess ||= "grouping";
         anyGrouping = true;
         if (firstGuess === "project" || firstGuess === "index") {
-          el.log(`group_by: not legal in ${firstGuess}: segment`);
+          el.log(`group_by: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof Aggregate) {
         firstGuess ||= "aggregate";
         if (firstGuess === "project" || firstGuess === "index") {
-          el.log(`aggregate: not legal in ${firstGuess}: segment`);
+          el.log(`aggregate: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof ProjectStatement) {
         firstGuess ||= "project";
+        if (firstGuess !== "project") {
+          el.log(`project: not legal in ${firstGuess} query`);
+        }
       }
     }
     if (firstGuess === "aggregate" && anyGrouping) {
       firstGuess = "grouping";
+    }
+    if (!firstGuess) {
+      this.log(
+        "Can't determine query type (group_by/aggregate/nest,project,index)"
+      );
     }
     const guessType = firstGuess || "grouping";
     this.opType = guessType;
@@ -1282,7 +1419,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 }
 
 export interface ModelEntry {
-  entry: model.NamedModelObject;
+  entry: model.NamedModelObject | model.SQLBlock;
   exported?: boolean;
 }
 export interface NameSpace {
@@ -1294,6 +1431,7 @@ export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
+  sqlBlocks: model.SQLBlock[] = [];
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
   }
@@ -1301,6 +1439,7 @@ export class Document extends MalloyElement implements NameSpace {
   getModelDef(extendingModelDef: model.ModelDef | undefined): model.ModelDef {
     this.documentModel = {};
     this.queryList = [];
+    this.sqlBlocks = [];
     if (extendingModelDef) {
       for (const inName in extendingModelDef.contents) {
         const struct = extendingModelDef.contents[inName];
@@ -1315,12 +1454,28 @@ export class Document extends MalloyElement implements NameSpace {
     }
     const def: model.ModelDef = { name: "", exports: [], contents: {} };
     for (const entry in this.documentModel) {
-      if (this.documentModel[entry].exported) {
-        def.exports.push(entry);
+      const entryDef = this.documentModel[entry].entry;
+      if (entryDef.type === "struct" || entryDef.type === "query") {
+        if (this.documentModel[entry].exported) {
+          def.exports.push(entry);
+        }
+        def.contents[entry] = cloneDeep(entryDef);
       }
-      def.contents[entry] = cloneDeep(this.documentModel[entry].entry);
     }
     return def;
+  }
+
+  defineSQL(sql: model.SQLBlock, name?: string): boolean {
+    const ret = { ...sql, as: `$${this.sqlBlocks.length}` };
+    if (name) {
+      if (this.getEntry(name)) {
+        return false;
+      }
+      ret.as = name;
+      this.setEntry(name, { entry: ret });
+    }
+    this.sqlBlocks.push(ret);
+    return true;
   }
 
   getEntry(str: string): ModelEntry {
@@ -1406,6 +1561,7 @@ export class TurtleDecl extends MalloyElement {
       type: "turtle",
       name: this.name,
       ...pipe,
+      location: this.location,
     };
   }
 }
@@ -1532,13 +1688,13 @@ export class PipelineDesc extends MalloyElement {
   getPipelineForExplore(exploreFS: FieldSpace): model.Pipeline {
     const modelPipe: model.Pipeline = { pipeline: [] };
     if (this.headName && this.headRefinement) {
-      const headEnt = exploreFS.findEntry(this.headName);
+      const headEnt = exploreFS.lookup(this.headName);
       let reportWrongType = true;
-      if (!headEnt) {
-        this.log(`Reference to undefined query '${this.headName}'`);
+      if (headEnt.error) {
+        this.log(headEnt.error);
         reportWrongType = false;
-      } else if (headEnt instanceof QueryField) {
-        const headDef = headEnt.queryFieldDef();
+      } else if (headEnt.found instanceof QueryField) {
+        const headDef = headEnt.found.queryFieldDef();
         if (isTurtle(headDef)) {
           const newPipe = this.refinePipeline(exploreFS, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];
@@ -1594,6 +1750,7 @@ export class PipelineDesc extends MalloyElement {
       ...resultPipe,
       type: "query",
       structRef: queryHead.structRef(),
+      location: this.location,
     };
     return { outputStruct, query };
   }
@@ -1604,6 +1761,7 @@ export class PipelineDesc extends MalloyElement {
       type: "query",
       structRef,
       pipeline: [],
+      location: this.location,
     };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
@@ -1729,6 +1887,7 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       ...this.queryDetails.query(),
       type: "query",
       name: this.name,
+      location: this.location,
     };
     const exported = false;
     doc.setEntry(this.name, { entry, exported });
@@ -1933,5 +2092,25 @@ export class ConstantParameter extends HasParameter {
       name: this.name,
       constant: true,
     };
+  }
+}
+
+export class SQLStatement extends MalloyElement implements DocStatement {
+  elementType = "sqlStatement";
+  is?: string;
+  constructor(readonly blockReq: SQLBlockRequest) {
+    super();
+  }
+
+  sqlBlock(): model.SQLBlock {
+    const sqlBlock = makeSQLBlock(this.blockReq);
+    sqlBlock.location = this.location;
+    return sqlBlock;
+  }
+
+  execute(doc: Document): void {
+    if (!doc.defineSQL(this.sqlBlock(), this.is)) {
+      this.log(`${this.is} already defined`);
+    }
   }
 }

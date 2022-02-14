@@ -19,7 +19,7 @@ import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { LogMessage, MessageLogger } from "./parse-log";
 import * as Source from "./source-reference";
-import { ParseMalloy } from "./parse-malloy";
+import { MalloyParseRoot } from "./parse-malloy";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -29,7 +29,7 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyVisitor<ast.MalloyElement>
 {
-  constructor(readonly parse: ParseMalloy, readonly msgLog: MessageLogger) {
+  constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
   }
 
@@ -129,6 +129,21 @@ export class MalloyToAST
     return eps;
   }
 
+  protected onlyQueryRefs(els: ast.MalloyElement[]): ast.QueryItem[] {
+    const eps: ast.QueryItem[] = [];
+    for (const el of els) {
+      if (el instanceof ast.FieldName || el instanceof ast.ExprFieldDecl) {
+        eps.push(el);
+      } else {
+        const reported = el instanceof ast.Unimplemented && el.reported;
+        if (!reported) {
+          this.astError(el, `Expected query field, not '${el.elementType}'`);
+        }
+      }
+    }
+    return eps;
+  }
+
   protected getNumber(term: ParseTree): number {
     return Number.parseInt(term.text);
   }
@@ -146,6 +161,12 @@ export class MalloyToAST
     return s;
   }
 
+  protected optionalText(idCx: ParseTree | undefined): string | undefined {
+    if (idCx) {
+      return this.getIdText(idCx);
+    }
+    return undefined;
+  }
   defaultResult(): ast.MalloyElement {
     return new ast.Unimplemented();
   }
@@ -154,7 +175,10 @@ export class MalloyToAST
     el: MT,
     cx: ParserRuleContext
   ): MT {
-    el.location = Source.rangeFromContext(cx);
+    el.location = {
+      url: this.parse.sourceURL,
+      range: Source.rangeFromContext(cx),
+    };
     return el;
   }
 
@@ -179,6 +203,20 @@ export class MalloyToAST
         }
       } else {
         this.contextError(cx, "Expected field definition");
+      }
+    }
+    return visited;
+  }
+
+  protected getRenames(cxList: ParserRuleContext[]): ast.RenameField[] {
+    const visited: ast.RenameField[] = [];
+    for (const cx of cxList) {
+      const v = this.visit(cx);
+      if (v instanceof ast.RenameField) {
+        this.astAt(v, cx);
+        visited.push(v);
+      } else {
+        this.contextError(cx, "Expected rename definition");
       }
     }
     return visited;
@@ -279,6 +317,13 @@ export class MalloyToAST
 
   visitTableSource(pcx: parse.TableSourceContext): ast.TableSource {
     return this.visitExploreTable(pcx.exploreTable());
+  }
+
+  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+    return this.astAt(
+      new ast.SQLSource(this.getIdText(pcx.sqlExploreNameRef())),
+      pcx
+    );
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
@@ -399,7 +444,7 @@ export class MalloyToAST
     return this.astAt(stmt, pcx);
   }
 
-  visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.RenameField {
+  visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0).id();
     const oldName = pcx.fieldName(1).id();
     const rename = new ast.RenameField(
@@ -407,6 +452,12 @@ export class MalloyToAST
       this.getIdText(oldName)
     );
     return this.astAt(rename, pcx);
+  }
+
+  visitDefExploreRename(pcx: parse.DefExploreRenameContext): ast.Renames {
+    const renames = this.getRenames(pcx.renameList().exploreRenameDef());
+    const stmt = new ast.Renames(renames);
+    return this.astAt(stmt, pcx);
   }
 
   visitFilterClauseList(pcx: parse.FilterClauseListContext): ast.Filter {
@@ -500,44 +551,37 @@ export class MalloyToAST
     return this.astAt(new ast.FieldName(this.getFieldPath(pcx)), pcx);
   }
 
-  visitGroupByEntry(pcx: parse.GroupByEntryContext): ast.QueryItem {
-    const defCx = pcx.dimensionDef()?.fieldDef();
-    if (defCx) {
-      const dim = this.visitFieldDef(defCx);
-      dim.isMeasure = false;
-      return this.astAt(dim, defCx);
-    }
+  visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
+    const defCx = pcx.dimensionDef().fieldDef();
+    const dim = this.visitFieldDef(defCx);
+    return this.astAt(dim, defCx);
+  }
+
+  visitQueryFieldRef(pcx: parse.QueryFieldRefContext): ast.QueryItem {
     const refCx = pcx.fieldPath();
-    if (refCx) {
-      return this.astAt(this.visitFieldPath(refCx), refCx);
-    }
-    throw this.internalError(pcx, "query item was not a ref or a def");
+    return this.astAt(this.visitFieldPath(refCx), refCx);
   }
 
-  visitGroupByList(pcx: parse.GroupByListContext): ast.GroupBy {
-    const groupBy = pcx.groupByEntry().map((cx) => this.visitGroupByEntry(cx));
-    return new ast.GroupBy(groupBy);
+  // visitQueryFieldNameless(
+  //   pcx: parse.QueryFieldNamelessContext
+  // ): ast.MalloyElement {
+  //   this.contextError(pcx, `Expressions in queries must have names`);
+  //   const noItem = new ast.Unimplemented();
+  //   noItem.reported = true;
+  //   return noItem;
+  // }
+
+  protected getQueryItems(pcx: parse.QueryFieldListContext): ast.QueryItem[] {
+    const itemList = pcx.queryFieldEntry().map((e) => this.visit(e));
+    return this.onlyQueryRefs(itemList);
   }
 
-  visitAggregateEntry(pcx: parse.AggregateEntryContext): ast.QueryItem {
-    const defCx = pcx.measureDef()?.fieldDef();
-    if (defCx) {
-      const m = this.visitFieldDef(defCx);
-      m.isMeasure = true;
-      return this.astAt(m, defCx);
-    }
-    const refCx = pcx.fieldPath();
-    if (refCx) {
-      return this.astAt(this.visitFieldPath(refCx), refCx);
-    }
-    throw this.internalError(pcx, "query item was not a ref or a def");
+  visitAggregateStatement(pcx: parse.AggregateStatementContext): ast.Aggregate {
+    return new ast.Aggregate(this.getQueryItems(pcx.queryFieldList()));
   }
 
-  visitAggregateList(pcx: parse.AggregateListContext): ast.Aggregate {
-    const aggList = pcx
-      .aggregateEntry()
-      .map((e) => this.visitAggregateEntry(e));
-    return new ast.Aggregate(aggList);
+  visitGroupByStatement(pcx: parse.GroupByStatementContext): ast.GroupBy {
+    return new ast.GroupBy(this.getQueryItems(pcx.queryFieldList()));
   }
 
   visitFieldCollection(
@@ -689,7 +733,7 @@ export class MalloyToAST
   }
 
   visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const query = this.visit(pcx.query());
+    const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
       return new ast.AnonymousQuery(query);
     }
@@ -793,7 +837,8 @@ export class MalloyToAST
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
-    return new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    const idRef = new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    return this.astAt(idRef, pcx);
   }
 
   visitExprNULL(_pcx: parse.ExprNULLContext): ast.ExprNULL {
@@ -1047,5 +1092,24 @@ export class MalloyToAST
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {
     return this.getFieldExpr(pcx.fieldExpr());
+  }
+
+  visitDefineSQLStatement(
+    pcx: parse.DefineSQLStatementContext
+  ): ast.SQLStatement {
+    return this.visitSQLStatementDef(pcx.sqlStatementDef());
+  }
+
+  visitSQLStatementDef(pcx: parse.SqlStatementDefContext): ast.SQLStatement {
+    const commands = pcx.sqlBlock().text;
+    const sqlStmt = new ast.SQLStatement({
+      select: commands.slice(2, commands.length - 2),
+      connection: this.optionalText(pcx.connectionName()),
+    });
+    const nameCx = pcx.sqlCommandNameDef();
+    if (nameCx) {
+      sqlStmt.is = this.getIdText(nameCx);
+    }
+    return this.astAt(sqlStmt, pcx);
   }
 }

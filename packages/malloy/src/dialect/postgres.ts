@@ -22,6 +22,11 @@ import {
   TimestampTimeframe,
 } from "./dialect";
 
+const castMap: Record<string, string> = {
+  number: "double precision",
+  string: "varchar",
+};
+
 export class PostgresDialect extends Dialect {
   name = "postgres";
   defaultNumberType = "DOUBLE PRECISION";
@@ -46,7 +51,7 @@ export class PostgresDialect extends Dialect {
     return fieldList
       .map(
         (f) =>
-          `${f.sqlExpression}${
+          `\n  ${f.sqlExpression}${
             f.type == "number" ? `::${this.defaultNumberType}` : ""
           } as ${f.sqlOutputName}`
         //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
@@ -66,7 +71,7 @@ export class PostgresDialect extends Dialect {
     }
     const fields = this.mapFields(fieldList);
     // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
-    return `TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail})`;
+    return `TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -131,9 +136,10 @@ export class PostgresDialect extends Dialect {
   ): string {
     if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
-      return `CROSS JOIN LATERAL UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias}`;
+      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
-      return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
+      // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
+      return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
     }
   }
 
@@ -251,5 +257,23 @@ export class PostgresDialect extends Dialect {
     timeframe: DateTimeframe
   ): DialectExpr {
     return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
+  }
+
+  sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr {
+    return ["(", expr, `)::${castMap[castTo] || castTo}`];
+  }
+
+  sqlLiteralTime(
+    timeString: string,
+    type: "date" | "timestamp",
+    _timezone: string
+  ): string {
+    if (type === "date") {
+      return `DATE('${timeString}')`;
+    } else if (type === "timestamp") {
+      return `TIMESTAMP '${timeString}'`;
+    } else {
+      throw new Error(`Unknown Liternal time format ${type}`);
+    }
   }
 }

@@ -13,7 +13,7 @@
 
 import { Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
   QueryMessageType,
@@ -25,6 +25,7 @@ import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
 import Prism from "prismjs";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
+import { usePopperTooltip } from "react-popper-tooltip";
 
 enum Status {
   Ready = "ready",
@@ -38,11 +39,17 @@ enum Status {
 
 export const App: React.FC = () => {
   const [status, setStatus] = useState<Status>(Status.Ready);
-  const [html, setHTML] = useState("");
+  const [html, setHTML] = useState<HTMLElement>(document.createElement("span"));
   const [json, setJSON] = useState("");
   const [sql, setSQL] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
+  const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
+  const drillTooltipId = useRef(0);
+  const { setTooltipRef, setTriggerRef, getTooltipProps } = usePopperTooltip({
+    visible: drillTooltipVisible,
+    placement: "top",
+  });
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -65,10 +72,21 @@ export const App: React.FC = () => {
               setSQL(
                 Prism.highlight(result.sql, Prism.languages["sql"], "sql")
               );
-              const rendered = await new HTMLView().render(
-                data,
-                message.styles
-              );
+              const rendered = await new HTMLView(document).render(data, {
+                dataStyles: message.styles,
+                isDrillingEnabled: true,
+                onDrill: (drillQuery, target) => {
+                  navigator.clipboard.writeText(drillQuery);
+                  setTriggerRef(target);
+                  setDrillTooltipVisible(true);
+                  const currentDrillTooltipId = ++drillTooltipId.current;
+                  setTimeout(() => {
+                    if (currentDrillTooltipId === drillTooltipId.current) {
+                      setDrillTooltipVisible(false);
+                    }
+                  }, 1000);
+                },
+              });
               setStatus(Status.Displaying);
               setTimeout(() => {
                 setHTML(rendered);
@@ -76,7 +94,7 @@ export const App: React.FC = () => {
               }, 0);
             }, 0);
           } else {
-            setHTML("");
+            setHTML(document.createElement("span"));
             setJSON("");
             setSQL("");
             switch (message.status) {
@@ -116,10 +134,9 @@ export const App: React.FC = () => {
       {!error && <ResultKindToggle kind={resultKind} setKind={setResultKind} />}
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
-          <div
-            dangerouslySetInnerHTML={{ __html: html }}
-            style={{ margin: "10px" }}
-          />
+          <div style={{ margin: "10px" }}>
+            <DOMElement element={html} />
+          </div>
         </Scroll>
       )}
       {!error && resultKind === ResultKind.JSON && (
@@ -138,6 +155,11 @@ export const App: React.FC = () => {
         </Scroll>
       )}
       {error && <div>{error}</div>}
+      {drillTooltipVisible && (
+        <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
+          Drill copied!
+        </DrillTooltip>
+      )}
     </div>
   );
 };
@@ -209,4 +231,26 @@ const PrismContainer = styled.pre`
   span.token.property {
     color: #b98f13;
   }
+`;
+
+const DOMElement: React.FC<{ element: HTMLElement }> = ({ element }) => {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const parent = ref.current;
+    if (parent) {
+      parent.innerHTML = "";
+      parent.appendChild(element);
+    }
+  }, [element]);
+
+  return <div ref={ref}></div>;
+};
+
+const DrillTooltip = styled.div`
+  background-color: #505050;
+  color: white;
+  border-radius: 5px;
+  box-shadow: rgb(144 144 144) 0px 1px 5px 0px;
+  padding: 5px;
 `;

@@ -143,3 +143,43 @@ export async function yieldTask(): Promise<void> {
     setTimeout(resolve, 0);
   });
 }
+
+export function createErrorElement(
+  document: Document,
+  error: string | Error
+): HTMLElement {
+  const element = document.createElement("span");
+  element.classList.add("error");
+  element.appendChild(
+    document.createTextNode(typeof error === "string" ? error : error.message)
+  );
+  return element;
+}
+
+export function createNullElement(document: Document): HTMLElement {
+  const element = document.createElement("span");
+  element.appendChild(document.createTextNode("∅"));
+  element.classList.add("value-null");
+  return element;
+}
+
+export function createDrillIcon(document: Document): HTMLElement {
+  const drill = document.createElement("div");
+  drill.style.borderRadius = "20px";
+  drill.style.backgroundColor = "#efefef";
+  drill.style.width = "27px";
+  drill.style.height = "14px";
+  drill.style.display = "flex";
+  drill.style.justifyContent = "center";
+  drill.style.alignItems = "center";
+  drill.style.gap = "2px";
+  for (let i = 0; i < 3; i++) {
+    const dot = document.createElement("div");
+    dot.style.backgroundColor = "rgb(181 181 181)";
+    dot.style.borderRadius = "5px";
+    dot.style.width = "4px";
+    dot.style.height = "4px";
+    drill.appendChild(dot);
+  }
+  return drill;
+}

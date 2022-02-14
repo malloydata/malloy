@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "(cd src/lang/grammar ; antlr4ts -visitor -o ../lib/Malloy Malloy.g4)",
+    "build-parser": "(cd src/lang/grammar ; sh build-parser.sh)",
     "testLang": "yarn test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
     "build": "yarn build-parser && yarn tsc --build",

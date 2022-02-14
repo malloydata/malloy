@@ -12,29 +12,21 @@
  */
 
 import { ParserRuleContext } from "antlr4ts";
+import { DocumentRange } from "../model/malloy_types";
 
-export interface Position {
-  line: number;
-  char?: number;
-}
-
-export interface Range {
-  begin: Position;
-  end?: Position;
-}
-
-export function rangeFromContext(cx: ParserRuleContext): Range {
-  const point: Range = {
-    begin: {
-      line: cx.start.line,
-      char: cx.start.charPositionInLine,
+export function rangeFromContext(pcx: ParserRuleContext): DocumentRange {
+  const stopToken = pcx.stop || pcx.start;
+  return {
+    start: {
+      line: pcx.start.line - 1,
+      character: pcx.start.charPositionInLine,
+    },
+    end: {
+      line: stopToken.line - 1,
+      character:
+        stopToken.stopIndex -
+        (stopToken.startIndex - stopToken.charPositionInLine) +
+        1,
     },
   };
-  if (cx.stop) {
-    point.end = {
-      line: cx.stop.line,
-      char: cx.stop.charPositionInLine,
-    };
-  }
-  return point;
 }

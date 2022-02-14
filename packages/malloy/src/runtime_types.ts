@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { MalloyQueryData, StructDef } from "./model";
+import { MalloyQueryData, SQLBlock, StructDef } from "./model";
 
 /**
  * A URL.
@@ -77,7 +77,7 @@ export interface URLReader {
 /**
  * An object capable of reading schemas for given table names.
  */
-export interface SchemaReader {
+export interface InfoConnection {
   // TODO should we really be exposing StructDef like this?
   // TODO should this be a Map instead of a Record in the public interface?
   /**
@@ -87,40 +87,62 @@ export interface SchemaReader {
    * @returns A mapping of table names to schemas.
    */
   fetchSchemaForTables(tables: string[]): Promise<Record<string, StructDef>>;
-}
 
-/**
- * A mapping of connection names to `SchemaReader`s.
- */
-export interface LookupSchemaReader {
-  /**
-   * @param connectionName The name of the connection for which a `SchemaReader` is required.
-   * @returns A promise to a `SchemaReader` for the connection named `connectionName`.
-   */
-  lookupSchemaReader(connectionName?: string): Promise<SchemaReader>;
+  // TODO feature-sql-block comment
+  fetchSchemaForSQLBlocks(
+    sqlStructs: SQLBlock[]
+  ): Promise<Record<string, StructDef>>;
+
+  // TODO feature-sql-block comment
+  get name(): string;
 }
 
 /**
  * An object capable of running SQL.
  */
-export interface SQLRunner {
+export interface Connection extends InfoConnection {
   /**
    * Run some SQL and yield results.
    *
    * @param sql The SQL to run.
+   * @param options.pageSize Maximum number of results to return at once.
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(sql: string): Promise<MalloyQueryData>;
+  runSQL(
+    sql: string,
+    options?: { rowLimit?: number }
+  ): Promise<MalloyQueryData>;
+
+  runSQLBlockAndFetchResultSchema(
+    sqlBlock: SQLBlock,
+    options?: { rowLimit?: number }
+  ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
+
+  // TODO feature-sql-block Comment
+  isPool(): this is PooledConnection;
+}
+
+// TODO feature-sql-block Comment
+export interface TestableConnection extends Connection {
+  // TODO feature-sql-block Comment
+  test(): Promise<void>;
+}
+
+export interface PooledConnection extends Connection {
+  // Most pool implementations require a specific call to release connection handles. If a Connection is a
+  // PooledConnection, drain() should be called when connection usage is over
+  drain(): Promise<void>;
+  isPool(): true;
 }
 
 /**
- * A mapping of connection names to `SQLRunner`s.
+ * A mapping of connection names to connections.
  */
-export interface LookupSQLRunner {
+export interface LookupConnection<T extends InfoConnection> {
   /**
-   * @param connectionName The name of the connection for which a `SQLRunner` is required.
-   * @returns A promise to a `SQLRunner` for the connection named `connectionName`.
+   * @param connectionName The name of the connection for which a `Connection` is required.
+   * @returns A promise to a `Connection` for the connection named `connectionName`.
    */
-  lookupSQLRunner(connectionName?: string): Promise<SQLRunner>;
+  lookupConnection(connectionName?: string): Promise<T>;
 }

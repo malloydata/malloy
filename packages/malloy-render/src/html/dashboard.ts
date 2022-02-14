@@ -13,18 +13,22 @@
 
 import { DataArrayOrRecord } from "@malloydata/malloy";
 import { StyleDefaults } from "../data_styles";
+import { getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
-import { yieldTask } from "./utils";
+import { createDrillIcon, createErrorElement, yieldTask } from "./utils";
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: "medium",
   };
 
-  async render(table: DataArrayOrRecord): Promise<string> {
+  async render(table: DataArrayOrRecord): Promise<HTMLElement> {
     if (!table.isArrayOrRecord()) {
-      return "Invalid data for dashboard renderer.";
+      return createErrorElement(
+        this.document,
+        "Invalid data for dashboard renderer."
+      );
     }
 
     const fields = table.field.intrinsicFields;
@@ -35,67 +39,102 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       (field) => !field.isAtomicField() || field.sourceWasMeasureLike()
     );
 
-    let renderedBody = "";
+    const body = this.document.createElement("div");
     for (const row of table) {
-      let renderedDimensions = "";
+      const dimensionsContainer = this.document.createElement("div");
+      dimensionsContainer.classList.add("dimensions");
+      dimensionsContainer.style.display = "flex";
+      dimensionsContainer.style.flexWrap = "wrap";
+      const rowElement = this.document.createElement("div");
+      rowElement.style.position = "relative";
       for (const field of dimensions) {
         const renderer = this.childRenderers[field.name];
         const rendered = await renderer.render(row.cell(field));
-        renderedDimensions += `<div style="${DIMENSION_BOX}"><div style="${DIMENSION_TITLE}">${field.name}</div><div style="${VERTICAL_CENTER}">${rendered}</div></div>\n`;
+        const renderedDimension = this.document.createElement("div");
+        renderedDimension.style.cssText = DIMENSION_BOX;
+        const dimensionTitle = this.document.createElement("div");
+        dimensionTitle.style.cssText = DIMENSION_TITLE;
+        dimensionTitle.appendChild(this.document.createTextNode(field.name));
+        const dimensionInner = this.document.createElement("div");
+        dimensionInner.style.cssText = VERTICAL_CENTER;
+        dimensionInner.appendChild(rendered);
+        renderedDimension.appendChild(dimensionTitle);
+        renderedDimension.appendChild(dimensionInner);
+        dimensionsContainer.appendChild(renderedDimension);
       }
-      let renderedMeasures = "";
+      if (dimensions.length > 0) {
+        const rowSeparatorOuter = this.document.createElement("div");
+        rowSeparatorOuter.classList.add("row-separator-outer");
+        rowSeparatorOuter.style.cssText = ROW_SEPARATOR_OUTER;
+        const rowSeparator = this.document.createElement("div");
+        rowSeparator.style.cssText = ROW_SEPARATOR;
+        rowSeparatorOuter.appendChild(rowSeparator);
+        dimensionsContainer.appendChild(rowSeparatorOuter);
+      }
+      const measuresContainer = this.document.createElement("div");
+      measuresContainer.style.cssText = MEASURE_BOXES;
       for (const field of measures) {
         const childRenderer = this.childRenderers[field.name];
         await yieldTask();
         const rendered = await childRenderer.render(row.cell(field));
         if (childRenderer instanceof HTMLDashboardRenderer) {
-          renderedMeasures += rendered;
+          measuresContainer.appendChild(rendered);
         } else if (childRenderer instanceof HTMLTextRenderer) {
-          renderedMeasures += `
-            <div style="${MEASURE_BOX}">
-              <div style="${TITLE}">${field.name}</div>
-              <div style="${VERTICAL_CENTER}">
-                <div style="${SINGLE_VALUE}">
-                  ${rendered}
-                </div>
-              </div>
-            </div>`;
+          const measureBox = this.document.createElement("div");
+          measureBox.style.cssText = MEASURE_BOX;
+          const measureTitle = this.document.createElement("div");
+          measureTitle.style.cssText = TITLE;
+          measureTitle.appendChild(this.document.createTextNode(field.name));
+          const measureInner = this.document.createElement("div");
+          measureInner.style.cssText = VERTICAL_CENTER;
+          const innerInner = this.document.createElement("div");
+          innerInner.style.cssText = SINGLE_VALUE;
+          innerInner.appendChild(rendered);
+          measureInner.appendChild(innerInner);
+          measureBox.appendChild(measureTitle);
+          measureBox.appendChild(measureInner);
+          measuresContainer.appendChild(measureBox);
         } else {
-          renderedMeasures += `
-            <div style="${MEASURE_BOX}">
-              <div style="${TITLE}">${field.name}</div>
-              <div style="${VERTICAL_CENTER}">
-                <div style="${HORIZONTAL_CENTER}">
-                  ${rendered}
-                </div>
-              </div>
-            </div>`;
+          const measureBox = this.document.createElement("div");
+          measureBox.style.cssText = MEASURE_BOX;
+          const measureTitle = this.document.createElement("div");
+          measureTitle.style.cssText = TITLE;
+          measureTitle.appendChild(this.document.createTextNode(field.name));
+          const measureInner = this.document.createElement("div");
+          measureInner.style.cssText = VERTICAL_CENTER;
+          const innerInner = this.document.createElement("div");
+          innerInner.style.cssText = HORIZONTAL_CENTER;
+          innerInner.appendChild(rendered);
+          measureInner.appendChild(innerInner);
+          measureBox.appendChild(measureTitle);
+          measureBox.appendChild(measureInner);
+          measuresContainer.appendChild(measureBox);
         }
       }
-      renderedBody += `
-          <div>
-            <div class="dimensions" style="display: flex; flex-wrap: wrap;">
-              ${renderedDimensions}
-              ${
-                dimensions.length > 0
-                  ? `<div class="row-separator-outer" style="${ROW_SEPARATOR_OUTER}"><div style="${ROW_SEPARATOR}"></div></div>`
-                  : ""
-              }
-            </div>
-            <div class="dashboard-outer" style="${DASHBOARD_OUTER}">
-              ${
-                dimensions.length > 0
-                  ? `<div class="nest-indicator" style="${NEST_INDICATOR}"></div>`
-                  : ""
-              }
-              <div style="${MEASURE_BOXES}">
-                ${renderedMeasures}
-              </div>
-            </div>
-          </div>
-      `;
+      rowElement.appendChild(dimensionsContainer);
+      if (dimensions.length > 0 && this.options.isDrillingEnabled) {
+        const drillElement = this.document.createElement("span");
+        const drillIcon = createDrillIcon(this.document);
+        drillElement.appendChild(drillIcon);
+        drillElement.style.cssText = `padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;`;
+        drillElement.onclick = () =>
+          this.options.onDrill &&
+          this.options.onDrill(getDrillQuery(row), drillIcon);
+        rowElement.appendChild(drillElement);
+      }
+      const dashboardOuter = this.document.createElement("div");
+      dashboardOuter.classList.add("dashboard-outer");
+      dashboardOuter.style.cssText = DASHBOARD_OUTER;
+      if (dimensions.length > 0) {
+        const nestIndicator = this.document.createElement("div");
+        nestIndicator.style.cssText = NEST_INDICATOR;
+        dashboardOuter.appendChild(nestIndicator);
+      }
+      dashboardOuter.appendChild(measuresContainer);
+      rowElement.appendChild(dashboardOuter);
+      body.appendChild(rowElement);
     }
-    return `<div>${renderedBody}</div>`;
+    return body;
   }
 }
 

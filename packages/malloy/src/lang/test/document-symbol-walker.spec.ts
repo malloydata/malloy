@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import { TestTranslator } from "../test-translator";
-import { DocumentSymbol } from "./document-symbol-walker";
+import { TestTranslator } from "./test-translator";
+import { DocumentSymbol } from "../parse-tree-walkers/document-symbol-walker";
 
 class MalloyExplore {
   tt: TestTranslator;

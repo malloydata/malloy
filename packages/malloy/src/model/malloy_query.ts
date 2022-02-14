@@ -227,7 +227,7 @@ class QueryField extends QueryNode {
         groupSets.length === 1
           ? `=${groupSets[0]}`
           : ` IN (${groupSets.join(",")})`;
-      return `CASE WHEN group_set${exp} THEN ${s} END`;
+      return `CASE WHEN group_set${exp} THEN\n  ${s}\n  END`;
     }
   }
 
@@ -509,7 +509,7 @@ class QueryField extends QueryNode {
       this.parent.fieldDef.structSource.type === "nested" ||
         this.parent.fieldDef.structSource.type === "inline" ||
         (this.parent.fieldDef.structSource.type === "sql" &&
-          this.parent.fieldDef.structSource.nested === true)
+          this.parent.fieldDef.structSource.method === "nested")
     );
   }
 }
@@ -1307,6 +1307,7 @@ class QueryQuery extends QueryField {
         f instanceof QueryAtomicField &&
         isScalarField(f) &&
         f.includeInWildcard() &&
+        !this.parent.dialect.ignoreInProject(f.fieldDef.name) &&
         (!filter || filter(f))
       ) {
         // fieldNames.push(`${struct.getFullOutputName()}${name}`);
@@ -1635,11 +1636,18 @@ class QueryQuery extends QueryField {
             dimCount++;
           }
 
+          const location = fi.f.fieldDef.location;
+
           // build out the result fields...
           switch (fi.f.fieldDef.type) {
             case "boolean":
             case "string":
-              fields.push({ name, type: fi.f.fieldDef.type, resultMetadata });
+              fields.push({
+                name,
+                type: fi.f.fieldDef.type,
+                resultMetadata,
+                location,
+              });
               break;
             case "timestamp": {
               const timeframe = fi.f.fieldDef.timeframe || "second";
@@ -1654,6 +1662,7 @@ class QueryQuery extends QueryField {
                     type: "date",
                     timeframe,
                     resultMetadata,
+                    location,
                   });
                   break;
                 case "second":
@@ -1665,6 +1674,7 @@ class QueryQuery extends QueryField {
                     type: "timestamp",
                     timeframe,
                     resultMetadata,
+                    location,
                   });
                   break;
                 case "hour_of_day":
@@ -1677,6 +1687,7 @@ class QueryQuery extends QueryField {
                     numberType: "integer",
                     timeframe,
                     resultMetadata,
+                    location,
                   });
                   break;
               }
@@ -1688,6 +1699,7 @@ class QueryQuery extends QueryField {
                 type: fi.f.fieldDef.type,
                 timeframe: fi.f.fieldDef.timeframe,
                 resultMetadata,
+                location,
               });
               break;
             }
@@ -1697,6 +1709,7 @@ class QueryQuery extends QueryField {
                 numberType: fi.f.fieldDef.numberType,
                 type: "number",
                 resultMetadata,
+                location,
               });
               break;
             default:
@@ -1772,7 +1785,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND ${conditions.join(" AND ")}`;
         }
-        s += `LEFT JOIN ${structSQL} AS ${ji.alias} ON ${onCondition}${filters}\n`;
+        s += `LEFT JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = "";
@@ -1787,7 +1800,7 @@ class QueryQuery extends QueryField {
         }\n${joins}\nWHERE ${conditions?.join(" AND ")}\n`;
         s += `LEFT JOIN (\n${indent(select)}) AS ${
           ji.alias
-        } ON ${onCondition}\n`;
+        }\n  ON ${onCondition}\n`;
         return s;
       }
     } else if (structRelationship.type === "nested") {
@@ -1801,7 +1814,7 @@ class QueryQuery extends QueryField {
         qs.parent.fieldDef.structRelationship.type === "nested"
       );
       // we need to generate primary key.  If parent has a primary key combine
-      s += `${this.parent.dialect.sqlUnnestAlias(
+      s += `\n${this.parent.dialect.sqlUnnestAlias(
         fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),
@@ -2357,7 +2370,7 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
-      structDef.structSource = { type: "sql", nested: true };
+      structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
@@ -2921,7 +2934,14 @@ class QueryStruct extends QueryNode {
         return this.dialect.quoteTableName(tablePath);
       }
       case "sql":
-        return this.fieldDef.name;
+        if (this.fieldDef.structSource.method === "nested") {
+          return this.fieldDef.name;
+        } else if (this.fieldDef.structSource.method === "subquery") {
+          return `(${this.fieldDef.structSource.sqlBlock.select})`;
+        }
+        throw new Error(
+          "Internal Error: Unknown structSource type 'sql' method"
+        );
       case "nested":
         // 'name' is always the source field even if has been renamed through
         // 'as'
@@ -3065,6 +3085,7 @@ class QueryStruct extends QueryNode {
       type: "turtle",
       name: turtleDef.name,
       pipeline,
+      location: turtleDef.location,
     };
     return flatTurtleDef;
   }
