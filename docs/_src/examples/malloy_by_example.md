@@ -1,8 +1,10 @@
-# Malloy By Example
+# Malloy by Example
 
-## The 3 Types of SELECT
+## SQL SELECT vs Malloy's `query`
 
-### Select with no GROUP BY
+The statement to run a query in malloy is `query:`.  Malloy's queries have two types, `project:` and `group_by:/aggregate:`.
+
+### SELECT with no GROUP BY
 
 *Click the SQL Tab to see the equivalent SQL Malloy query*
 
@@ -37,16 +39,18 @@ query: table('malloy-data.faa.airports') -> {
 
 ## Explore: adding calculations to tables
 
+Malloy can create reusable calculations and tie them to tables (and other data sources).
+These new object are called `explore:`.
 
-In the malloy language, `is` creates a new thing.  The '{ }' adds declarations to things.
 
-* `measure:` is an aggregate calculation delaration (and can be used in `aggregate:`)
-* `dimension:` is a scalar calculation declaration (and can be used in `group_by:`)
+* `measure:` is an calculation that can be used in the `aggregate:` element in a query
+* `dimension:` is a scalar calculation that can be be used in a `group_by:` or `project:` element of a query
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/explore1.malloy", "isHidden": false}
 explore: airports is table('malloy-data.faa.airports') {
   dimension: elevation_in_meters is elevation * 0.3048
+  dimension: state_and_county is concat(state,' - ', county)
   measure: airport_count is count()
   measure: avg_elevation_in_meters is elevation_in_meters.avg()
 }
@@ -54,8 +58,7 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ## Querying against an Explore
 
-Querying against an explore works pretty much the same as a table.  Notice that
-we don't have to provide a calculations for `airport_count` and `average_elevation_in_meters`.
+Queries can be run against `explore:` objects and can utilize the built in calculations.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
@@ -75,25 +78,22 @@ query: airports -> {
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
 query: airports -> {
-  group_by: elevation_meters is floor(elevation_in_meters/1000)*1000 // <-- declared in explore
+  group_by: state_and_county // <-- declared in explore
   aggregate: airport_count
   order_by: 1 desc
 }
 ```
 
 
-## Declaring queries inside Explores
+## Named Queries inside Explore object
 
-Queries can be declared inside an explore so it can be called by name.  Queries becomes a named
-calculation on the explore like any other measure or dimension.
+Queries can be declared inside an explore so it can be called by name.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/explore2.malloy", "isHidden": false}
 
 explore: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
-  dimension: elevation_in_meters is elevation * 0.3048
-  measure: avg_elevation_in_meters is elevation_in_meters.avg()
 
   query: by_state is {        // <-- can be called by name
     group_by: state
@@ -104,16 +104,118 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ###  Executing Named Queries.
 
-We can execute a named query by simply naming
+Instead of writing the elements of the query, we simply write the name of the query.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
 query: airports -> by_state
 ```
 
+
+
+## Filtering Queries
+
+The refinement jesture `{ }` adds declarations to things (more on that later).  We can add a filter to `airports`
+and run the named query `by_state`
+
+```malloy
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
+query: airports  {
+  where: fac_type = 'SEAPLANE BASE'   // <- run the query with an added filter
+}
+-> by_state
+```
+
+## Filtering Measures
+
+Measures can also be filtered.
+
+```malloy
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
+query: airports -> {
+  group_by: state
+  aggregate: airport_count
+  aggregate: heliport_count is airport_count { where: fac_type = 'HELIPORT' } // <-- add a filter
+}
+```
+
+## Composing with Queries
+
+For the next section assume the following explore declaration.
+
+```malloy
+--! {"isModel": true, "modelPath": "/inline/explore3.malloy", "isHidden": false}
+explore: airports is table('malloy-data.faa.airports') {
+  measure: airport_count is count()
+  measure: avg_elevation is elevation.avg()
+
+  query: top_5_states is {
+    group_by: state
+    aggregate: airport_count
+    limit: 5
+  }
+
+  query: by_facility_type is {
+    group_by: fac_type
+    aggregate: airport_count
+  }
+}
+```
+
+## The `nest:` property embeds one query in another
+
+Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
+In the case below, the top level query groups by state.  The nested query groups by facility type.
+This mechanism is really useful for undstanding data and creating complex data structures.
+
+```malloy
+--! {"isRunnable": true, "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+query: airports -> {
+  group_by: state
+  aggregate: airport_count
+  limit: 5
+  nest: by_facility_type is {
+    group_by: fac_type
+    aggregate: airport_count
+  }
+}
+```
+
+Queries can contain multiple nested queries.
+
+```malloy
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+query: airports -> {
+  group_by: faa_region
+  aggregate: airport_count
+  nest: top_5_states
+  nest: by_facility_type
+}
+```
+
+Queries can be nested to any level of depth.
+
+```malloy
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+query: airports -> {
+  group_by: faa_region
+  aggregate: airport_count
+  nest: by_state_and_county is {
+    group_by: state
+    aggregate: airport_count
+    nest: by_county is {
+      group_by: county
+      aggregate: airport_count
+      limit: 4
+    }
+  }
+  nest: by_facility_type
+}
+```
+
 ## Refining a Named Query
 
- The refine jesture `{ }` adds declarations to things.  We can add parameters to a query by refining it.
+ The refine jesture `{ }` adds declarations to things.  We can add elements to a query by refining it.
 
 For example we can add a limit and an order by to `by_state`
 
@@ -136,90 +238,34 @@ query: airports -> {
 }
 ```
 
-## Filtering Named Queries
+## Refinements allow you to add elements to queries.
 
-filtering a named query is really common.
+Refinements are a way of modifying declared things as you use them.  This becomes useful when the
+declared thing isn't exactly as you would like.
 
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
-query: airports -> by_state {
-  where: fac_type = 'SEAPLANE BASE'   // <-- add a filter to the query
-}
-```
-
-## Adding Fields to Named Queries
-
-Adding Fields allow you to get more information into existing queries.
-
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
-query: airports -> by_state {
-  aggregate: avg_elevation_in_meters    // <-- add an calc to the query
-}
-```
-
-## Refining measures
-
-The refinement jesture `{ }` adds declarations to things.  You can add a where clause to a measure
-
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
-query: airports -> {
-  group_by: state
-  aggregate: airport_count
-  aggregate: heliport_count is airport_count { where: fac_type = 'HELIPORT' }
-}
-```
-
-## Composing with Queries
-
-For the next section assume the following explore declaration.
-
-```malloy
---! {"isModel": true, "modelPath": "/inline/explore3.malloy", "isHidden": false}
-explore: airports is table('malloy-data.faa.airports') {
-  dimension: elevation_in_meters is elevation * 0.3048
-  measure: [
-    airport_count is count()
-    avg_elevation_in_meters is elevation_in_meters.avg()
-    heliport_count is airport_count { where: fac_type = 'HELIPORT' }
-  ]
-
-  query: by_state is {
-    group_by: state
-    aggregate: airport_count
-  }
-
-  query: by_facility_type is {
-    group_by: fac_type
-    aggregate: airport_count
-  }
-}
-```
-
-## The `nest:` property embeds one query in another
-
-Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
-In the case below, the top level query groups by state.  The nested query groups by facility type.
-This mechanism is really useful for undstanding data and creating complex data structures.
-
-```malloy
---! {"isRunnable": true, "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
-query: airports -> {
-  group_by: state
-  aggregate: airport_count
-  nest: by_facility_type is {
-    group_by: fac_type
-    aggregate: airport_count
-  }
-}
-```
-
-### Refinements make nested queries easy to write.  The above query can more easily be written as
+### You can add limits, ordering, filtering and even fields to queries when you use them.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
-query: airports -> by_state{
+query: airports -> by_facility_type {
+  limit: 2
+}
+```
+
+### You can add a measure or dimension
+
+```malloy
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+query: airports -> by_facility_type {
+  aggregate: avg_elevation
+}
+```
+
+### You can even add another query
+
+```malloy
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+query: airports -> top_5_states {
   nest: by_facility_type
 }
 ```
@@ -229,41 +275,10 @@ query: airports -> by_state{
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
 query: airports-> by_facility_type {
-  nest: by_state is by_state {
-    limit: 5
-  }
+  nest: top_5_states
 }
 ```
 
-Queries can contain multiple nested queries.
-
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
-query: airports -> {
-  group_by: faa_region
-  aggregate: airport_count
-  nest: by_state
-  nest: by_facility_type
-}
-```
-
-Queries can be nested to any level of depth.
-
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
-query: airports -> {
-  group_by: faa_region
-  aggregate: airport_count
-  nest: by_state_and_county is by_state {
-    nest: by_county is {
-      group_by: county
-      aggregate: airport_count
-      limit: 4
-    }
-  }
-  nest: by_facility_type
-}
-```
 
 ## Joining ...
 
