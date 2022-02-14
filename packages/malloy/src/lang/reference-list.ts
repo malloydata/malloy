@@ -74,6 +74,9 @@ export class ReferenceList {
     // Here we assume that references DO NOT overlap. And then we do a binary
     // search to find the one we're looking for.
     const index = this.findIndexBefore(position);
+    if (index === this.references.length) {
+      return undefined;
+    }
     const reference = this.references[index];
     if (
       reference.location.range.start.line <= position.line &&

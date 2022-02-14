@@ -748,6 +748,7 @@ describe("source locations", () => {
     const source = markSource`explore: na is a { dimension: ${"x is 1"} }`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -757,6 +758,7 @@ describe("source locations", () => {
     const source = markSource`explore: na is a { measure: ${"x is count()"} }`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -766,6 +768,7 @@ describe("source locations", () => {
     const source = markSource`explore: na is a { query: ${"x is { group_by: y is 1 }"} }`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -781,6 +784,7 @@ describe("source locations", () => {
 
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getQueryField(na, "x");
     const y = getField(x.pipeline[0], "y");
@@ -798,6 +802,7 @@ describe("source locations", () => {
 
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getQueryField(na, "x");
     const z = getField(x.pipeline[0], "z");
@@ -808,6 +813,7 @@ describe("source locations", () => {
     const source = markSource`explore: na is ${"table('aTable')"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const abool = getField(na, "abool");
     expect(abool.location).toMatchObject(source.locations[0]);
@@ -828,6 +834,7 @@ describe("source locations", () => {
       },
     });
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const one = getField(na, "one");
     expect(one.location).toMatchObject(source.locations[0]);
@@ -846,6 +853,7 @@ describe("source locations", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const abool = getField(na, "abool");
     expect(abool.location).toMatchObject(source.locations[0]);
@@ -857,6 +865,7 @@ describe("source locations", () => {
     const source = markSource`query: ${"q is table('aTable') -> { project: * }"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const q = getExplore(m.modelDef, "q");
     expect(q.location).toMatchObject(source.locations[0]);
   });
@@ -865,6 +874,7 @@ describe("source locations", () => {
     const source = markSource`query: q is table('aTable') -> { group_by: ${"a is 1"} }`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const q = getModelQuery(m.modelDef, "q");
     const a = getField(q.pipeline[0], "a");
     expect(a.location).toMatchObject(source.locations[0]);
@@ -874,6 +884,7 @@ describe("source locations", () => {
     const source = markSource`sql: ${"s is || SELECT 1 as one ;;"}`;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const s = m.sqlBlocks[0];
     expect(s.location).toMatchObject(source.locations[0]);
   });
@@ -886,6 +897,7 @@ describe("source locations", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const bbool = getField(na, "bbool");
     expect(bbool.location).toMatchObject(source.locations[0]);
@@ -899,6 +911,7 @@ describe("source locations", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -912,6 +925,7 @@ describe("source locations", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -928,6 +942,7 @@ describe("source locations", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     const na = getExplore(m.modelDef, "na");
     const x = getJoinField(na, "x");
     const y = getField(x, "y");
@@ -943,6 +958,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "exploreReference",
@@ -962,6 +978,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -979,6 +996,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1003,6 +1021,7 @@ describe("source references", () => {
       },
     });
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "sqlBlockReference",
@@ -1020,6 +1039,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "queryReference",
@@ -1032,11 +1052,30 @@ describe("source references", () => {
 
   test("reference to query in query head", () => {
     const source = markSource`
-      query: ${"q is table('foo') -> { project: * }"}
+      query: ${"q is table('aTable') -> { project: * }"}
       query: q2 is -> ${"q"} -> { project: * }
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in refined query", () => {
+    const source = markSource`
+      query: ${"q is table('aTable') -> { project: * }"}
+      query: q2 is -> ${"q"} { limit: 10 }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "queryReference",
@@ -1054,6 +1093,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1073,6 +1113,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1093,6 +1134,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     // TODO jump-to-definition Reference at location 3 reference appears twice. `addReference` may
     //      want to be one-time-use, or the calling function should be memoized.
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
@@ -1114,6 +1156,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
@@ -1130,6 +1173,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1147,6 +1191,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1166,6 +1211,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1185,6 +1231,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1204,6 +1251,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1223,6 +1271,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1242,6 +1291,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1259,6 +1309,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1285,6 +1336,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
@@ -1304,6 +1356,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
@@ -1321,6 +1374,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1339,6 +1393,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
@@ -1361,6 +1416,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toCompile();
+    expect(m).toBeErrorless();
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
