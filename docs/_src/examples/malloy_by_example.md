@@ -2,11 +2,11 @@
 
 ## SQL SELECT vs Malloy's `query`
 
-The statement to run a query in malloy is `query:`.  Malloy's queries have two types, `project:` and `group_by:/aggregate:`.
+The statement to run a query in malloy is `query:`.  Malloy's queries have two types, `project:` and `group_by:`/ `aggregate:`.
 
 ### SELECT with no GROUP BY
 
-*Click the SQL Tab to see the equivalent SQL Malloy query*
+*Click the SQL Tab to see the generated SQL query*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -92,7 +92,7 @@ query: airports -> {
 
 ## Named Queries inside Explore object
 
-Queries can be declared inside an explore so it can be called by name.
+Queries can be declared inside an explore and then called by name.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/explore2.malloy", "isHidden": false}
@@ -107,7 +107,7 @@ explore: airports is table('malloy-data.faa.airports') {
 }
 ```
 
-###  Executing Named Queries.
+###  Executing Named Queries
 
 Instead of writing the elements of the query, we simply write the name of the query.
 
@@ -120,7 +120,7 @@ query: airports -> by_state
 
 ## Filtering Queries
 
-The refinement jesture `{ }` adds declarations to things (more on that later).  We can add a filter to `airports`
+The refinement gesture `{ }` adds declarations to things (more on that later).  We can add a filter to `airports`
 and run the named query `by_state`
 
 ```malloy
@@ -135,7 +135,7 @@ query: airports  {
 
 Measures can also be filtered.
 
-[fabio]: what id the difference between an aggrgate and a measure?
+[fabio]: what is the difference between an aggregate and a measure?
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
@@ -175,7 +175,7 @@ explore: airports is table('malloy-data.faa.airports') {
 
 Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
 In the case below, the top level query groups by state.  The nested query groups by facility type.
-This mechanism is really useful for undstanding data and creating complex data structures.
+This mechanism is really useful for understanding data and creating complex data structures.
 
 ```malloy
 --! {"isRunnable": true, "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
@@ -224,7 +224,7 @@ query: airports -> {
 
 ## Refining a Named Query
 
- The refine jesture `{ }` adds declarations to things.  We can add elements to a query by refining it.
+The refine gesture `{ }` adds declarations to things.  We can add elements to a query by refining it.
 
 For example we can add a limit and an order by to `by_state`
 
@@ -261,7 +261,7 @@ query: airports -> by_facility_type {
 }
 ```
 
-[fabio]: go further in refinent examples and deep nesting.  Reproduce the nested example more simply
+[fabio]: go further in refinement examples and deep nesting.  Reproduce the nested example more simply
 
 
 ### You can add a measure or dimension
@@ -294,7 +294,7 @@ query: airports-> by_facility_type {
 
 ## Joining ...
 
-First let's setup some simple tables...
+First let's model some simple tables...
 
 ### Carrier table
 
@@ -387,7 +387,7 @@ query: flights -> {
 
 ## Graph, more complicated Joins
 
-[fabio]: simplify model, get rid of extraneos stuff.
+[fabio]: simplify model, get rid of extraneous stuff.
 [fabio]: graph isn't introduce.
 [fabio]: warning if need to generate a primary key.
 [fabio]: symmetric should be 'correct calculation'
@@ -470,7 +470,7 @@ query: airports -> {
 [fabio]: setup section is not obvious
 
 Next stage of a pipeline can be a `group_by` or `project`.  Calculations can be computed
-reltative to the level of nesting.
+relative to the level of nesting.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -545,7 +545,7 @@ explore: newname is from(oldname) {
 
 ### Named Source Query
 
-*doucmentation bug: name should not be commented out*
+*documentation bug: name should not be commented out*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium"}
