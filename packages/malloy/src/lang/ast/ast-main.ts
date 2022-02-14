@@ -23,7 +23,7 @@ import {
   QueryFieldSpace,
   IndexFieldSpace,
 } from "../field-space";
-import { LogMessage, MessageLogger } from "../parse-log";
+import { MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
 import {
   compressExpr,
@@ -180,13 +180,9 @@ export abstract class MalloyElement {
     return trans?.sourceURL || "(missing)";
   }
 
-  log(logString: string): void {
+  log(message: string): void {
     const trans = this.translator();
-    const msg: LogMessage = {
-      url: this.location.url,
-      range: this.location.range,
-      message: logString,
-    };
+    const msg = { ...this.location, message };
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);

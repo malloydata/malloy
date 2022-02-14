@@ -17,7 +17,7 @@ import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor
 import { MalloyVisitor } from "./lib/Malloy/MalloyVisitor";
 import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { LogMessage, MessageLogger } from "./parse-log";
+import { MessageLogger } from "./parse-log";
 import * as Source from "./source-reference";
 import { MalloyParseRoot } from "./parse-malloy";
 
@@ -51,22 +51,17 @@ export class MalloyToAST
    * Log an error message relative to an AST node
    */
   protected astError(el: ast.MalloyElement, str: string): void {
-    this.msgLog.log({
-      message: str,
-      ...el.location,
-    });
+    this.msgLog.log({ message: str, at: el.location });
   }
 
   /**
    * Log an error message relative to a parse node
    */
   protected contextError(cx: ParserRuleContext, msg: string): void {
-    const error: LogMessage = {
-      url: this.parse.sourceURL,
+    this.msgLog.log({
       message: msg,
-      range: Source.rangeFromContext(cx),
-    };
-    this.msgLog.log(error);
+      at: { url: this.parse.sourceURL, range: Source.rangeFromContext(cx) },
+    });
   }
 
   protected onlyExploreProperties(

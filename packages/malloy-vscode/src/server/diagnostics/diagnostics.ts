@@ -77,7 +77,7 @@ export async function getMalloyDiagnostics(
 
     diagnostics.push({
       severity: sev,
-      range: err.range || DEFAULT_RANGE,
+      range: err.at?.range || DEFAULT_RANGE,
       message: err.message,
       source: "malloy",
     });

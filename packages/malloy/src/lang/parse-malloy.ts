@@ -26,7 +26,7 @@ import {
   StructDef,
   ModelDef,
   SQLBlock,
-  DocumentRange,
+  DocumentLocation,
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
@@ -62,24 +62,14 @@ class ParseErrorHandler implements ANTLRErrorListener<Token> {
     msg: string,
     _e: unknown
   ) {
+    const errAt = { line: line - 1, character: charPositionInLine };
     const range = offendingSymbol
       ? rangeFromToken(offendingSymbol)
-      : {
-          start: { line: 0, character: 0 },
-          end: { line: 0, character: 0 },
-        };
+      : { start: errAt, end: errAt };
     const error: LogMessage = {
       message: msg,
-      url: this.sourceURL,
-      range,
+      at: { url: this.sourceURL, range },
     };
-    // TODO Don't know how to translate stopIndex into a char/line
-    // if (offendingSymbol && offendingSymbol.stopIndex != -1) {
-    //   error.end = {
-    //     line: offendingSymbol.tokenSource.inputStream.
-    //     char: offendingSymbol.tokenSource.charPositionInLine,
-    //   };
-    // }
     this.messages.log(error);
   }
 }
@@ -114,7 +104,7 @@ export interface NeedURLData {
 export class SQLExploreZone extends Zone<StructDef> {
   keyed: Record<string, SQLBlock> = {};
 
-  referenceBlock(from: ast.SQLStatement, at: DocumentRange): void {
+  referenceBlock(from: ast.SQLStatement, at: DocumentLocation): void {
     const sql = from.sqlBlock();
     this.reference(sql.name, at);
     this.keyed[sql.name] = sql;
@@ -223,7 +213,6 @@ class ParseStep implements TranslationStep {
         that.urlIsFullPath = false;
         that.root.logger.log({
           message: `Could not compute full path URL: ${msg}`,
-          url: that.sourceURL,
         });
       }
     }
@@ -235,13 +224,10 @@ class ParseStep implements TranslationStep {
     if (srcEnt.status !== "present") {
       if (srcEnt.status === "error") {
         const message = srcEnt.message.includes(that.sourceURL)
-          ? `Source missing: ${srcEnt.message}`
-          : `Source for '${that.sourceURL}' missing: ${srcEnt.message}`;
-        let errMsg: LogMessage = { url: that.sourceURL, message };
-        if (srcEnt.firstReference) {
-          errMsg = { ...errMsg, ...srcEnt.firstReference };
-        }
-        that.root.logger.log(errMsg);
+          ? `import error: ${srcEnt.message}`
+          : `import '${that.sourceURL}' error: ${srcEnt.message}`;
+        const at = srcEnt.firstReference || that.defaultLocation();
+        that.root.logger.log({ message, at });
         this.response = that.fatalErrors();
         return this.response;
       }
@@ -317,7 +303,10 @@ class ImportsAndTablesStep implements TranslationStep {
 
       if (parseRefs?.tables) {
         for (const ref in parseRefs.tables) {
-          that.root.schemaZone.reference(ref, parseRefs.tables[ref]);
+          that.root.schemaZone.reference(ref, {
+            url: that.sourceURL,
+            range: parseRefs.tables[ref],
+          });
         }
       }
 
@@ -327,15 +316,17 @@ class ImportsAndTablesStep implements TranslationStep {
           try {
             const ref = new URL(relativeRef, that.sourceURL).toString();
             that.addChild(ref);
-            that.root.importZone.reference(ref, firstRef);
+            that.root.importZone.reference(ref, {
+              url: that.sourceURL,
+              range: firstRef,
+            });
           } catch (err) {
             // This import spec is so bad the URL library threw up, this
             // may be impossible, because it will append any garbage
             // to the known good rootURL assuming it is relative
             that.root.logger.log({
-              url: that.sourceURL,
               message: `Malformed URL '${relativeRef}'"`,
-              ...firstRef,
+              at: { url: that.sourceURL, range: firstRef },
             });
           }
         }
@@ -449,10 +440,11 @@ class ASTStep implements TranslationStep {
     for (const sqlExploreRef in sqlExplores) {
       const sqlExplore = sqlExplores[sqlExploreRef];
       if (sqlExplore.ref && sqlExplore.def) {
-        that.root.sqlQueryZone.referenceBlock(
-          sqlExplore.def,
-          sqlExplore.def.location.range
-        );
+        const sqlAt = {
+          url: that.sourceURL,
+          range: sqlExplore.def.location.range,
+        };
+        that.root.sqlQueryZone.referenceBlock(sqlExplore.def, sqlAt);
       }
     }
 
@@ -575,8 +567,8 @@ class TranslateStep implements TranslationStep {
         that.sqlBlocks = doc.sqlBlocks;
       } else {
         that.root.logger.log({
-          url: that.sourceURL,
           message: `'${that.sourceURL}' did not parse to malloy document`,
+          at: that.defaultLocation(),
         });
       }
     }
@@ -666,8 +658,9 @@ export abstract class MalloyTranslation {
     const lineMap: Record<string, string[]> = {};
     for (const entry of this.root.logger.getLog()) {
       let cooked = entry.message;
-      if (entry.range?.start) {
-        const lineNo = entry.range.start.line;
+      if (entry.at) {
+        const lineNo = entry.at.range.start.line;
+        const charFrom = entry.at.range.start.character;
         if (this.sourceURL) {
           if (lineMap[this.sourceURL] === undefined) {
             const sourceFile = this.root.importZone.get(this.sourceURL);
@@ -678,14 +671,11 @@ export abstract class MalloyTranslation {
           if (lineMap[this.sourceURL]) {
             const errorLine = lineMap[this.sourceURL][lineNo - 1];
             cooked = `line ${lineNo}: ${entry.message}\n  | ${errorLine}`;
-            if (entry.range.start.character >= 0) {
-              cooked += `\n  | ${" ".repeat(entry.range.start.character)}^`;
+            if (charFrom > 0) {
+              cooked = cooked + `\n  | ${" ".repeat(charFrom)}^`;
             }
           } else {
-            cooked =
-              `line ${lineNo}` +
-              `:char ${entry.range.start.character}` +
-              `:${entry.message}`;
+            cooked = `line ${lineNo}: char ${charFrom}: ${entry.message}`;
           }
         }
       }
@@ -732,6 +722,16 @@ export abstract class MalloyTranslation {
     character: number;
   }): CompletionsResponse {
     return this.completionsStep.step(this, position);
+  }
+
+  defaultLocation(): DocumentLocation {
+    return {
+      url: this.sourceURL,
+      range: {
+        start: { line: 0, character: 0 },
+        end: { line: 0, character: 0 },
+      },
+    };
   }
 }
 

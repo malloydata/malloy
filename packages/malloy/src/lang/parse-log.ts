@@ -11,25 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import { DocumentRange } from "../model";
-
-export interface SourcePosition {
-  line: number;
-  char?: number;
-}
+import { DocumentLocation } from "../model/malloy_types";
 
 type LogSeverity = "error" | "warn" | "debug";
 
 /**
- * All errors are guaranteed to have a message, many errors will have a
- * start position, some errors will have an end position.
- *
- * "severity" is not required and defaults to "error"
+ * Default severity is "error"
  */
 export interface LogMessage {
   message: string;
-  url: string;
-  range?: DocumentRange;
+  at?: DocumentLocation;
   severity?: LogSeverity;
 }
 
@@ -50,7 +41,7 @@ export class MessageLog implements MessageLogger {
   }
 
   log(logMsg: LogMessage): void {
-    this.rawLog.push({ ...logMsg });
+    this.rawLog.push(logMsg);
   }
 
   reset(): void {
