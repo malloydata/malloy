@@ -52,7 +52,6 @@ export class MalloyToAST
    */
   protected astError(el: ast.MalloyElement, str: string): void {
     this.msgLog.log({
-      sourceURL: this.parse.sourceURL,
       message: str,
       ...el.location,
     });
@@ -63,19 +62,10 @@ export class MalloyToAST
    */
   protected contextError(cx: ParserRuleContext, msg: string): void {
     const error: LogMessage = {
-      sourceURL: this.parse.sourceURL,
+      url: this.parse.sourceURL,
       message: msg,
-      begin: {
-        line: cx.start.line,
-        char: cx.start.charPositionInLine,
-      },
+      range: Source.rangeFromContext(cx),
     };
-    if (cx.stop) {
-      error.end = {
-        line: cx.stop.line,
-        char: cx.stop.charPositionInLine,
-      };
-    }
     this.msgLog.log(error);
   }
 

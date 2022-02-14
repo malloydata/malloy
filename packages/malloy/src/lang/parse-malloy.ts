@@ -49,6 +49,7 @@ import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from "./parse-tree-walkers/document-completion-walker";
+import { rangeFromToken } from "./source-reference";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
   constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
@@ -61,13 +62,16 @@ class ParseErrorHandler implements ANTLRErrorListener<Token> {
     msg: string,
     _e: unknown
   ) {
+    const range = offendingSymbol
+      ? rangeFromToken(offendingSymbol)
+      : {
+          start: { line: 0, character: 0 },
+          end: { line: 0, character: 0 },
+        };
     const error: LogMessage = {
-      sourceURL: this.sourceURL,
       message: msg,
-      begin: {
-        line: line,
-        char: charPositionInLine,
-      },
+      url: this.sourceURL,
+      range,
     };
     // TODO Don't know how to translate stopIndex into a char/line
     // if (offendingSymbol && offendingSymbol.stopIndex != -1) {
@@ -219,7 +223,7 @@ class ParseStep implements TranslationStep {
         that.urlIsFullPath = false;
         that.root.logger.log({
           message: `Could not compute full path URL: ${msg}`,
-          sourceURL: that.sourceURL,
+          url: that.sourceURL,
         });
       }
     }
@@ -233,7 +237,7 @@ class ParseStep implements TranslationStep {
         const message = srcEnt.message.includes(that.sourceURL)
           ? `Source missing: ${srcEnt.message}`
           : `Source for '${that.sourceURL}' missing: ${srcEnt.message}`;
-        let errMsg: LogMessage = { sourceURL: that.sourceURL, message };
+        let errMsg: LogMessage = { url: that.sourceURL, message };
         if (srcEnt.firstReference) {
           errMsg = { ...errMsg, ...srcEnt.firstReference };
         }
@@ -329,7 +333,7 @@ class ImportsAndTablesStep implements TranslationStep {
             // may be impossible, because it will append any garbage
             // to the known good rootURL assuming it is relative
             that.root.logger.log({
-              sourceURL: that.sourceURL,
+              url: that.sourceURL,
               message: `Malformed URL '${relativeRef}'"`,
               ...firstRef,
             });
@@ -571,7 +575,7 @@ class TranslateStep implements TranslationStep {
         that.sqlBlocks = doc.sqlBlocks;
       } else {
         that.root.logger.log({
-          sourceURL: that.sourceURL,
+          url: that.sourceURL,
           message: `'${that.sourceURL}' did not parse to malloy document`,
         });
       }
@@ -662,8 +666,8 @@ export abstract class MalloyTranslation {
     const lineMap: Record<string, string[]> = {};
     for (const entry of this.root.logger.getLog()) {
       let cooked = entry.message;
-      if (entry.begin && entry.begin.line) {
-        const lineNo = entry.begin.line;
+      if (entry.range?.start) {
+        const lineNo = entry.range.start.line;
         if (this.sourceURL) {
           if (lineMap[this.sourceURL] === undefined) {
             const sourceFile = this.root.importZone.get(this.sourceURL);
@@ -674,13 +678,13 @@ export abstract class MalloyTranslation {
           if (lineMap[this.sourceURL]) {
             const errorLine = lineMap[this.sourceURL][lineNo - 1];
             cooked = `line ${lineNo}: ${entry.message}\n  | ${errorLine}`;
-            if (entry.begin.char !== undefined && entry.begin.char >= 0) {
-              cooked = cooked + `\n  | ${" ".repeat(entry.begin.char)}^`;
+            if (entry.range.start.character >= 0) {
+              cooked += `\n  | ${" ".repeat(entry.range.start.character)}^`;
             }
           } else {
             cooked =
               `line ${lineNo}` +
-              `:char ${entry.begin?.char || "?"}` +
+              `:char ${entry.range.start.character}` +
               `:${entry.message}`;
           }
         }

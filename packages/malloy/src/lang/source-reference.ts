@@ -11,15 +11,21 @@
  * GNU General Public License for more details.
  */
 
-import { ParserRuleContext } from "antlr4ts";
+import { ParserRuleContext, Token } from "antlr4ts";
 import { DocumentRange } from "../model/malloy_types";
 
 export function rangeFromContext(pcx: ParserRuleContext): DocumentRange {
-  const stopToken = pcx.stop || pcx.start;
+  return rangeFromTokens(pcx.start, pcx.stop || pcx.start);
+}
+
+export function rangeFromTokens(
+  startToken: Token,
+  stopToken: Token
+): DocumentRange {
   return {
     start: {
-      line: pcx.start.line - 1,
-      character: pcx.start.charPositionInLine,
+      line: startToken.line - 1,
+      character: startToken.charPositionInLine,
     },
     end: {
       line: stopToken.line - 1,
@@ -29,4 +35,8 @@ export function rangeFromContext(pcx: ParserRuleContext): DocumentRange {
         1,
     },
   };
+}
+
+export function rangeFromToken(token: Token): DocumentRange {
+  return rangeFromTokens(token, token);
 }

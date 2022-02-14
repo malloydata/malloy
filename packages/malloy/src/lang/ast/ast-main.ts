@@ -183,14 +183,10 @@ export abstract class MalloyElement {
   log(logString: string): void {
     const trans = this.translator();
     const msg: LogMessage = {
-      sourceURL: this.sourceURL,
+      url: this.location.url,
+      range: this.location.range,
       message: logString,
     };
-    const loc = this.location;
-    if (loc) {
-      msg.begin = loc.range.start;
-      msg.end = loc.range.end;
-    }
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);

@@ -154,7 +154,7 @@ export class TestTranslator extends MalloyTranslator {
       if (whatImports) {
         mysterious = false;
         this.logger.log({
-          sourceURL: "test://",
+          url: "test://",
           message: `Missing imports: ${whatImports.join(",")}`,
         });
       }
@@ -162,13 +162,13 @@ export class TestTranslator extends MalloyTranslator {
       if (needThese) {
         mysterious = false;
         this.logger.log({
-          sourceURL: "test://",
+          url: "test://",
           message: `Missing schema: ${needThese.join(",")}`,
         });
       }
       if (mysterious) {
         this.logger.log({
-          sourceURL: "test://",
+          url: "test://",
           message: "mysterious translation failure",
         });
       }

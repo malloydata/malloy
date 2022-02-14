@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { DocumentRange } from "../model";
+
 export interface SourcePosition {
   line: number;
   char?: number;
@@ -25,10 +27,9 @@ type LogSeverity = "error" | "warn" | "debug";
  * "severity" is not required and defaults to "error"
  */
 export interface LogMessage {
-  sourceURL: string;
   message: string;
-  begin?: SourcePosition;
-  end?: SourcePosition;
+  url: string;
+  range?: DocumentRange;
   severity?: LogSeverity;
 }
 
@@ -49,15 +50,7 @@ export class MessageLog implements MessageLogger {
   }
 
   log(logMsg: LogMessage): void {
-    const xMsg = { ...logMsg };
-    if (
-      xMsg.end &&
-      xMsg.end.line === xMsg.begin?.line &&
-      xMsg.end.char === xMsg.begin?.char
-    ) {
-      delete xMsg.end;
-    }
-    this.rawLog.push(xMsg);
+    this.rawLog.push({ ...logMsg });
   }
 
   reset(): void {
