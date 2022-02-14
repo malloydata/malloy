@@ -372,7 +372,7 @@
         </a>
       </h1>
     <p>The query below produces a table with the numbers 1 to 5</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.numbers&#39;</span><span style="color: #000000">) {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.numbers&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">num</span><span style="color: #000000"> &lt;= </span><span style="color: #098658">5</span></span>
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">num</span><span style="color: #000000"> }</span></span></pre><div class="result-outer small">
@@ -391,7 +391,7 @@
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;num&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -412,7 +412,7 @@
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   numbers.num </span><span style="color: #0000FF">as</span><span style="color: #000000"> num</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.numbers`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> numbers</span></span>
 <span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> numbers.num&lt;=</span><span style="color: #098658">5</span></span>
@@ -426,7 +426,7 @@
         </a>
       </h2>
     <p>The result is a table with nested data.  Each word contains a sub-table with a letter in each position.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// define the query</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// define the query</span></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words_and_position</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #008000">// cross join is missing at the moment</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_cross</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span></span>
@@ -458,7 +458,7 @@
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ABACI&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;letters&quot;</span><span style="color: #000000">: [</span></span>
@@ -2964,7 +2964,7 @@
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">     </span><span style="color: #795E26">upper</span><span style="color: #000000">(words.word) </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>

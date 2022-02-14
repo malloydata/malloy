@@ -18,8 +18,8 @@ footer: /generated/footers/language/filters.html
         </a>
       </h2>
     <p>Regardless of the placement of a filter, the syntax looks the same.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">source</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: [ </span><span style="color: #001080">filter_one</span><span style="color: #000000">, </span><span style="color: #001080">filter_two</span><span style="color: #000000"> ] }</span></span></pre><p>Each filter be any expression of type <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #267F99">boolean</span></span></code>, whether that's a boolean field <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">is_commercial_flight</span></span></code>, a comparison <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
-<p>Logically, the comma-separated list of filters are <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">and</span></span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">source</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: [ </span><span style="color: #001080">filter_one</span><span style="color: #000000">, </span><span style="color: #001080">filter_two</span><span style="color: #000000"> ] }</span></span></pre><p>Each filter be any expression of type <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">boolean</span></span></code>, whether that's a boolean field <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">is_commercial_flight</span></span></code>, a comparison <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
+<p>Logically, the comma-separated list of filters are <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">and</span></span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
 <!--
 TODO "see where vs having for more information on how Malloy generates SQL for filters"
 -->
@@ -36,7 +36,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>When filtering a query's source, the filter applies to the whole query.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> } -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> } -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -52,7 +52,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8784806</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
@@ -61,7 +61,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> flights.distance&gt;</span><span style="color: #098658">1000</span></span>
@@ -76,7 +76,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>A filter can also be applied to an individual query stage.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
 <span class="line"><span style="color: #000000">} -&gt; {</span></span>
@@ -98,7 +98,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
@@ -112,7 +112,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
 <span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
@@ -135,7 +135,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
         </a>
       </h3>
     <p>Any measure can be filtered by adding a where clause.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
@@ -157,18 +157,18 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_km_from_ca&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1385.174141235507</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_km_from_ca&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1385.174141235457</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_flights,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> flights.distance/</span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">621371</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_km_from_ca</span></span>
@@ -187,7 +187,7 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
 <span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> / </span><span style="color: #001080">flight_count</span></span>
@@ -218,7 +218,7 @@ measure and then create that as a percent of total.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">371416</span><span style="color: #000000">,</span></span>
@@ -232,7 +232,7 @@ measure and then create that as a percent of total.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_delayed_flights,</span></span>
@@ -258,7 +258,7 @@ measure and then create that as a percent of total.</p>
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
 <span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
@@ -291,7 +291,7 @@ measure and then create that as a percent of total.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_stats&quot;</span><span style="color: #000000">: {</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
@@ -309,7 +309,7 @@ measure and then create that as a percent of total.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
@@ -368,21 +368,21 @@ measure and then create that as a percent of total.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
 
-<td>Does <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> equal 10</td>
+<td>Does <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> equal 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
 
-<td>Is <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> > 10</td>
+<td>Is <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> > 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
 </tr>
 </tbody></table>
 
@@ -391,7 +391,7 @@ measure and then create that as a percent of total.</p>
           Combining Filters
         </a>
       </h3>
-    <p>Filters can be logically combined using <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">and</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">or</span></span></code>, and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">not</span></span></code>.</p>
+    <p>Filters can be logically combined using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">and</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">or</span></span></code>, and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">not</span></span></code>.</p>
 <table>
 <thead>
 <tr>
@@ -403,19 +403,19 @@ measure and then create that as a percent of total.</p>
 <tbody><tr>
 <td>Logical union</td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">distance_miles</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> </span><span style="color: #0000FF">or</span><span style="color: #000000"> </span><span style="color: #001080">duration_hours</span><span style="color: #000000"> &gt; </span><span style="color: #098658">8</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance_miles</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> </span><span style="color: #0000FF">or</span><span style="color: #000000"> </span><span style="color: #001080">duration_hours</span><span style="color: #000000"> &gt; </span><span style="color: #098658">8</span></span></code></td>
 </tr>
 
 <tr>
 <td>Logical conjunction</td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
 </tr>
 
 <tr>
 <td>Logical negation</td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">not</span><span style="color: #000000"> </span><span style="color: #001080">is_commercial_flight</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">not</span><span style="color: #000000"> </span><span style="color: #001080">is_commercial_flight</span></span></code></td>
 </tr>
 </tbody></table>
 
@@ -425,7 +425,7 @@ measure and then create that as a percent of total.</p>
         </a>
       </h3>
     <p>A range of numeric or time values can be constructed
-with the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">to</span></span></code>operator, e.g. <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code>. The <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">~</span></span></code> operator will check to
+with the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">to</span></span></code>operator, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code>. The <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">~</span></span></code> operator will check to
 see if a value is within a range.</p>
 <table>
 <thead>
@@ -436,15 +436,15 @@ see if a value is within a range.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> ~ </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> ~ </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is in the range [10, 20)</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is in the range [10, 20)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">event_time</span><span style="color: #000000"> ~ </span><span style="color: #098658">@2003</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">event_time</span><span style="color: #000000"> ~ </span><span style="color: #098658">@2003</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">event_time</span></span></code> occurs within the year 2003</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">event_time</span></span></code> occurs within the year 2003</td>
 </tr>
 </tbody></table>
 
@@ -453,7 +453,7 @@ see if a value is within a range.</p>
           String "Like" Matching
         </a>
       </h3>
-    <p>When comparing strings, the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">=</span></span></code> operator checks for pure equality, whereas the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">~</span></span></code> and <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">!~</span></span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.</p>
+    <p>When comparing strings, the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">=</span></span></code> operator checks for pure equality, whereas the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">~</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">!~</span></span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.</p>
 <table>
 <thead>
 <tr>
@@ -463,15 +463,15 @@ see if a value is within a range.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
 
-<td>The first letter of <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> is M</td>
+<td>The first letter of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> is M</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%Z%&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%Z%&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a Z</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a Z</td>
 </tr>
 </tbody></table>
 <p>In the right hand (pattern) string, the following syntax is used:</p>
@@ -486,7 +486,7 @@ see if a value is within a range.</p>
           Regular Expressions
         </a>
       </h3>
-    <p>When the right hand side of a <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">~</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">!~</span></span></code> operator is a regular expression,
+    <p>When the right hand side of a <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">~</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">!~</span></span></code> operator is a regular expression,
 Malloy checks whether the left hand side matches that regular expression. In Standard SQL, Malloy uses the <code>REGEXP_COMPARE</code> function.</p>
 <table>
 <thead>
@@ -497,15 +497,15 @@ Malloy checks whether the left hand side matches that regular expression. In Sta
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span></span></code> is <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&#39;NY&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span></span></code> is <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;NY&#39;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
 </tr>
 </tbody></table>
 
@@ -524,15 +524,15 @@ Malloy checks whether the left hand side matches that regular expression. In Sta
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span></span></code> is one of the primary colors</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span></span></code> is one of the primary colors</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">email</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;%.com&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;%.org&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">email</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;%.com&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;%.org&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">email</span></span></code> has <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">com</span></span></code> or <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">org</span></span></code> domain</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">email</span></span></code> has <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">com</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">org</span></span></code> domain</td>
 </tr>
 </tbody></table>
 
@@ -551,99 +551,99 @@ Malloy checks whether the left hand side matches that regular expression. In Sta
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is equal to 10</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is equal to 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than 10</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">:  </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">:  </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> &amp; &lt; </span><span style="color: #098658">100</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> &amp; &lt; </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span><span style="color: #000000"> : </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span><span style="color: #000000"> : </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">color</span></span></code> is red, green or blue</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span></span></code> is red, green or blue</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: </span><span style="color: #098658">14</span><span style="color: #000000"> | </span><span style="color: #098658">42</span><span style="color: #000000"> | &gt; </span><span style="color: #098658">100</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: </span><span style="color: #098658">14</span><span style="color: #000000"> | </span><span style="color: #098658">42</span><span style="color: #000000"> | &gt; </span><span style="color: #098658">100</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">size</span></span></code> is 14, 42, or greater than 100</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is 14, 42, or greater than 100</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #098658">@2003 to</span><span style="color: #000000"> </span><span style="color: #098658">@2013</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #098658">@2003 to</span><span style="color: #000000"> </span><span style="color: #098658">@2013</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> is between the years 2003 and 2013 (excluding 2013)</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> is between the years 2003 and 2013 (excluding 2013)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1591129283</span><span style="color: #000000"> + </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">hours</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1591129283</span><span style="color: #000000"> + </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">hours</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> greater than 10 hours after 1591129283 (epoch timestamp)</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> greater than 10 hours after 1591129283 (epoch timestamp)</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #267F99">date</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #267F99">date</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> is today</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> is today</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #0000FF">month</span><span style="color: #000000"> - </span><span style="color: #098658">1</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #0000FF">month</span><span style="color: #000000"> - </span><span style="color: #098658">1</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">time</span></span></code> is in the previous calendar month</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> is in the previous calendar month</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
 
-<td>first letter of <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> is a capital M</td>
+<td>first letter of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> is a capital M</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%z%&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%z%&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a lower case Z</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a lower case Z</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span></span></code> is 'CA' or 'NY'</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span></span></code> is 'CA' or 'NY'</td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
 </tr>
 </tbody></table>
 </div>

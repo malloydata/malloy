@@ -375,14 +375,14 @@
 Fundamentally, cohort analysis is used to group people into sets and to analyze the success,
 attributes or characteristics of that group as compared to the population in general.</p>
 <p>To understand this, we're going to use Social Security Administrations birth/name data.</p>
-<p>We have a table with <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">name</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">gender</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">`year`</span></span></code>, <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">state</span></span></code> and the <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">`number`</span></span></code> of people born with those
+<p>We have a table with <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">gender</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">`year`</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span></span></code> and the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">`number`</span></span></code> of people born with those
 characteristics.</p>
 <p>In the simplest form, a cohort calculation is a <a href="percent_of_total.html">percentage of total calculation</a>.
 For example, if we were interested in the name 'Billie' as it relates to location. We could look
 could filter on 'Billie' and look a states as it relates to total population.</p>
 <p>We can see that in the population of the the people named 'Billie', the cohort of the Billies born in
 Texas makes up 18% of the total population of Billies.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">name</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Billie&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">main_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
@@ -412,7 +412,7 @@ Texas makes up 18% of the total population of Billies.</p>
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;TX&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">23052</span><span style="color: #000000">,</span></span>
@@ -518,7 +518,7 @@ Texas makes up 18% of the total population of Billies.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
@@ -558,7 +558,7 @@ Texas makes up 18% of the total population of Billies.</p>
     </div>
   </div><p>We could run this same query, but instead look by decade to see when the Billies where born.
 Using the query below we can see that 26% of all Billies were born in the 1930s.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">name</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Billie&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">main_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
@@ -588,7 +588,7 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;decade&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1930</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">32560</span><span style="color: #000000">,</span></span>
@@ -649,7 +649,7 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
@@ -697,7 +697,7 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 Lets flip it around and look at people born with a particular name as a cohort and the other attributes to limit our population.
 Let's limit our population to California in 1990 and look at the most cohorts (people with a given name).  We are also going
 to measure a little differently.  Instead of looking at a percentage, let's look at births per 100,000 people.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">`year`</span><span style="color: #000000"> = </span><span style="color: #098658">1990</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">main_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
@@ -727,7 +727,7 @@ to measure a little differently.  Instead of looking at a percentage, let's look
     </div>
     <div class="result-middle" data-result-kind="json" selected>
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Michael&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_population&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8306</span><span style="color: #000000">,</span></span>
@@ -833,7 +833,7 @@ to measure a little differently.  Instead of looking at a percentage, let's look
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>

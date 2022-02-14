@@ -379,9 +379,9 @@
         </a>
       </h2>
     <p>The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be
-found at <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">/</span><span style="color: #001080">usr</span><span style="color: #000000">/</span><span style="color: #001080">share</span><span style="color: #000000">/</span><span style="color: #001080">dict</span><span style="color: #000000">/</span><span style="color: #001080">words</span></span></code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)
+found at <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">/</span><span style="color: #001080">usr</span><span style="color: #000000">/</span><span style="color: #001080">share</span><span style="color: #000000">/</span><span style="color: #001080">dict</span><span style="color: #000000">/</span><span style="color: #001080">words</span></span></code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)
 into BigQuery.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">)</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">project</span><span style="color: #000000">: * }</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -399,7 +399,7 @@ into BigQuery.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;A&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -705,7 +705,7 @@ into BigQuery.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   words.word </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>
 <span class="line"></span></pre></pre>
@@ -713,7 +713,7 @@ into BigQuery.</p>
     </div>
   </div><p>We are only interested in 5 letter words so create a query for that and
 limit the results to 5 letter words.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">) {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #795E26">length</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">) = </span><span style="color: #098658">5</span><span style="color: #000000"> </span><span style="color: #008000">// add a filter</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
@@ -736,7 +736,7 @@ limit the results to 5 letter words.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AMD&#39;s&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -1042,7 +1042,7 @@ limit the results to 5 letter words.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   words.word </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>
 <span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (</span><span style="color: #0000FF">length</span><span style="color: #000000">(words.word))=</span><span style="color: #098658">5</span></span>
@@ -1051,13 +1051,13 @@ limit the results to 5 letter words.</p>
     </div>
   </div><p>Notice that there are a bunch of proper names?  Let's look for only lowercase words as input
 and Uppercase words in the output of our query.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">) {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #795E26">length</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">) = </span><span style="color: #098658">5</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">word</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^[a-z]{5}$&#39;</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">upper</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><p>and the query:</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span></span></pre><div class="result-outer large">
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -1073,7 +1073,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ABACI&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -1379,7 +1379,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">upper</span><span style="color: #000000">(words.word) </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>
 <span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> ((</span><span style="color: #0000FF">length</span><span style="color: #000000">(words.word))=</span><span style="color: #098658">5</span><span style="color: #000000">)</span><span style="color: #0000FF">and</span><span style="color: #000000">(REGEXP_CONTAINS(words.word,r</span><span style="color: #A31515">&#39;^[a-z]{5}$&#39;</span><span style="color: #000000">))</span></span>
@@ -1400,7 +1400,7 @@ and Uppercase words in the output of our query.</p>
         </a>
       </h3>
     <p>Find words that contain X AND Y.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;[X]&#39;</span><span style="color: #000000"> &amp; ~ </span><span style="color: #811F3F">r&#39;[Y]&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
@@ -1419,7 +1419,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;CALYX&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -1446,7 +1446,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">     </span><span style="color: #795E26">upper</span><span style="color: #000000">(words.word) </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>
@@ -1466,7 +1466,7 @@ and Uppercase words in the output of our query.</p>
         </a>
       </h3>
     <p>Find words that have M in the 4th position and the 5th position is NOT E or Z</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;...M[^EZ]&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
@@ -1485,7 +1485,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ALUMS&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -1791,7 +1791,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">     </span><span style="color: #795E26">upper</span><span style="color: #000000">(words.word) </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>
@@ -1811,7 +1811,7 @@ and Uppercase words in the output of our query.</p>
         </a>
       </h3>
     <p>Find words that do NOT contain S,L,O,P, or E</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> -&gt; {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;[SLOPE]&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
@@ -1830,7 +1830,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;word&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ABACI&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
@@ -2136,7 +2136,7 @@ and Uppercase words in the output of our query.</p>
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">     </span><span style="color: #795E26">upper</span><span style="color: #000000">(words.word) </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.malloytest.words_bigger`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> words</span></span>

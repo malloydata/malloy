@@ -37,8 +37,9 @@ footer: /generated/footers/connection_instructions.html
         </a>
       </h3>
     <p>To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the <a href="https://cloud.google.com/sdk/gcloud">gcloud CLI</a> installed. Once it's installed, open a terminal and type the following:</p>
-<pre><code>gcloud%20auth%20login%20--update-adc%0Agcloud%20config%20set%20project%20%7Bmy_project_id%7D%20--installation%0A</code></pre>
-<p><em>Replace <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">{</span><span style="color: #001080">my_project_id</span><span style="color: #000000">}</span></span></code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, <a href="https://cloud.google.com/resource-manager/docs/creating-managing-projects">create one</a>.</em></p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">gcloud auth login --update-adc
+gcloud config set project {my_project_id} --installation
+</span></span></pre><p><em>Replace <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">{</span><span style="color: #001080">my_project_id</span><span style="color: #000000">}</span></span></code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, <a href="https://cloud.google.com/resource-manager/docs/creating-managing-projects">create one</a>.</em></p>
 
       <h3>
         <a id="option-2-service-account" class="header-link anchor" href="#option-2-service-account">

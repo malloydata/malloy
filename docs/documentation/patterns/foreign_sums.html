@@ -11,8 +11,8 @@ footer: /generated/footers/patterns/foreign_sums.html
         </a>
       </h1>
     <p>Malloy allows you to compute sums, averages correctly based on your join tree.  This example has flights, joining to aircraft, joining to aircraft_model.
-<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">aircraft_model</span></span></code> has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree.</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// join 3 tables, flights, aircraft and aircraft models.</span></span>
+<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft_model</span></span></code> has the number of seats specified on this model of aircraft.  Code below computes sums and averages at various places in the join tree.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// join 3 tables, flights, aircraft and aircraft models.</span></span>
 <span class="line"><span style="color: #008000">// `flights` is individual flights</span></span>
 <span class="line"><span style="color: #008000">// `aircraft` is the plane that made the flight</span></span>
 <span class="line"><span style="color: #008000">// `aircraft_models` is data about the kind of aircraft</span></span>
@@ -63,7 +63,7 @@ footer: /generated/footers/patterns/foreign_sums.html
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
-        <pre><pre class="language-json" style="background-color: #FFFFFF"><span class="line"><span style="color: #000000">[</span></span>
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">81592</span><span style="color: #000000">,</span></span>
@@ -114,7 +114,7 @@ footer: /generated/footers/patterns/foreign_sums.html
     </div>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
-        <pre><pre class="language-sql" style="background-color: #FFFFFF"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_0.tail_num) </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_count,</span></span>

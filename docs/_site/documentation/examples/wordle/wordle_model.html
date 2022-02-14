@@ -371,7 +371,7 @@
           Code For Wordlebot:
         </a>
       </h3>
-    <pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #008000">// Make a table of 5 letter words</span></span>
+    <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// Make a table of 5 letter words</span></span>
 <span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #795E26">length</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">) = </span><span style="color: #098658">5</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">word</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^[a-z]{5}$&#39;</span></span>

@@ -39,10 +39,10 @@ only `flights` is part of the file's public namespace.
         </a>
       </h2>
     <p>In order to reuse or extend a explore from another file, you can include all the
-exported explores from another file using <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;path/to/some/file.malloy&quot;</span></span></code>.</p>
+exported explores from another file using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;path/to/some/file.malloy&quot;</span></span></code>.</p>
 <p>For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the
-<code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #001080">flights</span></span></code> explore, you could write:</p>
-<pre class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;faa/flights.malloy&quot;</span></span>
+<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">flights</span></span></code> explore, you could write:</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;faa/flights.malloy&quot;</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">5</span><span style="color: #000000">; </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><!-- Because `airports` is not exported, referencing it here would be invalid. -->
       <h3>
@@ -56,43 +56,43 @@ exported explores from another file using <code class="language-malloy" style="b
 <tr>
 <th>Import Statement</th>
 
-<th>Meaning from <code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/a.malloy&quot;</span></span></code></th>
+<th>Meaning from <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;file:///f1/a.malloy&quot;</span></span></code></th>
 </tr>
 </thead>
 <tbody><tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;b.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;b.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/b.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;file:///f1/b.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;./c.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;./c.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/c.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;file:///f1/c.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;/f1/d.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;/f1/d.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/d.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;file:///f1/d.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;file:///f1/e.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;file:///f1/e.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f1/e.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;file:///f1/e.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;../f2/f.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;../f2/f.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;file:///f2/f.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;file:///f2/f.malloy&quot;</span></span></code></td>
 </tr>
 
 <tr>
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;https://example.com/g.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;https://example.com/g.malloy&quot;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FFFFFF"><span class="line"><span style="color: #A31515">&quot;https://example.com/g.malloy&quot;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;https://example.com/g.malloy&quot;</span></span></code></td>
 </tr>
 </tbody></table>
 </div>
