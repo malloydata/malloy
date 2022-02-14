@@ -1569,8 +1569,9 @@ export class PrimaryKey extends MalloyElement {
 
 export class RenameField extends MalloyElement {
   elementType = "renameField";
-  constructor(readonly newName: string, readonly oldName: string) {
+  constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
+    this.has({ oldName });
   }
 }
 

@@ -438,7 +438,7 @@ export class MalloyToAST
     const oldName = pcx.fieldName(1).id();
     const rename = new ast.RenameField(
       this.getIdText(newName),
-      this.getIdText(oldName)
+      this.astAt(new ast.FieldName(this.getIdText(oldName)), oldName)
     );
     return this.astAt(rename, pcx);
   }

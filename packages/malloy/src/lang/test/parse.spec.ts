@@ -1298,6 +1298,24 @@ describe("source references", () => {
     });
   });
 
+  test("reference to field in rename", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"} {
+        rename: bbool is ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toCompile();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
   // TODO jump-to-definition this gives a weird error
   //      Correct:  Reference to undefined value dsf
   //      Additionally (incorrect): Cannot define ai_sum, unexpected type unknown
