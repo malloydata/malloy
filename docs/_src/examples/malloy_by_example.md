@@ -491,13 +491,26 @@ query: airports -> county_rollup
 
 ```
 
+## Refining Explores
+
+(add section)
+
+```malloy
+explore: newname is from(oldname) {
+  where: <some data limit>
+  measure: added_calc is some_calc.sum()
+}
+```
+
 ## Explores based on Queries
 
-## Source Query
+### Named Source Query
+
+*doucmentation bug: name should not be commented out*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium"}
-query: q_airport_facts is table('malloy-data.faa.flights') -> {
+query: /* q_airport_facts is */ table('malloy-data.faa.flights') -> {
   group_by: [
     flight_year is dep_time.year
     origin
@@ -525,12 +538,13 @@ query: q_airport_facts is table('malloy-data.faa.flights') -> {
 }
 ```
 
-## Explore based on a query
+### Explore based on a query
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/query2.malloy", "source":"/inline/query1.malloy", "isHidden": false}
 
-explore: airport_facts is from(-> q_airport_facts) {
+explore: airport_facts is from(-> q_airport_facts) {  // <-- 'from' instead of 'table'
+                                                      //      '->' indicates a query name
   measure: flight_count is num_flights.sum()
   measure: total_distance is distance.sum()
 
@@ -553,7 +567,7 @@ explore: airport_facts is from(-> q_airport_facts) {
 }
 ```
 
-## Querying the Summary explore
+### Querying the Summary explore
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/query2.malloy"}
@@ -564,3 +578,21 @@ query: airport_facts -> flights_by_year
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/query2.malloy"}
 query: airport_facts -> flights_by_origin
 ```
+
+## Missing examples:
+
+### SQL BLocks
+
+### Named Queries from SQL Blocks
+
+### Mapping data with `pick`
+
+### Group by on Joined Subtrees
+
+### Date/Timestamp filters and Timezones
+
+### Nested data and Symmetric aggregates
+
+### import
+
+### data styles and rendering
