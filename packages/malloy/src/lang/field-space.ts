@@ -160,23 +160,23 @@ export class StructSpace implements FieldSpace {
     if (!found) {
       return { error: `'${step.head}' is not defined`, found };
     }
+    if (found instanceof SpaceField) {
+      const definition = found.fieldDef();
+      if (definition) {
+        fieldPath.addReference({
+          type:
+            found instanceof StructSpaceField
+              ? "joinReference"
+              : "fieldReference",
+          definition,
+          location: step.head.location,
+          text: step.head.name,
+        });
+      }
+    }
     if (step.tail) {
       if (found instanceof StructSpaceField) {
         return found.fieldSpace.lookup(step.tail);
-      }
-      if (found instanceof SpaceField) {
-        const definition = found.fieldDef();
-        if (definition) {
-          fieldPath.addReference({
-            type:
-              found instanceof StructSpaceField
-                ? "joinReference"
-                : "fieldReference",
-            definition,
-            location: step.head.location,
-            text: step.head.name,
-          });
-        }
       }
       return {
         error: `'${step.head}' cannot contain a '${step.tail}'`,
@@ -269,12 +269,16 @@ export class NewFieldSpace extends StructSpace {
           continue;
         }
         const oldValue = this.lookup(def.oldName);
-        if (oldValue instanceof SpaceField) {
-          this.setEntry(
-            def.newName,
-            new RenameSpaceField(oldValue, def.newName, def.location)
-          );
-          this.dropEntry(def.oldName.refString);
+        if (oldValue.found) {
+          if (oldValue.found instanceof SpaceField) {
+            this.setEntry(
+              def.newName,
+              new RenameSpaceField(oldValue.found, def.newName, def.location)
+            );
+            this.dropEntry(def.oldName.refString);
+          } else {
+            def.log(`'${def.oldName}' cannot be renamed`);
+          }
         } else {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }

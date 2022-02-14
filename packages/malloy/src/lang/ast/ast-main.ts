@@ -132,7 +132,6 @@ export abstract class MalloyElement {
     if (this.parent) {
       return this.parent.location;
     }
-    this.log("Location not set during parse");
     return {
       url: this.sourceURL,
       range: {
@@ -1907,6 +1906,10 @@ export class PipelineDesc extends MalloyElement {
     let pipeFs = new StructSpace(structDef);
 
     if (this.headPath) {
+      if (this.headPath instanceof FieldName) {
+        const { error } = pipeFs.lookup(this.headPath);
+        if (error) this.log(error);
+      }
       const { pipeline, location } = this.importTurtle(
         this.headPath.refString,
         structDef
