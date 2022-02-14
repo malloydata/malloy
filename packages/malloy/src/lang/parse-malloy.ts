@@ -51,6 +51,7 @@ import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from "./parse-tree-walkers/document-completion-walker";
+import { ReferenceList } from "./reference-list";
 
 class ParseErrorHandler implements ANTLRErrorListener<Token> {
   constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
@@ -611,7 +612,7 @@ export abstract class MalloyTranslation {
   readonly completionsStep: CompletionsStep;
   readonly translateStep: TranslateStep;
 
-  readonly references: DocumentReference[] = [];
+  readonly references: ReferenceList;
 
   constructor(
     readonly sourceURL: string,
@@ -636,6 +637,7 @@ export abstract class MalloyTranslation {
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.translateStep = new TranslateStep(this.astStep);
+    this.references = new ReferenceList(sourceURL);
   }
 
   addChild(url: string): void {
@@ -645,26 +647,14 @@ export abstract class MalloyTranslation {
   }
 
   addReference(reference: DocumentReference): void {
-    this.references.push(reference);
+    this.references.add(reference);
   }
 
   referenceAt(
     // url: string,
     position: DocumentPosition
   ): DocumentReference | undefined {
-    // TODO jump-to-definition Store references in sorted order, and do a binary search to
-    //      find them.
-    return this.references.find((reference) => {
-      return (
-        // reference.location.url === url &&
-        reference.location.range.start.line <= position.line &&
-        reference.location.range.end.line >= position.line &&
-        (position.line !== reference.location.range.start.line ||
-          position.character >= reference.location.range.start.character) &&
-        (position.line !== reference.location.range.end.line ||
-          position.character <= reference.location.range.end.character)
-      );
-    });
+    return this.references.find(position);
   }
 
   fatalErrors(): FatalResponse {
