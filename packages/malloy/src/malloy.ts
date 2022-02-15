@@ -434,11 +434,17 @@ export class Model {
     this._referenceAt = referenceAt;
   }
 
-  // TODO jump-to-definition comment
+  /**
+   * Retrieve a document reference for the token at the given position within
+   * the document that produced this model.
+   *
+   * @param position A position within the document.
+   * @returns A `DocumentReference` at that position if one exists.
+   */
   public getReference(
-    location: ModelDocumentPosition
+    position: ModelDocumentPosition
   ): DocumentReference | undefined {
-    return this._referenceAt(location);
+    return this._referenceAt(position);
   }
 
   /**
