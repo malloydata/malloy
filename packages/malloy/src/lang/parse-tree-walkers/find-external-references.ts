@@ -16,8 +16,8 @@ import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import type { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
-import { rangeFromContext } from "../source-reference";
 import { DocumentRange } from "../../model/malloy_types";
+import { MalloyTranslation } from "../parse-malloy";
 
 type References = Record<string, DocumentRange>;
 
@@ -25,19 +25,22 @@ class FindExternalReferences implements MalloyListener {
   needTables: References = {};
   needImports: References = {};
 
-  constructor(readonly tokens: CommonTokenStream) {}
+  constructor(
+    readonly trans: MalloyTranslation,
+    readonly tokens: CommonTokenStream
+  ) {}
 
   enterTableName(pcx: parser.TableNameContext) {
     const tableName = this.tokens.getText(pcx).slice(1, -1);
     if (!this.needTables[tableName]) {
-      this.needTables[tableName] = rangeFromContext(pcx);
+      this.needTables[tableName] = this.trans.rangeFromContext(pcx);
     }
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
     const url = JSON.parse(pcx.JSON_STRING().text);
     if (!this.needImports[url]) {
-      this.needImports[url] = rangeFromContext(pcx);
+      this.needImports[url] = this.trans.rangeFromContext(pcx);
     }
   }
 }
@@ -47,10 +50,11 @@ interface FinderFound {
   urls?: References;
 }
 export function findReferences(
+  trans: MalloyTranslation,
   tokens: CommonTokenStream,
   parseTree: ParseTree
 ): FinderFound | null {
-  const finder = new FindExternalReferences(tokens);
+  const finder = new FindExternalReferences(trans, tokens);
   const listener: MalloyListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
 

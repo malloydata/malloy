@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /*
  * Copyright 2021 Google LLC
  *
@@ -18,6 +19,7 @@ import {
   Token,
   CharStreams,
   CommonTokenStream,
+  ParserRuleContext,
 } from "antlr4ts";
 import type { ParseTree } from "antlr4ts/tree";
 import {
@@ -27,6 +29,7 @@ import {
   ModelDef,
   SQLBlock,
   DocumentLocation,
+  DocumentRange,
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
@@ -49,10 +52,12 @@ import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from "./parse-tree-walkers/document-completion-walker";
-import { rangeFromToken } from "./source-reference";
 
-class ParseErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(readonly sourceURL: string, readonly messages: MessageLogger) {}
+class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
+  constructor(
+    readonly translator: MalloyTranslation,
+    readonly messages: MessageLogger
+  ) {}
 
   syntaxError(
     recognizer: unknown,
@@ -64,11 +69,11 @@ class ParseErrorHandler implements ANTLRErrorListener<Token> {
   ) {
     const errAt = { line: line - 1, character: charPositionInLine };
     const range = offendingSymbol
-      ? rangeFromToken(offendingSymbol)
+      ? this.translator.rangeFromToken(offendingSymbol)
       : { start: errAt, end: errAt };
     const error: LogMessage = {
       message: msg,
-      at: { url: this.sourceURL, range },
+      at: { url: this.translator.sourceURL, range },
     };
     this.messages.log(error);
   }
@@ -182,9 +187,9 @@ interface TranslationStep {
 }
 
 export interface MalloyParseRoot {
-  sourceURL: string;
   root: ParseTree;
   tokens: CommonTokenStream;
+  subTranslator: MalloyTranslation;
   malloyVersion: string;
 }
 
@@ -196,8 +201,14 @@ type ParseResponse = Partial<ParseData>;
 /**
  * ParseStep -- Parse the source URL
  */
+interface SourceInfo {
+  lines: string[];
+  at: { begin: number; end: number }[];
+  length: number;
+}
 class ParseStep implements TranslationStep {
   response?: ParseResponse;
+  sourceInfo?: SourceInfo;
 
   step(that: MalloyTranslation): ParseResponse {
     if (this.response) {
@@ -234,13 +245,9 @@ class ParseStep implements TranslationStep {
       return { urls: [that.sourceURL] };
     }
     const source = srcEnt.value == "" ? "\n" : srcEnt.value;
+    this.sourceInfo = this.getSourceInfo(source);
 
-    const parse = this.runParser(
-      source,
-      that.sourceURL,
-      that.root.logger,
-      that.grammarRule
-    );
+    const parse = this.runParser(source, that);
 
     if (that.root.logger.hasErrors()) {
       this.response = {
@@ -253,33 +260,65 @@ class ParseStep implements TranslationStep {
     return this.response;
   }
 
-  private runParser(
-    source: string,
-    sourceURL: string,
-    messages: MessageLogger,
-    parseRule: string
-  ): MalloyParseRoot {
+  /**
+   * Split the source up into lines so we can correctly compute offset
+   * to the line/char positions favored by LSP and VSCode.
+   */
+  private getSourceInfo(code: string): SourceInfo {
+    const eolRegex = /\r?\n/;
+    const info: SourceInfo = {
+      at: [],
+      lines: [],
+      length: code.length,
+    };
+    let src = code;
+    let lineStart = 0;
+    while (src !== "") {
+      const eol = src.match(eolRegex);
+      if (eol && eol.index != undefined) {
+        // line text DOES NOT include the EOL
+        info.lines.push(src.slice(0, eol.index));
+        const lineLength = eol.index + eol[0].length;
+        info.at.push({
+          begin: lineStart,
+          end: lineStart + lineLength,
+        });
+        lineStart += lineLength;
+        src = src.slice(lineLength);
+      } else {
+        // last line, does not have a line end
+        info.lines.push(src);
+        info.at.push({ begin: lineStart, end: lineStart + src.length });
+        break;
+      }
+    }
+    return info;
+  }
+
+  private runParser(source: string, that: MalloyTranslation): MalloyParseRoot {
     const inputStream = CharStreams.fromString(source);
     const lexer = new MalloyLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
     const malloyParser = new MalloyParser(tokenStream);
     malloyParser.removeErrorListeners();
-    malloyParser.addErrorListener(new ParseErrorHandler(sourceURL, messages));
+    malloyParser.addErrorListener(
+      new MalloyParserErrorHandler(that, that.root.logger)
+    );
 
     // Admitted code smell here, testing likes to parse from an arbitrary
     // node and this is the simplest way to allow that.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const parseFunc = (malloyParser as any)[parseRule];
+    const parseFunc = (malloyParser as any)[that.grammarRule];
     if (!parseFunc) {
-      throw new Error(`No such parse rule as ${parseRule}`);
+      throw new Error(`No such parse rule as ${that.grammarRule}`);
     }
 
     return {
-      sourceURL: sourceURL,
       root: parseFunc.call(malloyParser) as ParseTree,
       tokens: tokenStream,
       // TODO put the real version here
       malloyVersion: "?.?.?-????",
+      subTranslator: that,
     };
   }
 }
@@ -297,6 +336,7 @@ class ImportsAndTablesStep implements TranslationStep {
     if (!this.alreadyLooked) {
       this.alreadyLooked = true;
       const parseRefs = findReferences(
+        that,
         parseReq.parse.tokens,
         parseReq.parse.root
       );
@@ -481,6 +521,7 @@ class MetadataStep implements TranslationStep {
         let symbols;
         try {
           symbols = walkForDocumentSymbols(
+            that,
             tryParse.parse.tokens,
             tryParse.parse.root
           );
@@ -732,6 +773,53 @@ export abstract class MalloyTranslation {
         end: { line: 0, character: 0 },
       },
     };
+  }
+
+  rangeFromContext(pcx: ParserRuleContext): DocumentRange {
+    return this.rangeFromTokens(pcx.start, pcx.stop || pcx.start);
+  }
+
+  rangeFromTokens(startToken: Token, stopToken: Token): DocumentRange {
+    const start = {
+      line: startToken.line - 1,
+      character: startToken.charPositionInLine,
+    };
+    if (
+      this.parseStep.sourceInfo &&
+      stopToken.stopIndex != -1 &&
+      stopToken.stopIndex != startToken.startIndex
+    ) {
+      // Find the line which contains the stopIndex
+      const lastLine = this.parseStep.sourceInfo.lines.length - 1;
+      for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
+        const at = this.parseStep.sourceInfo.at[lineNo];
+        const line = this.parseStep.sourceInfo.lines[lineNo];
+        const stopOff = stopToken.stopIndex - startToken.startIndex;
+        if (stopToken.stopIndex >= at.begin && stopToken.stopIndex <= at.end) {
+          return {
+            start,
+            end: {
+              line: lineNo,
+              character: stopToken.stopIndex - at.begin + 1,
+            },
+          };
+        }
+      }
+      // Should be impossible to get here, but if we do ... return the last
+      // character of the last line of the file
+      return {
+        start,
+        end: {
+          line: lastLine,
+          character: this.parseStep.sourceInfo.lines[lastLine].length,
+        },
+      };
+    }
+    return { start, end: start };
+  }
+
+  rangeFromToken(token: Token): DocumentRange {
+    return this.rangeFromTokens(token, token);
   }
 }
 

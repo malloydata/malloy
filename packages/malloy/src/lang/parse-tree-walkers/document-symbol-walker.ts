@@ -16,8 +16,8 @@ import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
 import * as parser from "../lib/Malloy/MalloyParser";
-import { rangeFromContext } from "../source-reference";
 import { DocumentRange } from "../../model/malloy_types";
+import { MalloyTranslation } from "../parse-malloy";
 
 export interface DocumentSymbol {
   range: DocumentRange;
@@ -28,6 +28,7 @@ export interface DocumentSymbol {
 
 class DocumentSymbolWalker implements MalloyListener {
   constructor(
+    readonly translator: MalloyTranslation,
     readonly tokens: CommonTokenStream,
     readonly scopes: DocumentSymbol[],
     readonly symbols: DocumentSymbol[]
@@ -43,7 +44,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterTopLevelQueryDef(pcx: parser.TopLevelQueryDefContext) {
     this.symbols.push({
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.queryName().text,
       type: "query",
       children: [],
@@ -52,7 +53,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
     this.symbols.push({
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: "unnamed_query",
       type: "unnamed_query",
       children: [],
@@ -61,7 +62,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterExploreDefinition(pcx: parser.ExploreDefinitionContext) {
     this.scopes.push({
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.exploreNameDef().id().text,
       type: "explore",
       children: [],
@@ -77,7 +78,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterExploreQueryDef(pcx: parser.ExploreQueryDefContext) {
     const symbol = {
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.exploreQueryNameDef().id().text,
       type: "query",
       children: [],
@@ -95,7 +96,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterDimensionDef(pcx: parser.DimensionDefContext) {
     const symbol = {
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldDef().fieldNameDef().id().text,
       type: "field",
       children: [],
@@ -108,7 +109,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterMeasureDef(pcx: parser.MeasureDefContext) {
     const symbol = {
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldDef().fieldNameDef().id().text,
       type: "field",
       children: [],
@@ -121,7 +122,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterExploreRenameDef(pcx: parser.ExploreRenameDefContext) {
     const symbol = {
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldName()[0].text,
       type: "field",
       children: [],
@@ -134,7 +135,7 @@ class DocumentSymbolWalker implements MalloyListener {
 
   enterJoinNameDef(pcx: parser.JoinNameDefContext) {
     const symbol = {
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: pcx.id().text,
       type: "join",
       children: [],
@@ -148,7 +149,7 @@ class DocumentSymbolWalker implements MalloyListener {
   enterSqlStatementDef(pcx: parser.SqlStatementDefContext) {
     const name = pcx.sqlCommandNameDef()?.id().text;
     const symbol = {
-      range: rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(pcx),
       name: name || "unnamed_sql",
       type: name === undefined ? "unnamed_sql" : "sql",
       children: [],
@@ -158,10 +159,11 @@ class DocumentSymbolWalker implements MalloyListener {
 }
 
 export function walkForDocumentSymbols(
+  forParse: MalloyTranslation,
   tokens: CommonTokenStream,
   parseTree: ParseTree
 ): DocumentSymbol[] {
-  const finder = new DocumentSymbolWalker(tokens, [], []);
+  const finder = new DocumentSymbolWalker(forParse, tokens, [], []);
   const listener: MalloyListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder.symbols;
