@@ -598,19 +598,19 @@ export class IsValueBlock extends MalloyElement {
   }
 }
 
-export class ModelEntryReference extends MalloyElement {
-  elementType = "namedSourceId";
+export class ModelEntryReference extends MalloyElement implements NameLike {
+  elementType = "modelEntryReference";
 
   constructor(readonly name: string) {
     super();
   }
 
-  get text(): string {
+  get refString(): string {
     return this.name;
   }
 
   toString(): string {
-    return this.text;
+    return this.refString;
   }
 }
 
@@ -819,9 +819,9 @@ export class KeyJoin extends Join {
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
-      joinStruct.name = this.name.text;
+      joinStruct.name = this.name.refString;
     } else {
-      joinStruct.as = this.name.text;
+      joinStruct.as = this.name.refString;
     }
 
     return joinStruct;
@@ -889,9 +889,9 @@ export class ExpressionJoin extends Join {
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
-      joinStruct.name = this.name.text;
+      joinStruct.name = this.name.refString;
     } else {
-      joinStruct.as = this.name.text;
+      joinStruct.as = this.name.refString;
     }
     return joinStruct;
   }
@@ -1044,15 +1044,12 @@ export class Renames extends ListOf<RenameField> {
   }
 }
 
-export interface ExactFieldReference extends FieldReferenceInterface {
-  get head(): FieldReferenceInterface;
-  get rest(): FieldReferenceInterface[];
+export interface FieldReferenceLike extends NameLike {
+  get head(): NameLike;
+  get rest(): NameLike[];
 }
 
-export class FieldName
-  extends MalloyElement
-  implements FieldReferenceInterface, ExactFieldReference
-{
+export class FieldName extends MalloyElement implements FieldReferenceLike {
   elementType = "fieldName";
 
   constructor(readonly name: string) {
@@ -1078,12 +1075,12 @@ export class FieldName
 
 export class FieldReference
   extends ListOf<FieldName>
-  implements FieldReferenceInterface, ExactFieldReference
+  implements NameLike, FieldReferenceLike
 {
-  elementType = "fieldPath";
+  elementType = "fieldReference";
 
   constructor(names: FieldName[]) {
-    super("fieldPath", names);
+    super("fieldReference", names);
   }
 
   get rest(): FieldName[] {
@@ -1114,7 +1111,7 @@ export class FieldReference
   }
 }
 
-interface FieldReferenceInterface {
+interface NameLike {
   refString: string;
 }
 export type FieldListReference = FieldReference | WildcardFieldReference;
@@ -1634,11 +1631,8 @@ export class RenameField extends MalloyElement {
   }
 }
 
-export class WildcardFieldReference
-  extends MalloyElement
-  implements FieldReferenceInterface
-{
-  elementType = "wildcard";
+export class WildcardFieldReference extends MalloyElement implements NameLike {
+  elementType = "wildcardFieldReference";
   constructor(
     readonly joinPath: FieldReference | undefined,
     readonly star: "*" | "**"
@@ -1959,7 +1953,7 @@ export class PipelineDesc extends MalloyElement {
       }
       const name =
         this.headPath instanceof ModelEntryReference
-          ? this.headPath.text
+          ? this.headPath.refString
           : this.headPath.refString;
       const { pipeline, location } = this.importTurtle(name, structDef);
       destQuery.location = location;

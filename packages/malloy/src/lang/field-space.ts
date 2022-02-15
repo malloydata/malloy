@@ -30,7 +30,7 @@ import {
   NestDefinition,
   MalloyElement,
   NestReference,
-  ExactFieldReference,
+  FieldReferenceLike,
   FieldReference,
 } from "./ast";
 import {
@@ -69,7 +69,7 @@ export type LookupResult = LookupFound | LookupError;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  lookup(symbol: ExactFieldReference): LookupResult;
+  lookup(symbol: FieldReferenceLike): LookupResult;
   getDialect(): Dialect;
 }
 
@@ -156,7 +156,7 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  lookup(path: ExactFieldReference): LookupResult {
+  lookup(path: FieldReferenceLike): LookupResult {
     const found = this.entry(path.head.refString);
     if (!found) {
       return { error: `'${path.head}' is not defined`, found };
@@ -291,7 +291,7 @@ export class NewFieldSpace extends StructSpace {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        this.setEntry(def.name.text, new JoinSpaceField(this, def));
+        this.setEntry(def.name.refString, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${elseType}'`
@@ -371,7 +371,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  lookup(fieldPath: ExactFieldReference): LookupResult {
+  lookup(fieldPath: FieldReferenceLike): LookupResult {
     return this.inputSpace.lookup(fieldPath);
   }
 
@@ -519,7 +519,7 @@ export class CircleSpace implements FieldSpace {
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  lookup(symbol: ExactFieldReference): LookupResult {
+  lookup(symbol: FieldReferenceLike): LookupResult {
     if (symbol.refString === this.circular.defineName) {
       this.foundCircle = true;
       return {
