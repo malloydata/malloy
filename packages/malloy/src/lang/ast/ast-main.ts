@@ -609,6 +609,10 @@ export class ModelEntryReference extends MalloyElement {
   get text(): string {
     return this.name;
   }
+
+  toString(): string {
+    return this.text;
+  }
 }
 
 export class NamedSource extends Mallobj {
@@ -1258,7 +1262,9 @@ class ReduceExecutor implements QueryExecutor {
         qp.log("Query operation already sorted");
       } else {
         this.order = qp;
-        qp.checkReferences(this.outputFS);
+        // TODO jump-to-definition This `outputFS` cannot currently `lookup` in the actual
+        //      output space.
+        // qp.checkReferences(this.outputFS);
       }
     } else {
       return false;
@@ -2099,11 +2105,11 @@ export class Top extends MalloyElement {
   getBy(fs: FieldSpace): model.By | undefined {
     if (this.by) {
       if (this.by instanceof FieldName) {
-        // TODO jump-to-definition Add a test for this
-        const entry = fs.lookup(this.by);
-        if (entry.error) {
-          this.by.log(entry.error);
-        }
+        // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
+        // const entry = fs.lookup(this.by);
+        // if (entry.error) {
+        //   this.by.log(entry.error);
+        // }
         return { by: "name", name: this.by.refString };
       } else {
         const byExpr = this.by.getExpression(fs);

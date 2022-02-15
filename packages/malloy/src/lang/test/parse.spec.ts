@@ -1011,6 +1011,22 @@ describe("source locations", () => {
       "project: not legal in grouping query"
     )
   );
+
+  test.skip(
+    "undefined field reference in top",
+    modelErrors(
+      markSource`query: a -> { group_by: one is 1; top: 1 by ${"xyz"} }`,
+      "'xyz' is not defined"
+    )
+  );
+
+  test.skip(
+    "undefined field reference in order_by",
+    modelErrors(
+      markSource`query: a -> { group_by: one is 1; order_by: ${"xyz"} }`,
+      "'xyz' is not defined"
+    )
+  );
 });
 
 describe("source references", () => {
@@ -1250,11 +1266,30 @@ describe("source references", () => {
     });
   });
 
-  test("reference to field in order by", () => {
+  test.skip("reference to field in order by", () => {
     const source = markSource`
       query: ${"table('aTable')"} -> {
         group_by: abool
         order_by: ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test.skip("reference to field in order by (output space)", () => {
+    const source = markSource`
+      query: table('aTable') -> {
+        group_by: ${"one is 1"}
+        order_by: ${"one"}
       }
     `;
     const m = new BetaModel(source.code);
@@ -1307,11 +1342,30 @@ describe("source references", () => {
     });
   });
 
-  test("reference to field in top", () => {
+  test.skip("reference to field in top", () => {
     const source = markSource`
       query: ${"table('aTable')"} -> {
         group_by: abool
         top: 10 by ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test.skip("reference to field in top (output space)", () => {
+    const source = markSource`
+      query: table('aTable') -> {
+        group_by: ${"one is 1"}
+        top: 10 by ${"one"}
       }
     `;
     const m = new BetaModel(source.code);
