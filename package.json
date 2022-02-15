@@ -66,6 +66,10 @@
   "dependencies": {},
   "resolutions": {
     "simple-get": "3.1.1",
-    "node-fetch": "2.6.7"
+    "node-fetch": "2.6.7",
+    "nanoid": "3.1.31",
+    "node-forge": "1.0.0",
+    "ansi-regex": "5.0.1",
+    "nth-check": "2.0.1"
   }
 }
