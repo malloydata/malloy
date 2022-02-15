@@ -32,7 +32,6 @@
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json"
   },
-  "resolutions": {},
   "devDependencies": {
     "@jest/globals": "^26.6.2",
     "@malloydata/db-bigquery": "*",
@@ -64,5 +63,8 @@
     "unified": "^9.2.1",
     "wait-on": "^6.0.0"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "resolutions": {
+    "simple-get": "3.1.1"
+  }
 }
