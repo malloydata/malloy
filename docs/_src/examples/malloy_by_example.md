@@ -6,7 +6,7 @@ The statement to run a query in malloy is `query:`.  Malloy's queries have two t
 
 ### SELECT with no GROUP BY
 
-*Click the SQL Tab to see the generated SQL query*
+*Click the SQL Tab to see the generated SQL query* <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -17,6 +17,10 @@ query: table('malloy-data.faa.airports') -> {
 ```
 
 ### SELECT with only Aggregate Functions
+
+```
+SELECT COUNT(*) is airport_count FROM `malloy-data.faa.airports`
+```
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
