@@ -31,7 +31,7 @@ import {
   ExprFieldDecl,
   ExpressionDef,
 } from "./index";
-import { QueryField } from "../space-field";
+import { QueryField, SpaceEntry } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 
 /*
@@ -107,7 +107,7 @@ export abstract class MalloyElement {
   /**
    * Record all elements as children of this element, and mark this
    * element as their parent.
-   * @param kids Some of these might be undefined, in which case they ae ignored
+   * @param kids Some of these might be undefined, in which case they are ignored
    */
   has(kids: Record<string, ChildBody | undefined>): void {
     for (const kidName in kids) {
@@ -202,8 +202,14 @@ export abstract class MalloyElement {
   }
 
   addReference(reference: model.DocumentReference): void {
+    const translator = this.translator();
     // TODO jump-to-definition It would be nice to throw an error here if no translator can be found
-    this.translator()?.addReference(reference);
+    // if (translator === undefined) {
+    //   throw new Error(
+    //     "Expected translator to be available when adding reference."
+    //   );
+    // }
+    translator?.addReference(reference);
   }
 
   private get sourceURL() {
@@ -797,12 +803,13 @@ export abstract class Join extends MalloyElement {
 
 export class KeyJoin extends Join {
   elementType = "joinOnKey";
+  keyField?: SpaceEntry;
   constructor(
     readonly name: ModelEntryReference,
     readonly source: Mallobj,
-    readonly key: string
+    readonly key: FieldName
   ) {
-    super({ source });
+    super({ name, source, key });
   }
 
   structDef(): model.StructDef {
@@ -811,7 +818,7 @@ export class KeyJoin extends Join {
       ...sourceDef,
       structRelationship: {
         type: "foreignKey",
-        foreignKey: this.key,
+        foreignKey: this.key.refString,
       },
       location: this.location,
     };
@@ -824,6 +831,18 @@ export class KeyJoin extends Join {
 
     return joinStruct;
   }
+
+  needsFixup(): boolean {
+    return this.keyField === undefined;
+  }
+
+  fixupJoinOn(outer: FieldSpace, _inStruct: model.StructDef): void {
+    const entry = outer.lookup(this.key);
+    if (entry.error) {
+      this.key.log(entry.error);
+    }
+    this.keyField = entry.found;
+  }
 }
 
 type ExpressionJoinType = "many" | "one" | "cross";
@@ -832,7 +851,7 @@ export class ExpressionJoin extends Join {
   joinType: ExpressionJoinType = "one";
   private expr?: ExpressionDef;
   constructor(readonly name: ModelEntryReference, readonly source: Mallobj) {
-    super({ source });
+    super({ name, source });
   }
 
   needsFixup(): boolean {

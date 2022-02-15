@@ -1428,6 +1428,25 @@ describe("source references", () => {
     });
   });
 
+  test("reference to field in join with", () => {
+    const source = markSource`
+      explore: exp1 is table('aTable') { primary_key: astr }
+      explore: exp2 is ${"table('aTable')"} {
+        join_one: exp1 with ${"astr"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "astr",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
   // TODO jump-to-definition this gives a weird error
   //      Correct:  Reference to undefined value dsf
   //      Additionally (incorrect): Cannot define ai_sum, unexpected type unknown

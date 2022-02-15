@@ -410,7 +410,11 @@ export class MalloyToAST
       nameCx
     );
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const joinOn = this.getIdText(pcx.fieldName());
+    const withCx = pcx.fieldName();
+    const joinOn = this.astAt(
+      new ast.FieldName(this.getIdText(withCx)),
+      withCx
+    );
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
