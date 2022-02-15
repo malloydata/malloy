@@ -283,7 +283,7 @@ export class NewFieldSpace extends StructSpace {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        this.setEntry(def.name, new JoinSpaceField(this, def));
+        this.setEntry(def.name.text, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${elseType}'`

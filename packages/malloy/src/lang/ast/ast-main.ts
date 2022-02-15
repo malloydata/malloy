@@ -608,7 +608,7 @@ export class ModelEntryReference extends MalloyElement {
     super();
   }
 
-  get refString(): string {
+  get text(): string {
     return this.name;
   }
 }
@@ -785,7 +785,7 @@ export class QuerySource extends Mallobj {
 }
 
 export abstract class Join extends MalloyElement {
-  abstract name: string;
+  abstract name: ModelEntryReference;
   abstract structDef(): model.StructDef;
   needsFixup(): boolean {
     return false;
@@ -798,7 +798,7 @@ export abstract class Join extends MalloyElement {
 export class KeyJoin extends Join {
   elementType = "joinOnKey";
   constructor(
-    readonly name: string,
+    readonly name: ModelEntryReference,
     readonly source: Mallobj,
     readonly key: string
   ) {
@@ -817,9 +817,9 @@ export class KeyJoin extends Join {
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
-      joinStruct.name = this.name;
+      joinStruct.name = this.name.text;
     } else {
-      joinStruct.as = this.name;
+      joinStruct.as = this.name.text;
     }
 
     return joinStruct;
@@ -831,7 +831,7 @@ export class ExpressionJoin extends Join {
   elementType = "joinOnExpr";
   joinType: ExpressionJoinType = "one";
   private expr?: ExpressionDef;
-  constructor(readonly name: string, readonly source: Mallobj) {
+  constructor(readonly name: ModelEntryReference, readonly source: Mallobj) {
     super({ source });
   }
 
@@ -875,9 +875,9 @@ export class ExpressionJoin extends Join {
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
-      joinStruct.name = this.name;
+      joinStruct.name = this.name.text;
     } else {
-      joinStruct.as = this.name;
+      joinStruct.as = this.name.text;
     }
     return joinStruct;
   }
@@ -1857,6 +1857,9 @@ export class PipelineDesc extends MalloyElement {
     if (!this.headPath) {
       throw this.internalError("can't make query from nameless query");
     }
+    if (this.headPath instanceof FieldName) {
+      throw new Error("Expected headPath to be a ModelEntryReference");
+    }
     const queryEntry = this.modelEntry(this.headPath);
     const seedQuery = queryEntry?.entry;
     const oops = function () {
@@ -1910,10 +1913,11 @@ export class PipelineDesc extends MalloyElement {
         const { error } = pipeFs.lookup(this.headPath);
         if (error) this.log(error);
       }
-      const { pipeline, location } = this.importTurtle(
-        this.headPath.refString,
-        structDef
-      );
+      const name =
+        this.headPath instanceof ModelEntryReference
+          ? this.headPath.text
+          : this.headPath.refString;
+      const { pipeline, location } = this.importTurtle(name, structDef);
       destQuery.location = location;
       const refined = this.refinePipeline(pipeFs, { pipeline }).pipeline;
       if (this.headRefinement) {
@@ -1922,7 +1926,7 @@ export class PipelineDesc extends MalloyElement {
         // TODO there was mention of promoting filters to the query
         destQuery.pipeline = refined;
       } else {
-        destQuery.pipeHead = { name: this.headPath.refString };
+        destQuery.pipeHead = { name };
       }
       const pipeStruct = this.getOutputStruct(structDef, refined);
       pipeFs = new StructSpace(pipeStruct);

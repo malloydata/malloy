@@ -379,18 +379,21 @@ export class MalloyToAST
   }
 
   protected getJoinSource(
-    name: string,
+    name: ast.ModelEntryReference,
     ecx: parse.ExploreContext | undefined
   ): ast.Mallobj {
     if (ecx) {
       return this.visitExplore(ecx);
     }
-    // TODO jump-to-definition
     return new ast.NamedSource(name);
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
+    const nameCx = pcx.joinNameDef();
+    const joinAs = this.astAt(
+      new ast.ModelEntryReference(this.getIdText(nameCx)),
+      nameCx
+    );
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
@@ -401,7 +404,11 @@ export class MalloyToAST
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
+    const nameCx = pcx.joinNameDef();
+    const joinAs = this.astAt(
+      new ast.ModelEntryReference(this.getIdText(nameCx)),
+      nameCx
+    );
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const joinOn = this.getIdText(pcx.fieldName());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
