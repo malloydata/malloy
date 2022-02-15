@@ -22,19 +22,21 @@ export function rangeFromTokens(
   startToken: Token,
   stopToken: Token
 ): DocumentRange {
-  return {
-    start: {
-      line: startToken.line - 1,
-      character: startToken.charPositionInLine,
-    },
-    end: {
-      line: stopToken.line - 1,
-      character:
-        stopToken.stopIndex -
-        (stopToken.startIndex - stopToken.charPositionInLine) +
-        1,
-    },
+  const start = {
+    line: startToken.line - 1,
+    character: startToken.charPositionInLine,
   };
+  const end =
+    stopToken.stopIndex == -1
+      ? start
+      : {
+          line: stopToken.line - 1,
+          character:
+            stopToken.stopIndex -
+            (stopToken.startIndex - stopToken.charPositionInLine) +
+            1,
+        };
+  return { start, end };
 }
 
 export function rangeFromToken(token: Token): DocumentRange {

@@ -225,13 +225,15 @@ export function getJoinField(structDef: StructDef, name: string) {
   return getField(structDef, name) as StructDef;
 }
 
+export interface MarkedSource {
+  code: string;
+  locations: DocumentLocation[];
+}
+
 export function markSource(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): {
-  code: string;
-  locations: DocumentLocation[];
-} {
+): MarkedSource {
   let code = "";
   const locations: DocumentLocation[] = [];
   for (let index = 0; index < marked.length; index++) {

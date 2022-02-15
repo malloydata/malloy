@@ -1140,9 +1140,11 @@ class ReduceExecutor implements QueryExecutor {
   }
 
   execute(qp: QueryProperty): void {
-    if (!this.handle(qp)) {
-      qp.log("Illegal statement in a group_by/aggregate query operation");
-    }
+    this.handle(qp);
+    // Errors should have already been reported computeType()
+    // if (!this.handle(qp)) {
+    //   qp.log("Illegal statement in a group_by/aggregate query operation");
+    // }
   }
 
   refineFrom(from: model.QuerySegment | undefined, to: model.QuerySegment) {

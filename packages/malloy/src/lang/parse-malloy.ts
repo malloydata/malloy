@@ -669,13 +669,13 @@ export abstract class MalloyTranslation {
             }
           }
           if (lineMap[this.sourceURL]) {
-            const errorLine = lineMap[this.sourceURL][lineNo - 1];
-            cooked = `line ${lineNo}: ${entry.message}\n  | ${errorLine}`;
+            const errorLine = lineMap[this.sourceURL][lineNo];
+            cooked = `line ${lineNo + 1}: ${entry.message}\n  | ${errorLine}`;
             if (charFrom > 0) {
               cooked = cooked + `\n  | ${" ".repeat(charFrom)}^`;
             }
           } else {
-            cooked = `line ${lineNo}: char ${charFrom}: ${entry.message}`;
+            cooked = `line ${lineNo + 1}: char ${charFrom}: ${entry.message}`;
           }
         }
       }
