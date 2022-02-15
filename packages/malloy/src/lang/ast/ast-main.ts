@@ -1055,6 +1055,21 @@ export class FieldName
   toString(): string {
     return this.refString;
   }
+
+  get path(): string {
+    const asString = this.refString;
+    const lastDot = asString.lastIndexOf(".");
+    if (lastDot < 0) {
+      return "";
+    }
+    return asString.slice(0, lastDot);
+  }
+
+  get field(): string {
+    const asString = this.refString;
+    const lastDot = asString.lastIndexOf(".");
+    return asString.slice(lastDot + 1);
+  }
 }
 
 export class FieldPath extends FieldName implements FieldReferenceInterface {

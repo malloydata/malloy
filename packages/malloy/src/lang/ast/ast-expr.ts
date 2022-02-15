@@ -28,7 +28,6 @@ import {
   Expr,
 } from "../../model/malloy_types";
 import { CircleSpace, FieldSpace, LookupResult } from "../field-space";
-import * as FieldPathTODO from "../field-path";
 import {
   Filter,
   MalloyElement,
@@ -411,7 +410,6 @@ export class ExprIdReference extends ExpressionDef {
     this.has({ fieldPath });
   }
 
-  // TODO jump-to-definition Maybe remove this
   get refString(): string {
     return this.fieldPath.refString;
   }
@@ -593,7 +591,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
             value: [{ type: "field", path: source.refString }],
           };
 
-          const body = FieldPathTODO.path(source.refString);
+          const body = source.path;
           if (body.length > 0) {
             sourceRefString = body;
           } else {
@@ -674,7 +672,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
 
   defaultFieldName(): undefined | string {
     if (this.source && this.expr === undefined) {
-      const tag = FieldPathTODO.field(this.source.refString);
+      const tag = this.source.field;
       switch (this.func) {
         case "sum":
           return `total_${tag}`;
@@ -695,8 +693,7 @@ export class ExprCount extends ExprAggregateFunction {
 
   defaultFieldName(): string | undefined {
     if (this.source) {
-      // TODO jump-to-definition
-      return "count_" + FieldPathTODO.field(this.source.refString);
+      return "count_" + this.source.field;
     }
     return undefined;
   }
