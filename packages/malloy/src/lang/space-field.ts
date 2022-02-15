@@ -19,7 +19,7 @@ import {
   TurtleDecl,
   HasParameter,
   Join,
-  FieldName,
+  FieldPath,
 } from "./ast";
 
 // "Space Fields" are a field in a field space
@@ -227,7 +227,7 @@ export class FANSPaceField extends SpaceField {
   as?: string;
   filterList?: model.FilterExpression[];
   constructor(
-    readonly ref: FieldName,
+    readonly ref: FieldPath,
     readonly inSpace: FieldSpace,
     refInit?: Partial<model.FilteredAliasedName>
   ) {

@@ -117,7 +117,7 @@ export class MalloyToAST
   protected onlyQueryRefs(els: ast.MalloyElement[]): ast.QueryItem[] {
     const eps: ast.QueryItem[] = [];
     for (const el of els) {
-      if (el instanceof ast.FieldName || el instanceof ast.ExprFieldDecl) {
+      if (el instanceof ast.FieldPath || el instanceof ast.ExprFieldDecl) {
         eps.push(el);
       } else {
         const reported = el instanceof ast.Unimplemented && el.reported;
@@ -135,6 +135,14 @@ export class MalloyToAST
 
   protected getIdText(fromTerm: ParseTree): string {
     return this.stripQuotes(fromTerm.text);
+  }
+
+  protected getFieldName(cx: ParserRuleContext): ast.FieldName {
+    return this.astAt(new ast.FieldName(this.getIdText(cx)), cx);
+  }
+
+  protected getModelEntryName(cx: ParserRuleContext): ast.ModelEntryReference {
+    return this.astAt(new ast.ModelEntryReference(this.getIdText(cx)), cx);
   }
 
   protected stripQuotes(s: string): string {
@@ -291,11 +299,7 @@ export class MalloyToAST
   }
 
   visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
-    const nameCx = pcx.sqlExploreNameRef();
-    const name = this.astAt(
-      new ast.ModelEntryReference(this.getIdText(nameCx)),
-      nameCx
-    );
+    const name = this.getModelEntryName(pcx.sqlExploreNameRef());
     return this.astAt(new ast.SQLSource(name), pcx);
   }
 
@@ -374,11 +378,7 @@ export class MalloyToAST
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
-    const nameCx = pcx.joinNameDef();
-    const joinAs = this.astAt(
-      new ast.ModelEntryReference(this.getIdText(nameCx)),
-      nameCx
-    );
+    const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
@@ -389,17 +389,9 @@ export class MalloyToAST
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
-    const nameCx = pcx.joinNameDef();
-    const joinAs = this.astAt(
-      new ast.ModelEntryReference(this.getIdText(nameCx)),
-      nameCx
-    );
+    const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const withCx = pcx.fieldName();
-    const joinOn = this.astAt(
-      new ast.FieldName(this.getIdText(withCx)),
-      withCx
-    );
+    const joinOn = this.getFieldName(pcx.fieldName());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
@@ -434,7 +426,7 @@ export class MalloyToAST
     const oldName = pcx.fieldName(1).id();
     const rename = new ast.RenameField(
       this.getIdText(newName),
-      this.astAt(new ast.FieldName(this.getIdText(oldName)), oldName)
+      this.getFieldName(oldName)
     );
     return this.astAt(rename, pcx);
   }
@@ -494,7 +486,12 @@ export class MalloyToAST
     }
     const fcx = pcx.fieldName();
     if (fcx) {
-      return this.astAt(new ast.FieldName(this.getIdText(fcx)), fcx);
+      return this.astAt(
+        new ast.FieldPath([
+          this.astAt(new ast.FieldName(this.getIdText(fcx)), fcx),
+        ]),
+        fcx
+      );
     }
     throw this.internalError(pcx, "mis-parsed field name reference");
   }
@@ -532,17 +529,11 @@ export class MalloyToAST
     return new ast.QOPDesc(qProps);
   }
 
-  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldName {
-    const restCx = pcx.fieldPath();
-    const nameCx = pcx.fieldName();
-    const name = this.getIdText(nameCx);
-    const astName = this.astAt(new ast.FieldName(name), nameCx);
-    if (restCx) {
-      const rest = this.visitFieldPath(restCx);
-      return this.astAt(new ast.FieldPath(astName, rest), pcx);
-    } else {
-      return astName;
-    }
+  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldPath {
+    const names = pcx.fieldName().map((nameCx) => {
+      return this.getFieldName(nameCx);
+    });
+    return this.astAt(new ast.FieldPath(names), pcx);
   }
 
   visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
@@ -646,10 +637,7 @@ export class MalloyToAST
     if (byCx) {
       const nameCx = byCx.fieldName();
       if (nameCx) {
-        const name = this.astAt(
-          new ast.FieldName(this.getIdText(nameCx)),
-          nameCx
-        );
+        const name = this.getFieldName(nameCx);
         top = new ast.Top(topN, name);
       }
       const exprCx = byCx.fieldExpr();
@@ -664,11 +652,7 @@ export class MalloyToAST
   }
 
   visitExploreName(pcx: parse.ExploreNameContext): ast.NamedSource {
-    const nameCx = pcx.id();
-    const name = this.astAt(
-      new ast.ModelEntryReference(this.getIdText(nameCx)),
-      nameCx
-    );
+    const name = this.getModelEntryName(pcx.id());
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
@@ -676,10 +660,7 @@ export class MalloyToAST
     const qp = new ast.PipelineDesc();
     const nameCx = pcx.exploreQueryName();
     if (nameCx) {
-      qp.headPath = this.astAt(
-        new ast.FieldName(this.getIdText(nameCx)),
-        nameCx
-      );
+      qp.headPath = this.getFieldName(nameCx);
     }
     const propsCx = pcx.queryProperties();
     if (propsCx) {
@@ -708,11 +689,7 @@ export class MalloyToAST
 
   visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
     const pipe = new ast.PipelineDesc();
-    const queryNameCx = pcx.queryName();
-    pipe.headPath = this.astAt(
-      new ast.ModelEntryReference(this.getIdText(queryNameCx)),
-      queryNameCx
-    );
+    pipe.headPath = this.getModelEntryName(pcx.queryName());
     const refCx = pcx.queryProperties();
     if (refCx) {
       pipe.refineHead(this.visitQueryProperties(refCx));
@@ -766,7 +743,7 @@ export class MalloyToAST
   }
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
-    const name = this.getIdText(pcx.queryName());
+    const name = this.getFieldName(pcx.queryName());
     return this.astAt(new ast.NestReference(name), pcx);
   }
 
@@ -1043,11 +1020,7 @@ export class MalloyToAST
   }
 
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
-    const nameCx = pcx.exploreName();
-    const name = this.astAt(
-      new ast.ModelEntryReference(this.getIdText(nameCx)),
-      nameCx
-    );
+    const name = this.getModelEntryName(pcx.exploreName());
     // Parameters ... coming ...
     // const paramListCx = pcx.isParam();
     // if (paramListCx) {

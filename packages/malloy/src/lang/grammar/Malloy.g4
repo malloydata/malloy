@@ -392,8 +392,7 @@ collectionMember
   ;
 
 fieldPath
-  : fieldName
-  | fieldName DOT fieldPath
+  : fieldName (DOT fieldName)*
   ;
 
 joinName: id;

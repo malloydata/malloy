@@ -30,6 +30,8 @@ import {
   NestDefinition,
   MalloyElement,
   NestReference,
+  ExactFieldReference,
+  FieldPath,
 } from "./ast";
 import {
   SpaceField,
@@ -67,7 +69,7 @@ export type LookupResult = LookupFound | LookupError;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  lookup(symbol: FieldName): LookupResult;
+  lookup(symbol: ExactFieldReference): LookupResult;
   getDialect(): Dialect;
 }
 
@@ -154,32 +156,36 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  lookup(fieldPath: FieldName): LookupResult {
-    const step = { head: fieldPath.head, tail: fieldPath.rest };
-    const found = this.entry(step.head.name);
+  lookup(path: ExactFieldReference): LookupResult {
+    const found = this.entry(path.head.refString);
     if (!found) {
-      return { error: `'${step.head}' is not defined`, found };
+      return { error: `'${path.head}' is not defined`, found };
     }
-    if (found instanceof SpaceField) {
+    if (found instanceof SpaceField && path.head instanceof MalloyElement) {
       const definition = found.fieldDef();
       if (definition) {
-        fieldPath.addReference({
+        path.head.addReference({
           type:
             found instanceof StructSpaceField
               ? "joinReference"
               : "fieldReference",
           definition,
-          location: step.head.location,
-          text: step.head.name,
+          location: path.head.location,
+          text: path.head.refString,
         });
       }
     }
-    if (step.tail) {
+    const restString = path.rest.map((n) => n.refString).join(".");
+    if (path.rest.length) {
       if (found instanceof StructSpaceField) {
-        return found.fieldSpace.lookup(step.tail);
+        return found.fieldSpace.lookup({
+          head: path.rest[0],
+          rest: path.rest.slice(1),
+          refString: restString,
+        });
       }
       return {
-        error: `'${step.head}' cannot contain a '${step.tail}'`,
+        error: `'${path.head}' cannot contain a '${restString}'`,
         found: undefined,
       };
     }
@@ -363,7 +369,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  lookup(fieldPath: FieldName): LookupResult {
+  lookup(fieldPath: ExactFieldReference): LookupResult {
     return this.inputSpace.lookup(fieldPath);
   }
 
@@ -378,7 +384,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldName || qi instanceof NestReference) {
+      if (qi instanceof FieldPath || qi instanceof NestReference) {
         this.addReference(qi);
       } else if (qi instanceof ExprFieldDecl) {
         this.addField(qi);
@@ -392,7 +398,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
-      if (member instanceof FieldName) {
+      if (member instanceof FieldPath) {
         this.addReference(member);
       } else if (member instanceof Wildcard) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
@@ -402,7 +408,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
   }
 
-  addReference(ref: FieldName): void {
+  addReference(ref: FieldPath): void {
     const refIs = this.lookup(ref);
     if (refIs.error) {
       ref.log(refIs.error);
@@ -508,7 +514,7 @@ export class CircleSpace implements FieldSpace {
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  lookup(symbol: FieldName): LookupResult {
+  lookup(symbol: ExactFieldReference): LookupResult {
     if (symbol.refString === this.circular.defineName) {
       this.foundCircle = true;
       return {

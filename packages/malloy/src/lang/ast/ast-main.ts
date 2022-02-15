@@ -1045,9 +1045,14 @@ export class Renames extends ListOf<RenameField> {
   }
 }
 
+export interface ExactFieldReference extends FieldReferenceInterface {
+  get head(): FieldReferenceInterface;
+  get rest(): FieldReferenceInterface[];
+}
+
 export class FieldName
   extends MalloyElement
-  implements FieldReferenceInterface
+  implements FieldReferenceInterface, ExactFieldReference
 {
   elementType = "fieldName";
 
@@ -1063,12 +1068,35 @@ export class FieldName
     return this;
   }
 
-  get rest(): FieldName | undefined {
-    return undefined;
+  get rest(): FieldName[] {
+    return [];
   }
 
   toString(): string {
     return this.refString;
+  }
+}
+
+export class FieldPath
+  extends ListOf<FieldName>
+  implements FieldReferenceInterface, ExactFieldReference
+{
+  elementType = "fieldPath";
+
+  constructor(names: FieldName[]) {
+    super("fieldPath", names);
+  }
+
+  get rest(): FieldName[] {
+    return this.list.slice(1);
+  }
+
+  get head(): FieldName {
+    return this.list[0];
+  }
+
+  get refString(): string {
+    return this.list.map((n) => n.refString).join(".");
   }
 
   get path(): string {
@@ -1087,34 +1115,10 @@ export class FieldName
   }
 }
 
-export class FieldPath extends FieldName implements FieldReferenceInterface {
-  elementType = "fieldPath";
-
-  constructor(readonly _head: FieldName, readonly _rest: FieldName) {
-    super(_head.name);
-    this.has({ _head, _rest });
-  }
-
-  get rest(): FieldName {
-    return this._rest;
-  }
-
-  get head(): FieldName {
-    return this._head;
-  }
-
-  get refString(): string {
-    if (this.rest) {
-      return `${this.name}.${this.rest.refString}`;
-    }
-    return this.name;
-  }
-}
-
 interface FieldReferenceInterface {
   refString: string;
 }
-export type FieldReference = FieldName | Wildcard;
+export type FieldReference = FieldPath | Wildcard;
 
 export class FieldReferences extends ListOf<FieldReference> {
   constructor(members: FieldReference[]) {
@@ -1130,7 +1134,8 @@ export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {
   return (
-    el instanceof FieldName ||
+    // el instanceof FieldName ||
+    el instanceof FieldPath ||
     el instanceof Wildcard ||
     el instanceof ExprFieldDecl
   );
@@ -1154,6 +1159,7 @@ export class FieldListEdit extends MalloyElement {
 export type QueryItem =
   | ExprFieldDecl
   | FieldName
+  | FieldPath
   | NestDefinition
   | NestReference;
 
@@ -1632,7 +1638,7 @@ export class RenameField extends MalloyElement {
 export class Wildcard extends MalloyElement implements FieldReferenceInterface {
   elementType = "wildcard";
   constructor(
-    readonly joinPath: FieldName | undefined,
+    readonly joinPath: FieldPath | undefined,
     readonly star: "*" | "**"
   ) {
     super();
@@ -2014,10 +2020,10 @@ export class ExistingQuery extends MalloyElement {
   }
 }
 
-export class NestReference extends FieldName {
+export class NestReference extends FieldPath {
   elementType = "nestReference";
-  constructor(readonly name: string) {
-    super(name);
+  constructor(readonly name: FieldName) {
+    super([name]);
   }
 }
 

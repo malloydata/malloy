@@ -45,7 +45,7 @@ import {
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
-import { FieldName, FieldPath } from "./ast-main";
+import { FieldPath } from "./ast-main";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -405,7 +405,7 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
 
 export class ExprIdReference extends ExpressionDef {
   elementType = "ExpressionIdReference";
-  constructor(readonly fieldPath: FieldName) {
+  constructor(readonly fieldPath: FieldPath) {
     super();
     this.has({ fieldPath });
   }
@@ -560,7 +560,7 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
 
 abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
-  source?: FieldName;
+  source?: FieldPath;
   expr?: ExpressionDef;
   legalChildTypes = [FT.numberT];
   constructor(readonly func: string, expr?: ExpressionDef) {
@@ -664,7 +664,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
   constructor(
     readonly func: "sum" | "avg",
     readonly expr: ExpressionDef | undefined,
-    readonly source?: FieldName
+    readonly source?: FieldPath
   ) {
     super(func, expr);
     this.has({ source });
@@ -686,7 +686,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
 
 export class ExprCount extends ExprAggregateFunction {
   elementType = "count";
-  constructor(readonly source?: FieldName) {
+  constructor(readonly source?: FieldPath) {
     super("count");
     this.has({ source });
   }
@@ -716,14 +716,14 @@ export class ExprCount extends ExprAggregateFunction {
 }
 
 export class ExprAvg extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: FieldName) {
+  constructor(expr: ExpressionDef | undefined, source?: FieldPath) {
     super("avg", expr, source);
     this.has({ source });
   }
 }
 
 export class ExprSum extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: FieldName) {
+  constructor(expr: ExpressionDef | undefined, source?: FieldPath) {
     super("sum", expr, source);
     this.has({ source });
   }
