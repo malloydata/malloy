@@ -23,7 +23,7 @@ import {
   QueryFieldSpace,
   IndexFieldSpace,
 } from "../field-space";
-import { LogMessage, MessageLogger } from "../parse-log";
+import { MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
 import {
   compressExpr,
@@ -217,17 +217,9 @@ export abstract class MalloyElement {
     return trans?.sourceURL || "(missing)";
   }
 
-  log(logString: string): void {
+  log(message: string): void {
     const trans = this.translator();
-    const msg: LogMessage = {
-      sourceURL: this.sourceURL,
-      message: logString,
-    };
-    const loc = this.location;
-    if (loc) {
-      msg.begin = loc.range.start;
-      msg.end = loc.range.end;
-    }
+    const msg = { at: this.location, message };
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);
@@ -1275,9 +1267,11 @@ class ReduceExecutor implements QueryExecutor {
   }
 
   execute(qp: QueryProperty): void {
-    if (!this.handle(qp)) {
-      qp.log("Illegal statement in a group_by/aggregate query operation");
-    }
+    this.handle(qp);
+    // Errors should have already been reported computeType()
+    // if (!this.handle(qp)) {
+    //   qp.log("Illegal statement in a group_by/aggregate query operation");
+    // }
   }
 
   refineFrom(from: model.QuerySegment | undefined, to: model.QuerySegment) {

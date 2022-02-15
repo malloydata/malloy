@@ -22,7 +22,7 @@ Authenticating to BigQuery can be done either via OAuth (using your Google Cloud
 
 To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the [gcloud CLI](https://cloud.google.com/sdk/gcloud) installed. Once it's installed, open a terminal and type the following:
 
-```
+```bash
 gcloud auth login --update-adc
 gcloud config set project {my_project_id} --installation
 ```

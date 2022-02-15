@@ -20,6 +20,11 @@ import { LogMessage, MalloyError } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { translateWithCache } from "../translate_cache";
 
+const DEFAULT_RANGE = {
+  start: { line: 0, character: 0 },
+  end: { line: 0, character: Number.MAX_VALUE },
+};
+
 export async function getMalloyDiagnostics(
   documents: TextDocuments<TextDocument>,
   document: TextDocument
@@ -35,10 +40,7 @@ export async function getMalloyDiagnostics(
       // TODO this kind of error should cease to exist. All errors should have source info.
       diagnostics.push({
         severity: DiagnosticSeverity.Error,
-        range: {
-          start: { line: 0, character: 0 },
-          end: { line: 0, character: Number.MAX_VALUE },
-        },
+        range: DEFAULT_RANGE,
         message: error.message,
         source: "malloy",
       });
@@ -55,16 +57,7 @@ export async function getMalloyDiagnostics(
 
     diagnostics.push({
       severity: sev,
-      range: {
-        start: {
-          line: err.begin?.line || 1,
-          character: err.begin?.char || 0,
-        },
-        end: {
-          line: err.end?.line || err.begin?.line || 1,
-          character: err.end?.char || Number.MAX_VALUE,
-        },
-      },
+      range: err.at?.range || DEFAULT_RANGE,
       message: err.message,
       source: "malloy",
     });

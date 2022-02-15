@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DocumentRange } from "../model/malloy_types";
+import { DocumentLocation } from "../model/malloy_types";
 
 export type ZoneData<TValue> = Record<string, TValue>;
 
@@ -19,7 +19,7 @@ type EntryStatus = "present" | "reference" | "error";
 
 interface AllEntries {
   status: EntryStatus;
-  firstReference?: DocumentRange;
+  firstReference?: DocumentLocation;
 }
 
 interface EntryPresent<T> extends AllEntries {
@@ -29,7 +29,7 @@ interface EntryPresent<T> extends AllEntries {
 
 interface ReferenceEntry {
   status: "reference";
-  firstReference: DocumentRange;
+  firstReference: DocumentLocation;
 }
 
 interface EntryErrored extends AllEntries {
@@ -48,7 +48,7 @@ type ZoneEntry<T> = EntryPresent<T> | ReferenceEntry | EntryErrored;
  */
 export class Zone<TValue> {
   zone: Map<string, ZoneEntry<TValue>>;
-  location: Record<string, DocumentRange> = {};
+  location: Record<string, DocumentLocation> = {};
   constructor() {
     this.zone = new Map<string, ZoneEntry<TValue>>();
   }
@@ -85,7 +85,7 @@ export class Zone<TValue> {
    * @param str The symbol
    * @param loc The location of the reference
    */
-  reference(str: string, loc: DocumentRange): void {
+  reference(str: string, loc: DocumentLocation): void {
     const zst = this.zone.get(str);
     if (zst?.status == undefined) {
       this.zone.set(str, { status: "reference", firstReference: loc });
