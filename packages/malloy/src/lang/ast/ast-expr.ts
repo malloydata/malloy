@@ -591,7 +591,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
             value: [{ type: "field", path: source.refString }],
           };
 
-          const body = source.path;
+          const body = source.sourceString;
           if (body.length > 0) {
             sourceRefString = body;
           } else {
@@ -672,7 +672,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
 
   defaultFieldName(): undefined | string {
     if (this.source && this.expr === undefined) {
-      const tag = this.source.field;
+      const tag = this.source.nameString;
       switch (this.func) {
         case "sum":
           return `total_${tag}`;
@@ -693,7 +693,7 @@ export class ExprCount extends ExprAggregateFunction {
 
   defaultFieldName(): string | undefined {
     if (this.source) {
-      return "count_" + this.source.field;
+      return "count_" + this.source.nameString;
     }
     return undefined;
   }

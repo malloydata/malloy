@@ -1098,7 +1098,7 @@ export class FieldReference
     return this.list.map((n) => n.refString).join(".");
   }
 
-  get path(): string {
+  get sourceString(): string {
     const asString = this.refString;
     const lastDot = asString.lastIndexOf(".");
     if (lastDot < 0) {
@@ -1107,7 +1107,7 @@ export class FieldReference
     return asString.slice(0, lastDot);
   }
 
-  get field(): string {
+  get nameString(): string {
     const asString = this.refString;
     const lastDot = asString.lastIndexOf(".");
     return asString.slice(lastDot + 1);
