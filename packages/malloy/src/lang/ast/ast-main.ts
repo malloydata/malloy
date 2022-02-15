@@ -203,13 +203,12 @@ export abstract class MalloyElement {
 
   addReference(reference: model.DocumentReference): void {
     const translator = this.translator();
-    // TODO jump-to-definition It would be nice to throw an error here if no translator can be found
-    // if (translator === undefined) {
-    //   throw new Error(
-    //     "Expected translator to be available when adding reference."
-    //   );
-    // }
-    translator?.addReference(reference);
+    if (translator === undefined) {
+      throw new Error(
+        "Expected translator to be available when adding reference."
+      );
+    }
+    translator.addReference(reference);
   }
 
   private get sourceURL() {
