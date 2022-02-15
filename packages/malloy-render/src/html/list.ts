@@ -44,7 +44,12 @@ export class HTMLListRenderer extends ContainerRenderer {
     const detailField = this.getDetailField(table.field);
 
     const element = this.document.createElement("span");
+    let isFirst = true;
     for (const row of table) {
+      if (!isFirst) {
+        element.appendChild(this.document.createTextNode(", "));
+      }
+      isFirst = false;
       const childRenderer = this.childRenderers[valueField.name];
       const rendered = await childRenderer.render(row.cell(valueField));
       element.appendChild(rendered);

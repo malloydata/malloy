@@ -44,9 +44,9 @@ class Renderer {
   protected async code(
     code: string,
     infostring: string | undefined,
-    escaped: boolean
+    _escaped: boolean
   ) {
-    const lang = (infostring || "").trim();
+    const lang = (infostring || "txt").trim();
     let showCode = code;
     let hidden = false;
 
@@ -87,22 +87,7 @@ class Renderer {
 
     showCode = showCode.replace(/\n$/, "") + "\n";
 
-    if (!lang) {
-      return (
-        "<pre><code>" +
-        (escaped ? showCode : escape(showCode)) +
-        "</code></pre>\n"
-      );
-    }
-
-    return (
-      '<pre><code class="' +
-      "language-" +
-      escape(lang) +
-      '">' +
-      (escaped ? showCode : escape(showCode)) +
-      "</code></pre>\n"
-    );
+    return await highlight(showCode, lang);
   }
 
   protected async blockquote(content: Markdown[]) {
