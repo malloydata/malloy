@@ -1675,7 +1675,6 @@ export class OrderBy extends MalloyElement {
   }
 
   checkReferences(fs: FieldSpace): void {
-    // TODO jump-to-definition Add test for this
     if (this.field instanceof FieldName) {
       const entry = fs.lookup(this.field);
       if (entry.error) {
