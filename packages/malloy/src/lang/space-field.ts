@@ -15,11 +15,11 @@ import * as model from "../model/malloy_types";
 import { FieldSpace, StructSpace, NewFieldSpace } from "./field-space";
 import {
   FieldValueType,
-  ExprFieldDecl,
+  FieldDeclaration,
   TurtleDecl,
   HasParameter,
   Join,
-  FieldPath,
+  FieldReference,
 } from "./ast";
 
 // "Space Fields" are a field in a field space
@@ -227,7 +227,7 @@ export class FANSPaceField extends SpaceField {
   as?: string;
   filterList?: model.FilterExpression[];
   constructor(
-    readonly ref: FieldPath,
+    readonly ref: FieldReference,
     readonly inSpace: FieldSpace,
     refInit?: Partial<model.FilteredAliasedName>
   ) {
@@ -306,7 +306,10 @@ export class FANSPaceField extends SpaceField {
 
 export class ExpressionFieldFromAst extends SpaceField {
   fieldName: string;
-  constructor(readonly space: NewFieldSpace, readonly exprDef: ExprFieldDecl) {
+  constructor(
+    readonly space: NewFieldSpace,
+    readonly exprDef: FieldDeclaration
+  ) {
     super();
     this.fieldName = exprDef.defineName;
     // left over from anonymous expression days

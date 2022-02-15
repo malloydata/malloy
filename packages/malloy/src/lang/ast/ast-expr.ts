@@ -45,7 +45,7 @@ import {
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
-import { FieldPath } from "./ast-main";
+import { FieldReference } from "./ast-main";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -150,7 +150,7 @@ class ConstantFieldSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     return { ...this.structDef(), fields: [] };
   }
-  lookup(_name: FieldPath): LookupResult {
+  lookup(_name: FieldReference): LookupResult {
     return {
       error: "Only constants allowed in parameter expressions",
       found: undefined,
@@ -205,8 +205,8 @@ export class ConstantSubExpression extends ExpressionDef {
   }
 }
 
-export class ExprFieldDecl extends MalloyElement {
-  elementType = "exprFieldDecl";
+export class FieldDeclaration extends MalloyElement {
+  elementType = "fieldDeclaration";
   isMeasure?: boolean;
 
   constructor(
@@ -405,7 +405,7 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
 
 export class ExprIdReference extends ExpressionDef {
   elementType = "ExpressionIdReference";
-  constructor(readonly fieldPath: FieldPath) {
+  constructor(readonly fieldPath: FieldReference) {
     super();
     this.has({ fieldPath });
   }
@@ -560,7 +560,7 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
 
 abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
-  source?: FieldPath;
+  source?: FieldReference;
   expr?: ExpressionDef;
   legalChildTypes = [FT.numberT];
   constructor(readonly func: string, expr?: ExpressionDef) {
@@ -664,7 +664,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
   constructor(
     readonly func: "sum" | "avg",
     readonly expr: ExpressionDef | undefined,
-    readonly source?: FieldPath
+    readonly source?: FieldReference
   ) {
     super(func, expr);
     this.has({ source });
@@ -686,7 +686,7 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
 
 export class ExprCount extends ExprAggregateFunction {
   elementType = "count";
-  constructor(readonly source?: FieldPath) {
+  constructor(readonly source?: FieldReference) {
     super("count");
     this.has({ source });
   }
@@ -716,14 +716,14 @@ export class ExprCount extends ExprAggregateFunction {
 }
 
 export class ExprAvg extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: FieldPath) {
+  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
     super("avg", expr, source);
     this.has({ source });
   }
 }
 
 export class ExprSum extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: FieldPath) {
+  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
     super("sum", expr, source);
     this.has({ source });
   }

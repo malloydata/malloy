@@ -28,8 +28,8 @@ import { MalloyTranslation } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
-  ExprFieldDecl,
   ExpressionDef,
+  FieldDeclaration,
 } from "./index";
 import { QueryField, SpaceEntry } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
@@ -346,10 +346,10 @@ function getStructFieldDef(
   return s.fields.find((fld) => (fld.as || fld.name) === fn);
 }
 
-type FieldDecl = ExprFieldDecl | Join | TurtleDecl | Turtles;
+type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 function isFieldDecl(f: MalloyElement): f is FieldDecl {
   return (
-    f instanceof ExprFieldDecl ||
+    f instanceof FieldDeclaration ||
     f instanceof Join ||
     f instanceof TurtleDecl ||
     f instanceof Turtles
@@ -1021,8 +1021,8 @@ export class Filter extends ListOf<FilterElement> {
   }
 }
 
-export class Measures extends ListOf<ExprFieldDecl> {
-  constructor(measures: ExprFieldDecl[]) {
+export class Measures extends ListOf<FieldDeclaration> {
+  constructor(measures: FieldDeclaration[]) {
     super("measure", measures);
     for (const dim of measures) {
       dim.isMeasure = true;
@@ -1030,8 +1030,8 @@ export class Measures extends ListOf<ExprFieldDecl> {
   }
 }
 
-export class Dimensions extends ListOf<ExprFieldDecl> {
-  constructor(dimensions: ExprFieldDecl[]) {
+export class Dimensions extends ListOf<FieldDeclaration> {
+  constructor(dimensions: FieldDeclaration[]) {
     super("dimension", dimensions);
     for (const dim of dimensions) {
       dim.isMeasure = false;
@@ -1077,7 +1077,7 @@ export class FieldName
   }
 }
 
-export class FieldPath
+export class FieldReference
   extends ListOf<FieldName>
   implements FieldReferenceInterface, ExactFieldReference
 {
@@ -1118,26 +1118,27 @@ export class FieldPath
 interface FieldReferenceInterface {
   refString: string;
 }
-export type FieldReference = FieldPath | Wildcard;
+export type FieldListReference = FieldReference | WildcardFieldReference;
 
-export class FieldReferences extends ListOf<FieldReference> {
-  constructor(members: FieldReference[]) {
+export class FieldReferences extends ListOf<FieldListReference> {
+  constructor(members: FieldListReference[]) {
     super("fieldReferenceList", members);
   }
 }
-export function isFieldReference(me: MalloyElement): me is FieldReference {
-  return me instanceof FieldName || me instanceof Wildcard;
+export function isFieldListReference(
+  me: MalloyElement
+): me is FieldListReference {
+  return me instanceof FieldReference || me instanceof WildcardFieldReference;
 }
 
-export type FieldCollectionMember = FieldReference | ExprFieldDecl;
+export type FieldCollectionMember = FieldListReference | FieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {
   return (
-    // el instanceof FieldName ||
-    el instanceof FieldPath ||
-    el instanceof Wildcard ||
-    el instanceof ExprFieldDecl
+    el instanceof FieldReference ||
+    el instanceof WildcardFieldReference ||
+    el instanceof FieldDeclaration
   );
 }
 export class ProjectStatement extends ListOf<FieldCollectionMember> {
@@ -1157,9 +1158,8 @@ export class FieldListEdit extends MalloyElement {
 }
 
 export type QueryItem =
-  | ExprFieldDecl
-  | FieldName
-  | FieldPath
+  | FieldDeclaration
+  | FieldReference
   | NestDefinition
   | NestReference;
 
@@ -1167,7 +1167,7 @@ export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("groupBy", members);
     for (const el of members) {
-      if (el instanceof ExprFieldDecl) {
+      if (el instanceof FieldDeclaration) {
         el.isMeasure = false;
       }
     }
@@ -1178,7 +1178,7 @@ export class Aggregate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("aggregate", members);
     for (const el of members) {
-      if (el instanceof ExprFieldDecl) {
+      if (el instanceof FieldDeclaration) {
         el.isMeasure = true;
       }
     }
@@ -1635,10 +1635,13 @@ export class RenameField extends MalloyElement {
   }
 }
 
-export class Wildcard extends MalloyElement implements FieldReferenceInterface {
+export class WildcardFieldReference
+  extends MalloyElement
+  implements FieldReferenceInterface
+{
   elementType = "wildcard";
   constructor(
-    readonly joinPath: FieldPath | undefined,
+    readonly joinPath: FieldReference | undefined,
     readonly star: "*" | "**"
   ) {
     super();
@@ -2020,7 +2023,7 @@ export class ExistingQuery extends MalloyElement {
   }
 }
 
-export class NestReference extends FieldPath {
+export class NestReference extends FieldReference {
   elementType = "nestReference";
   constructor(readonly name: FieldName) {
     super([name]);

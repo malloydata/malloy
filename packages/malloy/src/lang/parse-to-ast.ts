@@ -117,7 +117,10 @@ export class MalloyToAST
   protected onlyQueryRefs(els: ast.MalloyElement[]): ast.QueryItem[] {
     const eps: ast.QueryItem[] = [];
     for (const el of els) {
-      if (el instanceof ast.FieldPath || el instanceof ast.ExprFieldDecl) {
+      if (
+        el instanceof ast.FieldReference ||
+        el instanceof ast.FieldDeclaration
+      ) {
         eps.push(el);
       } else {
         const reported = el instanceof ast.Unimplemented && el.reported;
@@ -184,11 +187,11 @@ export class MalloyToAST
   protected getFieldDefs(
     cxList: ParserRuleContext[],
     isAgg?: boolean
-  ): ast.ExprFieldDecl[] {
-    const visited: ast.ExprFieldDecl[] = [];
+  ): ast.FieldDeclaration[] {
+    const visited: ast.FieldDeclaration[] = [];
     for (const cx of cxList) {
       const v = this.visit(cx);
-      if (v instanceof ast.ExprFieldDecl) {
+      if (v instanceof ast.FieldDeclaration) {
         this.astAt(v, cx);
         visited.push(v);
         if (isAgg !== undefined) {
@@ -396,11 +399,11 @@ export class MalloyToAST
     return this.astAt(join, pcx);
   }
 
-  visitFieldDef(pcx: parse.FieldDefContext): ast.ExprFieldDecl {
+  visitFieldDef(pcx: parse.FieldDefContext): ast.FieldDeclaration {
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
-    const def = new ast.ExprFieldDecl(valExpr, fieldName, defCx.text);
+    const def = new ast.FieldDeclaration(valExpr, fieldName, defCx.text);
     return this.astAt(def, pcx);
   }
 
@@ -480,14 +483,14 @@ export class MalloyToAST
     return this.astAt(node, pcx);
   }
 
-  visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldReference {
+  visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldListReference {
     if (pcx.STAR()) {
-      return this.astAt(new ast.Wildcard(undefined, "*"), pcx);
+      return this.astAt(new ast.WildcardFieldReference(undefined, "*"), pcx);
     }
     const fcx = pcx.fieldName();
     if (fcx) {
       return this.astAt(
-        new ast.FieldPath([
+        new ast.FieldReference([
           this.astAt(new ast.FieldName(this.getIdText(fcx)), fcx),
         ]),
         fcx
@@ -529,11 +532,11 @@ export class MalloyToAST
     return new ast.QOPDesc(qProps);
   }
 
-  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldPath {
+  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldReference {
     const names = pcx.fieldName().map((nameCx) => {
       return this.getFieldName(nameCx);
     });
-    return this.astAt(new ast.FieldPath(names), pcx);
+    return this.astAt(new ast.FieldReference(names), pcx);
   }
 
   visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
@@ -587,11 +590,11 @@ export class MalloyToAST
     return this.astAt(new ast.ProjectStatement(fields), pcx);
   }
 
-  visitWildMember(pcx: parse.WildMemberContext): ast.FieldReference {
+  visitWildMember(pcx: parse.WildMemberContext): ast.FieldListReference {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? "*" : "**";
     const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
-    return new ast.Wildcard(join, stars);
+    return new ast.WildcardFieldReference(join, stars);
   }
 
   visitIndexStatement(pcx: parse.IndexStatementContext): ast.Index {

@@ -18,9 +18,9 @@ import * as model from "../model/malloy_types";
 import {
   ExploreField,
   FieldListEdit,
-  ExprFieldDecl,
+  FieldDeclaration,
   RenameField,
-  Wildcard,
+  WildcardFieldReference,
   Join,
   FieldName,
   TurtleDecl,
@@ -31,7 +31,7 @@ import {
   MalloyElement,
   NestReference,
   ExactFieldReference,
-  FieldPath,
+  FieldReference,
 } from "./ast";
 import {
   SpaceField,
@@ -215,7 +215,9 @@ export class NewFieldSpace extends StructSpace {
     const edited = new NewFieldSpace(from);
     if (choose) {
       const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      for (const s of choose.refs.list.filter((f) => f instanceof Wildcard)) {
+      for (const s of choose.refs.list.filter(
+        (f) => f instanceof WildcardFieldReference
+      )) {
         s.log("Wildcards not allowed in accept/except");
       }
       const oldMap = edited.entries();
@@ -262,7 +264,7 @@ export class NewFieldSpace extends StructSpace {
       // one of three kinds of fields are legal in an explore: expressions ...
       const elseLog = def.log;
       const elseType = def.elementType;
-      if (def instanceof ExprFieldDecl) {
+      if (def instanceof FieldDeclaration) {
         const exprField = new ExpressionFieldFromAst(this, def);
         this.setEntry(exprField.name, exprField);
         // querry (turtle) fields
@@ -384,9 +386,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldPath || qi instanceof NestReference) {
+      if (qi instanceof FieldReference || qi instanceof NestReference) {
         this.addReference(qi);
-      } else if (qi instanceof ExprFieldDecl) {
+      } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);
       } else if (qi instanceof NestDefinition) {
         this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
@@ -398,9 +400,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
-      if (member instanceof FieldPath) {
+      if (member instanceof FieldReference) {
         this.addReference(member);
-      } else if (member instanceof Wildcard) {
+      } else if (member instanceof WildcardFieldReference) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
         this.addField(member);
@@ -408,7 +410,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
   }
 
-  addReference(ref: FieldPath): void {
+  addReference(ref: FieldReference): void {
     const refIs = this.lookup(ref);
     if (refIs.error) {
       ref.log(refIs.error);
@@ -507,7 +509,10 @@ export class IndexFieldSpace extends QueryFieldSpace {
  */
 export class CircleSpace implements FieldSpace {
   foundCircle = false;
-  constructor(readonly realFS: FieldSpace, readonly circular: ExprFieldDecl) {}
+  constructor(
+    readonly realFS: FieldSpace,
+    readonly circular: FieldDeclaration
+  ) {}
   structDef(): model.StructDef {
     return this.realFS.structDef();
   }
