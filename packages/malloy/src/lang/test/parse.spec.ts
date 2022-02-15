@@ -1155,8 +1155,6 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    // TODO jump-to-definition Reference at location 3 reference appears twice. `addReference` may
-    //      want to be one-time-use, or the calling function should be memoized.
     expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",

@@ -1656,9 +1656,12 @@ export class OrderBy extends MalloyElement {
   }
 
   checkReferences(fs: FieldSpace): void {
+    // TODO jump-to-definition Add test for this
     if (this.field instanceof FieldName) {
-      // TODO jump-to-definition Maybe use _foo to trigger error
-      const _foo = fs.lookup(this.field);
+      const entry = fs.lookup(this.field);
+      if (entry.error) {
+        this.field.log(entry.error);
+      }
     }
   }
 }
@@ -2083,8 +2086,11 @@ export class Top extends MalloyElement {
   getBy(fs: FieldSpace): model.By | undefined {
     if (this.by) {
       if (this.by instanceof FieldName) {
-        // TODO jump-to-definition Maybe use this to create an error
-        const _foo = fs.lookup(this.by);
+        // TODO jump-to-definition Add a test for this
+        const entry = fs.lookup(this.by);
+        if (entry.error) {
+          this.by.log(entry.error);
+        }
         return { by: "name", name: this.by.refString };
       } else {
         const byExpr = this.by.getExpression(fs);

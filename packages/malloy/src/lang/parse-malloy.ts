@@ -68,7 +68,7 @@ class ParseErrorHandler implements ANTLRErrorListener<Token> {
       sourceURL: this.sourceURL,
       message: msg,
       begin: {
-        line: line,
+        line: line - 1,
         char: charPositionInLine,
       },
     };

@@ -16,38 +16,18 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { LogMessage, MalloyError, Runtime, URL } from "@malloydata/malloy";
+import { LogMessage, MalloyError } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import * as fs from "fs";
-import { CONNECTION_MANAGER } from "../connections";
-
-async function magicGetTheFile(
-  documents: TextDocuments<TextDocument>,
-  uri: string
-): Promise<string> {
-  const cached = documents.get(uri);
-  if (cached) {
-    return cached.getText();
-  } else {
-    return fs.readFileSync(uri.replace(/^file:\/\//, ""), "utf8");
-    // TODO catch this error
-  }
-}
+import { translateWithCache } from "../translate_cache";
 
 export async function getMalloyDiagnostics(
   documents: TextDocuments<TextDocument>,
   document: TextDocument
 ): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
-
-  const uri = document.uri.toString();
-  const files = {
-    readURL: (url: URL) => magicGetTheFile(documents, url.toString()),
-  };
-  const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
   let errors: LogMessage[] = [];
   try {
-    await runtime.getModel(new URL(uri));
+    await translateWithCache(document, documents);
   } catch (error) {
     if (error instanceof MalloyError) {
       errors = error.log;
@@ -77,11 +57,11 @@ export async function getMalloyDiagnostics(
       severity: sev,
       range: {
         start: {
-          line: (err.begin?.line || 1) - 1,
+          line: err.begin?.line || 1,
           character: err.begin?.char || 0,
         },
         end: {
-          line: (err.end?.line || err.begin?.line || 1) - 1,
+          line: err.end?.line || err.begin?.line || 1,
           character: err.end?.char || Number.MAX_VALUE,
         },
       },

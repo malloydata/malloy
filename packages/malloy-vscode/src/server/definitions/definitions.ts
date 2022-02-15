@@ -12,38 +12,16 @@
  */
 
 import { TextDocuments, Location, Position } from "vscode-languageserver/node";
-import { Runtime, URL } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import * as fs from "fs";
-import { CONNECTION_MANAGER } from "../connections";
-
-// TODO jump-to-definition This code is duplicated
-async function magicGetTheFile(
-  documents: TextDocuments<TextDocument>,
-  uri: string
-): Promise<string> {
-  const cached = documents.get(uri);
-  if (cached) {
-    return cached.getText();
-  } else {
-    return fs.readFileSync(uri.replace(/^file:\/\//, ""), "utf8");
-    // TODO catch this error
-  }
-}
+import { translateWithCache } from "../translate_cache";
 
 export async function getMalloyDefinitionReference(
   documents: TextDocuments<TextDocument>,
   document: TextDocument,
   position: Position
 ): Promise<Location[]> {
-  const uri = document.uri.toString();
-  const files = {
-    readURL: (url: URL) => magicGetTheFile(documents, url.toString()),
-  };
-  const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
   try {
-    // TODO jump-to-definition Cache the model so diagnostics and definitions can share work
-    const model = await runtime.getModel(new URL(uri));
+    const model = await translateWithCache(document, documents);
     const reference = model.getReference(position);
     const location = reference?.definition.location;
     if (location) {
@@ -56,6 +34,9 @@ export async function getMalloyDefinitionReference(
     }
     return [];
   } catch {
+    // TODO It's probably possible to get some references from a model that has errors;
+    //      maybe the Model api should not throw an error if there are errors, but just
+    //      make them available via `.errors` or something.
     return [];
   }
 }
