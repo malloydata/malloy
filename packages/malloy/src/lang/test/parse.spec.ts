@@ -26,6 +26,7 @@ import {
   getModelQuery,
   getJoinField,
   markSource,
+  MarkedSource,
 } from "./test-translator";
 
 const inspectCompile = false;
@@ -143,6 +144,17 @@ function badModel(s: string, e: string): TestFunc {
     const errList = m.errors().errors;
     const firstError = errList[0];
     expect(firstError.message).toBe(e);
+    return undefined;
+  };
+}
+
+function modelErrors(s: MarkedSource, msg: string): TestFunc {
+  return () => {
+    const m = new BetaModel(s.code);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].message).toBe(msg);
+    expect(errList[0].at).toEqual(s.locations[0]);
     return undefined;
   };
 }
@@ -923,4 +935,25 @@ describe("source locations", () => {
     const y = getField(x, "y");
     expect(y.location).toMatchObject(source.locations[0]);
   });
+  test(
+    "undefined query location",
+    modelErrors(
+      markSource`query: ${"-> xyz"}`,
+      "Reference to undefined query 'xyz'"
+    )
+  );
+  test(
+    "undefined field reference",
+    modelErrors(
+      markSource`query: a -> { group_by: ${"xyz"} }`,
+      "'xyz' is not defined"
+    )
+  );
+  test(
+    "bad query",
+    modelErrors(
+      markSource`query: a -> { group_by: astr; ${"project: *"} }`,
+      "project: not legal in grouping query"
+    )
+  );
 });

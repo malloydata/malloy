@@ -154,7 +154,7 @@ export class TestTranslator extends MalloyTranslator {
       if (whatImports) {
         mysterious = false;
         this.logger.log({
-          sourceURL: "test://",
+          at: this.defaultLocation(),
           message: `Missing imports: ${whatImports.join(",")}`,
         });
       }
@@ -162,13 +162,13 @@ export class TestTranslator extends MalloyTranslator {
       if (needThese) {
         mysterious = false;
         this.logger.log({
-          sourceURL: "test://",
+          at: this.defaultLocation(),
           message: `Missing schema: ${needThese.join(",")}`,
         });
       }
       if (mysterious) {
         this.logger.log({
-          sourceURL: "test://",
+          at: this.defaultLocation(),
           message: "mysterious translation failure",
         });
       }
@@ -225,13 +225,15 @@ export function getJoinField(structDef: StructDef, name: string) {
   return getField(structDef, name) as StructDef;
 }
 
+export interface MarkedSource {
+  code: string;
+  locations: DocumentLocation[];
+}
+
 export function markSource(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): {
-  code: string;
-  locations: DocumentLocation[];
-} {
+): MarkedSource {
   let code = "";
   const locations: DocumentLocation[] = [];
   for (let index = 0; index < marked.length; index++) {
