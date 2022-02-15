@@ -51,8 +51,6 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    // TODO jump-to-definition I'd like to leave these tests here, but it also feels bad to construct
-    //      ast nodes like this in a test...
     expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
