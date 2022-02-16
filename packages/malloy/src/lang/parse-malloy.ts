@@ -693,36 +693,40 @@ export abstract class MalloyTranslation {
     return { errors: [...errors] };
   }
 
+  getLineMap(url: string): string[] | undefined {
+    if (url == this.sourceURL) {
+      return this.parseStep.sourceInfo?.lines;
+    }
+    const theChild = this.childTranslators.get(url);
+    if (theChild) {
+      return theChild.parseStep.sourceInfo?.lines;
+    }
+  }
+
   prettyErrors(): string {
     let lovely = "";
     let inFile = "";
-    const lineMap: Record<string, string[]> = {};
     for (const entry of this.root.logger.getLog()) {
       let cooked = entry.message;
+      let errorURL = this.sourceURL;
       if (entry.at) {
+        errorURL = entry.at.url;
         const lineNo = entry.at.range.start.line;
         const charFrom = entry.at.range.start.character;
-        if (this.sourceURL) {
-          if (lineMap[this.sourceURL] === undefined) {
-            const sourceFile = this.root.importZone.get(this.sourceURL);
-            if (sourceFile) {
-              lineMap[this.sourceURL] = sourceFile.split("\n");
-            }
+        const lines = this.getLineMap(entry.at.url);
+        if (lines) {
+          const errorLine = lines[lineNo];
+          cooked = `line ${lineNo + 1}: ${entry.message}\n  | ${errorLine}`;
+          if (charFrom > 0) {
+            cooked = cooked + `\n  | ${" ".repeat(charFrom)}^`;
           }
-          if (lineMap[this.sourceURL]) {
-            const errorLine = lineMap[this.sourceURL][lineNo];
-            cooked = `line ${lineNo + 1}: ${entry.message}\n  | ${errorLine}`;
-            if (charFrom > 0) {
-              cooked = cooked + `\n  | ${" ".repeat(charFrom)}^`;
-            }
-          } else {
-            cooked = `line ${lineNo + 1}: char ${charFrom}: ${entry.message}`;
-          }
+        } else {
+          cooked = `line ${lineNo + 1}: char ${charFrom}: ${entry.message}`;
         }
       }
-      if (inFile !== this.sourceURL) {
-        cooked = `FILE: ${this.sourceURL}\n` + cooked;
-        inFile = this.sourceURL;
+      if (inFile !== errorURL) {
+        cooked = `FILE: ${errorURL}\n` + cooked;
+        inFile = errorURL;
       }
       if (lovely !== "") {
         lovely = `${lovely}\n${cooked}`;
