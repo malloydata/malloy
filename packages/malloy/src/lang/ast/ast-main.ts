@@ -202,13 +202,7 @@ export abstract class MalloyElement {
   }
 
   addReference(reference: model.DocumentReference): void {
-    const translator = this.translator();
-    if (translator === undefined) {
-      throw new Error(
-        "Expected translator to be available when adding reference."
-      );
-    }
-    translator.addReference(reference);
+    this.translator()?.addReference(reference);
   }
 
   private get sourceURL() {
@@ -525,7 +519,7 @@ export class RefinedExplore extends Mallobj {
       fs.addParameters(pList);
     }
     if (primaryKey) {
-      const keyDef = fs.lookup(primaryKey.field);
+      const keyDef = fs.lookup([primaryKey.field]);
       if (keyDef.error) {
         primaryKey.log(keyDef.error);
       }
@@ -832,7 +826,7 @@ export class KeyJoin extends Join {
   }
 
   fixupJoinOn(outer: FieldSpace, _inStruct: model.StructDef): void {
-    const entry = outer.lookup(this.key);
+    const entry = outer.lookup([this.key]);
     if (entry.error) {
       this.key.log(entry.error);
     }
@@ -1044,12 +1038,7 @@ export class Renames extends ListOf<RenameField> {
   }
 }
 
-export interface FieldReferenceLike extends NameLike {
-  get head(): NameLike;
-  get rest(): NameLike[];
-}
-
-export class FieldName extends MalloyElement implements FieldReferenceLike {
+export class FieldName extends MalloyElement implements NameLike {
   elementType = "fieldName";
 
   constructor(readonly name: string) {
@@ -1060,54 +1049,34 @@ export class FieldName extends MalloyElement implements FieldReferenceLike {
     return this.name;
   }
 
-  get head(): FieldName {
-    return this;
-  }
-
-  get rest(): FieldName[] {
-    return [];
-  }
-
   toString(): string {
     return this.refString;
   }
 }
 
-export class FieldReference
-  extends ListOf<FieldName>
-  implements NameLike, FieldReferenceLike
-{
+export class FieldReference extends ListOf<FieldName> implements NameLike {
   elementType = "fieldReference";
 
   constructor(names: FieldName[]) {
     super("fieldReference", names);
   }
 
-  get rest(): FieldName[] {
-    return this.list.slice(1);
-  }
-
-  get head(): FieldName {
-    return this.list[0];
-  }
-
   get refString(): string {
     return this.list.map((n) => n.refString).join(".");
   }
 
-  get sourceString(): string {
-    const asString = this.refString;
-    const lastDot = asString.lastIndexOf(".");
-    if (lastDot < 0) {
-      return "";
+  get sourceString(): string | undefined {
+    if (this.list.length > 1) {
+      return this.list
+        .slice(0, -1)
+        .map((n) => n.refString)
+        .join(".");
     }
-    return asString.slice(0, lastDot);
+    return undefined;
   }
 
   get nameString(): string {
-    const asString = this.refString;
-    const lastDot = asString.lastIndexOf(".");
-    return asString.slice(lastDot + 1);
+    return this.list[this.list.length - 1].refString;
   }
 }
 
@@ -1678,7 +1647,7 @@ export class OrderBy extends MalloyElement {
 
   checkReferences(fs: FieldSpace): void {
     if (this.field instanceof FieldName) {
-      const entry = fs.lookup(this.field);
+      const entry = fs.lookup([this.field]);
       if (entry.error) {
         this.field.log(entry.error);
       }
@@ -1709,13 +1678,13 @@ export class Limit extends MalloyElement {
 
 export class TurtleDecl extends MalloyElement {
   elementType = "turtleDesc";
-  constructor(readonly name: string, readonly pipe: PipelineDesc) {
+  constructor(readonly name: string, readonly pipe: FromTurtlePipelineDesc) {
     super();
     this.has({ pipe });
   }
 
   getFieldDef(inputFS: FieldSpace): model.TurtleDef {
-    const pipe = this.pipe.getPipelineForExplore(inputFS);
+    const pipe = this.pipe.getPipeline(inputFS);
     return {
       type: "turtle",
       name: this.name,
@@ -1766,11 +1735,10 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
  * I aslo expect to re-factor once I have implemented all three of the
  * above and know enough to recognize the common elements.
  */
-export class PipelineDesc extends MalloyElement {
+abstract class PipelineDesc extends MalloyElement {
   elementType = "pipelineDesc";
-  private headRefinement?: QOPDesc;
-  _headPath?: ModelEntryReference | FieldName;
-  private qops: QOPDesc[] = [];
+  protected headRefinement?: QOPDesc;
+  protected qops: QOPDesc[] = [];
 
   refineHead(refinement: QOPDesc): void {
     this.headRefinement = refinement;
@@ -1780,15 +1748,6 @@ export class PipelineDesc extends MalloyElement {
   addSegments(...segDesc: QOPDesc[]): void {
     this.qops.push(...segDesc);
     this.has({ segments: this.qops });
-  }
-
-  set headPath(headPath: ModelEntryReference | FieldName | undefined) {
-    this._headPath = headPath;
-    this.has({ headPath });
-  }
-
-  get headPath(): ModelEntryReference | FieldName | undefined {
-    return this._headPath;
   }
 
   protected appendOps(
@@ -1855,50 +1814,25 @@ export class PipelineDesc extends MalloyElement {
     }
     return walkStruct;
   }
+}
 
-  getPipelineForExplore(exploreFS: FieldSpace): model.Pipeline {
-    const modelPipe: model.Pipeline = { pipeline: [] };
-    if (this.headPath && this.headRefinement) {
-      if (this.headPath instanceof ModelEntryReference) {
-        this.log(`Cannot reference model entry here.`);
-        return modelPipe;
-      }
-      const headEnt = exploreFS.lookup(this.headPath);
-      let reportWrongType = true;
-      if (headEnt.error) {
-        this.log(headEnt.error);
-        reportWrongType = false;
-      } else if (headEnt.found instanceof QueryField) {
-        const headDef = headEnt.found.queryFieldDef();
-        if (isTurtle(headDef)) {
-          const newPipe = this.refinePipeline(exploreFS, headDef);
-          modelPipe.pipeline = [...newPipe.pipeline];
-          reportWrongType = false;
-        }
-      }
-      if (reportWrongType) {
-        this.log(`Expected '${this.headPath}' to be as query`);
-      }
-    } else if (this.headPath) {
-      throw this.internalError("Unrefined turtle with a named head");
-    } else if (this.headRefinement) {
-      throw this.internalError(
-        "Can't refine the head of a turtle in its definition"
-      );
-    }
+export class FromQueryPipelineDesc extends PipelineDesc {
+  _head?: ModelEntryReference;
 
-    this.appendOps(modelPipe.pipeline, exploreFS);
-    return modelPipe;
+  set head(head: ModelEntryReference | undefined) {
+    this._head = head;
+    this.has({ head });
   }
 
-  queryFromQuery(): QueryComp {
-    if (!this.headPath) {
+  get head(): ModelEntryReference | undefined {
+    return this._head;
+  }
+
+  query(): QueryComp {
+    if (!this.head) {
       throw this.internalError("can't make query from nameless query");
     }
-    if (this.headPath instanceof FieldName) {
-      throw new Error("Expected headPath to be a ModelEntryReference");
-    }
-    const queryEntry = this.modelEntry(this.headPath);
+    const queryEntry = this.modelEntry(this.head);
     const seedQuery = queryEntry?.entry;
     const oops = function () {
       return {
@@ -1907,11 +1841,11 @@ export class PipelineDesc extends MalloyElement {
       };
     };
     if (!seedQuery) {
-      this.log(`Reference to undefined query '${this.headPath}'`);
+      this.log(`Reference to undefined query '${this.head}'`);
       return oops();
     }
     if (seedQuery.type !== "query") {
-      this.log(`Illegal reference to '${this.headPath}', query expected`);
+      this.log(`Illegal reference to '${this.head}', query expected`);
       return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
@@ -1932,8 +1866,21 @@ export class PipelineDesc extends MalloyElement {
     };
     return { outputStruct, query };
   }
+}
 
-  queryFromExplore(explore: Mallobj): QueryComp {
+export class FromTurtlePipelineDesc extends PipelineDesc {
+  _turtleName?: FieldName;
+
+  set turtleName(turtleName: FieldName | undefined) {
+    this._turtleName = turtleName;
+    this.has({ turtleName });
+  }
+
+  get turtleName(): FieldName | undefined {
+    return this._turtleName;
+  }
+
+  getQuery(explore: Mallobj): QueryComp {
     const structRef = explore.structRef();
     const destQuery: model.Query = {
       type: "query",
@@ -1946,15 +1893,10 @@ export class PipelineDesc extends MalloyElement {
       : explore.structDef();
     let pipeFs = new StructSpace(structDef);
 
-    if (this.headPath) {
-      if (this.headPath instanceof FieldName) {
-        const { error } = pipeFs.lookup(this.headPath);
-        if (error) this.log(error);
-      }
-      const name =
-        this.headPath instanceof ModelEntryReference
-          ? this.headPath.refString
-          : this.headPath.refString;
+    if (this.turtleName) {
+      const { error } = pipeFs.lookup([this.turtleName]);
+      if (error) this.log(error);
+      const name = this.turtleName.refString;
       const { pipeline, location } = this.importTurtle(name, structDef);
       destQuery.location = location;
       const refined = this.refinePipeline(pipeFs, { pipeline }).pipeline;
@@ -1972,6 +1914,37 @@ export class PipelineDesc extends MalloyElement {
     const outputStruct = this.appendOps(destQuery.pipeline, pipeFs);
     return { outputStruct, query: destQuery };
   }
+
+  getPipeline(exploreFS: FieldSpace): model.Pipeline {
+    const modelPipe: model.Pipeline = { pipeline: [] };
+    if (this.turtleName && this.headRefinement) {
+      const headEnt = exploreFS.lookup([this.turtleName]);
+      let reportWrongType = true;
+      if (headEnt.error) {
+        this.log(headEnt.error);
+        reportWrongType = false;
+      } else if (headEnt.found instanceof QueryField) {
+        const headDef = headEnt.found.queryFieldDef();
+        if (isTurtle(headDef)) {
+          const newPipe = this.refinePipeline(exploreFS, headDef);
+          modelPipe.pipeline = [...newPipe.pipeline];
+          reportWrongType = false;
+        }
+      }
+      if (reportWrongType) {
+        this.log(`Expected '${this.turtleName}' to be as query`);
+      }
+    } else if (this.turtleName) {
+      throw this.internalError("Unrefined turtle with a named head");
+    } else if (this.headRefinement) {
+      throw this.internalError(
+        "Can't refine the head of a turtle in its definition"
+      );
+    }
+
+    this.appendOps(modelPipe.pipeline, exploreFS);
+    return modelPipe;
+  }
 }
 
 /**
@@ -1982,12 +1955,15 @@ export class PipelineDesc extends MalloyElement {
 export class FullQuery extends MalloyElement {
   elementType = "fullQuery";
 
-  constructor(readonly explore: Mallobj, readonly pipeline: PipelineDesc) {
+  constructor(
+    readonly explore: Mallobj,
+    readonly pipeline: FromTurtlePipelineDesc
+  ) {
     super({ explore, pipeline });
   }
 
   queryComp(): QueryComp {
-    return this.pipeline.queryFromExplore(this.explore);
+    return this.pipeline.getQuery(this.explore);
   }
 
   query(): model.Query {
@@ -2002,13 +1978,13 @@ export class FullQuery extends MalloyElement {
  */
 export class ExistingQuery extends MalloyElement {
   elementType = "queryFromQuery";
-  constructor(readonly queryDesc: PipelineDesc) {
+  constructor(readonly queryDesc: FromQueryPipelineDesc) {
     super();
     this.has({ queryDesc });
   }
 
   queryComp(): QueryComp {
-    return this.queryDesc.queryFromQuery();
+    return this.queryDesc.query();
   }
 
   query(): model.Query {
@@ -2025,7 +2001,7 @@ export class NestReference extends FieldReference {
 
 export class NestDefinition extends TurtleDecl {
   elementType = "nestDefinition";
-  constructor(name: string, queryDesc: PipelineDesc) {
+  constructor(name: string, queryDesc: FromTurtlePipelineDesc) {
     super(name, queryDesc);
   }
 }

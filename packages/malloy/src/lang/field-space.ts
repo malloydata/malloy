@@ -30,7 +30,6 @@ import {
   NestDefinition,
   MalloyElement,
   NestReference,
-  FieldReferenceLike,
   FieldReference,
 } from "./ast";
 import {
@@ -69,7 +68,7 @@ export type LookupResult = LookupFound | LookupError;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  lookup(symbol: FieldReferenceLike): LookupResult;
+  lookup(symbol: FieldName[]): LookupResult;
   getDialect(): Dialect;
 }
 
@@ -156,36 +155,33 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  lookup(path: FieldReferenceLike): LookupResult {
-    const found = this.entry(path.head.refString);
+  lookup(path: FieldName[]): LookupResult {
+    const head = path[0];
+    const rest = path.slice(1);
+    const found = this.entry(head.refString);
     if (!found) {
-      return { error: `'${path.head}' is not defined`, found };
+      return { error: `'${head}' is not defined`, found };
     }
-    if (found instanceof SpaceField && path.head instanceof MalloyElement) {
+    if (found instanceof SpaceField) {
       const definition = found.fieldDef();
       if (definition) {
-        path.head.addReference({
+        head.addReference({
           type:
             found instanceof StructSpaceField
               ? "joinReference"
               : "fieldReference",
           definition,
-          location: path.head.location,
-          text: path.head.refString,
+          location: head.location,
+          text: head.refString,
         });
       }
     }
-    const restString = path.rest.map((n) => n.refString).join(".");
-    if (path.rest.length) {
+    if (rest.length) {
       if (found instanceof StructSpaceField) {
-        return found.fieldSpace.lookup({
-          head: path.rest[0],
-          rest: path.rest.slice(1),
-          refString: restString,
-        });
+        return found.fieldSpace.lookup(rest);
       }
       return {
-        error: `'${path.head}' cannot contain a '${restString}'`,
+        error: `'${head}' cannot contain a '${rest[0]}'`,
         found: undefined,
       };
     }
@@ -276,7 +272,7 @@ export class NewFieldSpace extends StructSpace {
           def.log("Can't rename field to itself");
           continue;
         }
-        const oldValue = this.lookup(def.oldName);
+        const oldValue = this.lookup([def.oldName]);
         if (oldValue.found) {
           if (oldValue.found instanceof SpaceField) {
             this.setEntry(
@@ -371,7 +367,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  lookup(fieldPath: FieldReferenceLike): LookupResult {
+  lookup(fieldPath: FieldName[]): LookupResult {
     return this.inputSpace.lookup(fieldPath);
   }
 
@@ -411,7 +407,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   }
 
   addReference(ref: FieldReference): void {
-    const refIs = this.lookup(ref);
+    const refIs = this.lookup(ref.list);
     if (refIs.error) {
       ref.log(refIs.error);
       return;
@@ -519,8 +515,8 @@ export class CircleSpace implements FieldSpace {
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  lookup(symbol: FieldReferenceLike): LookupResult {
-    if (symbol.refString === this.circular.defineName) {
+  lookup(symbol: FieldName[]): LookupResult {
+    if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
       return {
         error: `Circular reference to '${this.circular.defineName}' in definition`,

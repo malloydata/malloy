@@ -18,6 +18,7 @@ import {
   QueryFieldStruct,
 } from "../space-field";
 import { StructSpace } from "../field-space";
+import { FieldName } from "../ast";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
@@ -37,11 +38,7 @@ describe("structdef comprehension", () => {
   }
 
   function fieldRef(...names: string[]) {
-    return {
-      head: { refString: names[0] },
-      rest: names.slice(1).map((name) => ({ refString: name })),
-      refString: names.join("."),
-    };
+    return names.map((name) => new FieldName(name));
   }
 
   test(`import string field`, () => {

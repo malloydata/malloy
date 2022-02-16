@@ -659,11 +659,13 @@ export class MalloyToAST
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
-  visitFirstSegment(pcx: parse.FirstSegmentContext): ast.PipelineDesc {
-    const qp = new ast.PipelineDesc();
+  visitFirstSegment(
+    pcx: parse.FirstSegmentContext
+  ): ast.FromTurtlePipelineDesc {
+    const qp = new ast.FromTurtlePipelineDesc();
     const nameCx = pcx.exploreQueryName();
     if (nameCx) {
-      qp.headPath = this.getFieldName(nameCx);
+      qp.turtleName = this.getFieldName(nameCx);
     }
     const propsCx = pcx.queryProperties();
     if (propsCx) {
@@ -677,7 +679,9 @@ export class MalloyToAST
     return this.astAt(qp, pcx);
   }
 
-  visitPipelineFromName(pcx: parse.PipelineFromNameContext): ast.PipelineDesc {
+  visitPipelineFromName(
+    pcx: parse.PipelineFromNameContext
+  ): ast.FromTurtlePipelineDesc {
     const pipe = this.visitFirstSegment(pcx.firstSegment());
     const tail = this.getSegments(pcx.pipeElement());
     pipe.addSegments(...tail);
@@ -691,8 +695,8 @@ export class MalloyToAST
   }
 
   visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
-    const pipe = new ast.PipelineDesc();
-    pipe.headPath = this.getModelEntryName(pcx.queryName());
+    const pipe = new ast.FromQueryPipelineDesc();
+    pipe.head = this.getModelEntryName(pcx.queryName());
     const refCx = pcx.queryProperties();
     if (refCx) {
       pipe.refineHead(this.visitQueryProperties(refCx));

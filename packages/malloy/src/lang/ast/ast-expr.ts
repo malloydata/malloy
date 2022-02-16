@@ -150,7 +150,7 @@ class ConstantFieldSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     return { ...this.structDef(), fields: [] };
   }
-  lookup(_name: FieldReference): LookupResult {
+  lookup(_name: unknown): LookupResult {
     return {
       error: "Only constants allowed in parameter expressions",
       found: undefined,
@@ -415,7 +415,7 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const def = fs.lookup(this.fieldPath);
+    const def = fs.lookup(this.fieldPath.list);
     if (def.found) {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = def.found.type();
@@ -429,7 +429,7 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = fs.lookup(this.fieldPath);
+    const entry = fs.lookup(this.fieldPath.list);
     if (entry instanceof SpaceParam) {
       const cParam = entry.parameter();
       if (isConditionParameter(cParam)) {
@@ -579,9 +579,8 @@ abstract class ExprAggregateFunction extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     let exprVal = this.expr?.getExpression(fs);
     const source = this.source;
-    let sourceRefString = this.source?.refString;
     if (source) {
-      const sourceFoot = fs.lookup(source).found;
+      const sourceFoot = fs.lookup(source.list).found;
       if (sourceFoot) {
         const footType = sourceFoot.type();
         if (isAtomicFieldType(footType.type)) {
@@ -590,13 +589,6 @@ abstract class ExprAggregateFunction extends ExpressionDef {
             aggregate: !!footType.aggregate,
             value: [{ type: "field", path: source.refString }],
           };
-
-          const body = source.sourceString;
-          if (body.length > 0) {
-            sourceRefString = body;
-          } else {
-            sourceRefString = undefined;
-          }
         } else {
           if (!(sourceFoot instanceof StructSpaceField)) {
             this.log(`Aggregate source cannot be a ${footType.type}`);
@@ -619,7 +611,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
         e: exprVal.value,
       };
       if (source) {
-        f.structPath = sourceRefString;
+        f.structPath = source.sourceString;
       }
       return {
         dataType: this.returns(exprVal),
