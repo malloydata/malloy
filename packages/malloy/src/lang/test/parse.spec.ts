@@ -937,13 +937,12 @@ describe("source locations", () => {
   });
 
   test("multi line sql block token span is correct", () => {
-    const source = markSource`|| // line 0
-                                 // line 1
-;; explore: na is a              // line 2`;
-    const m = new BetaModel(source.code);
+    // There is exactly one token in this file ..
+    const sqlSource = "|| // line 0\n//line 1\n// line 2;;";
+    const m = new BetaModel(sqlSource);
     expect(m).not.toCompile();
     const errList = m.errors().errors;
-    expect(errList[0].at?.range.end).toEqual({ line: 2, character: 2 });
+    expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
   });
 
   test(
