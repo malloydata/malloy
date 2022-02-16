@@ -935,6 +935,16 @@ describe("source locations", () => {
     const y = getField(x, "y");
     expect(y.location).toMatchObject(source.locations[0]);
   });
+
+  test("multi line sql block token span is correct", () => {
+    // There is exactly one token in this file ..
+    const sqlSource = "|| // line 0\n//line 1\n// line 2;;";
+    const m = new BetaModel(sqlSource);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
+  });
+
   test(
     "undefined query location",
     modelErrors(
