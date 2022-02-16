@@ -247,7 +247,7 @@ export class FANSPaceField extends SpaceField {
     if (this.as === undefined) {
       return undefined;
     }
-    const fromField = this.inSpace.lookup(this.ref.list).found;
+    const fromField = this.ref.getField(this.inSpace).found;
     if (fromField === undefined) {
       // TODO should errror
       return undefined;
@@ -299,7 +299,7 @@ export class FANSPaceField extends SpaceField {
   }
 
   type(): FieldType {
-    const field = this.inSpace.lookup(this.ref.list).found;
+    const field = this.ref.getField(this.inSpace).found;
     return field?.type() || { type: "unknown" };
   }
 }

@@ -22,6 +22,7 @@ import {
   NewFieldSpace,
   QueryFieldSpace,
   IndexFieldSpace,
+  LookupResult,
 } from "../field-space";
 import { MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
@@ -519,7 +520,7 @@ export class RefinedExplore extends Mallobj {
       fs.addParameters(pList);
     }
     if (primaryKey) {
-      const keyDef = fs.lookup([primaryKey.field]);
+      const keyDef = primaryKey.field.getField(fs);
       if (keyDef.error) {
         primaryKey.log(keyDef.error);
       }
@@ -826,7 +827,7 @@ export class KeyJoin extends Join {
   }
 
   fixupJoinOn(outer: FieldSpace, _inStruct: model.StructDef): void {
-    const entry = outer.lookup([this.key]);
+    const entry = this.key.getField(outer);
     if (entry.error) {
       this.key.log(entry.error);
     }
@@ -1052,6 +1053,10 @@ export class FieldName extends MalloyElement implements NameLike {
   toString(): string {
     return this.refString;
   }
+
+  getField(inFs: FieldSpace): LookupResult {
+    return inFs.lookup([this]);
+  }
 }
 
 export class FieldReference extends ListOf<FieldName> implements NameLike {
@@ -1077,6 +1082,10 @@ export class FieldReference extends ListOf<FieldName> implements NameLike {
 
   get nameString(): string {
     return this.list[this.list.length - 1].refString;
+  }
+
+  getField(inFs: FieldSpace): LookupResult {
+    return inFs.lookup(this.list);
   }
 }
 
@@ -1647,7 +1656,7 @@ export class OrderBy extends MalloyElement {
 
   checkReferences(fs: FieldSpace): void {
     if (this.field instanceof FieldName) {
-      const entry = fs.lookup([this.field]);
+      const entry = this.field.getField(fs);
       if (entry.error) {
         this.field.log(entry.error);
       }
@@ -1894,7 +1903,7 @@ export class FromTurtlePipelineDesc extends PipelineDesc {
     let pipeFs = new StructSpace(structDef);
 
     if (this.turtleName) {
-      const { error } = pipeFs.lookup([this.turtleName]);
+      const { error } = this.turtleName.getField(pipeFs);
       if (error) this.log(error);
       const name = this.turtleName.refString;
       const { pipeline, location } = this.importTurtle(name, structDef);
@@ -1918,7 +1927,7 @@ export class FromTurtlePipelineDesc extends PipelineDesc {
   getPipeline(exploreFS: FieldSpace): model.Pipeline {
     const modelPipe: model.Pipeline = { pipeline: [] };
     if (this.turtleName && this.headRefinement) {
-      const headEnt = exploreFS.lookup([this.turtleName]);
+      const headEnt = this.turtleName.getField(exploreFS);
       let reportWrongType = true;
       if (headEnt.error) {
         this.log(headEnt.error);
@@ -2083,7 +2092,7 @@ export class Top extends MalloyElement {
     if (this.by) {
       if (this.by instanceof FieldName) {
         // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-        // const entry = fs.lookup(this.by);
+        // const entry = this.by.getField(fs);
         // if (entry.error) {
         //   this.by.log(entry.error);
         // }

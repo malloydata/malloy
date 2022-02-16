@@ -405,17 +405,17 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
 
 export class ExprIdReference extends ExpressionDef {
   elementType = "ExpressionIdReference";
-  constructor(readonly fieldPath: FieldReference) {
+  constructor(readonly fieldReference: FieldReference) {
     super();
-    this.has({ fieldPath });
+    this.has({ fieldPath: fieldReference });
   }
 
   get refString(): string {
-    return this.fieldPath.refString;
+    return this.fieldReference.refString;
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const def = fs.lookup(this.fieldPath.list);
+    const def = this.fieldReference.getField(fs);
     if (def.found) {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = def.found.type();
@@ -429,7 +429,7 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = fs.lookup(this.fieldPath.list);
+    const entry = this.fieldReference.getField(fs);
     if (entry instanceof SpaceParam) {
       const cParam = entry.parameter();
       if (isConditionParameter(cParam)) {
@@ -580,7 +580,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
     let exprVal = this.expr?.getExpression(fs);
     const source = this.source;
     if (source) {
-      const sourceFoot = fs.lookup(source.list).found;
+      const sourceFoot = source.getField(fs).found;
       if (sourceFoot) {
         const footType = sourceFoot.type();
         if (isAtomicFieldType(footType.type)) {

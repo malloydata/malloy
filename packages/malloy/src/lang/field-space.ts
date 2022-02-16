@@ -272,7 +272,7 @@ export class NewFieldSpace extends StructSpace {
           def.log("Can't rename field to itself");
           continue;
         }
-        const oldValue = this.lookup([def.oldName]);
+        const oldValue = def.oldName.getField(this);
         if (oldValue.found) {
           if (oldValue.found instanceof SpaceField) {
             this.setEntry(
@@ -407,7 +407,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
   }
 
   addReference(ref: FieldReference): void {
-    const refIs = this.lookup(ref.list);
+    const refIs = ref.getField(this);
     if (refIs.error) {
       ref.log(refIs.error);
       return;
