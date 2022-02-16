@@ -578,17 +578,20 @@ abstract class ExprAggregateFunction extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     let exprVal = this.expr?.getExpression(fs);
-    const source = this.source;
-    if (source) {
-      const sourceFoot = source.getField(fs).found;
+    let structPath = this.source?.refString;
+    if (this.source) {
+      const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
         const footType = sourceFoot.type();
         if (isAtomicFieldType(footType.type)) {
           exprVal = {
             dataType: footType.type,
             aggregate: !!footType.aggregate,
-            value: [{ type: "field", path: source.refString }],
+            value: [{ type: "field", path: this.source.refString }],
           };
+          if (this.source.sourceString) {
+            structPath = this.source.sourceString;
+          }
         } else {
           if (!(sourceFoot instanceof StructSpaceField)) {
             this.log(`Aggregate source cannot be a ${footType.type}`);
@@ -596,8 +599,10 @@ abstract class ExprAggregateFunction extends ExpressionDef {
           }
         }
       } else {
-        this.log(`Reference to undefined value ${source.refString}`);
-        return errorFor(`Reference to undefined value ${source.refString}`);
+        this.log(`Reference to undefined value ${this.source.refString}`);
+        return errorFor(
+          `Reference to undefined value ${this.source.refString}`
+        );
       }
     }
     if (exprVal === undefined) {
@@ -610,8 +615,8 @@ abstract class ExprAggregateFunction extends ExpressionDef {
         function: this.func,
         e: exprVal.value,
       };
-      if (source) {
-        f.structPath = source.sourceString;
+      if (structPath) {
+        f.structPath = structPath;
       }
       return {
         dataType: this.returns(exprVal),
