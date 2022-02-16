@@ -12,7 +12,6 @@
  * GNU General Public License for more details.
  */
 
-/* eslint-disable no-useless-constructor */
 import { URL } from "url";
 import {
   ANTLRErrorListener,
@@ -797,8 +796,6 @@ export abstract class MalloyTranslation {
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
         const at = this.parseStep.sourceInfo.at[lineNo];
-        const line = this.parseStep.sourceInfo.lines[lineNo];
-        const stopOff = stopToken.stopIndex - startToken.startIndex;
         if (stopToken.stopIndex >= at.begin && stopToken.stopIndex <= at.end) {
           return {
             start,
