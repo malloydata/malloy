@@ -6,7 +6,15 @@ The statement to run a query in malloy is `query:`.  Malloy's queries have two t
 
 ### SELECT with no GROUP BY
 
-*Click the SQL Tab to see the generated SQL query* <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
+*Click the SQL Tab to see the generated SQL query for any example* <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
+
+In SQL
+```
+SELECT code, full_name, state, faa_region, fac_type, elevation \
+FROM `malloy-data.faa.airports`
+ORDER BY code
+```
+In Malloy
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -18,10 +26,12 @@ query: table('malloy-data.faa.airports') -> {
 
 ### SELECT with only Aggregate Functions
 
+In SQL
 ```
 SELECT COUNT(*) is airport_count FROM `malloy-data.faa.airports`
 ```
 
+In Malloy
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
 query: table('malloy-data.faa.airports') -> {
@@ -30,6 +40,19 @@ query: table('malloy-data.faa.airports') -> {
 ```
 
 ### SELECT with GROUP BY
+
+In SQL
+```
+SELECT
+   base.fac_type as fac_type,
+   COUNT( 1) as airport_count
+FROM `malloy-data.faa.airports` as base
+WHERE base.state='CA'
+GROUP BY 1
+ORDER BY 2 desc
+```
+
+In Malloy
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -62,9 +85,6 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ## Querying against an Explore
 
-[fabio]: what does the arrow mean?
-[fabio]: array vs double declarations.
-
 Queries can be run against `explore:` objects and can utilize the built in calculations.
 
 ```malloy
@@ -81,8 +101,6 @@ query: airports -> {
 ```
 
 ## Dimensional calculations are no different than columns
-
-[fabio]: had to jump back to the explore definition
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
@@ -139,8 +157,6 @@ query: airports  {
 
 Measures can also be filtered.
 
-[fabio]: what is the difference between an aggregate and a measure?
-
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
 query: airports -> {
@@ -174,8 +190,6 @@ explore: airports is table('malloy-data.faa.airports') {
 ```
 
 ## The `nest:` property embeds one query in another
-
-[fabio]: anytime want a limit, I want an order by?
 
 Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
 In the case below, the top level query groups by state.  The nested query groups by facility type.
@@ -265,8 +279,6 @@ query: airports -> by_facility_type {
 }
 ```
 
-[fabio]: go further in refinement examples and deep nesting.  Reproduce the nested example more simply
-
 
 ### You can add a measure or dimension
 
@@ -329,8 +341,6 @@ query: flights -> {
 
 ## Foreign Key / Primary Key Join
 
-[fabio]: cardinality of joins is hard...
-
 Join carriers to flights.  Each flight has one carrier so we use `join_one:`.  We are joining
 with a primary key in carriers and foreign key in flights so we can use the `with` keyword
 to name the foreign key in flights.
@@ -390,11 +400,6 @@ query: flights -> {
 ```
 
 ## Graph, more complicated Joins
-
-[fabio]: simplify model, get rid of extraneous stuff.
-[fabio]: graph isn't introduce.
-[fabio]: warning if need to generate a primary key.
-[fabio]: symmetric should be 'correct calculation'
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/join2.malloy", "isHidden": false}
