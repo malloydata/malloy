@@ -25,7 +25,7 @@ explore: airports is table('malloy-data.faa.airports') {
     aggregate: airport_count
   }
 
-  query: by_fac_type is {
+  query: by_facility_type is {
     group_by: fac_type
     aggregate: [
       airport_count
@@ -54,9 +54,13 @@ explore: airports is table('malloy-data.faa.airports') {
     group_by: faa_region
     aggregate: airport_count
     nest: [
-      by_fac_type
+      by_facility_type
       by_state_shape_map is by_state {}
       major_airports
     ]
   }
+}
+query: airports -> by_region {
+  nest: by_state_shape_map is by_state {}
+  nest: by_facility_type
 }
