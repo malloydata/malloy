@@ -479,9 +479,7 @@ export class MalloyToAST
   visitDefExplorePrimaryKey(
     pcx: parse.DefExplorePrimaryKeyContext
   ): ast.PrimaryKey {
-    const node = new ast.PrimaryKey(
-      new ast.FieldName(this.getIdText(pcx.fieldName()))
-    );
+    const node = new ast.PrimaryKey(this.getFieldName(pcx.fieldName()));
     return this.astAt(node, pcx);
   }
 
@@ -491,12 +489,7 @@ export class MalloyToAST
     }
     const fcx = pcx.fieldName();
     if (fcx) {
-      return this.astAt(
-        new ast.FieldReference([
-          this.astAt(new ast.FieldName(this.getIdText(fcx)), fcx),
-        ]),
-        fcx
-      );
+      return this.astAt(new ast.FieldReference([this.getFieldName(fcx)]), fcx);
     }
     throw this.internalError(pcx, "mis-parsed field name reference");
   }
@@ -604,7 +597,7 @@ export class MalloyToAST
     const indexStmt = new ast.Index(fields);
     const weightCx = pcx.fieldName();
     if (weightCx) {
-      indexStmt.useWeight(new ast.FieldName(this.getIdText(weightCx)));
+      indexStmt.useWeight(this.getFieldName(weightCx));
     }
     return this.astAt(indexStmt, pcx);
   }
@@ -621,11 +614,7 @@ export class MalloyToAST
     }
     const fieldCx = pcx.fieldName();
     if (fieldCx) {
-      const fieldName = this.astAt(
-        new ast.FieldName(this.getIdText(fieldCx)),
-        fieldCx
-      );
-      return new ast.OrderBy(fieldName, dir);
+      return new ast.OrderBy(this.getFieldName(fieldCx), dir);
     }
     throw this.internalError(pcx, "can't parse order_by specification");
   }

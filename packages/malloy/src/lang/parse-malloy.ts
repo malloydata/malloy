@@ -685,10 +685,7 @@ export abstract class MalloyTranslation {
     this.references.add(reference);
   }
 
-  referenceAt(
-    // url: string,
-    position: DocumentPosition
-  ): DocumentReference | undefined {
+  referenceAt(position: DocumentPosition): DocumentReference | undefined {
     return this.references.find(position);
   }
 
