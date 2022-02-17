@@ -36,7 +36,7 @@ explore: airports is table('malloy-data.faa.airports') {
   query: by_state_and_county is {
     group_by: state
     aggregate: airport_count
-    nest: by_fac_type
+    nest: by_facility_type
     nest: by_county is {
       top: 5
       group_by: county
@@ -49,18 +49,12 @@ explore: airports is table('malloy-data.faa.airports') {
     group_by: name is concat(state, '-', full_name)
   }
 
-  query: airports_by_region is {
+  query: airports_by_region_dashboard is by_region {
     where: faa_region != null
-    group_by: faa_region
-    aggregate: airport_count
     nest: [
-      by_facility_type
       by_state_shape_map is by_state {}
+      by_facility_type
       major_airports
     ]
   }
-}
-query: airports -> by_region {
-  nest: by_state_shape_map is by_state {}
-  nest: by_facility_type
 }
