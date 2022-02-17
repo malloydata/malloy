@@ -593,7 +593,7 @@ export class IsValueBlock extends MalloyElement {
   }
 }
 
-export class ModelEntryReference extends MalloyElement implements NameLike {
+export class ModelEntryReference extends MalloyElement {
   elementType = "modelEntryReference";
 
   constructor(readonly name: string) {
@@ -1039,7 +1039,7 @@ export class Renames extends ListOf<RenameField> {
   }
 }
 
-export class FieldName extends MalloyElement implements NameLike {
+export class FieldName extends MalloyElement {
   elementType = "fieldName";
 
   constructor(readonly name: string) {
@@ -1059,7 +1059,7 @@ export class FieldName extends MalloyElement implements NameLike {
   }
 }
 
-export class FieldReference extends ListOf<FieldName> implements NameLike {
+export class FieldReference extends ListOf<FieldName> {
   elementType = "fieldReference";
 
   constructor(names: FieldName[]) {
@@ -1089,9 +1089,6 @@ export class FieldReference extends ListOf<FieldName> implements NameLike {
   }
 }
 
-interface NameLike {
-  refString: string;
-}
 export type FieldListReference = FieldReference | WildcardFieldReference;
 
 export class FieldReferences extends ListOf<FieldListReference> {
@@ -1609,7 +1606,7 @@ export class RenameField extends MalloyElement {
   }
 }
 
-export class WildcardFieldReference extends MalloyElement implements NameLike {
+export class WildcardFieldReference extends MalloyElement {
   elementType = "wildcardFieldReference";
   constructor(
     readonly joinPath: FieldReference | undefined,
