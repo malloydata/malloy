@@ -589,9 +589,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
             aggregate: !!footType.aggregate,
             value: [{ type: "field", path: this.source.refString }],
           };
-          if (this.source.sourceString) {
-            structPath = this.source.sourceString;
-          }
+          structPath = this.source.sourceString;
         } else {
           if (!(sourceFoot instanceof StructSpaceField)) {
             this.log(`Aggregate source cannot be a ${footType.type}`);
