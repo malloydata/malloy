@@ -85,6 +85,16 @@ class TestRoot extends MalloyElement implements NameSpace {
 const testURI = "internal://test/root";
 export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
+  /*
+   * Tests can assume this model exists:
+   *   explore: a is table('aTable') { primary_key: astr }
+   *   explore: b is a
+   *   explore: ab is a {
+   *     join_one: b with astr
+   *     measure: acount is count()
+   *     query: aturtle is { group_bY: astr; aggregate: acount }
+   *   }
+   */
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
