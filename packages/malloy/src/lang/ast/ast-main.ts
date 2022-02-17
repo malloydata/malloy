@@ -1685,24 +1685,6 @@ export class Limit extends MalloyElement {
   }
 }
 
-export class TurtleDecl extends MalloyElement {
-  elementType = "turtleDesc";
-  constructor(readonly name: string, readonly pipe: FromTurtlePipelineDesc) {
-    super();
-    this.has({ pipe });
-  }
-
-  getFieldDef(inputFS: FieldSpace): model.TurtleDef {
-    const pipe = this.pipe.getPipeline(inputFS);
-    return {
-      type: "turtle",
-      name: this.name,
-      ...pipe,
-      location: this.location,
-    };
-  }
-}
-
 export class Turtles extends ListOf<TurtleDecl> {
   constructor(turtles: TurtleDecl[]) {
     super("turtleDeclarationList", turtles);
@@ -1825,7 +1807,7 @@ abstract class PipelineDesc extends MalloyElement {
   }
 }
 
-export class FromQueryPipelineDesc extends PipelineDesc {
+export class ExistingQuery extends PipelineDesc {
   _head?: ModelEntryReference;
 
   set head(head: ModelEntryReference | undefined) {
@@ -1837,7 +1819,7 @@ export class FromQueryPipelineDesc extends PipelineDesc {
     return this._head;
   }
 
-  query(): QueryComp {
+  queryComp(): QueryComp {
     if (!this.head) {
       throw this.internalError("can't make query from nameless query");
     }
@@ -1875,9 +1857,13 @@ export class FromQueryPipelineDesc extends PipelineDesc {
     };
     return { outputStruct, query };
   }
+
+  query(): model.Query {
+    return this.queryComp().query;
+  }
 }
 
-export class FromTurtlePipelineDesc extends PipelineDesc {
+export abstract class TurtleHeadedPipe extends PipelineDesc {
   _turtleName?: FieldName;
 
   set turtleName(turtleName: FieldName | undefined) {
@@ -1888,9 +1874,15 @@ export class FromTurtlePipelineDesc extends PipelineDesc {
   get turtleName(): FieldName | undefined {
     return this._turtleName;
   }
+}
 
-  getQuery(explore: Mallobj): QueryComp {
-    const structRef = explore.structRef();
+export class FullQuery extends TurtleHeadedPipe {
+  constructor(readonly explore: Mallobj) {
+    super({ explore });
+  }
+
+  queryComp(): QueryComp {
+    const structRef = this.explore.structRef();
     const destQuery: model.Query = {
       type: "query",
       structRef,
@@ -1899,7 +1891,7 @@ export class FromTurtlePipelineDesc extends PipelineDesc {
     };
     const structDef = model.refIsStructDef(structRef)
       ? structRef
-      : explore.structDef();
+      : this.explore.structDef();
     let pipeFs = new StructSpace(structDef);
 
     if (this.turtleName) {
@@ -1922,6 +1914,16 @@ export class FromTurtlePipelineDesc extends PipelineDesc {
     }
     const outputStruct = this.appendOps(destQuery.pipeline, pipeFs);
     return { outputStruct, query: destQuery };
+  }
+
+  query(): model.Query {
+    return this.queryComp().query;
+  }
+}
+
+export class TurtleDecl extends TurtleHeadedPipe {
+  constructor(readonly name: string) {
+    super();
   }
 
   getPipeline(exploreFS: FieldSpace): model.Pipeline {
@@ -1954,50 +1956,15 @@ export class FromTurtlePipelineDesc extends PipelineDesc {
     this.appendOps(modelPipe.pipeline, exploreFS);
     return modelPipe;
   }
-}
 
-/**
- * A FullQuery is something which starts at an explorable, and then
- * may have a named-turtle first segment, which may have refinments,
- * and then it has a pipeline of zero or more qops after that.
- */
-export class FullQuery extends MalloyElement {
-  elementType = "fullQuery";
-
-  constructor(
-    readonly explore: Mallobj,
-    readonly pipeline: FromTurtlePipelineDesc
-  ) {
-    super({ explore, pipeline });
-  }
-
-  queryComp(): QueryComp {
-    return this.pipeline.getQuery(this.explore);
-  }
-
-  query(): model.Query {
-    return this.queryComp().query;
-  }
-}
-
-/**
- * An ExisitingQuery is a query definition which starts with an existing
- * named query, and then may have a refinement for the head of the query
- * and then may have a list of new qops to add.
- */
-export class ExistingQuery extends MalloyElement {
-  elementType = "queryFromQuery";
-  constructor(readonly queryDesc: FromQueryPipelineDesc) {
-    super();
-    this.has({ queryDesc });
-  }
-
-  queryComp(): QueryComp {
-    return this.queryDesc.query();
-  }
-
-  query(): model.Query {
-    return this.queryComp().query;
+  getFieldDef(inputFS: FieldSpace): model.TurtleDef {
+    const pipe = this.getPipeline(inputFS);
+    return {
+      type: "turtle",
+      name: this.name,
+      ...pipe,
+      location: this.location,
+    };
   }
 }
 
@@ -2010,8 +1977,8 @@ export class NestReference extends FieldReference {
 
 export class NestDefinition extends TurtleDecl {
   elementType = "nestDefinition";
-  constructor(name: string, queryDesc: FromTurtlePipelineDesc) {
-    super(name, queryDesc);
+  constructor(name: string) {
+    super(name);
   }
 }
 
