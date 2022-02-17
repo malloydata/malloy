@@ -3,6 +3,22 @@
 explore: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
 
+  dimension: faa_region_name is faa_region:
+    pick 'Southwest' when 'ASW'
+    pick 'Northwest Mountain' when 'ANM'
+    pick 'Eastern' when 'AEA'
+    pick 'Southern' when 'ASO'
+    pick 'Great Lakes' when 'AGL'
+    pick 'Central' when 'ACE'
+    pick 'New England' when 'ANE'
+    pick 'Western Pacific' when 'AWP'
+    pick 'Alaska' when 'AAL'
+
+  query: by_region is {
+    group_by: faa_region
+    group_by: faa_region_name
+    aggregate: airport_count
+  }
   query: by_state is {
     where: state != null
     group_by: state
