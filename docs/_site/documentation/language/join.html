@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Malloy Documentation</title>
+    <link rel="stylesheet" href="/malloy/css/document.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+  </head>
+  <body>
+    <div class="top">
+      <div class="header">
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
+      </div>
+      <div class="main">
+        <div class="sidebar" id="sidebar">
+    <div>
+        <div id=getting_started class="sidebar-section-title collapsed">Getting Started<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/index.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/features.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/samples.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sample Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=language_reference class="sidebar-section-title collapsed">Language Reference<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/language/overview.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/basic.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/statement.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/explore.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Explores
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/query.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/fields.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/types.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/expressions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/order_by.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
+<div class='sidebar-item active'>
+              <a href="/malloy/documentation/language/join.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/filters.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/nesting.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/aggregates.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/imports.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=common_patterns class="sidebar-section-title collapsed">Common Patterns<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/yoy.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/foreign_sums.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/percent_of_total.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/cohorts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/pivot_limits.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/sessionize.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=rendering_results class="sidebar-section-title collapsed">Rendering Results<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/dashboards.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/bar_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/charts_line_chart.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/shape_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/segment_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/scatter_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=examples class="sidebar-section-title collapsed">Examples<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ecommerce.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/faa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/names.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ga_sessions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/iowa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step6.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle1a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle4.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle5.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
+          </div>
+      </div>
+
+  </div>
+        <script src="/malloy/js/sidebar_state.js"></script>
+        <div class="content">
+          <div class="footer">
+            
+            <div class="linear-navigation">
+    <div class="item">
+      <a href="order_by.html"><img src="/malloy/img/previous.svg" alt="previous"/>Ordering and Limiting</a>
+    </div>
+    <div class="item">
+      <a href="filters.html">Filters<img src="/malloy/img/next.svg" alt="next"/></a>
+    </div>
+  </div>
+            
+          </div>
+          <div class="document-outer">
+            <div class="document">
+      <h1>
+        <a id="joins" class="header-link anchor" href="#joins">
+          Joins
+        </a>
+      </h1>
+    <p>Joins in malloy are different than SQL joins.  When two explores are joined,
+Malloy retains the graph nature of the the data relationships. This is unlike
+SQL, which flattens them all into a single table space.</p>
+<p><a href="aggregates.html">Aggregate calculations</a> use this graph to deduce
+a locality of computation, so they always work regardless of join pattern.</p>
+<p>In Malloy syntaxes for join are:</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">: &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">name</span><span style="color: #000000">&gt; [</span><span style="color: #AF00DB">is</span><span style="color: #000000"> &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">exp</span><span style="color: #000000">&gt;] </span><span style="color: #AF00DB">with</span><span style="color: #000000"> &lt;</span><span style="color: #001080">foreign_key</span><span style="color: #000000">&gt;</span></span>
+<span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">: &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">name</span><span style="color: #000000">&gt; [</span><span style="color: #AF00DB">is</span><span style="color: #000000"> &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">exp</span><span style="color: #000000">&gt;] [</span><span style="color: #AF00DB">on</span><span style="color: #000000"> &lt;</span><span style="color: #267F99">boolean</span><span style="color: #000000"> </span><span style="color: #001080">expression</span><span style="color: #000000">&gt;]</span></span>
+<span class="line"><span style="color: #AF00DB">join_many</span><span style="color: #000000">: &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">name</span><span style="color: #000000">&gt; [</span><span style="color: #AF00DB">is</span><span style="color: #000000"> &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">exp</span><span style="color: #000000">&gt;] </span><span style="color: #AF00DB">on</span><span style="color: #000000"> &lt;</span><span style="color: #267F99">boolean</span><span style="color: #000000"> </span><span style="color: #001080">expression</span><span style="color: #000000">&gt;</span></span>
+<span class="line"><span style="color: #AF00DB">join_cross</span><span style="color: #000000">: &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">name</span><span style="color: #000000">&gt; [</span><span style="color: #AF00DB">is</span><span style="color: #000000"> &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">-</span><span style="color: #001080">exp</span><span style="color: #000000">&gt;] [</span><span style="color: #AF00DB">on</span><span style="color: #000000"> &lt;</span><span style="color: #267F99">boolean</span><span style="color: #000000"> </span><span style="color: #001080">expression</span><span style="color: #000000">&gt;]</span></span></pre><p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">:</span></span></code> - the table we are joining has one row for each row in the source table.</p>
+<p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_many</span><span style="color: #000000">:</span></span></code> - the table we are joining has many rows for each row in the source table</p>
+<p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_cross</span><span style="color: #000000">:</span></span></code> - the join is a cross product and there will be many rows in each side of the join.</p>
+<p>Malloy's joins are left outer joins by default.
+Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example).</p>
+
+      <h2>
+        <a id="join-types" class="header-link anchor" href="#join-types">
+          Join Types
+        </a>
+      </h2>
+    
+      <h3>
+        <a id="foreign-key-to-primary-key" class="header-link anchor" href="#foreign-key-to-primary-key">
+          Foreign Key to Primary Key
+        </a>
+      </h3>
+    <p>The easiest, most error proof way to perform a join is with <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">:/</span><span style="color: #AF00DB">with</span></span></code>. The basic syntax is:</p>
+<p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">: &lt;</span><span style="color: #AF00DB">explore</span><span style="color: #000000">&gt; </span><span style="color: #AF00DB">with</span><span style="color: #000000"> &lt;</span><span style="color: #001080">foreign_key</span><span style="color: #000000">&gt;</span></span></code></p>
+<p>To join a foreign key of the source explore to the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">primary</span><span style="color: #000000"> </span><span style="color: #001080">key</span></span></code> of a joined explore, reference the foreign key by name in the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">with</span></span></code> clause.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.users&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">id</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.order_items&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">user_id</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h2>
+        <a id="naming-joined-explores" class="header-link anchor" href="#naming-joined-explores">
+          Naming Joined Explores
+        </a>
+      </h2>
+    <p>If no name is specified with <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">is</span></span></code>, the name of the join will be the name of the
+explore being joined.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.carriers&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>To give the joined explore a different name within the source explore, use <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">is</span></span></code> to specify the name of the explore.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">origin_airport</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">origin</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h2>
+        <a id="inlining-joins" class="header-link anchor" href="#inlining-joins">
+          Inlining Joins
+        </a>
+      </h2>
+    <p>Explores do not need to be named before they are used in a join. if the join
+uses <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">is</span></span></code> to give the join a name.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.carriers&#39;</span><span style="color: #000000">) { </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span><span style="color: #000000"> } </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h2>
+        <a id="using-fields-in-joined-explores" class="header-link anchor" href="#using-fields-in-joined-explores">
+          Using Fields in Joined Explores
+        </a>
+      </h2>
+    <p>When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">.</span></span></code>.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000">.</span><span style="color: #001080">nickname</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Southwest</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Delta</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>American</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>United</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,654,646</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>USAir</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,205,810</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Southwest&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Delta&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;American&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;United&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3654646</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;USAir&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3205810</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carriers_0.nickname </span><span style="color: #0000FF">as</span><span style="color: #000000"> nickname,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.carriers`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> carriers_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.carrier = carriers_0.code</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p>Measures and queries defined in joined explores may be used in addition to dimensions.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">destination_code</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000">.</span><span style="color: #001080">carrier_count</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">destination_​code</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">carrier_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>LAS</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>19</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>LAX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>19</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>PIT</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>18</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>SFO</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>18</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>PHX</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>18</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination_code&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LAS&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">19</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination_code&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LAX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">19</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination_code&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PIT&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">18</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination_code&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;SFO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">18</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination_code&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PHX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">18</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.destination </span><span style="color: #0000FF">as</span><span style="color: #000000"> destination_code,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> carriers_0.code) </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.carriers`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> carriers_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.carrier = carriers_0.code</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="join-example" class="header-link anchor" href="#join-example">
+          Join Example
+        </a>
+      </h2>
+    <p>This example demonstrates the definition of several different joins in a model and their use in a query.
+Entire subtrees of data can be joined.  In the example below, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft</span></span></code> joins <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft_models</span></span></code>.  <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">flights</span></span></code>
+joins aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship
+retained.</p>
+<p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">manufacturer</span></span></code></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_models</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.aircraft_models&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_model_code</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_model_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// Individual airplanes</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.aircraft&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">tail_num</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">aircraft_models</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_model_code</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// The airports that the aircraft fly to and from</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">airport_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">origin_airport</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">origin</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">destination_airport</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">destination</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">tail_num</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">manufacturer</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">aircraft_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">aircraft_model_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">manufacturer</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">aircraft_​model_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>BOEING</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>16,020,923</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,403</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>120</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>null</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,773,031</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>EMBRAER</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,174,815</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>602</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>12</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>MCDONNELL DOUGLAS</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,047,321</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>470</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>10</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AIRBUS INDUSTRIE</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>2,780,924</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>407</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>12</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;manufacturer&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;BOEING&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">16020923</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2403</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_model_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">120</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;manufacturer&quot;</span><span style="color: #000000">: </span><span style="color: #0000FF">null</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5773031</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_model_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;manufacturer&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;EMBRAER&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3174815</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">602</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_model_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">12</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;manufacturer&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MCDONNELL DOUGLAS&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3047321</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">470</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_model_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;manufacturer&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AIRBUS INDUSTRIE&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2780924</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">407</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;aircraft_model_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">12</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   aircraft_models_0.manufacturer </span><span style="color: #0000FF">as</span><span style="color: #000000"> manufacturer,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_0.tail_num) </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_count,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code) </span><span style="color: #0000FF">as</span><span style="color: #000000"> aircraft_model_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.tail_num = aircraft_0.tail_num</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.aircraft_models`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> aircraft_models_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> aircraft_0.aircraft_model_code = aircraft_models_0.aircraft_model_code</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p>For more examples and how to reason about aggregation across joins, review the <a href="aggregates.html">Aggregates</a> section.</p>
+
+      <h2>
+        <a id="sql-joins" class="header-link anchor" href="#sql-joins">
+          SQL Joins
+        </a>
+      </h2>
+    <p>Inner join are joins where the the joined table has rows. The example below, suppose we only want users that have at least one row in the orders table. The following is the equivalent of a SQL <code>INNER JOIN</code>.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000"> </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;users&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_many</span><span style="color: #000000">: </span><span style="color: #001080">orders</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;orders&#39;</span><span style="color: #000000">) </span><span style="color: #AF00DB">on</span><span style="color: #000000"> </span><span style="color: #001080">id</span><span style="color: #000000"> = </span><span style="color: #001080">orders</span><span style="color: #000000">.</span><span style="color: #001080">user_id</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">orders</span><span style="color: #000000">.</span><span style="color: #001080">user_id</span><span style="color: #000000"> != </span><span style="color: #0000FF">null</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre></div>
+          </div>
+        </div>
+        <script src="/malloy/js/view_toggles.js"></script>
+      </div>
+    </div>
+  </body>
+</html>

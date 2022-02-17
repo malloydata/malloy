@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Malloy Documentation</title>
+    <link rel="stylesheet" href="/malloy/css/document.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+  </head>
+  <body>
+    <div class="top">
+      <div class="header">
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
+      </div>
+      <div class="main">
+        <div class="sidebar" id="sidebar">
+    <div>
+        <div id=getting_started class="sidebar-section-title collapsed">Getting Started<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/index.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/features.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/samples.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sample Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=language_reference class="sidebar-section-title collapsed">Language Reference<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/language/overview.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/basic.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/statement.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/explore.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Explores
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/query.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/fields.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/types.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/expressions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/order_by.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/join.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
+<div class='sidebar-item active'>
+              <a href="/malloy/documentation/language/filters.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/nesting.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/aggregates.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/imports.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=common_patterns class="sidebar-section-title collapsed">Common Patterns<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/yoy.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/foreign_sums.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/percent_of_total.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/cohorts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/pivot_limits.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/sessionize.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=rendering_results class="sidebar-section-title collapsed">Rendering Results<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/dashboards.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/bar_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/charts_line_chart.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/shape_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/segment_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/scatter_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=examples class="sidebar-section-title collapsed">Examples<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ecommerce.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/faa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/names.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ga_sessions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/iowa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step6.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle1a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle4.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle5.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
+          </div>
+      </div>
+
+  </div>
+        <script src="/malloy/js/sidebar_state.js"></script>
+        <div class="content">
+          <div class="footer">
+            
+            <div class="linear-navigation">
+    <div class="item">
+      <a href="join.html"><img src="/malloy/img/previous.svg" alt="previous"/>Joins</a>
+    </div>
+    <div class="item">
+      <a href="nesting.html">Nested Queries<img src="/malloy/img/next.svg" alt="next"/></a>
+    </div>
+  </div>
+            
+          </div>
+          <div class="document-outer">
+            <div class="document">
+      <h1>
+        <a id="filters" class="header-link anchor" href="#filters">
+          Filters
+        </a>
+      </h1>
+    <p>Filtering which data is used in a query is an incredibly important aspect of data analysis. Malloy makes it easy to target specific parts of a query to apply individual filters.</p>
+
+      <h2>
+        <a id="filter-syntax" class="header-link anchor" href="#filter-syntax">
+          Filter Syntax
+        </a>
+      </h2>
+    <p>Regardless of the placement of a filter, the syntax looks the same.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">source</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: [ </span><span style="color: #001080">filter_one</span><span style="color: #000000">, </span><span style="color: #001080">filter_two</span><span style="color: #000000"> ] }</span></span></pre><p>Each filter be any expression of type <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">boolean</span></span></code>, whether that's a boolean field <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">is_commercial_flight</span></span></code>, a comparison <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
+<p>Logically, the comma-separated list of filters are <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">and</span></span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
+<!--
+TODO "see where vs having for more information on how Malloy generates SQL for filters"
+-->
+      <h2>
+        <a id="filter-placement" class="header-link anchor" href="#filter-placement">
+          Filter Placement
+        </a>
+      </h2>
+    <p>A filter can be applied to the source of a query, to just one stage of a query, or even to a particular field or expression (measure or nested query).</p>
+
+      <h3>
+        <a id="filtering-a-query-s-source" class="header-link anchor" href="#filtering-a-query-s-source">
+          Filtering a Query's Source
+        </a>
+      </h3>
+    <p>When filtering a query's source, the filter applies to the whole query.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> } -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>8,784,806</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">8784806</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> flights.distance&gt;</span><span style="color: #098658">1000</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-in-a-query-stage" class="header-link anchor" href="#filtering-in-a-query-stage">
+          Filtering in a Query Stage
+        </a>
+      </h3>
+    <p>A filter can also be applied to an individual query stage.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;UA&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;AA&#39;</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [ </span><span style="color: #001080">carrier</span><span style="color: #000000">, </span><span style="color: #001080">flight_count</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,654,646</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3654646</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   base.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   base.flight_count </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage0`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (base.carrier=</span><span style="color: #A31515">&#39;UA&#39;</span><span style="color: #000000">)</span><span style="color: #0000FF">or</span><span style="color: #000000">(base.carrier=</span><span style="color: #A31515">&#39;AA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-aggregate-calculations" class="header-link anchor" href="#filtering-aggregate-calculations">
+          Filtering Aggregate Calculations
+        </a>
+      </h3>
+    <p>Any measure can be filtered by adding a where clause.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_km_from_ca</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">distance</span><span style="color: #000000"> / </span><span style="color: #098658">0.621371</span><span style="color: #000000">) { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​km_​from_​ca</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,617,694</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,385.174</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_km_from_ca&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1385.174141235457</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">AVG</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> flights.distance/</span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">621371</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_km_from_ca</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-complex-measure" class="header-link anchor" href="#filtering-complex-measure">
+          Filtering Complex Measure
+        </a>
+      </h3>
+    <p>Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> / </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​percent_​delayed</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ny_​percent_​delayed</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>371,416</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.083</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,617,694</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>154,338</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.095</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">371416</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.08251035722513228</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">154338</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.09540617694075641</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_delayed_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_percent_delayed,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_delayed_flights,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_percent_delayed</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> my_flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> my_flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="filtering-nested-queries" class="header-link anchor" href="#filtering-nested-queries">
+          Filtering Nested Queries
+        </a>
+      </h3>
+    <p>Even complex measures can be filtered.  A common use case is to create a filtered
+measure and then create that as a percent of total.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
+<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">delayed_flights</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> / </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">    ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">ny_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000"> }</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">ca_​stats</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">ny_​stats</th></tr></thead><tbody><tr><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">percent_​delayed</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>371,416</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.083</span></td></tr></tbody></table></td><td style="padding: 0px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">delayed_​flights</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">percent_​delayed</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,617,694</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>154,338</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>0.095</span></td></tr></tbody></table></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ca_stats&quot;</span><span style="color: #000000">: {</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4501447</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">371416</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.08251035722513228</span></span>
+<span class="line"><span style="color: #000000">    },</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;ny_stats&quot;</span><span style="color: #000000">: {</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1617694</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;delayed_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">154338</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0451A5">&quot;percent_delayed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">0.09540617694075641</span></span>
+<span class="line"><span style="color: #000000">    }</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__2,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights__2,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> my_flights.dep_delay&gt;</span><span style="color: #098658">30</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">)/</span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed__2</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> my_flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">ON</span><span style="color: #000000"> my_flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> ((group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">OR</span><span style="color: #000000"> (group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">AND</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> ((group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">2</span><span style="color: #000000">) </span><span style="color: #0000FF">OR</span><span style="color: #000000"> (group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">2</span><span style="color: #000000">) </span><span style="color: #0000FF">AND</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;NY&#39;</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(flight_count__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, delayed_flights__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, percent_delayed__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed) </span><span style="color: #0000FF">END</span><span style="color: #000000">), STRUCT(</span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_stats,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> STRUCT(flight_count__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, delayed_flights__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, percent_delayed__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed) </span><span style="color: #0000FF">END</span><span style="color: #000000">), STRUCT(</span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> delayed_flights, </span><span style="color: #0000FF">NULL</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_delayed)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ny_stats</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="common-patterns-in-filters" class="header-link anchor" href="#common-patterns-in-filters">
+          Common Patterns in Filters
+        </a>
+      </h2>
+    <p>This section describes some of the more common patterns used in filter expressions. For a more detailed description of the possible kinds of expressions, see the <a href="expressions.html">Expressions</a> section.</p>
+
+      <h3>
+        <a id="comparisons" class="header-link anchor" href="#comparisons">
+          Comparisons
+        </a>
+      </h3>
+    <p>All the usual comparison operators behave as expected, and are some of the most common kinds of filters.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
+
+<td>Does <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> equal 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
+
+<td>Is <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> > 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="combining-filters" class="header-link anchor" href="#combining-filters">
+          Combining Filters
+        </a>
+      </h3>
+    <p>Filters can be logically combined using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">and</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">or</span></span></code>, and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">not</span></span></code>.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Logical union</td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance_miles</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000"> </span><span style="color: #0000FF">or</span><span style="color: #000000"> </span><span style="color: #001080">duration_hours</span><span style="color: #000000"> &gt; </span><span style="color: #098658">8</span></span></code></td>
+</tr>
+
+<tr>
+<td>Logical conjunction</td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
+</tr>
+
+<tr>
+<td>Logical negation</td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">not</span><span style="color: #000000"> </span><span style="color: #001080">is_commercial_flight</span></span></code></td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="ranges" class="header-link anchor" href="#ranges">
+          Ranges
+        </a>
+      </h3>
+    <p>A range of numeric or time values can be constructed
+with the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">to</span></span></code>operator, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code>. The <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">~</span></span></code> operator will check to
+see if a value is within a range.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> ~ </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is in the range [10, 20)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">event_time</span><span style="color: #000000"> ~ </span><span style="color: #098658">@2003</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">event_time</span></span></code> occurs within the year 2003</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="string-like-matching" class="header-link anchor" href="#string-like-matching">
+          String "Like" Matching
+        </a>
+      </h3>
+    <p>When comparing strings, the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">=</span></span></code> operator checks for pure equality, whereas the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">~</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">!~</span></span></code> operators, <code>LIKE</code> and <code>NOT LIKE</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
+
+<td>The first letter of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> is M</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%Z%&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a Z</td>
+</tr>
+</tbody></table>
+<p>In the right hand (pattern) string, the following syntax is used:</p>
+<ul>
+<li><p>A percent sign <code>%</code> matches any number of characters</p>
+</li>
+<li><p>An underscore <code>_</code> matches a single character</p>
+</li></ul>
+
+      <h3>
+        <a id="regular-expressions" class="header-link anchor" href="#regular-expressions">
+          Regular Expressions
+        </a>
+      </h3>
+    <p>When the right hand side of a <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">~</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">!~</span></span></code> operator is a regular expression,
+Malloy checks whether the left hand side matches that regular expression. In Standard SQL, Malloy uses the <code>REGEXP_COMPARE</code> function.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span></span></code> is <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;NY&#39;</span></span></code></td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
+</tr>
+</tbody></table>
+
+      <h3>
+        <a id="alternation" class="header-link anchor" href="#alternation">
+          Alternation
+        </a>
+      </h3>
+    <p>Checking equality against multiple possible values is extremely common, and can be achieved succinctly using the <a href="expressions.html#application">apply operator</a> and <a href="expressions.html#alternation">alternation</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span></span></code> is one of the primary colors</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">email</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;%.com&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;%.org&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">email</span></span></code> has <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">com</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">.</span><span style="color: #001080">org</span></span></code> domain</td>
+</tr>
+</tbody></table>
+
+      <h2>
+        <a id="examples-of-filter-expressions" class="header-link anchor" href="#examples-of-filter-expressions">
+          Examples of Filter Expressions
+        </a>
+      </h2>
+    <p>Use this table as a quick reference for common types of filter expressions.</p>
+<table>
+<thead>
+<tr>
+<th>Example</th>
+
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> = </span><span style="color: #098658">10</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is equal to 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> != </span><span style="color: #098658">10</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is not equal to 10</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">:  </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">100</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">size</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: &gt;= </span><span style="color: #098658">10</span><span style="color: #000000"> &amp; &lt; </span><span style="color: #098658">100</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is greater than or equal to 10 and less than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span><span style="color: #000000"> : </span><span style="color: #A31515">&#39;red&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;green&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;blue&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">color</span></span></code> is red, green or blue</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span><span style="color: #000000">: </span><span style="color: #098658">14</span><span style="color: #000000"> | </span><span style="color: #098658">42</span><span style="color: #000000"> | &gt; </span><span style="color: #098658">100</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size</span></span></code> is 14, 42, or greater than 100</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #098658">@2003 to</span><span style="color: #000000"> </span><span style="color: #098658">@2013</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> is between the years 2003 and 2013 (excluding 2013)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1591129283</span><span style="color: #000000"> + </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">hours</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> greater than 10 hours after 1591129283 (epoch timestamp)</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #267F99">date</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> is today</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span><span style="color: #000000">: </span><span style="color: #001080">now</span><span style="color: #000000">.</span><span style="color: #0000FF">month</span><span style="color: #000000"> - </span><span style="color: #098658">1</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">time</span></span></code> is in the previous calendar month</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #A31515">&#39;M%&#39;</span></span></code></td>
+
+<td>first letter of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> is a capital M</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #A31515">&#39;%z%&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not contain a lower case Z</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^(CA|NY)$&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span></span></code> is 'CA' or 'NY'</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;Z$&#39;</span></span></code></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span></span></code> does not end with a Z</td>
+</tr>
+</tbody></table>
+</div>
+          </div>
+        </div>
+        <script src="/malloy/js/view_toggles.js"></script>
+      </div>
+    </div>
+  </body>
+</html>

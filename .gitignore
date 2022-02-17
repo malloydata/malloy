@@ -1,10 +1,5 @@
 # auto-generated docs
-docs/_includes/generated/
-docs/_site/
-docs/documentation/
 docs/.jekyll-cache/
-docs/js/generated/
-docs/aux/generated/
 
 # config file
 malloy.json

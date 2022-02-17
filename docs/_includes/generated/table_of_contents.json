@@ -1,0 +1,227 @@
+{
+  "contents": [
+    {
+      "title": "Getting Started",
+      "items": [
+        {
+          "title": "The Tao of Malloy",
+          "link": "/index.md"
+        },
+        {
+          "title": "Key Features",
+          "link": "/features.md"
+        },
+        {
+          "title": "Sample Models",
+          "link": "/samples.md"
+        },
+        {
+          "title": "Connecting a Database",
+          "link": "/connection_instructions.md"
+        }
+      ]
+    },
+    {
+      "title": "Language Reference",
+      "items": [
+        {
+          "title": "Introduction",
+          "link": "/language/overview.md"
+        },
+        {
+          "title": "Malloy Quickstart",
+          "link": "/language/basic.md"
+        },
+        {
+          "title": "Models",
+          "link": "/language/statement.md"
+        },
+        {
+          "title": "Explores",
+          "link": "/language/explore.md"
+        },
+        {
+          "title": "Queries",
+          "link": "/language/query.md"
+        },
+        {
+          "title": "Fields",
+          "link": "/language/fields.md"
+        },
+        {
+          "title": "Types",
+          "link": "/language/types.md"
+        },
+        {
+          "title": "Expressions",
+          "link": "/language/expressions.md"
+        },
+        {
+          "title": "Ordering and Limiting",
+          "link": "/language/order_by.md"
+        },
+        {
+          "title": "Joins",
+          "link": "/language/join.md"
+        },
+        {
+          "title": "Filters",
+          "link": "/language/filters.md"
+        },
+        {
+          "title": "Nested Queries",
+          "link": "/language/nesting.md"
+        },
+        {
+          "title": "Aggregates",
+          "link": "/language/aggregates.md"
+        },
+        {
+          "title": "Imports",
+          "link": "/language/imports.md"
+        },
+        {
+          "title": "SQL Blocks",
+          "link": "/language/sql_blocks.md"
+        }
+      ]
+    },
+    {
+      "title": "Common Patterns",
+      "items": [
+        {
+          "title": "Year Over Year Analysis",
+          "link": "/patterns/yoy.md"
+        },
+        {
+          "title": "Foreign Sums and Averages",
+          "link": "/patterns/foreign_sums.md"
+        },
+        {
+          "title": "Percent of Total",
+          "link": "/patterns/percent_of_total.md"
+        },
+        {
+          "title": "Cohort Analysis",
+          "link": "/patterns/cohorts.md"
+        },
+        {
+          "title": "Pivot Limits",
+          "link": "/patterns/pivot_limits.md"
+        },
+        {
+          "title": "Sessionized Data",
+          "link": "/patterns/sessionize.md"
+        }
+      ]
+    },
+    {
+      "title": "Rendering Results",
+      "items": [
+        {
+          "title": "Tables and Dashboards",
+          "link": "/visualizations/dashboards.md"
+        },
+        {
+          "title": "Bar Charts",
+          "link": "/visualizations/bar_charts.md"
+        },
+        {
+          "title": "Line Charts",
+          "link": "/visualizations/charts_line_chart.md"
+        },
+        {
+          "title": "Shape Maps",
+          "link": "/visualizations/shape_maps.md"
+        },
+        {
+          "title": "Segment Maps",
+          "link": "/visualizations/segment_maps.md"
+        },
+        {
+          "title": "Scatter Charts",
+          "link": "/visualizations/scatter_charts.md"
+        }
+      ]
+    },
+    {
+      "title": "Examples",
+      "items": [
+        {
+          "title": "eCommerce Analysis",
+          "link": "/examples/ecommerce.md"
+        },
+        {
+          "title": "NTSB Flight Database",
+          "link": "/examples/faa.md"
+        },
+        {
+          "title": "The Name Game",
+          "link": "/examples/names.md"
+        },
+        {
+          "title": "Google Analytics GA360",
+          "link": "/examples/ga_sessions.md"
+        }
+      ]
+    },
+    {
+      "title": "Walkthrough: Iowa Liquor",
+      "items": [
+        {
+          "title": "About the Data Set",
+          "link": "/examples/iowa/iowa.md"
+        },
+        {
+          "title": "The Malloy Data Model",
+          "link": "/examples/iowa/source.md"
+        },
+        {
+          "title": "Basic Calculations",
+          "link": "/examples/iowa/step2.md"
+        },
+        {
+          "title": "Analysis: Products and Brands",
+          "link": "/examples/iowa/step2a.md"
+        },
+        {
+          "title": "Bucketing and Mapping",
+          "link": "/examples/iowa/step3.md"
+        },
+        {
+          "title": "Dashboards",
+          "link": "/examples/iowa/step6.md"
+        }
+      ]
+    },
+    {
+      "title": "Walkthrough: Wordle Solver",
+      "items": [
+        {
+          "title": "Just Words",
+          "link": "/examples/wordle/wordle.md"
+        },
+        {
+          "title": "Letters and Positioning",
+          "link": "/examples/wordle/wordle1a.md"
+        },
+        {
+          "title": "Letter Frequency",
+          "link": "/examples/wordle/wordle2.md"
+        },
+        {
+          "title": "Scoring Words",
+          "link": "/examples/wordle/wordle3.md"
+        },
+        {
+          "title": "Final Model",
+          "link": "/examples/wordle/wordle4.md"
+        },
+        {
+          "title": "Solving Puzzles",
+          "link": "/examples/wordle/wordle5.md"
+        }
+      ]
+    }
+  ]
+}

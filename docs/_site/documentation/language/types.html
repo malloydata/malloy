@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Malloy Documentation</title>
+    <link rel="stylesheet" href="/malloy/css/document.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+  </head>
+  <body>
+    <div class="top">
+      <div class="header">
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
+      </div>
+      <div class="main">
+        <div class="sidebar" id="sidebar">
+    <div>
+        <div id=getting_started class="sidebar-section-title collapsed">Getting Started<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/index.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/features.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/samples.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sample Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=language_reference class="sidebar-section-title collapsed">Language Reference<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/language/overview.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/basic.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/statement.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/explore.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Explores
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/query.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/fields.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
+<div class='sidebar-item active'>
+              <a href="/malloy/documentation/language/types.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/expressions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/order_by.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/join.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/filters.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/nesting.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/aggregates.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/imports.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=common_patterns class="sidebar-section-title collapsed">Common Patterns<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/yoy.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/foreign_sums.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/percent_of_total.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/cohorts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/pivot_limits.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/sessionize.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=rendering_results class="sidebar-section-title collapsed">Rendering Results<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/dashboards.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/bar_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/charts_line_chart.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/shape_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/segment_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/scatter_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=examples class="sidebar-section-title collapsed">Examples<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ecommerce.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/faa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/names.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ga_sessions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/iowa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step6.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle1a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle4.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle5.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
+          </div>
+      </div>
+
+  </div>
+        <script src="/malloy/js/sidebar_state.js"></script>
+        <div class="content">
+          <div class="footer">
+            
+            <div class="linear-navigation">
+    <div class="item">
+      <a href="fields.html"><img src="/malloy/img/previous.svg" alt="previous"/>Fields</a>
+    </div>
+    <div class="item">
+      <a href="expressions.html">Expressions<img src="/malloy/img/next.svg" alt="next"/></a>
+    </div>
+  </div>
+            
+          </div>
+          <div class="document-outer">
+            <div class="document">
+      <h1>
+        <a id="types" class="header-link anchor" href="#types">
+          Types
+        </a>
+      </h1>
+    <p>All fields in Malloy have a type. Today, these types are
+mostly scalar, with a few notable exceptions.</p>
+
+      <h2>
+        <a id="scalar-types" class="header-link anchor" href="#scalar-types">
+          Scalar Types
+        </a>
+      </h2>
+    
+      <h3>
+        <a id="numbers" class="header-link anchor" href="#numbers">
+          Numbers
+        </a>
+      </h3>
+    <p>All numbers in Malloy are of type <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">number</span></span></code>, including BigQuery's <code>INTEGER</code>, <code>INT64</code>, <code>FLOAT</code>, and <code>FLOAT64</code> types.</p>
+<p>Literal <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">number</span></span></code>s consist of one or more digits optionally followed
+by a decimal point <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">.</span></span></code> and more digits, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">42</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">3.14</span></span></code>.</p>
+<p>Negative numbers are represented using the unary minus
+operator, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">-</span><span style="color: #098658">7</span></span></code>.</p>
+<p>Today, no other forms of literal numbers (e.g. numbers in other
+bases, numbers with thousand separators, exponential notation, etc.) are legal.</p>
+
+      <h3>
+        <a id="strings" class="header-link anchor" href="#strings">
+          Strings
+        </a>
+      </h3>
+    <p>In Malloy, strings of any length are represented by the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">string</span></span></code> type.</p>
+<p>Literal strings in Malloy are enclosed in single quotes <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;</span></span></code>, and may include the escape sequences <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">\\</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">\.</span></span></code>, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;</span><span style="color: #EE0000">\&#39;</span><span style="color: #A31515">Hello, world</span><span style="color: #EE0000">\&#39;</span><span style="color: #A31515">&#39;</span></span></code>.</p>
+
+      <h3>
+        <a id="dates-and-timestamps" class="header-link anchor" href="#dates-and-timestamps">
+          Dates and Timestamps
+        </a>
+      </h3>
+    <p>Malloy has two time types, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">date</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">timestamp</span></span></code>.</p>
+<p>Both the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">date</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">timestamp</span></span></code> types may have an associated
+<em>timeframe</em>, which can be <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">year</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">quarter</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">month</span></span></code>,
+<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">week</span></span></code>, or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">day</span></span></code>, and for <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">timestamp</span></span></code>s only, additionally
+<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">hour</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">minute</span></span></code>, or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">second</span></span></code>.</p>
+<p>Literals for <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">date</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">timestamp</span></span></code> are preceded by the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@</span></span></code> character, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@2003</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@1983-11-23 10:00:10</span></span></code>. For all
+variations of time literals and information about their interaction with comparison operators, see the <a href="time-ranges.html#literals">Time Ranges</a> section.</p>
+
+      <h3>
+        <a id="booleans" class="header-link anchor" href="#booleans">
+          Booleans
+        </a>
+      </h3>
+    <p>The <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">boolean</span></span></code> type covers both the <code>BOOLEAN</code> and <code>BOOL</code> types from BigQuery.</p>
+<p>In Malloy, the boolean literals are written <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">true</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">false</span></span></code>.</p>
+
+      <h3>
+        <a id="bytes" class="header-link anchor" href="#bytes">
+          Bytes
+        </a>
+      </h3>
+    <p>Bytestrings are represented by the <code>bytes</code> type
+in Malloy.</p>
+<p>There is currently no syntax for specifying <code>bytes</code> literals or casting to the <code>bytes</code> type.</p>
+<!-- TODO Add information about how Malloy has arrays and structs, though with no literal form, type keyword, or support in expressions. Currently, structs and arrays only exist in that the output type of a query is an array of structs (or possibly a single struct in some cases) --><!-- ## Compound Types
+
+Today, Malloy contains only one compound type, the <code>struct</code>.
+
+### Structs
+
+All queries are of type <code>struct</code>, which map field
+names to values. In JSON output from Malloy, structs are
+represented by JSON objects. -->
+      <h2>
+        <a id="intermediate-types" class="header-link anchor" href="#intermediate-types">
+          Intermediate Types
+        </a>
+      </h2>
+    <p>The following types are not assignable to fields, and are
+therefore considered <em>intermediate types</em>, in that they are
+primarily used to represent part of a computation that
+yields a regular scalar type, often <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">boolean</span></span></code>.</p>
+
+      <h3>
+        <a id="regular-expressions" class="header-link anchor" href="#regular-expressions">
+          Regular Expressions
+        </a>
+      </h3>
+    <p>Literal regular expressions are enclosed in single quotation
+marks <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;</span></span></code> and preceded by either <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">/</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">r</span></span></code>, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #811F3F">/&#39;.*&#39;</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #811F3F">r&#39;.*&#39;</span></span></code>. Both syntaxes are semantically equivalent.</p>
+<p>In the future, the literal regular expressions will likely
+be simply slash-enclosed, e.g <code>/.*/</code>.</p>
+<p>Values of type <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">string</span></span></code> may be compared against regular
+expressions using either the <a href="apply.html">apply operator</a>,<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000">: </span><span style="color: #811F3F">r&#39;c.*&#39;</span></span></code> or the like operator, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;c.*&#39;</span></span></code>.</p>
+
+      <h3>
+        <a id="ranges" class="header-link anchor" href="#ranges">
+          Ranges
+        </a>
+      </h3>
+    <p>There are three types of ranges today: <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">string</span></span></code> ranges, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">date</span></span></code> ranges, and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">timestamp</span></span></code> ranges. The most basic ranges
+are of the form <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">start</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">end</span></span></code> and represent the inclusive range between <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">start</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">end</span></span></code>, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@2004-01 to</span><span style="color: #000000"> </span><span style="color: #098658">@2005-05</span></span></code>.</p>
+<p>Ranges may be used in conjunction with the <a href="apply.html">apply operator</a> to test whether a value falls within a given range.</p>
+<p>In the future, other ranges may be allowed, such as <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">string</span></span></code> ranges.</p>
+
+      <h3>
+        <a id="alternations-and-partials" class="header-link anchor" href="#alternations-and-partials">
+          Alternations and Partials
+        </a>
+      </h3>
+    <p><em>Partials</em> represent a "part of" a comparison.
+Specifically, a partial is a comparison missing its
+left-hand side, and represents the condition of the
+comparison yielding <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">true</span></span></code> if a given value were to be
+filled in for that missing left-hand side. For example, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">&gt; </span><span style="color: #098658">10</span></span></code> is a partial that represents the condition "is greater
+than ten." Likewise, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">!= </span><span style="color: #A31515">&#39;CA&#39;</span></span></code> is a partial that represents the condition of not being equal to <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span></span></code>.</p>
+<p><em>Alternations</em> are combinations of partials representing
+either the logical union ("or") or conjunction ("and") of
+their conditions. Alternations are represented using the
+union alternation operator <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">|</span></span></code> and the conjunction
+alternation operator <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">&amp;</span></span></code>.</p>
+<p>For example, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">= </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> | = </span><span style="color: #A31515">&#39;NY&#39;</span></span></code> represents the condition of being equal to 'CA' or <em>alternatively</em> being equal to 'NY'. On the other hand, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">!= </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> &amp; != </span><span style="color: #A31515">&#39;NY&#39;</span></span></code> represents the condition of being not equal to 'CA' <em>as well as</em> being not equal to 'NY'.</p>
+<p>Scalar values, regular expressions, and
+ranges may also be used in alternations, in which case the
+condition is assumed to be that of equality, matching, and
+inclusion respectively.</p>
+<p>For example, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> | </span><span style="color: #811F3F">r&#39;N.*&#39;</span></span></code> represents the condition of being equal to 'CA' or starting with 'N', and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">20</span><span style="color: #000000"> | </span><span style="color: #098658">20</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">30</span></span></code> represents the condition of being <em>either</em> between 10 and 20 <em>or</em> 20 and 30.</p>
+<p>Alternations and partials may be used in conjunction with the <a href="apply.html">apply operator</a> to test whether a value meets the given condition.</p>
+
+      <h2>
+        <a id="nullability" class="header-link anchor" href="#nullability">
+          Nullability
+        </a>
+      </h2>
+    <p>Today, all Malloy types include the value <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">null</span></span></code>, however
+in the future Malloy may have a concept of nullable vs.
+non-nullable types.</p>
+</div>
+          </div>
+        </div>
+        <script src="/malloy/js/view_toggles.js"></script>
+      </div>
+    </div>
+  </body>
+</html>
