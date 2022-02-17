@@ -615,6 +615,9 @@ export class NamedSource extends Mallobj {
       this.isBlock = new IsValueBlock(paramValues);
       this.has({ parameterValues: this.isBlock });
     }
+    if (ref instanceof ModelEntryReference) {
+      this.has({ ref });
+    }
   }
 
   get refName(): string {
