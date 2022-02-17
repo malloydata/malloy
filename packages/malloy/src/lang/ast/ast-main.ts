@@ -1719,12 +1719,6 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
  * Generic abstract for all pipelines, the first segment might be a reference
  * to an existing pipeline (query or turtle), and if there is a refinement it
  * is refers to the first segment of the composed pipeline.
- *
- * I expect three subclasses for this. A query starting at an explore,
- * a query starting at a query, and a turtle definition.
- *
- * I aslo expect to re-factor once I have implemented all three of the
- * above and know enough to recognize the common elements.
  */
 abstract class PipelineDesc extends MalloyElement {
   elementType = "pipelineDesc";
