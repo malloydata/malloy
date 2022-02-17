@@ -659,50 +659,44 @@ export class MalloyToAST
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
-  visitFirstSegment(
-    pcx: parse.FirstSegmentContext
-  ): ast.FromTurtlePipelineDesc {
-    const qp = new ast.FromTurtlePipelineDesc();
-    const nameCx = pcx.exploreQueryName();
+  protected buildPipelineFromName(
+    pipe: ast.TurtleHeadedPipe,
+    pipeCx: parse.PipelineFromNameContext
+  ): void {
+    const firstCx = pipeCx.firstSegment();
+    const nameCx = firstCx.exploreQueryName();
     if (nameCx) {
-      qp.turtleName = this.getFieldName(nameCx);
+      pipe.turtleName = this.getFieldName(nameCx);
     }
-    const propsCx = pcx.queryProperties();
+    const propsCx = firstCx.queryProperties();
     if (propsCx) {
       const queryDesc = this.visitQueryProperties(propsCx);
       if (nameCx) {
-        qp.refineHead(queryDesc);
+        pipe.refineHead(queryDesc);
       } else {
-        qp.addSegments(queryDesc);
+        pipe.addSegments(queryDesc);
       }
     }
-    return this.astAt(qp, pcx);
-  }
-
-  visitPipelineFromName(
-    pcx: parse.PipelineFromNameContext
-  ): ast.FromTurtlePipelineDesc {
-    const pipe = this.visitFirstSegment(pcx.firstSegment());
-    const tail = this.getSegments(pcx.pipeElement());
+    const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
-    return this.astAt(pipe, pcx);
   }
 
   visitExploreArrowQuery(pcx: parse.ExploreArrowQueryContext): ast.FullQuery {
     const root = this.visitExplore(pcx.explore());
-    const queryPipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.FullQuery(root, queryPipe), pcx);
+    const query = new ast.FullQuery(root);
+    this.buildPipelineFromName(query, pcx.pipelineFromName());
+    return this.astAt(query, pcx);
   }
 
   visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
-    const pipe = new ast.FromQueryPipelineDesc();
-    pipe.head = this.getModelEntryName(pcx.queryName());
+    const query = new ast.ExistingQuery();
+    query.head = this.getModelEntryName(pcx.queryName());
     const refCx = pcx.queryProperties();
     if (refCx) {
-      pipe.refineHead(this.visitQueryProperties(refCx));
+      query.refineHead(this.visitQueryProperties(refCx));
     }
-    pipe.addSegments(...this.getSegments(pcx.pipeElement()));
-    return this.astAt(new ast.ExistingQuery(pipe), pcx);
+    query.addSegments(...this.getSegments(pcx.pipeElement()));
+    return this.astAt(query, pcx);
   }
 
   visitTopLevelQueryDefs(
@@ -754,16 +748,18 @@ export class MalloyToAST
     return this.astAt(new ast.NestReference(name), pcx);
   }
 
-  visitNestDef(pcx: parse.NestDefContext): ast.NestedQuery {
+  visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
     const name = this.getIdText(pcx.queryName());
-    const pipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.NestDefinition(name, pipe), pcx);
+    const nestDef = new ast.NestDefinition(name);
+    this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
+    return this.astAt(nestDef, pcx);
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
     const name = this.getIdText(pcx.exploreQueryNameDef());
-    const pipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.TurtleDecl(name, pipe), pcx);
+    const queryDef = new ast.TurtleDecl(name);
+    this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
+    return this.astAt(queryDef, pcx);
   }
 
   visitExprNot(pcx: parse.ExprNotContext): ast.ExprNot {
