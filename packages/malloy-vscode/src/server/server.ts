@@ -36,6 +36,7 @@ import {
   getCompletionItems,
   resolveCompletionItem,
 } from "./completions/completions";
+import { getMalloyDefinitionReference } from "./definitions/definitions";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -54,6 +55,7 @@ connection.onInitialize((params: InitializeParams) => {
       completionProvider: {
         resolveProvider: true,
       },
+      definitionProvider: true,
       semanticTokensProvider: {
         full: true,
         range: false,
@@ -111,6 +113,13 @@ connection.languages.semanticTokens.on((handler) => {
 connection.onCodeLens((handler) => {
   const document = documents.get(handler.textDocument.uri);
   return document ? getMalloyLenses(document) : [];
+});
+
+connection.onDefinition((handler) => {
+  const document = documents.get(handler.textDocument.uri);
+  return document
+    ? getMalloyDefinitionReference(documents, document, handler.position)
+    : [];
 });
 
 connection.onDidChangeConfiguration(async (change) => {

@@ -26,6 +26,8 @@ import {
   StructDef,
   ModelDef,
   SQLBlock,
+  DocumentReference,
+  DocumentPosition,
   DocumentLocation,
   DocumentRange,
 } from "../model/malloy_types";
@@ -50,6 +52,7 @@ import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from "./parse-tree-walkers/document-completion-walker";
+import { ReferenceList } from "./reference-list";
 
 class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
   constructor(
@@ -452,10 +455,10 @@ class ASTStep implements TranslationStep {
     if (!this.walked) {
       newAst.walk((walkedTo: ast.MalloyElement): void => {
         if (walkedTo instanceof ast.SQLSource) {
-          if (!sqlExplores[walkedTo.name]) {
-            sqlExplores[walkedTo.name] = {};
+          if (!sqlExplores[walkedTo.refName]) {
+            sqlExplores[walkedTo.refName] = {};
           }
-          sqlExplores[walkedTo.name].ref = walkedTo;
+          sqlExplores[walkedTo.refName].ref = walkedTo;
         } else if (walkedTo instanceof ast.SQLStatement && walkedTo.is) {
           if (!sqlExplores[walkedTo.is]) {
             sqlExplores[walkedTo.is] = {};
@@ -644,6 +647,8 @@ export abstract class MalloyTranslation {
   readonly completionsStep: CompletionsStep;
   readonly translateStep: TranslateStep;
 
+  readonly references: ReferenceList;
+
   constructor(
     readonly sourceURL: string,
     public grammarRule = "malloyDocument"
@@ -667,12 +672,21 @@ export abstract class MalloyTranslation {
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.translateStep = new TranslateStep(this.astStep);
+    this.references = new ReferenceList(sourceURL);
   }
 
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
     }
+  }
+
+  addReference(reference: DocumentReference): void {
+    this.references.add(reference);
+  }
+
+  referenceAt(position: DocumentPosition): DocumentReference | undefined {
+    return this.references.find(position);
   }
 
   fatalErrors(): FatalResponse {
@@ -786,11 +800,7 @@ export abstract class MalloyTranslation {
       line: startToken.line - 1,
       character: startToken.charPositionInLine,
     };
-    if (
-      this.parseStep.sourceInfo &&
-      stopToken.stopIndex != -1 &&
-      stopToken.stopIndex != startToken.startIndex
-    ) {
+    if (this.parseStep.sourceInfo && stopToken.stopIndex != -1) {
       // Find the line which contains the stopIndex
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {

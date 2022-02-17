@@ -38,6 +38,8 @@ import {
   StructDef,
   TurtleDef,
   SQLBlock,
+  DocumentReference,
+  DocumentPosition as ModelDocumentPosition,
 } from "./model";
 import {
   LookupConnection,
@@ -165,7 +167,9 @@ export class Malloy {
           return new Model(
             result.translated.modelDef,
             result.translated.queryList,
-            result.translated.sqlBlocks
+            result.translated.sqlBlocks,
+            (position: ModelDocumentPosition) =>
+              translator.referenceAt(position)
           );
         } else {
           const errors = result.errors || [];
@@ -409,15 +413,35 @@ export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
   private sqlBlocks: SQLBlock[];
+  _referenceAt: (
+    location: ModelDocumentPosition
+  ) => DocumentReference | undefined;
 
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
-    sqlBlocks: SQLBlock[]
+    sqlBlocks: SQLBlock[],
+    referenceAt: (
+      location: ModelDocumentPosition
+    ) => DocumentReference | undefined = () => undefined
   ) {
     this.modelDef = modelDef;
     this.queryList = queryList;
     this.sqlBlocks = sqlBlocks;
+    this._referenceAt = referenceAt;
+  }
+
+  /**
+   * Retrieve a document reference for the token at the given position within
+   * the document that produced this model.
+   *
+   * @param position A position within the document.
+   * @returns A `DocumentReference` at that position if one exists.
+   */
+  public getReference(
+    position: ModelDocumentPosition
+  ): DocumentReference | undefined {
+    return this._referenceAt(position);
   }
 
   /**

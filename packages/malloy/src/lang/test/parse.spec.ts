@@ -12,6 +12,13 @@
  * GNU General Public License for more details.
  */
 
+import { TranslateResponse } from "..";
+import {
+  DocumentLocation,
+  DocumentPosition,
+  SQLBlock,
+  StructDef,
+} from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StructSpace } from "../field-space";
@@ -67,6 +74,7 @@ declare global {
     interface Matchers<R> {
       toCompile(): R;
       toBeErrorless(): R;
+      toTranslate(): R;
     }
   }
 }
@@ -87,10 +95,53 @@ function checkForErrors(trans: Testable) {
   };
 }
 
+function prettyNeeds(response: TranslateResponse) {
+  let needString = "";
+  if (response.tables) {
+    needString += "Tables:\n";
+    response.tables.forEach((table) => (needString += `  - ${table}`));
+  }
+  if (response.sqlStructs) {
+    needString += "SQL Structs:\n";
+    response.sqlStructs.forEach(
+      (sql) => (needString += `  - ${sql.as || "(unnamed sql struct)"}`)
+    );
+  }
+  if (response.urls) {
+    needString += "URLs:\n";
+    response.urls.forEach((url) => (needString += `  - ${url}`));
+  }
+  return needString;
+}
+
+function checkForNeededs(trans: Testable) {
+  const response = trans.translateStep.step(trans);
+  if (!response.final) {
+    return {
+      message: () =>
+        `Translation is not complete, needs:\n${prettyNeeds(response)}`,
+      pass: false,
+    };
+  }
+  return {
+    message: () => "Unexpected complete translation",
+    pass: true,
+  };
+}
+
 expect.extend({
   toCompile: function (x: Testable) {
     x.compile();
     return checkForErrors(x);
+  },
+  toTranslate: function (x: Testable) {
+    x.compile();
+    const errorCheck = checkForErrors(x);
+    if (!errorCheck.pass) {
+      return errorCheck;
+    }
+    x.translate();
+    return checkForNeededs(x);
   },
   toBeErrorless: function (trans: Testable) {
     return checkForErrors(trans);
@@ -716,6 +767,21 @@ describe("error handling", () => {
   // });
 });
 
+function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
+  return {
+    type: "struct",
+    name: sqlBlock.name,
+    dialect: "bigquery",
+    structSource: {
+      type: "sql",
+      method: "subquery",
+      sqlBlock,
+    },
+    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    fields: [{ type: "number", name: "one" }],
+  };
+}
+
 describe("source locations", () => {
   test("renamed explore location", () => {
     const source = markSource`explore: ${"na is a"}`;
@@ -738,7 +804,7 @@ describe("source locations", () => {
   test("location of defined dimension", () => {
     const source = markSource`explore: na is a { dimension: ${"x is 1"} }`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -747,7 +813,7 @@ describe("source locations", () => {
   test("location of defined measure", () => {
     const source = markSource`explore: na is a { measure: ${"x is count()"} }`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -756,7 +822,7 @@ describe("source locations", () => {
   test("location of defined query", () => {
     const source = markSource`explore: na is a { query: ${"x is { group_by: y is 1 }"} }`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -771,7 +837,7 @@ describe("source locations", () => {
       }`;
 
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getQueryField(na, "x");
     const y = getField(x.pipeline[0], "y");
@@ -788,7 +854,7 @@ describe("source locations", () => {
       }`;
 
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getQueryField(na, "x");
     const z = getField(x.pipeline[0], "z");
@@ -798,7 +864,7 @@ describe("source locations", () => {
   test("location of field inherited from table", () => {
     const source = markSource`explore: na is ${"table('aTable')"}`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const abool = getField(na, "abool");
     expect(abool.location).toMatchObject(source.locations[0]);
@@ -815,21 +881,10 @@ describe("source locations", () => {
     const sqlBlock = (result.sqlStructs || [])[0];
     m.update({
       sqlStructs: {
-        [sqlBlock.name]: {
-          type: "struct",
-          name: sqlBlock.name,
-          dialect: "bigquery",
-          structSource: {
-            type: "sql",
-            method: "subquery",
-            sqlBlock,
-          },
-          structRelationship: { type: "basetable", connectionName: "bigquery" },
-          fields: [{ type: "number", name: "one" }],
-        },
+        [sqlBlock.name]: getSelectOneStruct(sqlBlock),
       },
     });
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const one = getField(na, "one");
     expect(one.location).toMatchObject(source.locations[0]);
@@ -847,7 +902,7 @@ describe("source locations", () => {
       )
     `;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const abool = getField(na, "abool");
     expect(abool.location).toMatchObject(source.locations[0]);
@@ -856,38 +911,38 @@ describe("source locations", () => {
   });
 
   test("location of named query", () => {
-    const source = markSource`query: ${"q is table('aTable') -> { project: * }"}`;
+    const source = markSource`query: ${"q is a -> { project: * }"}`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const q = getExplore(m.modelDef, "q");
     expect(q.location).toMatchObject(source.locations[0]);
   });
 
   test("location of field in named query", () => {
-    const source = markSource`query: q is table('aTable') -> { group_by: ${"a is 1"} }`;
+    const source = markSource`query: q is a -> { group_by: ${"b is 1"} }`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const q = getModelQuery(m.modelDef, "q");
-    const a = getField(q.pipeline[0], "a");
+    const a = getField(q.pipeline[0], "b");
     expect(a.location).toMatchObject(source.locations[0]);
   });
 
   test("location of named SQL block", () => {
-    const source = markSource`sql: ${"s is || SELECT 1 ;;"}`;
+    const source = markSource`sql: ${"s is || SELECT 1 as one ;;"}`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const s = m.sqlBlocks[0];
     expect(s.location).toMatchObject(source.locations[0]);
   });
 
   test("location of renamed field", () => {
     const source = markSource`
-      explore: na is table('aTable') {
+      explore: na is a {
         rename: ${"bbool is abool"}
       }
     `;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const bbool = getField(na, "bbool");
     expect(bbool.location).toMatchObject(source.locations[0]);
@@ -895,12 +950,12 @@ describe("source locations", () => {
 
   test("location of join on", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"x is table('aTable') { primary_key: abool } on abool"}
+      explore: na is a {
+        join_one: ${"x is a { primary_key: abool } on abool"}
       }
     `;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -908,12 +963,12 @@ describe("source locations", () => {
 
   test("location of join with", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"x is table('aTable') { primary_key: abool } with astr"}
+      explore: na is a {
+        join_one: ${"x is a { primary_key: abool } with astr"}
       }
     `;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getField(na, "x");
     expect(x.location).toMatchObject(source.locations[0]);
@@ -921,15 +976,15 @@ describe("source locations", () => {
 
   test("location of field in join", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: x is table('aTable') {
+      explore: na is a {
+        join_one: x is a {
           primary_key: abool
           dimension: ${"y is 1"}
         } on abool
       }
     `;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
     const x = getJoinField(na, "x");
     const y = getField(x, "y");
@@ -966,6 +1021,550 @@ describe("source locations", () => {
       "project: not legal in grouping query"
     )
   );
+
+  test.skip(
+    "undefined field reference in top",
+    modelErrors(
+      markSource`query: a -> { group_by: one is 1; top: 1 by ${"xyz"} }`,
+      "'xyz' is not defined"
+    )
+  );
+
+  test.skip(
+    "undefined field reference in order_by",
+    modelErrors(
+      markSource`query: a -> { group_by: one is 1; order_by: ${"xyz"} }`,
+      "'xyz' is not defined"
+    )
+  );
+});
+
+describe("source references", () => {
+  test("reference to explore", () => {
+    const source = markSource`
+      explore: ${"na is a"}
+      query: ${"na"} -> { project: * }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "exploreReference",
+      text: "na",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in query", () => {
+    const source = markSource`
+      explore: t is a {
+        query: ${"q is { project: * }"}
+      }
+      query: t -> ${"q"}
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in query (version 2)", () => {
+    const source = markSource`
+      explore: na is a { query: ${"x is { group_by: y is 1 }"} }
+      query: na -> ${"x"}
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "x",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to sql block", () => {
+    const source = markSource`
+      sql: ${"s is || SELECT 1 as one ;;"}
+      explore: na is from_sql(${"s"})
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    const sqlBlock = (result.sqlStructs || [])[0];
+    m.update({
+      sqlStructs: {
+        [sqlBlock.name]: getSelectOneStruct(sqlBlock),
+      },
+    });
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "sqlBlockReference",
+      text: "s",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in from", () => {
+    const source = markSource`
+      query: ${"q is a -> { project: * }"}
+      explore: na is from(-> ${"q"})
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in query head", () => {
+    const source = markSource`
+      query: ${"q is a -> { project: * }"}
+      query: q2 is -> ${"q"} -> { project: * }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to query in refined query", () => {
+    const source = markSource`
+      query: ${"q is a -> { project: * }"}
+      query: q2 is -> ${"q"} { limit: 10 }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "queryReference",
+      text: "q",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in expression", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { project: bbool is not ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to quoted field in expression", () => {
+    const source = markSource`
+      explore: na is a {
+        dimension: ${"`name` is 'name'"}
+      }
+      query: na -> { project: ${"`name`"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "name",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to joined field in expression", () => {
+    const source = markSource`
+      explore: na is a {
+        join_one: self is ${"table('aTable')"}
+          on astr = self.astr
+      }
+      query: na -> { project: bstr is self.${"astr"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "astr",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to joined join in expression", () => {
+    const source = markSource`
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
+      }
+      query: na -> { project: bstr is ${"self"}.astr }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field not in expression (group by)", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> { group_by: ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field not in expression (project)", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { project: ${"abool"} }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test.skip("reference to field in order by", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> {
+        group_by: abool
+        order_by: ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test.skip("reference to field in order by (output space)", () => {
+    const source = markSource`
+      query: a -> {
+        group_by: ${"one is 1"}
+        order_by: ${"one"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in aggregate", () => {
+    const source = markSource`
+      query: a { measure: ${"c is count()"} } -> {
+        group_by: abool
+        aggregate: ${"c"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "c",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in measure", () => {
+    const source = markSource`
+      explore: e is a {
+        measure: ${"c is count()"}
+        measure: c2 is ${"c"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "c",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test.skip("reference to field in top", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> {
+        group_by: abool
+        top: 10 by ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test.skip("reference to field in top (output space)", () => {
+    const source = markSource`
+      query: a -> {
+        group_by: ${"one is 1"}
+        top: 10 by ${"one"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in filter", () => {
+    const source = markSource`
+      query: ${"table('aTable')"} -> {
+        group_by: abool
+        where: ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in aggregate source", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { aggregate: ai_sum is ${"ai"}.sum() }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "ai",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  function pos(location: DocumentLocation): [DocumentPosition] {
+    return [
+      // location.url,
+      location.range.start,
+    ];
+  }
+
+  test("reference to join in aggregate source", () => {
+    const source = markSource`
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
+      }
+      query: na -> { aggregate: ai_sum is ${"self"}.sum(self.ai) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to join in aggregate in expr", () => {
+    const source = markSource`
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
+      }
+      query: na -> { aggregate: ai_sum is self.sum(${"self"}.ai) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to explore in join", () => {
+    const source = markSource`
+      explore: ${"exp1 is a"}
+      explore: exp2 is a {
+        join_one: ${"exp1"} on astr = exp1.astr
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "exploreReference",
+      text: "exp1",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in aggregate (in expr)", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"}
+      query: na -> { aggregate: ai_sum is sum(${"ai"}) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "ai",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in rename", () => {
+    const source = markSource`
+      explore: na is ${"table('aTable')"} {
+        rename: bbool is ${"abool"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "abool",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  test("reference to field in join with", () => {
+    const source = markSource`
+      explore: exp1 is a { primary_key: astr }
+      explore: exp2 is ${"table('aTable')"} {
+        join_one: exp1 with ${"astr"}
+      }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "fieldReference",
+      text: "astr",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
+
+  // TODO jump-to-definition this gives a weird error
+  //      Correct:  Reference to undefined value dsf
+  //      Additionally (incorrect): Cannot define ai_sum, unexpected type unknown
+  test.skip("reference to join in aggregate source", () => {
+    const source = markSource`
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
+      }
+      query: na -> { aggregate: ai_sum is ${"dsf"}.sum(self.ai) }
+    `;
+    const m = new BetaModel(source.code);
+    expect(m).toTranslate();
+    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+      location: source.locations[1],
+      type: "joinReference",
+      text: "self",
+      definition: {
+        location: source.locations[0],
+      },
+    });
+  });
 });
 
 describe("translation need error locations", () => {

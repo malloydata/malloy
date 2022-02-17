@@ -18,6 +18,7 @@ import {
   QueryFieldStruct,
 } from "../space-field";
 import { StructSpace } from "../field-space";
+import { FieldName } from "../ast";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
@@ -36,6 +37,10 @@ describe("structdef comprehension", () => {
     };
   }
 
+  function fieldRef(...names: string[]) {
+    return names.map((name) => new FieldName(name));
+  }
+
   test(`import string field`, () => {
     const field: model.FieldDef = {
       name: "t",
@@ -43,7 +48,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -56,7 +61,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -69,7 +74,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -81,7 +86,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(ColumnSpaceField);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -97,7 +102,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t.b").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t", "b")).found).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -113,7 +120,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t.a").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t", "a")).found).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -129,7 +138,9 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t.a").found).toBeInstanceOf(ColumnSpaceField);
+    expect(space.lookup(fieldRef("t", "a")).found).toBeInstanceOf(
+      ColumnSpaceField
+    );
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -147,7 +158,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup("t").found).toBeInstanceOf(QueryFieldStruct);
+    expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(QueryFieldStruct);
     const oField = space.structDef().fields[0];
     expect(oField).toEqual(field);
   });
@@ -169,7 +180,11 @@ describe("structdef comprehension", () => {
       },
     };
     const space = new StructSpace(struct);
-    expect(space.lookup("cReqStr").found).toBeInstanceOf(DefinedParameter);
-    expect(space.lookup("cOptStr").found).toBeInstanceOf(DefinedParameter);
+    expect(space.lookup(fieldRef("cReqStr")).found).toBeInstanceOf(
+      DefinedParameter
+    );
+    expect(space.lookup(fieldRef("cOptStr")).found).toBeInstanceOf(
+      DefinedParameter
+    );
   });
 });

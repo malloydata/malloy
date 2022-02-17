@@ -28,7 +28,6 @@ import {
   Expr,
 } from "../../model/malloy_types";
 import { CircleSpace, FieldSpace, LookupResult } from "../field-space";
-import * as FieldPath from "../field-path";
 import {
   Filter,
   MalloyElement,
@@ -44,8 +43,9 @@ import {
   ExprCompare,
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
-import { SpaceParam } from "../space-field";
+import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
+import { FieldReference } from "./ast-main";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -150,7 +150,7 @@ class ConstantFieldSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     return { ...this.structDef(), fields: [] };
   }
-  lookup(_name: string): LookupResult {
+  lookup(_name: unknown): LookupResult {
     return {
       error: "Only constants allowed in parameter expressions",
       found: undefined,
@@ -205,8 +205,8 @@ export class ConstantSubExpression extends ExpressionDef {
   }
 }
 
-export class ExprFieldDecl extends MalloyElement {
-  elementType = "exprFieldDecl";
+export class FieldDeclaration extends MalloyElement {
+  elementType = "fieldDeclaration";
   isMeasure?: boolean;
 
   constructor(
@@ -405,12 +405,17 @@ export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
 
 export class ExprIdReference extends ExpressionDef {
   elementType = "ExpressionIdReference";
-  constructor(readonly refString: string) {
+  constructor(readonly fieldReference: FieldReference) {
     super();
+    this.has({ fieldPath: fieldReference });
+  }
+
+  get refString(): string {
+    return this.fieldReference.refString;
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const def = fs.lookup(this.refString);
+    const def = this.fieldReference.getField(fs);
     if (def.found) {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = def.found.type();
@@ -424,9 +429,9 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const def = fs.lookup(this.refString);
-    if (def.found instanceof SpaceParam) {
-      const cParam = def.found.parameter();
+    const entry = this.fieldReference.getField(fs).found;
+    if (entry instanceof SpaceParam) {
+      const cParam = entry.parameter();
       if (isConditionParameter(cParam)) {
         const lval = expr.getExpression(fs);
         return {
@@ -555,7 +560,7 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
 
 abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
-  source?: string;
+  source?: FieldReference;
   expr?: ExpressionDef;
   legalChildTypes = [FT.numberT];
   constructor(readonly func: string, expr?: ExpressionDef) {
@@ -573,25 +578,29 @@ abstract class ExprAggregateFunction extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     let exprVal = this.expr?.getExpression(fs);
-    let source = this.source;
-    if (source) {
-      const sourceFoot = fs.lookup(source).found;
+    let structPath = this.source?.refString;
+    if (this.source) {
+      const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
         const footType = sourceFoot.type();
         if (isAtomicFieldType(footType.type)) {
           exprVal = {
             dataType: footType.type,
             aggregate: !!footType.aggregate,
-            value: [{ type: "field", path: source }],
+            value: [{ type: "field", path: this.source.refString }],
           };
-
-          const body = FieldPath.path(source);
-          if (body.length > 0) {
-            source = body;
-          } else {
-            source = undefined;
+          structPath = this.source.sourceString;
+        } else {
+          if (!(sourceFoot instanceof StructSpaceField)) {
+            this.log(`Aggregate source cannot be a ${footType.type}`);
+            return errorFor(`Aggregate source cannot be a ${footType.type}`);
           }
         }
+      } else {
+        this.log(`Reference to undefined value ${this.source.refString}`);
+        return errorFor(
+          `Reference to undefined value ${this.source.refString}`
+        );
       }
     }
     if (exprVal === undefined) {
@@ -604,8 +613,8 @@ abstract class ExprAggregateFunction extends ExpressionDef {
         function: this.func,
         e: exprVal.value,
       };
-      if (source) {
-        f.structPath = source;
+      if (structPath) {
+        f.structPath = structPath;
       }
       return {
         dataType: this.returns(exprVal),
@@ -650,14 +659,15 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
   constructor(
     readonly func: "sum" | "avg",
     readonly expr: ExpressionDef | undefined,
-    readonly source?: string
+    readonly source?: FieldReference
   ) {
     super(func, expr);
+    this.has({ source });
   }
 
   defaultFieldName(): undefined | string {
     if (this.source && this.expr === undefined) {
-      const tag = FieldPath.field(this.source);
+      const tag = this.source.nameString;
       switch (this.func) {
         case "sum":
           return `total_${tag}`;
@@ -671,13 +681,14 @@ abstract class ExprAsymmetric extends ExprAggregateFunction {
 
 export class ExprCount extends ExprAggregateFunction {
   elementType = "count";
-  constructor(readonly source?: string) {
+  constructor(readonly source?: FieldReference) {
     super("count");
+    this.has({ source });
   }
 
   defaultFieldName(): string | undefined {
     if (this.source) {
-      return "count_" + FieldPath.field(this.source);
+      return "count_" + this.source.nameString;
     }
     return undefined;
   }
@@ -689,7 +700,7 @@ export class ExprCount extends ExprAggregateFunction {
       e: [],
     };
     if (this.source) {
-      ret.structPath = this.source;
+      ret.structPath = this.source.refString;
     }
     return {
       dataType: "number",
@@ -700,14 +711,16 @@ export class ExprCount extends ExprAggregateFunction {
 }
 
 export class ExprAvg extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: string) {
+  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
     super("avg", expr, source);
+    this.has({ source });
   }
 }
 
 export class ExprSum extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: string) {
+  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
     super("sum", expr, source);
+    this.has({ source });
   }
 }
 

@@ -18,9 +18,9 @@ import * as model from "../model/malloy_types";
 import {
   ExploreField,
   FieldListEdit,
-  ExprFieldDecl,
+  FieldDeclaration,
   RenameField,
-  Wildcard,
+  WildcardFieldReference,
   Join,
   FieldName,
   TurtleDecl,
@@ -28,10 +28,10 @@ import {
   FieldCollectionMember,
   QueryItem,
   NestDefinition,
-  NestReference,
   MalloyElement,
+  NestReference,
+  FieldReference,
 } from "./ast";
-import * as FieldPath from "./field-path";
 import {
   SpaceField,
   StructSpaceField,
@@ -68,7 +68,7 @@ export type LookupResult = LookupFound | LookupError;
 export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
-  lookup(symbol: string): LookupResult;
+  lookup(symbol: FieldName[]): LookupResult;
   getDialect(): Dialect;
 }
 
@@ -155,18 +155,33 @@ export class StructSpace implements FieldSpace {
     return this.fromStruct.as || this.fromStruct.name;
   }
 
-  lookup(fieldPath: string): LookupResult {
-    const step = FieldPath.walk(fieldPath);
-    const found = this.entry(step.head);
+  lookup(path: FieldName[]): LookupResult {
+    const head = path[0];
+    const rest = path.slice(1);
+    const found = this.entry(head.refString);
     if (!found) {
-      return { error: `'${step.head}' is not defined`, found };
+      return { error: `'${head}' is not defined`, found };
     }
-    if (step.tail) {
+    if (found instanceof SpaceField) {
+      const definition = found.fieldDef();
+      if (definition) {
+        head.addReference({
+          type:
+            found instanceof StructSpaceField
+              ? "joinReference"
+              : "fieldReference",
+          definition,
+          location: head.location,
+          text: head.refString,
+        });
+      }
+    }
+    if (rest.length) {
       if (found instanceof StructSpaceField) {
-        return found.fieldSpace.lookup(step.tail);
+        return found.fieldSpace.lookup(rest);
       }
       return {
-        error: `'${step.head}' cannot contain a '${step.tail}'`,
+        error: `'${head}' cannot contain a '${rest[0]}'`,
         found: undefined,
       };
     }
@@ -196,7 +211,9 @@ export class NewFieldSpace extends StructSpace {
     const edited = new NewFieldSpace(from);
     if (choose) {
       const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      for (const s of choose.refs.list.filter((f) => f instanceof Wildcard)) {
+      for (const s of choose.refs.list.filter(
+        (f) => f instanceof WildcardFieldReference
+      )) {
         s.log("Wildcards not allowed in accept/except");
       }
       const oldMap = edited.entries();
@@ -243,7 +260,7 @@ export class NewFieldSpace extends StructSpace {
       // one of three kinds of fields are legal in an explore: expressions ...
       const elseLog = def.log;
       const elseType = def.elementType;
-      if (def instanceof ExprFieldDecl) {
+      if (def instanceof FieldDeclaration) {
         const exprField = new ExpressionFieldFromAst(this, def);
         this.setEntry(exprField.name, exprField);
         // querry (turtle) fields
@@ -251,22 +268,26 @@ export class NewFieldSpace extends StructSpace {
         const name = def.name;
         this.setEntry(name, new QueryFieldAST(this, def, name));
       } else if (def instanceof RenameField) {
-        if (def.oldName === def.newName) {
+        if (def.oldName.refString === def.newName) {
           def.log("Can't rename field to itself");
           continue;
         }
-        const oldValue = this.entry(def.oldName);
-        if (oldValue instanceof SpaceField) {
-          this.setEntry(
-            def.newName,
-            new RenameSpaceField(oldValue, def.newName, def.location)
-          );
-          this.dropEntry(def.oldName);
+        const oldValue = def.oldName.getField(this);
+        if (oldValue.found) {
+          if (oldValue.found instanceof SpaceField) {
+            this.setEntry(
+              def.newName,
+              new RenameSpaceField(oldValue.found, def.newName, def.location)
+            );
+            this.dropEntry(def.oldName.refString);
+          } else {
+            def.log(`'${def.oldName}' cannot be renamed`);
+          }
         } else {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        this.setEntry(def.name, new JoinSpaceField(this, def));
+        this.setEntry(def.name.refString, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Error translating fields for '${this.outerName()}': Expected expression, query, or rename, got '${elseType}'`
@@ -346,7 +367,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
    * hold both the input and output spaces, but I haven't been able to
    * refold my brain to see this properly yet.
    */
-  lookup(fieldPath: string): LookupResult {
+  lookup(fieldPath: FieldName[]): LookupResult {
     return this.inputSpace.lookup(fieldPath);
   }
 
@@ -361,9 +382,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldName || qi instanceof NestReference) {
-        this.addReference(qi, qi.name);
-      } else if (qi instanceof ExprFieldDecl) {
+      if (qi instanceof FieldReference || qi instanceof NestReference) {
+        this.addReference(qi);
+      } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);
       } else if (qi instanceof NestDefinition) {
         this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
@@ -375,9 +396,9 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
 
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
-      if (member instanceof FieldName) {
-        this.addReference(member, member.name);
-      } else if (member instanceof Wildcard) {
+      if (member instanceof FieldReference) {
+        this.addReference(member);
+      } else if (member instanceof WildcardFieldReference) {
         this.setEntry(member.refString, new WildSpaceField(member.refString));
       } else {
         this.addField(member);
@@ -385,13 +406,13 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
     }
   }
 
-  addReference(astEl: MalloyElement, ref: string): void {
-    const refIs = this.lookup(ref);
+  addReference(ref: FieldReference): void {
+    const refIs = ref.getField(this);
     if (refIs.error) {
-      astEl.log(refIs.error);
+      ref.log(refIs.error);
       return;
     }
-    this.setEntry(ref, new FANSPaceField(ref, this));
+    this.setEntry(ref.refString, new FANSPaceField(ref, this));
   }
 
   conContain(_qd: model.QueryFieldDef): boolean {
@@ -484,15 +505,18 @@ export class IndexFieldSpace extends QueryFieldSpace {
  */
 export class CircleSpace implements FieldSpace {
   foundCircle = false;
-  constructor(readonly realFS: FieldSpace, readonly circular: ExprFieldDecl) {}
+  constructor(
+    readonly realFS: FieldSpace,
+    readonly circular: FieldDeclaration
+  ) {}
   structDef(): model.StructDef {
     return this.realFS.structDef();
   }
   emptyStructDef(): model.StructDef {
     return this.realFS.emptyStructDef();
   }
-  lookup(symbol: string): LookupResult {
-    if (symbol === this.circular.defineName) {
+  lookup(symbol: FieldName[]): LookupResult {
+    if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
       return {
         error: `Circular reference to '${this.circular.defineName}' in definition`,

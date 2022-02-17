@@ -119,7 +119,10 @@ export class MalloyToAST
   protected onlyQueryRefs(els: ast.MalloyElement[]): ast.QueryItem[] {
     const eps: ast.QueryItem[] = [];
     for (const el of els) {
-      if (el instanceof ast.FieldName || el instanceof ast.ExprFieldDecl) {
+      if (
+        el instanceof ast.FieldReference ||
+        el instanceof ast.FieldDeclaration
+      ) {
         eps.push(el);
       } else {
         const reported = el instanceof ast.Unimplemented && el.reported;
@@ -137,6 +140,14 @@ export class MalloyToAST
 
   protected getIdText(fromTerm: ParseTree): string {
     return this.stripQuotes(fromTerm.text);
+  }
+
+  protected getFieldName(cx: ParserRuleContext): ast.FieldName {
+    return this.astAt(new ast.FieldName(this.getIdText(cx)), cx);
+  }
+
+  protected getModelEntryName(cx: ParserRuleContext): ast.ModelEntryReference {
+    return this.astAt(new ast.ModelEntryReference(this.getIdText(cx)), cx);
   }
 
   protected stripQuotes(s: string): string {
@@ -178,11 +189,11 @@ export class MalloyToAST
   protected getFieldDefs(
     cxList: ParserRuleContext[],
     isAgg?: boolean
-  ): ast.ExprFieldDecl[] {
-    const visited: ast.ExprFieldDecl[] = [];
+  ): ast.FieldDeclaration[] {
+    const visited: ast.FieldDeclaration[] = [];
     for (const cx of cxList) {
       const v = this.visit(cx);
-      if (v instanceof ast.ExprFieldDecl) {
+      if (v instanceof ast.FieldDeclaration) {
         this.astAt(v, cx);
         visited.push(v);
         if (isAgg !== undefined) {
@@ -229,20 +240,6 @@ export class MalloyToAST
   protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
     const el = this.getFilterElement(cx.fieldExpr());
     return new ast.Filter([el]);
-  }
-
-  protected getFieldPath(pcx: parse.FieldPathContext): string {
-    const nameCx = pcx.fieldName();
-    const tailCx = pcx.joinField();
-    const parts: string[] = [];
-    if (nameCx) {
-      parts.push(this.getIdText(nameCx));
-    } else if (tailCx) {
-      const joins = pcx.joinPath()?.joinName() || [];
-      parts.push(...joins.map((jcx) => this.getIdText(jcx)));
-      parts.push(this.getIdText(tailCx));
-    }
-    return parts.join(".");
   }
 
   protected getExploreSource(pcx: parse.ExploreSourceContext): ast.Mallobj {
@@ -307,10 +304,8 @@ export class MalloyToAST
   }
 
   visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
-    return this.astAt(
-      new ast.SQLSource(this.getIdText(pcx.sqlExploreNameRef())),
-      pcx
-    );
+    const name = this.getModelEntryName(pcx.sqlExploreNameRef());
+    return this.astAt(new ast.SQLSource(name), pcx);
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
@@ -378,7 +373,7 @@ export class MalloyToAST
   }
 
   protected getJoinSource(
-    name: string,
+    name: ast.ModelEntryReference,
     ecx: parse.ExploreContext | undefined
   ): ast.Mallobj {
     if (ecx) {
@@ -388,7 +383,7 @@ export class MalloyToAST
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
@@ -399,18 +394,18 @@ export class MalloyToAST
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
-    const joinAs = this.getIdText(pcx.joinNameDef());
+    const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const joinOn = this.getIdText(pcx.fieldName());
+    const joinOn = this.getFieldName(pcx.fieldName());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
 
-  visitFieldDef(pcx: parse.FieldDefContext): ast.ExprFieldDecl {
+  visitFieldDef(pcx: parse.FieldDefContext): ast.FieldDeclaration {
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
-    const def = new ast.ExprFieldDecl(valExpr, fieldName, defCx.text);
+    const def = new ast.FieldDeclaration(valExpr, fieldName, defCx.text);
     return this.astAt(def, pcx);
   }
 
@@ -436,7 +431,7 @@ export class MalloyToAST
     const oldName = pcx.fieldName(1).id();
     const rename = new ast.RenameField(
       this.getIdText(newName),
-      this.getIdText(oldName)
+      this.getFieldName(oldName)
     );
     return this.astAt(rename, pcx);
   }
@@ -484,19 +479,17 @@ export class MalloyToAST
   visitDefExplorePrimaryKey(
     pcx: parse.DefExplorePrimaryKeyContext
   ): ast.PrimaryKey {
-    const node = new ast.PrimaryKey(
-      new ast.FieldName(this.getIdText(pcx.fieldName()))
-    );
+    const node = new ast.PrimaryKey(this.getFieldName(pcx.fieldName()));
     return this.astAt(node, pcx);
   }
 
-  visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldReference {
+  visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldListReference {
     if (pcx.STAR()) {
-      return this.astAt(new ast.Wildcard("", "*"), pcx);
+      return this.astAt(new ast.WildcardFieldReference(undefined, "*"), pcx);
     }
     const fcx = pcx.fieldName();
     if (fcx) {
-      return this.astAt(new ast.FieldName(this.getIdText(fcx)), fcx);
+      return this.astAt(new ast.FieldReference([this.getFieldName(fcx)]), fcx);
     }
     throw this.internalError(pcx, "mis-parsed field name reference");
   }
@@ -534,8 +527,11 @@ export class MalloyToAST
     return new ast.QOPDesc(qProps);
   }
 
-  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldName {
-    return this.astAt(new ast.FieldName(this.getFieldPath(pcx)), pcx);
+  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldReference {
+    const names = pcx.fieldName().map((nameCx) => {
+      return this.getFieldName(nameCx);
+    });
+    return this.astAt(new ast.FieldReference(names), pcx);
   }
 
   visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
@@ -589,11 +585,11 @@ export class MalloyToAST
     return this.astAt(new ast.ProjectStatement(fields), pcx);
   }
 
-  visitWildMember(pcx: parse.WildMemberContext): ast.FieldReference {
+  visitWildMember(pcx: parse.WildMemberContext): ast.FieldListReference {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? "*" : "**";
-    const join = nameCx ? this.getFieldPath(nameCx) : "";
-    return new ast.Wildcard(join, stars);
+    const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
+    return new ast.WildcardFieldReference(join, stars);
   }
 
   visitIndexStatement(pcx: parse.IndexStatementContext): ast.Index {
@@ -601,7 +597,7 @@ export class MalloyToAST
     const indexStmt = new ast.Index(fields);
     const weightCx = pcx.fieldName();
     if (weightCx) {
-      indexStmt.useWeight(new ast.FieldName(this.getIdText(weightCx)));
+      indexStmt.useWeight(this.getFieldName(weightCx));
     }
     return this.astAt(indexStmt, pcx);
   }
@@ -618,7 +614,7 @@ export class MalloyToAST
     }
     const fieldCx = pcx.fieldName();
     if (fieldCx) {
-      return new ast.OrderBy(this.getIdText(fieldCx), dir);
+      return new ast.OrderBy(this.getFieldName(fieldCx), dir);
     }
     throw this.internalError(pcx, "can't parse order_by specification");
   }
@@ -635,11 +631,12 @@ export class MalloyToAST
     if (byCx) {
       const nameCx = byCx.fieldName();
       if (nameCx) {
-        top = new ast.Top(topN, { byString: this.getIdText(nameCx) });
+        const name = this.getFieldName(nameCx);
+        top = new ast.Top(topN, name);
       }
       const exprCx = byCx.fieldExpr();
       if (exprCx) {
-        top = new ast.Top(topN, { byExpr: this.getFieldExpr(exprCx) });
+        top = new ast.Top(topN, this.getFieldExpr(exprCx));
       }
     }
     if (!top) {
@@ -649,50 +646,48 @@ export class MalloyToAST
   }
 
   visitExploreName(pcx: parse.ExploreNameContext): ast.NamedSource {
-    const name = this.getIdText(pcx.id());
+    const name = this.getModelEntryName(pcx.id());
     return this.astAt(new ast.NamedSource(name), pcx);
   }
 
-  visitFirstSegment(pcx: parse.FirstSegmentContext): ast.PipelineDesc {
-    const qp = new ast.PipelineDesc();
-    const nameCx = pcx.exploreQueryName();
+  protected buildPipelineFromName(
+    pipe: ast.TurtleHeadedPipe,
+    pipeCx: parse.PipelineFromNameContext
+  ): void {
+    const firstCx = pipeCx.firstSegment();
+    const nameCx = firstCx.exploreQueryName();
     if (nameCx) {
-      qp.headName = this.getIdText(nameCx);
+      pipe.turtleName = this.getFieldName(nameCx);
     }
-    const propsCx = pcx.queryProperties();
+    const propsCx = firstCx.queryProperties();
     if (propsCx) {
       const queryDesc = this.visitQueryProperties(propsCx);
       if (nameCx) {
-        qp.refineHead(queryDesc);
+        pipe.refineHead(queryDesc);
       } else {
-        qp.addSegments(queryDesc);
+        pipe.addSegments(queryDesc);
       }
     }
-    return this.astAt(qp, pcx);
-  }
-
-  visitPipelineFromName(pcx: parse.PipelineFromNameContext): ast.PipelineDesc {
-    const pipe = this.visitFirstSegment(pcx.firstSegment());
-    const tail = this.getSegments(pcx.pipeElement());
+    const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
-    return this.astAt(pipe, pcx);
   }
 
   visitExploreArrowQuery(pcx: parse.ExploreArrowQueryContext): ast.FullQuery {
     const root = this.visitExplore(pcx.explore());
-    const queryPipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.FullQuery(root, queryPipe), pcx);
+    const query = new ast.FullQuery(root);
+    this.buildPipelineFromName(query, pcx.pipelineFromName());
+    return this.astAt(query, pcx);
   }
 
   visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
-    const pipe = new ast.PipelineDesc();
-    pipe.headName = this.getIdText(pcx.queryName());
+    const query = new ast.ExistingQuery();
+    query.head = this.getModelEntryName(pcx.queryName());
     const refCx = pcx.queryProperties();
     if (refCx) {
-      pipe.refineHead(this.visitQueryProperties(refCx));
+      query.refineHead(this.visitQueryProperties(refCx));
     }
-    pipe.addSegments(...this.getSegments(pcx.pipeElement()));
-    return this.astAt(new ast.ExistingQuery(pipe), pcx);
+    query.addSegments(...this.getSegments(pcx.pipeElement()));
+    return this.astAt(query, pcx);
   }
 
   visitTopLevelQueryDefs(
@@ -740,20 +735,22 @@ export class MalloyToAST
   }
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
-    const name = this.getIdText(pcx.queryName());
+    const name = this.getFieldName(pcx.queryName());
     return this.astAt(new ast.NestReference(name), pcx);
   }
 
-  visitNestDef(pcx: parse.NestDefContext): ast.NestedQuery {
+  visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
     const name = this.getIdText(pcx.queryName());
-    const pipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.NestDefinition(name, pipe), pcx);
+    const nestDef = new ast.NestDefinition(name);
+    this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
+    return this.astAt(nestDef, pcx);
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
     const name = this.getIdText(pcx.exploreQueryNameDef());
-    const pipe = this.visitPipelineFromName(pcx.pipelineFromName());
-    return this.astAt(new ast.TurtleDecl(name, pipe), pcx);
+    const queryDef = new ast.TurtleDecl(name);
+    this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
+    return this.astAt(queryDef, pcx);
   }
 
   visitExprNot(pcx: parse.ExprNotContext): ast.ExprNot {
@@ -824,7 +821,7 @@ export class MalloyToAST
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
-    const idRef = new ast.ExprIdReference(this.getFieldPath(pcx.fieldPath()));
+    const idRef = new ast.ExprIdReference(this.visitFieldPath(pcx.fieldPath()));
     return this.astAt(idRef, pcx);
   }
 
@@ -875,14 +872,15 @@ export class MalloyToAST
 
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
-    const path = pathCx ? this.getFieldPath(pathCx) : undefined;
+    const path = pathCx ? this.visitFieldPath(pathCx) : undefined;
+    const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
 
     const exprDef = pcx.fieldExpr();
     if (pcx.aggregate().COUNT()) {
       if (exprDef) {
         this.contextError(exprDef, "Ignored expression inside COUNT()");
       }
-      return new ast.ExprCount(path);
+      return new ast.ExprCount(source);
     }
 
     // * was ok in count, not ok now ... this should be in grammer but at
@@ -911,9 +909,9 @@ export class MalloyToAST
         this.contextError(pcx, "Missing expression for max");
       }
     } else if (pcx.aggregate().AVG()) {
-      return new ast.ExprAvg(expr, path);
+      return new ast.ExprAvg(expr, source);
     } else if (pcx.aggregate().SUM()) {
-      return new ast.ExprSum(expr, path);
+      return new ast.ExprSum(expr, source);
     }
     return new ast.ExprNULL();
   }
@@ -1016,7 +1014,7 @@ export class MalloyToAST
   }
 
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
-    const name = this.getIdText(pcx.exploreName());
+    const name = this.getModelEntryName(pcx.exploreName());
     // Parameters ... coming ...
     // const paramListCx = pcx.isParam();
     // if (paramListCx) {
