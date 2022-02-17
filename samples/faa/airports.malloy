@@ -3,13 +3,29 @@
 explore: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
 
+  dimension: faa_region_name is faa_region:
+    pick 'Southwest' when 'ASW'
+    pick 'Northwest Mountain' when 'ANM'
+    pick 'Eastern' when 'AEA'
+    pick 'Southern' when 'ASO'
+    pick 'Great Lakes' when 'AGL'
+    pick 'Central' when 'ACE'
+    pick 'New England' when 'ANE'
+    pick 'Western Pacific' when 'AWP'
+    pick 'Alaska' when 'AAL'
+
+  query: by_region is {
+    group_by: faa_region
+    group_by: faa_region_name
+    aggregate: airport_count
+  }
   query: by_state is {
     where: state != null
     group_by: state
     aggregate: airport_count
   }
 
-  query: by_fac_type is {
+  query: by_facility_type is {
     group_by: fac_type
     aggregate: [
       airport_count
@@ -20,7 +36,7 @@ explore: airports is table('malloy-data.faa.airports') {
   query: by_state_and_county is {
     group_by: state
     aggregate: airport_count
-    nest: by_fac_type
+    nest: by_facility_type
     nest: by_county is {
       top: 5
       group_by: county
@@ -33,13 +49,11 @@ explore: airports is table('malloy-data.faa.airports') {
     group_by: name is concat(state, '-', full_name)
   }
 
-  query: airports_by_region is {
+  query: airports_by_region_dashboard is by_region {
     where: faa_region != null
-    group_by: faa_region
-    aggregate: airport_count
     nest: [
-      by_fac_type
       by_state_shape_map is by_state {}
+      by_facility_type
       major_airports
     ]
   }
