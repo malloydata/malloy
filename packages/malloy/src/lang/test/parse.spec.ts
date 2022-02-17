@@ -911,7 +911,7 @@ describe("source locations", () => {
   });
 
   test("location of named query", () => {
-    const source = markSource`query: ${"q is table('aTable') -> { project: * }"}`;
+    const source = markSource`query: ${"q is a -> { project: * }"}`;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
     const q = getExplore(m.modelDef, "q");
@@ -919,11 +919,11 @@ describe("source locations", () => {
   });
 
   test("location of field in named query", () => {
-    const source = markSource`query: q is table('aTable') -> { group_by: ${"a is 1"} }`;
+    const source = markSource`query: q is a -> { group_by: ${"b is 1"} }`;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
     const q = getModelQuery(m.modelDef, "q");
-    const a = getField(q.pipeline[0], "a");
+    const a = getField(q.pipeline[0], "b");
     expect(a.location).toMatchObject(source.locations[0]);
   });
 
@@ -937,7 +937,7 @@ describe("source locations", () => {
 
   test("location of renamed field", () => {
     const source = markSource`
-      explore: na is table('aTable') {
+      explore: na is a {
         rename: ${"bbool is abool"}
       }
     `;
@@ -950,8 +950,8 @@ describe("source locations", () => {
 
   test("location of join on", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"x is table('aTable') { primary_key: abool } on abool"}
+      explore: na is a {
+        join_one: ${"x is a { primary_key: abool } on abool"}
       }
     `;
     const m = new BetaModel(source.code);
@@ -963,8 +963,8 @@ describe("source locations", () => {
 
   test("location of join with", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"x is table('aTable') { primary_key: abool } with astr"}
+      explore: na is a {
+        join_one: ${"x is a { primary_key: abool } with astr"}
       }
     `;
     const m = new BetaModel(source.code);
@@ -976,8 +976,8 @@ describe("source locations", () => {
 
   test("location of field in join", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: x is table('aTable') {
+      explore: na is a {
+        join_one: x is a {
           primary_key: abool
           dimension: ${"y is 1"}
         } on abool
@@ -1042,7 +1042,7 @@ describe("source locations", () => {
 describe("source references", () => {
   test("reference to explore", () => {
     const source = markSource`
-      explore: ${"na is table('aTable')"}
+      explore: ${"na is a"}
       query: ${"na"} -> { project: * }
     `;
     const m = new BetaModel(source.code);
@@ -1059,7 +1059,7 @@ describe("source references", () => {
 
   test("reference to query in query", () => {
     const source = markSource`
-      explore: t is table('aTable') {
+      explore: t is a {
         query: ${"q is { project: * }"}
       }
       query: t -> ${"q"}
@@ -1119,7 +1119,7 @@ describe("source references", () => {
 
   test("reference to query in from", () => {
     const source = markSource`
-      query: ${"q is table('aTable') -> { project: * }"}
+      query: ${"q is a -> { project: * }"}
       explore: na is from(-> ${"q"})
     `;
     const m = new BetaModel(source.code);
@@ -1136,7 +1136,7 @@ describe("source references", () => {
 
   test("reference to query in query head", () => {
     const source = markSource`
-      query: ${"q is table('aTable') -> { project: * }"}
+      query: ${"q is a -> { project: * }"}
       query: q2 is -> ${"q"} -> { project: * }
     `;
     const m = new BetaModel(source.code);
@@ -1153,7 +1153,7 @@ describe("source references", () => {
 
   test("reference to query in refined query", () => {
     const source = markSource`
-      query: ${"q is table('aTable') -> { project: * }"}
+      query: ${"q is a -> { project: * }"}
       query: q2 is -> ${"q"} { limit: 10 }
     `;
     const m = new BetaModel(source.code);
@@ -1187,7 +1187,7 @@ describe("source references", () => {
 
   test("reference to quoted field in expression", () => {
     const source = markSource`
-      explore: na is table('aTable') {
+      explore: na is a {
         dimension: ${"`name` is 'name'"}
       }
       query: na -> { project: ${"`name`"} }
@@ -1206,7 +1206,7 @@ describe("source references", () => {
 
   test("reference to joined field in expression", () => {
     const source = markSource`
-      explore: na is table('aTable') {
+      explore: na is a {
         join_one: self is ${"table('aTable')"}
           on astr = self.astr
       }
@@ -1226,8 +1226,8 @@ describe("source references", () => {
 
   test("reference to joined join in expression", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"self is table('aTable') on astr = self.astr"}
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
       }
       query: na -> { project: bstr is ${"self"}.astr }
     `;
@@ -1297,7 +1297,7 @@ describe("source references", () => {
 
   test.skip("reference to field in order by (output space)", () => {
     const source = markSource`
-      query: table('aTable') -> {
+      query: a -> {
         group_by: ${"one is 1"}
         order_by: ${"one"}
       }
@@ -1316,7 +1316,7 @@ describe("source references", () => {
 
   test("reference to field in aggregate", () => {
     const source = markSource`
-      query: table('aTable') { measure: ${"c is count()"} } -> {
+      query: a { measure: ${"c is count()"} } -> {
         group_by: abool
         aggregate: ${"c"}
       }
@@ -1335,7 +1335,7 @@ describe("source references", () => {
 
   test("reference to field in measure", () => {
     const source = markSource`
-      explore: e is table('aTable') {
+      explore: e is a {
         measure: ${"c is count()"}
         measure: c2 is ${"c"}
       }
@@ -1373,7 +1373,7 @@ describe("source references", () => {
 
   test.skip("reference to field in top (output space)", () => {
     const source = markSource`
-      query: table('aTable') -> {
+      query: a -> {
         group_by: ${"one is 1"}
         top: 10 by ${"one"}
       }
@@ -1435,8 +1435,8 @@ describe("source references", () => {
 
   test("reference to join in aggregate source", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"self is table('aTable') on astr = self.astr"}
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
       }
       query: na -> { aggregate: ai_sum is ${"self"}.sum(self.ai) }
     `;
@@ -1454,8 +1454,8 @@ describe("source references", () => {
 
   test("reference to join in aggregate in expr", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"self is table('aTable') on astr = self.astr"}
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
       }
       query: na -> { aggregate: ai_sum is self.sum(${"self"}.ai) }
     `;
@@ -1473,8 +1473,8 @@ describe("source references", () => {
 
   test("reference to explore in join", () => {
     const source = markSource`
-      explore: ${"exp1 is table('aTable')"}
-      explore: exp2 is table('aTable') {
+      explore: ${"exp1 is a"}
+      explore: exp2 is a {
         join_one: ${"exp1"} on astr = exp1.astr
       }
     `;
@@ -1527,7 +1527,7 @@ describe("source references", () => {
 
   test("reference to field in join with", () => {
     const source = markSource`
-      explore: exp1 is table('aTable') { primary_key: astr }
+      explore: exp1 is a { primary_key: astr }
       explore: exp2 is ${"table('aTable')"} {
         join_one: exp1 with ${"astr"}
       }
@@ -1549,8 +1549,8 @@ describe("source references", () => {
   //      Additionally (incorrect): Cannot define ai_sum, unexpected type unknown
   test.skip("reference to join in aggregate source", () => {
     const source = markSource`
-      explore: na is table('aTable') {
-        join_one: ${"self is table('aTable') on astr = self.astr"}
+      explore: na is a {
+        join_one: ${"self is a on astr = self.astr"}
       }
       query: na -> { aggregate: ai_sum is ${"dsf"}.sum(self.ai) }
     `;
