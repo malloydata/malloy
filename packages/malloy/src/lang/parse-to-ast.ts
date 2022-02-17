@@ -18,7 +18,6 @@ import { MalloyVisitor } from "./lib/Malloy/MalloyVisitor";
 import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { MessageLogger } from "./parse-log";
-import * as Source from "./source-reference";
 import { MalloyParseRoot } from "./parse-malloy";
 
 /**
@@ -60,7 +59,10 @@ export class MalloyToAST
   protected contextError(cx: ParserRuleContext, msg: string): void {
     this.msgLog.log({
       message: msg,
-      at: { url: this.parse.sourceURL, range: Source.rangeFromContext(cx) },
+      at: {
+        url: this.parse.subTranslator.sourceURL,
+        range: this.parse.subTranslator.rangeFromContext(cx),
+      },
     });
   }
 
@@ -172,8 +174,8 @@ export class MalloyToAST
     cx: ParserRuleContext
   ): MT {
     el.location = {
-      url: this.parse.sourceURL,
-      range: Source.rangeFromContext(cx),
+      url: this.parse.subTranslator.sourceURL,
+      range: this.parse.subTranslator.rangeFromContext(cx),
     };
     return el;
   }
@@ -1081,7 +1083,10 @@ export class MalloyToAST
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.stripQuotes(pcx.importURL().text);
-    return this.astAt(new ast.ImportStatement(url, this.parse.sourceURL), pcx);
+    return this.astAt(
+      new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
+      pcx
+    );
   }
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {

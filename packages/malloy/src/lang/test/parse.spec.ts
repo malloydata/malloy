@@ -990,6 +990,16 @@ describe("source locations", () => {
     const y = getField(x, "y");
     expect(y.location).toMatchObject(source.locations[0]);
   });
+
+  test("multi line sql block token span is correct", () => {
+    // There is exactly one token in this file ..
+    const sqlSource = "|| // line 0\n//line 1\n// line 2;;";
+    const m = new BetaModel(sqlSource);
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
+  });
+
   test(
     "undefined query location",
     modelErrors(
@@ -1554,5 +1564,55 @@ describe("source references", () => {
         location: source.locations[0],
       },
     });
+  });
+});
+
+describe("translation need error locations", () => {
+  test("import error location", () => {
+    const source = markSource`import ${'"badfile"'}`;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    m.update({
+      errors: { urls: { [(result.urls || [])[0]]: "Bad file!" } },
+    });
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at).toEqual(source.locations[0]);
+    return undefined;
+  });
+
+  test("sql struct error location", () => {
+    const source = markSource`
+      sql: bad_sql is || BAD SQL ;;
+      query: ${"from_sql(bad_sql)"} -> { project: * }
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    m.update({
+      errors: {
+        sqlStructs: { [(result.sqlStructs || [])[0].name]: "Bad SQL!" },
+      },
+    });
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at).toEqual(source.locations[0]);
+    return undefined;
+  });
+
+  test("table struct error location", () => {
+    const source = markSource`
+      explore: bad_explore is ${"table('malloy-data.bad.table')"}
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    m.update({
+      errors: {
+        tables: { [(result.tables || [])[0]]: "Bad table!" },
+      },
+    });
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at).toEqual(source.locations[0]);
+    return undefined;
   });
 });

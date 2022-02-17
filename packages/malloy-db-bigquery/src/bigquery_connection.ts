@@ -109,8 +109,16 @@ export class BigQueryConnection implements Connection {
     string,
     { data: MalloyQueryData; schema: bigquery.ITableFieldSchema }
   >();
-  private schemaCache = new Map<string, StructDef>();
-  private sqlSchemaCache = new Map<string, StructDef>();
+  private schemaCache = new Map<
+    string,
+    | { schema: StructDef; error?: undefined }
+    | { error: string; schema?: undefined }
+  >();
+  private sqlSchemaCache = new Map<
+    string,
+    | { schema: StructDef; error?: undefined }
+    | { error: string; schema?: undefined }
+  >();
 
   private queryOptions?: QueryOptionsReader;
 
@@ -535,21 +543,33 @@ export class BigQueryConnection implements Connection {
     return structDef;
   }
 
-  public async fetchSchemaForTables(
-    missing: string[]
-  ): Promise<NamedStructDefs> {
-    const tableStructDefs: NamedStructDefs = {};
+  public async fetchSchemaForTables(missing: string[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    const schemas: NamedStructDefs = {};
+    const errors: { [name: string]: string } = {};
 
     for (const tableURL of missing) {
       let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
-        const tableFieldSchema = await this.getTableFieldSchema(tableURL);
-        inCache = this.structDefFromTableSchema(tableURL, tableFieldSchema);
-        this.schemaCache.set(tableURL, inCache);
+        try {
+          const tableFieldSchema = await this.getTableFieldSchema(tableURL);
+          inCache = {
+            schema: this.structDefFromTableSchema(tableURL, tableFieldSchema),
+          };
+          this.schemaCache.set(tableURL, inCache);
+        } catch (error) {
+          inCache = { error: error.message };
+        }
       }
-      tableStructDefs[tableURL] = inCache;
+      if (inCache.schema !== undefined) {
+        schemas[tableURL] = inCache.schema;
+      } else {
+        errors[tableURL] = inCache.error;
+      }
     }
-    return tableStructDefs;
+    return { schemas, errors };
   }
 
   private async getSQLBlockSchema(sqlRef: SQLBlock) {
@@ -575,22 +595,34 @@ export class BigQueryConnection implements Connection {
     throw lastFetchError;
   }
 
-  public async fetchSchemaForSQLBlocks(
-    sqlRefs: SQLBlock[]
-  ): Promise<NamedStructDefs> {
-    const tableStructDefs: NamedStructDefs = {};
+  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    const schemas: NamedStructDefs = {};
+    const errors: { [name: string]: string } = {};
 
     for (const sqlRef of sqlRefs) {
       const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {
-        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
-        inCache = this.structDefFromSQLSchema(sqlRef, tableFieldSchema);
-        this.schemaCache.set(key, inCache);
+        try {
+          const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
+          inCache = {
+            schema: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
+          };
+          this.schemaCache.set(key, inCache);
+        } catch (error) {
+          inCache = { error: error.message };
+        }
       }
-      tableStructDefs[key] = inCache;
+      if (inCache.schema !== undefined) {
+        schemas[key] = inCache.schema;
+      } else {
+        errors[key] = inCache.error;
+      }
     }
-    return tableStructDefs;
+    return { schemas, errors };
   }
 
   private async runBigQueryJob(
