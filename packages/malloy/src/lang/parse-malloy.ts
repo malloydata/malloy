@@ -803,11 +803,7 @@ export abstract class MalloyTranslation {
       line: startToken.line - 1,
       character: startToken.charPositionInLine,
     };
-    if (
-      this.parseStep.sourceInfo &&
-      stopToken.stopIndex != -1 &&
-      stopToken.stopIndex != startToken.startIndex
-    ) {
+    if (this.parseStep.sourceInfo && stopToken.stopIndex != -1) {
       // Find the line which contains the stopIndex
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
