@@ -386,22 +386,15 @@ export abstract class Mallobj extends MalloyElement {
 
 class QueryHeadStruct extends Mallobj {
   elementType = "internalOnlyQueryHead";
-  constructor(readonly fromRef: ModelEntryReference | model.StructRef) {
+  constructor(readonly fromRef: model.StructRef) {
     super();
   }
 
   structRef(): model.StructRef {
-    return this.fromRef instanceof ModelEntryReference
-      ? this.fromRef.name
-      : this.fromRef;
+    return this.fromRef;
   }
 
   structDef(): model.StructDef {
-    if (this.fromRef instanceof ModelEntryReference) {
-      const ns = new NamedSource(this.fromRef);
-      this.has({ exploreReference: ns });
-      return ns.structDef();
-    }
     if (model.refIsStructDef(this.fromRef)) {
       return this.fromRef;
     }
