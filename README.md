@@ -12,6 +12,12 @@ Malloy is a language for anyone who works with SQL--whether you’re an analyst,
 
 We've built a Visual Studio Code extension to facilitate interacting with your data using Malloy. The extension provides a rich environment to create Malloy data models, query and transform data, and to create simple visualizations and dashboards.
 
+
+
+https://user-images.githubusercontent.com/7178946/154564840-41299974-58ce-41d1-ab08-98f2be6f9157.mov
+
+
+
 # Syntax Example
 We recommend starting with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html) to get acquainted with the syntax. Here is a simple example of a Malloy query:
 
@@ -42,13 +48,9 @@ ORDER BY flight_count desc         -- malloy automatically orders by the first a
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
 # Get Started
-GitHub mutes videos by default, so make sure to unmute to hear the walkthrough. 
-
-
+GitHub mutes videos by default, so make sure to unmute. This walkthrough covers installing the extension, connecting a database, and the basics of using Malloy in VS Code. 
 
 https://user-images.githubusercontent.com/7178946/151630430-308e651d-814c-4c18-8522-d2d0edb25ece.mp4
-
-
 
 
 
