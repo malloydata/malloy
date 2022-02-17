@@ -1235,9 +1235,6 @@ class ReduceExecutor implements QueryExecutor {
         qp.log("Query operation already sorted");
       } else {
         this.order = qp;
-        // TODO jump-to-definition This `outputFS` cannot currently `lookup` in the actual
-        //      output space.
-        // qp.checkReferences(this.outputFS);
       }
     } else {
       return false;
@@ -1278,7 +1275,7 @@ class ReduceExecutor implements QueryExecutor {
       }
     }
     if (this.order instanceof Ordering) {
-      to.orderBy = this.order.orderBy();
+      to.orderBy = this.order.getOrderBy(this.outputFS);
     }
 
     const oldFilters = from?.filterList || [];
@@ -1639,21 +1636,19 @@ export class OrderBy extends MalloyElement {
     return typeof this.field === "number" ? this.field : this.field.refString;
   }
 
-  byElement(): model.OrderBy {
+  getOrderBy(_fs: FieldSpace): model.OrderBy {
+    // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
+    // if (this.field instanceof FieldName) {
+    //   const entry = this.field.getField(_fs);
+    //   if (entry.error) {
+    //     this.field.log(entry.error);
+    //   }
+    // }
     const orderElement: model.OrderBy = { field: this.modelField };
     if (this.dir) {
       orderElement.dir = this.dir;
     }
     return orderElement;
-  }
-
-  checkReferences(fs: FieldSpace): void {
-    if (this.field instanceof FieldName) {
-      const entry = this.field.getField(fs);
-      if (entry.error) {
-        this.field.log(entry.error);
-      }
-    }
   }
 }
 
@@ -1662,12 +1657,8 @@ export class Ordering extends ListOf<OrderBy> {
     super("ordering", list);
   }
 
-  orderBy(): model.OrderBy[] {
-    return this.list.map((el) => el.byElement());
-  }
-
-  checkReferences(fs: FieldSpace): void {
-    this.list.forEach((orderBy) => orderBy.checkReferences(fs));
+  getOrderBy(fs: FieldSpace): model.OrderBy[] {
+    return this.list.map((el) => el.getOrderBy(fs));
   }
 }
 
