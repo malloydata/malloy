@@ -967,3 +967,53 @@ describe("source locations", () => {
     )
   );
 });
+
+describe("translation need error locations", () => {
+  test("import error location", () => {
+    const source = markSource`import ${'"badfile"'}`;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    m.update({
+      errors: { urls: { [(result.urls || [])[0]]: "Bad file!" } },
+    });
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at).toEqual(source.locations[0]);
+    return undefined;
+  });
+
+  test("sql struct error location", () => {
+    const source = markSource`
+      sql: bad_sql is || BAD SQL ;;
+      query: ${"from_sql(bad_sql)"} -> { project: * }
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    m.update({
+      errors: {
+        sqlStructs: { [(result.sqlStructs || [])[0].name]: "Bad SQL!" },
+      },
+    });
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at).toEqual(source.locations[0]);
+    return undefined;
+  });
+
+  test("table struct error location", () => {
+    const source = markSource`
+      explore: bad_explore is ${"table('malloy-data.bad.table')"}
+    `;
+    const m = new BetaModel(source.code);
+    const result = m.translate();
+    m.update({
+      errors: {
+        tables: { [(result.tables || [])[0]]: "Bad table!" },
+      },
+    });
+    expect(m).not.toCompile();
+    const errList = m.errors().errors;
+    expect(errList[0].at).toEqual(source.locations[0]);
+    return undefined;
+  });
+});

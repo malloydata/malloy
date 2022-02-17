@@ -180,27 +180,22 @@ export class Malloy {
         // there might be more than one of these in a single reply ...
         if (result.urls) {
           for (const neededUrl of result.urls) {
-            if (neededUrl.startsWith("internal://")) {
-              throw new Error(
-                "In order to use relative imports, you must compile a file via a URL."
+            try {
+              if (neededUrl.startsWith("internal://")) {
+                throw new Error(
+                  "In order to use relative imports, you must compile a file via a URL."
+                );
+              }
+              const neededText = await urlReader.readURL(
+                URL.fromString(neededUrl)
               );
+              const urls = { [neededUrl]: neededText };
+              translator.update({ urls });
+            } catch (error) {
+              translator.update({
+                errors: { urls: { [neededUrl]: error.message } },
+              });
             }
-            const neededText = await urlReader.readURL(
-              URL.fromString(neededUrl)
-            );
-            // TODO -- If the URL fetch fails, report the error with
-            // translator.update({
-            //   errors: {
-            // .   urls: {
-            // .     [neededURL]: errorMessage
-            // .   },
-            // . }
-            // });
-            // ... the parser will report this as an error. The  next time
-            // .translate() is called in the loop it will return the
-            // error message, the location of the reference, and .final
-            const urls = { [neededUrl]: neededText };
-            translator.update({ urls });
           }
         }
         if (result.tables) {
@@ -228,11 +223,12 @@ export class Malloy {
             const connection = await connections.lookupConnection(
               connectionName
             );
-            const tables = await connection.fetchSchemaForTables(
-              connectionTableString
-            );
-            // TODO add { error: { tables: {} } handling as above in .urls
-            translator.update({ tables });
+            // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
+            //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
+            //      the translator runs into an infinite loop fetching tables.
+            const { schemas: tables, errors } =
+              await connection.fetchSchemaForTables(connectionTableString);
+            translator.update({ tables, errors: { tables: errors } });
           }
         }
         if (result.sqlStructs) {
@@ -263,14 +259,15 @@ export class Malloy {
             const connection = await connections.lookupConnection(
               connectionName
             );
-            const sqlStructs = await connection.fetchSchemaForSQLBlocks(
-              connectionToSQLReferencesMap
-            );
+            // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
+            //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
+            //      the translator runs into an infinite loop fetching SQL structs.
+            const { schemas: sqlStructs, errors } =
+              await connection.fetchSchemaForSQLBlocks(
+                connectionToSQLReferencesMap
+              );
             translator.update({ sqlStructs });
-            // TODO feature-sql-block handle error properly
-            // translator.update({errors: {
-            //   sqlRefs: { [misinngSqlSchemaRef.key]: errorMessage }
-            // }});
+            translator.update({ sqlStructs, errors: { sqlStructs: errors } });
           }
         }
       }

@@ -77,8 +77,16 @@ const SCHEMA_PAGE_SIZE = 1000;
 
 export class PostgresConnection implements Connection {
   private resultCache = new Map<string, MalloyQueryData>();
-  private schemaCache = new Map<string, StructDef>();
-  private sqlSchemaCache = new Map<string, StructDef>();
+  private schemaCache = new Map<
+    string,
+    | { schema: StructDef; error?: undefined }
+    | { error: string; schema?: undefined }
+  >();
+  private sqlSchemaCache = new Map<
+    string,
+    | { schema: StructDef; error?: undefined }
+    | { error: string; schema?: undefined }
+  >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
   public readonly name;
@@ -117,35 +125,61 @@ export class PostgresConnection implements Connection {
     return false;
   }
 
-  public async fetchSchemaForTables(
-    missing: string[]
-  ): Promise<NamedStructDefs> {
-    const tableStructDefs: NamedStructDefs = {};
-    for (const tableName of missing) {
-      let inCache = this.schemaCache.get(tableName);
+  public async fetchSchemaForTables(missing: string[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    const schemas: NamedStructDefs = {};
+    const errors: { [name: string]: string } = {};
+
+    for (const tableURL of missing) {
+      let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
-        inCache = await this.getTableSchema(tableName);
-        this.schemaCache.set(tableName, inCache);
+        try {
+          inCache = {
+            schema: await this.getTableSchema(tableURL),
+          };
+          this.schemaCache.set(tableURL, inCache);
+        } catch (error) {
+          inCache = { error: error.message };
+        }
       }
-      tableStructDefs[tableName] = inCache;
+      if (inCache.schema !== undefined) {
+        schemas[tableURL] = inCache.schema;
+      } else {
+        errors[tableURL] = inCache.error;
+      }
     }
-    return tableStructDefs;
+    return { schemas, errors };
   }
 
-  public async fetchSchemaForSQLBlocks(
-    sqlStructs: SQLBlock[]
-  ): Promise<NamedStructDefs> {
-    const tableStructDefs: NamedStructDefs = {};
-    for (const sqlRef of sqlStructs) {
+  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    const schemas: NamedStructDefs = {};
+    const errors: { [name: string]: string } = {};
+
+    for (const sqlRef of sqlRefs) {
       const key = sqlRef.name;
       let inCache = this.sqlSchemaCache.get(key);
       if (!inCache) {
-        inCache = await this.getSQLBlockSchema(sqlRef);
-        this.schemaCache.set(key, inCache);
+        try {
+          inCache = {
+            schema: await this.getSQLBlockSchema(sqlRef),
+          };
+          this.schemaCache.set(key, inCache);
+        } catch (error) {
+          inCache = { error: error.message };
+        }
       }
-      tableStructDefs[key] = inCache;
+      if (inCache.schema !== undefined) {
+        schemas[key] = inCache.schema;
+      } else {
+        errors[key] = inCache.error;
+      }
     }
-    return tableStructDefs;
+    return { schemas, errors };
   }
 
   public async runSQLBlockAndFetchResultSchema(
@@ -154,7 +188,7 @@ export class PostgresConnection implements Connection {
     options?: { rowLimit?: number | undefined }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
     const data = await this.runSQL(sqlBlock.select, options);
-    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock]))[
+    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock])).schemas[
       sqlBlock.name
     ];
     return { data, schema };
