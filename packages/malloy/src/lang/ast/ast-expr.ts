@@ -429,7 +429,7 @@ export class ExprIdReference extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = this.fieldReference.getField(fs);
+    const entry = this.fieldReference.getField(fs).found;
     if (entry instanceof SpaceParam) {
       const cParam = entry.parameter();
       if (isConditionParameter(cParam)) {
