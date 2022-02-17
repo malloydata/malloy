@@ -800,13 +800,7 @@ export abstract class MalloyTranslation {
       line: startToken.line - 1,
       character: startToken.charPositionInLine,
     };
-    if (
-      this.parseStep.sourceInfo &&
-      stopToken.stopIndex != -1 &&
-      // If the `stopToken.stopIndex` is one before the `startToken.startIndex`, it means
-      // it's length 0 and we don't need to look up the end.
-      stopToken.stopIndex != startToken.startIndex - 1
-    ) {
+    if (this.parseStep.sourceInfo && stopToken.stopIndex != -1) {
       // Find the line which contains the stopIndex
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
