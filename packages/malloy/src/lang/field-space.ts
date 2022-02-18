@@ -31,6 +31,7 @@ import {
   MalloyElement,
   NestReference,
   FieldReference,
+  ErrorFactory,
 } from "./ast";
 import {
   SpaceField,
@@ -323,8 +324,10 @@ export class NewFieldSpace extends StructSpace {
       for (const [fieldName, field] of reorderFields) {
         if (field instanceof JoinSpaceField && field.join.needsFixup()) {
           const joinStruct = field.join.structDef();
-          this.final.fields.push(joinStruct);
-          fixupJoins.push([field.join, joinStruct]);
+          if (!ErrorFactory.isErrorStructdef(joinStruct)) {
+            this.final.fields.push(joinStruct);
+            fixupJoins.push([field.join, joinStruct]);
+          }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
