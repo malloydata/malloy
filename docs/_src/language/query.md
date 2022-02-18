@@ -1,7 +1,7 @@
 # Queries
 
 The basic syntax for a query in Malloy consists of a source
-and a "pipeline" of one or more _stages_ separated by `->`. The shape of the data defined in the original explore is transformed by each stage.
+and a "pipeline" of one or more _stages_ separated by `->`. The shape of the data defined in the original source is transformed by each stage.
 
 ```malloy
 query: flights -> { group_by: carrier; aggregate: flight_count is count() }
@@ -9,7 +9,7 @@ query: flights -> { group_by: carrier; aggregate: flight_count is count() }
 
 ## Sources
 
-The source of a query can be a table, an [explore](explore.md), or a [named query](statement.md#queries).
+The source of a query can be a table, a [source](source.md), or a [named query](statement.md#queries).
 
 **A query against a table**
 
@@ -17,7 +17,7 @@ The source of a query can be a table, an [explore](explore.md), or a [named quer
 query: table('malloy-data.faa.flights') -> { aggregate: flight_count is count() }
 ```
 
-**A query against an explore**
+**A query against a source**
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
@@ -36,7 +36,7 @@ query: flights_by_carrier is table('malloy-data.faa.flights') -> {
 query: -> flights_by_carrier -> { project: carrier; limit: 2 }
 ```
 
-When a query is defined as part of an explore or nested inside
+When a query is defined as part of a source or nested inside
 another query stage, the source is implicit.
 
 ```malloy
@@ -51,7 +51,7 @@ query: table('malloy-data.faa.flights') -> {
 
 ## Pipelines
 
-A pipeline transforms the shape of an explore, and is made up of a series of stages.
+A pipeline transforms the shape of a source, and is made up of a series of stages.
 
 A typical stage is has either `group_by`/`aggregate` or `project`, or `index` transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.
 
@@ -114,7 +114,7 @@ query: flights -> {
 }
 ```
 
-Filters may also be applied to a [query's source](), an [entire explore](explore.md#filtering-explores), or to a [measure](expressions.md).
+Filters may also be applied to a [query's source](), a [entire source](source.md#filtering-sources), or to a [measure](expressions.md).
 
 <!-- TODO: improve link for filtering a measure. -->
 

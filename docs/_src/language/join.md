@@ -1,6 +1,6 @@
 # Joins
 
-Joins in Malloy differ from SQL joins.  When two explores are joined,
+Joins in Malloy differ from SQL joins.  When two sources are joined,
 Malloy retains the graph nature and hierarchy of the the data relationships. This is unlike
 SQL, which flattens everything into a single table space.
 
@@ -10,13 +10,13 @@ the locality of computation, so they are always computed correctly regardless of
 In Malloy, syntaxes for join are:
 
 ```malloy
-join_one: <explore-name> [is <explore-exp>] on <boolean expression>
-join_one: <explore-name> [is <explore-exp>] with <foreign_key>        -- slightly more concise; works with primary to foreign key joins
-join_many: <explore-name> [is <explore-exp>] on <boolean expression>
-join_cross: <explore-name> [is <explore-exp>] [on <boolean expression>]
+join_one: <source-name> [is <source-exp>] on <boolean expression>
+join_one: <source-name> [is <source-exp>] with <foreign_key>        -- slightly more concise; works with primary to foreign key joins
+join_many: <source-name> [is <source-exp>] on <boolean expression>
+join_cross: <source-name> [is <source-exp>] [on <boolean expression>]
 ```
 
-Examples of the above, with `orders` as the implied source explore.:
+Examples of the above, with `orders` as the implied source:
 ```malloy
 join_one: users is table('malloy-data.ecomm.users') on orders.user_id = users.id
 join_one: users on orders.user_id = users.id
@@ -42,9 +42,9 @@ Since Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, 
 
 The easiest, most error-proof way to perform a join is using the following syntax:
 
-`join_one: <explore> with <foreign_key>`
+`join_one: <source> with <foreign_key>`
 
-To join a foreign key of the source explore to the `primary_key` of a joined explore, reference the foreign key by name in the `with` clause.
+To join a foreign key in the source to the `primary_key` of a joined source, reference the foreign key by name in the `with` clause.
 
 ```malloy
 source: users is table('malloy-data.ecomm.users'){
@@ -64,10 +64,9 @@ source: order_items is table('malloy-data.ecomm.order_items'){
 ```
 
 
-## Naming Joined Explores
+## Naming Joined Sources
 
-If no alias is specified using `is`, the name of the join will be the name of the
-explore being joined.
+If no alias is specified using `is`, the name of the join will be the name of the source being joined.
 
 ```malloy
 
@@ -80,7 +79,7 @@ source: flights is table('malloy-data.faa.flights'){
 }
 ```
 
-To give the joined explore a different name within the source explore, use `is` to alias the explore.
+To give the joined source a different name within the context source, use `is` to alias it.
 
 ```malloy
 source: airports is table('malloy-data.faa.airports') {
@@ -94,7 +93,7 @@ source: flights is table('malloy-data.faa.flights'){
 
 ## In-line Joins
 
-Explores do not need to be modeled before they are used in a join, though the join must be named using `is`.
+Sources do not need to be modeled before they are used in a join, though the join must be named using `is`.
 
 ```malloy
 
@@ -103,9 +102,9 @@ source: flights is table('malloy-data.faa.flights'){
 }
 ```
 
-## Using Fields from Joined Explores
+## Using Fields from Joined Sources
 
-When an explore is joined in, its fields become nested within the parent explore. Fields from joined explores can be referenced using `.`:
+When a source is joined in, its fields become nested within the parent source. Fields from joined sources can be referenced using `.`:
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
@@ -115,7 +114,7 @@ query: flights->{
 }
 ```
 
-Measures and queries defined in joined explores may be used in addition to dimensions.
+Measures and queries defined in joined sources may be used in addition to dimensions.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
@@ -177,7 +176,7 @@ For more examples and how to reason about aggregation across joins, review the [
 Inner join are essentially left joins with an additional condition that the parent table has matches in the joined table. The example below functions logically as an INNER JOIN, returning only users that have at least one row in the orders table, and only orders that have an associated user.
 
 ```malloy
-explore users is table('users') {
-  join_many: orders is table('orders') on id=orders.user_id and orders.user_id != null
+source: users is table('malloy-data.ecomm.users') {
+  join_many: orders is table('malloy-data.ecomm.order_items') on id = orders.user_id and orders.user_id != null
 }
 ```

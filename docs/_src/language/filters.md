@@ -69,7 +69,7 @@ measure and then create that as a percent of total.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-// add a couple of measures to the `flights` explore
+// add a couple of measures to the `flights` source
 source: my_flights is flights {
   measure: delayed_flights is flight_count { where: dep_delay > 30 }
   measure: percent_delayed is delayed_flights / flight_count
@@ -95,7 +95,7 @@ measure and then create that as a percent of total.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-// add a couple of measures to the `flights` explore
+// add a couple of measures to the `flights` source
 source: my_flights is flights {
   measure: delayed_flights is flight_count { where: dep_delay > 30 }
   query: delay_stats is {

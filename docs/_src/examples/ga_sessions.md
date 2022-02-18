@@ -2,7 +2,7 @@
 
 _You can find the complete source code for this model [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/ga_sessions/ga_sessions.malloy)._
 
-Start by defining an explore based on a query.
+Start by defining a source based on a query.
 
 ```malloy
 source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {

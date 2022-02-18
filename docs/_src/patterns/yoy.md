@@ -78,7 +78,7 @@ query: order_items -> {
 
 
 ### Declaring and reusing common expressions
-We can rewrite the query so it is more reusable.  The declarations after the explore are temporary additions to this order_items table for the sake of just this query.
+We can rewrite the query so it is more reusable.  The declarations after the source are temporary additions to this order_items table for the sake of just this query.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}

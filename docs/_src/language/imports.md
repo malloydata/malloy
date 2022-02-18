@@ -3,12 +3,12 @@
 
 # Imports and Exports
 
-Malloy allows for explores to be reused between files, or for a set of explores
+Malloy allows for Sources to be reused between files, or for a set of sources
 to simply be split up among multiple files by using `import` and `export`.
 
 ## Exports
 
-Before an explore definition, the `export` keyword means that the explore should
+Before a source definition, the `export` keyword means that the source should
 be included in the file's _public namespace_.
 
 Consider a file <code>samples/faa/flights.malloy</code>:
@@ -31,11 +31,10 @@ only `flights` is part of the file's public namespace.
 
 ## Imports
 
-In order to reuse or extend a explore from another file, you can include all the
-exported explores from another file using `import "path/to/some/file.malloy"`.
+In order to reuse or extend a source from another file, you can include all the
+exported sources from another file using `import "path/to/some/file.malloy"`.
 
-For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the
-`flights` explore, you could write:
+For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the `flights` source, you could write:
 
 ```malloy
 import "faa/flights.malloy"

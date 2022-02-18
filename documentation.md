@@ -48,7 +48,7 @@ line in a comment with an `!`, like: `--! { "isRunnable": true }`. For example,
 ~~~
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size": "large"}
-explore flights | sessionize
+source flights | sessionize
 ```
 ~~~
 
@@ -63,7 +63,7 @@ The following list describes style conventions used in the docs.
 
 * Use headers (`# Foo`, `## Bar`, etc.) to organize document structure, not for
   emphasis. If you want to show emphasis, do it with `**bold**` or `_italics_`.
-* Code spans (`` `explore flights` ``) are by default _Malloy_ syntax-highlighted. If
+* Code spans (`` `source flights` ``) are by default _Malloy_ syntax-highlighted. If
   you are writing a code span with code in any other language, use an HTML code tag,
   e.g. `<code>SELECT *</code>`
 

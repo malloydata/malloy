@@ -6,7 +6,7 @@ Malloy supports the standard aggregate functions `count`, `sum`, `avg`, `min`, a
 
 ### Counts
 
-The `count` aggregate function may be used to count the number of records appearing in an explore.
+The `count` aggregate function may be used to count the number of records appearing in a source.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
@@ -17,7 +17,7 @@ query: flights -> {
 
 ### Distinct Counts
 
-Distinct counts may be used to count the number of distinct values of a particular field within an explore.
+Distinct counts may be used to count the number of distinct values of a particular field within a source.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
@@ -185,13 +185,13 @@ The `min` and `max` aggregates do not support aggregate locality because the min
 
 ### Aggregates on Fields
 
-Aggregating "on a field," e.g. `aircraft_models.seats.avg()` is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. `aircraft_models.avg(aircraft_models.seats)`. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, `avg` and `sum`.
+Aggregating "on a field," e.g. `aircraft_models.seats.avg()` is exactly equivalent to aggregating that field with respect to its direct parent source, e.g. `aircraft_models.avg(aircraft_models.seats)`. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, `avg` and `sum`.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
 query: aircraft -> {
   aggregate: [
-    avg_on_explore is aircraft_models.avg(aircraft_models.seats)
+    avg_on_source is aircraft_models.avg(aircraft_models.seats)
     avg_on_field is aircraft_models.seats.avg()
   ]
 }
