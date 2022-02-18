@@ -72,10 +72,12 @@ The following list describes style conventions used in the docs.
 To deploy the docs, use the following steps:
 
 1. Merge any docs changes into `main`
-2. `git pull main`
-2. `git checkout docs-release`
-3. `git merge main`
-4. `yarn docs-build`
-5. `git add docs`
-6. `git commit`
-7. `git push`
+2. `git checkout main`
+3. `git pull`
+4. `git checkout docs-release`
+5. `git pull`
+6. `git merge main`
+7. `yarn docs-build`
+8. `git add docs`
+9. `git commit`
+10. `git push`
