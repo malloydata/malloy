@@ -238,6 +238,10 @@
           "name": "keyword.control.explore"
         },
         {
+          "match": "(?i)\\bsource\\b",
+          "name": "keyword.control.source"
+        },
+        {
           "match": "(?i)\\bgroup_by\\b",
           "name": "keyword.control.group_by"
         },
