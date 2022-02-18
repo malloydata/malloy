@@ -18,7 +18,7 @@ An explore can be created from a SQL table or view from a connected database.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e1.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 ```
@@ -49,12 +49,12 @@ the base explore with modifications only relevant in that specific context.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e1.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
 // new explore 'my_flights' adds total_distance and carrier_stats to flights
-explore: my_flights is flights {
+source: my_flights is flights {
   measure: total_distance is distance.sum()
 
   query: carrier_stats is {
@@ -82,11 +82,11 @@ be defined inline or referenced by name.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e2.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
-explore: carrier_facts is from(
+source: carrier_facts is from(
   flights -> {
     group_by: carrier
     aggregate: lifetime_flights is flight_count
@@ -109,7 +109,7 @@ query: carrier_facts -> {
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e3.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
   query: by_carrier is {
     group_by: carrier
@@ -117,7 +117,7 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 }
 
-explore: carrier_facts is from(flights -> by_carrier) {
+source: carrier_facts is from(flights -> by_carrier) {
   dimension: lifetime_flights_bucketed is floor(lifetime_flights / 10000) * 10000
 }
 ```
@@ -145,7 +145,7 @@ sql: my_sql_query is ||
   LIMIT 10
 ;;
 
-explore: limited_users is from_sql(my_sql_query) {
+source: limited_users is from_sql(my_sql_query) {
   measure: user_count is count()
 }
 
@@ -168,11 +168,11 @@ When an explore is defined, filters which apply to any query against the new exp
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e4.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
-explore: long_sfo_flights is flights {
+source: long_sfo_flights is flights {
   where: origin = 'SFO' and distance > 1000
 }
 ```
@@ -188,7 +188,7 @@ To be used in joins to other explores, an explore must
 have a primary key specified.
 
 ```malloy
-explore: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
 }
 ```
@@ -199,11 +199,11 @@ When explores are joined as part of their definition, queries can reference fiel
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e5.malloy"}
-explore: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   join_one: carriers with carrier
   measure: flight_count is count()
 }
@@ -228,7 +228,7 @@ part of an explore, allowing for them to be used in any
 query against the explore.
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   // A dimension
   dimension: has_control_tower is cntl_twr = 'Y'
 
@@ -249,7 +249,7 @@ Fields from an explore's source may be renamed in the context of the
 new explore. This is useful when the original name is not descriptive, or has a different meaning in the new explore.
 
 ```malloy
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   rename: facility_type is fac_type
   rename: origin_code is origin
 
@@ -270,7 +270,7 @@ conjunction with one another.
 **Accepting fields**
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   accept: [ id, name, code, city, state, elevation ]
 }
 ```
@@ -278,7 +278,7 @@ explore: airports is table('malloy-data.faa.airports') {
 **Excepting fields**
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   except: [ c_ldg_rts, aero_cht, cntl_twr ]
 }
 ```

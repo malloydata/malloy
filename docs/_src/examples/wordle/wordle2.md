@@ -1,7 +1,7 @@
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
-explore: words is table('malloy-data.malloytest.words_bigger') {
+source: words is table('malloy-data.malloytest.words_bigger') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
@@ -9,7 +9,7 @@ explore: words is table('malloy-data.malloytest.words_bigger') {
 }
 
 // cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
@@ -39,7 +39,7 @@ each row is the letter and position in that row.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(-> words_and_position) {
+source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 }
 ```
@@ -88,7 +88,7 @@ We've noticed there are a lots of words that end in 'S' or 'ED' in the dataset, 
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(-> words_and_position) {
+source: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 }

@@ -14,7 +14,7 @@ used in queries.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   dimension: distance_km is distance / 1.609344
 
   measure: flight_count is count()

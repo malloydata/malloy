@@ -8,7 +8,7 @@ In this Case, the X-Axis is `month_of_year`, the Y-Axis is `flight_count` and th
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"year_over_year":{"renderer":"line_chart"}}}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
@@ -27,7 +27,7 @@ Filters make it easy to reuse aggregate calculations for trends analysis.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
 // common calculation for flights
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
@@ -52,11 +52,11 @@ current data.  Read more about it in the [filters](filter_expressions.md) sectio
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
-explore: inventory_items is table('malloy-data.ecomm.inventory_items') {
+source: inventory_items is table('malloy-data.ecomm.inventory_items') {
   primary_key: id
 }
 
-explore: order_items is table('malloy-data.ecomm.order_items') {
+source: order_items is table('malloy-data.ecomm.order_items') {
   join_one: inventory_items with inventory_item_id
   measure: order_item_count is count()
 }
@@ -83,11 +83,11 @@ We can rewrite the query so it is more reusable.  The declarations after the exp
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "pageSize":100, "size":"medium"}
 -- common calculation for order_items
-explore: inventory_items is table('malloy-data.ecomm.inventory_items') {
+source: inventory_items is table('malloy-data.ecomm.inventory_items') {
   primary_key: id
 }
 
-explore: order_items is table('malloy-data.ecomm.order_items') {
+source: order_items is table('malloy-data.ecomm.order_items') {
   join_one: inventory_items  with inventory_item_id
   measure: order_item_count is count()
 }

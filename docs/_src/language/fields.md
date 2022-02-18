@@ -12,7 +12,7 @@ explore or a query stage. In either case, they are defined using the `is` keywor
 **In an explore**
 
 ```malloy
-explore: users is table('malloy-data.ecomm.users') {
+source: users is table('malloy-data.ecomm.users') {
   dimension: age_in_dog_years is age * 7
 }
 ```
@@ -106,7 +106,7 @@ Queries represent a pipelined data transformation including a source and one or 
 their source is implicit.
 
 ```malloy
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   query: by_carrier is {
     group_by: carrier
     aggregate: flight_count is count()
@@ -117,7 +117,7 @@ explore: flights is table('malloy-data.faa.flights') {
 A named query's pipeline can always begin with another named query.
 
 ```malloy
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   ...
   query: top_carriers is by_carrier -> {
     project: carrier

@@ -47,18 +47,18 @@ The easiest, most error-proof way to perform a join is using the following synta
 To join a foreign key of the source explore to the `primary_key` of a joined explore, reference the foreign key by name in the `with` clause.
 
 ```malloy
-explore: users is table('malloy-data.ecomm.users'){
+source: users is table('malloy-data.ecomm.users'){
   primary_key: id
 }
 
-explore: order_items is table('malloy-data.ecomm.order_items'){
+source: order_items is table('malloy-data.ecomm.order_items'){
   join_one: users with user_id
 }
 ```
 
 This syntax for the join expresses exactly the same thing a bit more explicitly:
 ```
-explore: order_items is table('malloy-data.ecomm.order_items'){
+source: order_items is table('malloy-data.ecomm.order_items'){
   join_one: users on order_items.user_id = users.id
 }
 ```
@@ -71,11 +71,11 @@ explore being joined.
 
 ```malloy
 
-explore: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
 }
 
-explore: flights is table('malloy-data.faa.flights'){
+source: flights is table('malloy-data.faa.flights'){
   join_one: carriers with carrier
 }
 ```
@@ -83,11 +83,11 @@ explore: flights is table('malloy-data.faa.flights'){
 To give the joined explore a different name within the source explore, use `is` to alias the explore.
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   primary_key: code
 }
 
-explore: flights is table('malloy-data.faa.flights'){
+source: flights is table('malloy-data.faa.flights'){
   join_one: origin_airport is airports with origin
 }
 ```
@@ -98,7 +98,7 @@ Explores do not need to be modeled before they are used in a join, though the jo
 
 ```malloy
 
-explore: flights is table('malloy-data.faa.flights'){
+source: flights is table('malloy-data.faa.flights'){
   join_one: carriers is table('malloy-data.faa.carriers'){primary_key: code} with carrier
 }
 ```
@@ -136,25 +136,25 @@ retained.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "size":"large"}
-explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+source: aircraft_models is table('malloy-data.faa.aircraft_models') {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
 /* Individual airplanes */
-explore: aircraft is table('malloy-data.faa.aircraft') {
+source: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
 /* The airports that the aircraft fly to and from */
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   primary_key: code
   measure: airport_count is count()
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   join_one: origin_airport is airports with origin
   join_one: destination_airport is airports with destination
   join_one: aircraft with tail_num

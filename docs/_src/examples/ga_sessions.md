@@ -5,7 +5,7 @@ _You can find the complete source code for this model [here](https://github.com/
 Start by defining an explore based on a query.
 
 ```malloy
-explore: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {
+source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {
   dimension: start_time is timestamp_seconds(visitStartTime)::timestamp
   measure: [
     user_count is count(distinct fullVisitorId)

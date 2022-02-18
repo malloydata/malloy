@@ -5,7 +5,7 @@ import "hackernews.malloy"
 // analysis about FAANG (Facebook Apple Amazon Netflix and Google)
 // a resonable threshold for interesting stories is about 10
 
-explore: faang_analysis is stories {
+source: faang_analysis is stories {
 
   dimension: [
     faang is title :

@@ -21,7 +21,7 @@ query: table('malloy-data.faa.flights') -> { aggregate: flight_count is count() 
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
-explore: flights is table('malloy-data.faa.flights')
+source: flights is table('malloy-data.faa.flights')
 
 query: flights -> { aggregate: flight_count is count() }
 ```

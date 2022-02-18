@@ -128,7 +128,7 @@ add a `dimension:` calculation for `county_and_state` and `measure:` calculation
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   dimension: county_and_state is concat(county, ', ', state)
   measure: airport_count is count()
   measure: average_elevation is avg(elevation)
@@ -330,7 +330,7 @@ query: table('malloy-data.faa.flights') { where: dep_time > @2003 } -> {
 The next several examples will use this simple explore definition:
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   airport_count is count()
 };
 ```
@@ -441,14 +441,14 @@ query: airports -> {
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
-explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+source: aircraft_models is table('malloy-data.faa.aircraft_models') {
   primary_key: aircraft_model_code
 }
-explore: aircraft is table('malloy-data.faa.aircraft') {
+source: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   join_one: aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code
 }
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   join_one: aircraft on tail_num = aircraft.tail_num
 }
 query: flights->{

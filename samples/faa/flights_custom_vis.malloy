@@ -15,7 +15,7 @@ import "flights.malloy"
 // N: dimensional number
 // M: numeric measure
 
-explore: vis_flights is flights {
+source: vis_flights is flights {
 
   // bar_SM: simple bar chart (as opposed to column) with
   //  labels inside the bar.

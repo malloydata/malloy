@@ -78,29 +78,29 @@ query: flights { where: [ carrier:'WN', dep_time: @2002-03-03 ] } -> sessionize
 All of the queries above are executed against the following model:
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   primary_key: code
   dimension: name is concat(code, ' - ', full_name)
   measure: airport_count is count()
 }
 
-explore: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
   measure: carrier_count is count()
 }
 
-explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+source: aircraft_models is table('malloy-data.faa.aircraft_models') {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
-explore: aircraft is table('malloy-data.faa.aircraft') {
+source: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
-explore: aircraft_facts is from(
+source: aircraft_facts is from(
   table('malloy-data.faa.flights') -> {
     group_by: tail_num
     aggregate: [
@@ -113,7 +113,7 @@ explore: aircraft_facts is from(
   dimension: lifetime_flights_bucketed is floor(lifetime_flights / 1000) * 1000
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   primary_key: id2
   rename: origin_code is origin
   rename: destination_code is destination

@@ -14,7 +14,7 @@ This map can also be specified in a data styles file and included in the model.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
   query: by_state_and_county is {
     limit: 10

@@ -31,7 +31,7 @@ sql: my_sql_query is ||
   LIMIT 10
 ;;
 
-explore: limited_users is from_sql(my_sql_query) {
+source: limited_users is from_sql(my_sql_query) {
   measure: user_count is count()
 }
 
