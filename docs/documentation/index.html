@@ -1,0 +1,88 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/index.html
+---
+
+<div class="document">
+      <h1>
+        <a id="the-tao-of-malloy" class="header-link anchor" href="#the-tao-of-malloy">
+          The Tao of Malloy
+        </a>
+      </h1>
+    <blockquote>
+<p><em>Tao is the natural order of the universe whose character one's human intuition must discern in order to realize the potential for individual wisdom. This intuitive knowing of "life" cannot be grasped as a concept; it is known through actual living experience of one's everyday being.</em> — <a href="https://en.wikipedia.org/wiki/Tao">Wikipedia "Tao"</a></p>
+</blockquote>
+
+      <h3>
+        <a id="malloy-" class="header-link anchor" href="#malloy-">
+          Malloy …
+        </a>
+      </h3>
+    
+      <h3>
+        <a id="-feels-familiar-to-someone-coming-from-sql" class="header-link anchor" href="#-feels-familiar-to-someone-coming-from-sql">
+          … feels familiar to someone coming from SQL
+        </a>
+      </h3>
+    <p>Our primary users will all be familiar with SQL. We should make their life no harder than it needs to be. That said, Malloy is actually describing a different type of operation than SQL does, and so in some places we are deliberately different from SQL because we want people to be unfamiliar, to learn how Malloy works.</p>
+<p>For example <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">name</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">expression</span></span></code>, vs <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">expression</span><span style="color: #000000"> </span><span style="color: #001080">as</span><span style="color: #000000"> </span><span style="color: #001080">name</span></span></code>. In SQL the naming on an expression sits as a casual afterthought "oh by the way, give this really important expression a name". In Malloy, the name of a thing is important, you are building complex things from smaller pieces. When you look at a model, you will often want to scan the file looking for names, they belong on the left hand side.</p>
+<p>However, we in general try to have the "feel" of SQL. We use <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">()</span></span></code> for structuring instead of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">{}</span></span></code> like LookML or JavaScript do, or indentation like Python does. We use <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">is</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">define</span></span></code> instead of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">:</span></span></code> like LookML or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">=</span></span></code> like JavaScript. We use SQL words for things (like <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">join</span></span></code>) where it makes sense.</p>
+<p>The intention was always that there is some context, command line or editor, which handles a single document with mixed Malloy and SQL, either because they are one merged language, or there is some JSX-like escaping between the contexts.</p>
+
+      <h3>
+        <a id="-feels-concise-but-not-cryptic" class="header-link anchor" href="#-feels-concise-but-not-cryptic">
+          … feels concise, but not cryptic
+        </a>
+      </h3>
+    <p>This is the most common point of disagreement as we talk about how to express things. There is no one right answer to this. We have a preference for brevity, every single feature we wrestle with trying to get the most clarity from the least language surface.</p>
+
+      <h3>
+        <a id="-is-composable" class="header-link anchor" href="#-is-composable">
+          … is composable
+        </a>
+      </h3>
+    <p>If you find a piece of code that works, you should be able to select it, paste it somewhere with a name, and use it by name.</p>
+
+      <h3>
+        <a id="-is-an-algebra-for-computations-with-relational-data" class="header-link anchor" href="#-is-an-algebra-for-computations-with-relational-data">
+          … is an algebra for computations with relational data
+        </a>
+      </h3>
+    <p>Malloy comprehends data as a network of relationships and so computations like aggregation have a useful and mathematical meaning. Malloy gestures should read like a mathematical formula which means one clear thing.</p>
+
+      <h3>
+        <a id="-is-not-an-attempt-to-make-the-language-look-like-english-sentences" class="header-link anchor" href="#-is-not-an-attempt-to-make-the-language-look-like-english-sentences">
+          … is NOT an attempt to make the language look like English sentences
+        </a>
+      </h3>
+    <p>Maybe AppleScript or COBOL would be at the extreme end of this. More of a kind of math, less like a natural language.</p>
+
+      <h3>
+        <a id="-is-curated" class="header-link anchor" href="#-is-curated">
+          … is curated
+        </a>
+      </h3>
+    <p>There are not four different ways to express things depending on which programming language or style you came from. There is one, and it is carefully chosen to match the task of data transformation, discovery and presentation.</p>
+
+      <h3>
+        <a id="-is-helpful" class="header-link anchor" href="#-is-helpful">
+          … is helpful
+        </a>
+      </h3>
+    <p>Malloy tries to "do the right thing" that most people want, by default, while still allowing non default expressions to be written. The treatment of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">null</span></span></code> and booleans, and the sorting rules for "reduce" stages would be two examples of this.</p>
+
+      <h3>
+        <a id="-is-still-an-experiment" class="header-link anchor" href="#-is-still-an-experiment">
+          … is still an experiment
+        </a>
+      </h3>
+    <p>We had some theoretical insights that there was a better way to interact with data than SQL, and Malloy is the current snapshot of that thinking, but we are not done. We have a number of features which are not yet in the language, which we expect to have an impact on the language, and maybe even on these rules. The language is still young and needs room to grow.</p>
+
+      <h3>
+        <a id="-is-an-expression-of-empathy-towards-explorers-and-explainers-of-data" class="header-link anchor" href="#-is-an-expression-of-empathy-towards-explorers-and-explainers-of-data">
+          … is an expression of empathy towards explorers and explainers of data
+        </a>
+      </h3>
+    <p>The Malloy user is not someone who writes one sentence in Malloy, and then never sees the language again. Malloy is an invitation into a "way" for people who are passionate about decision making based on data, and good decision making is iterative, and ongoing.</p>
+</div>

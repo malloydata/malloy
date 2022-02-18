@@ -1,0 +1,117 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/fields.html
+---
+
+<div class="document">
+      <h1>
+        <a id="fields" class="header-link anchor" href="#fields">
+          Fields
+        </a>
+      </h1>
+    <p>Fields constitute all kinds of data in Malloy. They
+can represent dimensional attributes sourced directly from
+tables in a database, constant values to be used in later analysis, computed metrics derived from other fields, or even nested structures created from aggregating subqueries.</p>
+
+      <h2>
+        <a id="defining-fields" class="header-link anchor" href="#defining-fields">
+          Defining Fields
+        </a>
+      </h2>
+    <p>Fields are defined in explores are reusable and are <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">dimension</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">measures</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span></span></code>.  When these are used in a query, these fields are <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">project</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">group_by</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">aggregate</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">nest</span></span></code>.   The definitions are the same way whether part of an
+explore or a query stage. In either case, they are defined using the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">is</span></span></code> keyword.</p>
+<p><strong>In an explore</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.users&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">age_in_dog_years</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">age</span><span style="color: #000000"> * </span><span style="color: #098658">7</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p><strong>In a query stage</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">age_in_dog_years</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">age</span><span style="color: #000000"> * </span><span style="color: #098658">7</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>The right hand side of this kind of definition can be any
+field expression. See the <a href="expressions.html">Expressions</a>
+section for more information.</p>
+<p>Named queries (see <a href="#queries">below</a>) can also be defined as
+part of an explore or query stage. When a named query is defined in a query stage, it is known as a "nested query" or an "aggregating
+subquery." See the <a href="nesting.html">Nesting</a> section for a
+detailed discussion of nested queries.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_month</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">departure_month</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">dep_time</span><span style="color: #000000">.</span><span style="color: #0000FF">month</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h2>
+        <a id="field-names" class="header-link anchor" href="#field-names">
+          Field Names
+        </a>
+      </h2>
+    <p>Field names must start with a letter or underscore, and can only contain letters, numbers, and underscores. Field names which conflict with keywords must be enclosed in back ticks, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000"> </span><span style="color: #001080">`year`</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">dep_time</span><span style="color: #000000">.</span><span style="color: #0000FF">year</span></span></code>.</p>
+
+      <h2>
+        <a id="kinds-of-fields" class="header-link anchor" href="#kinds-of-fields">
+          Kinds of Fields
+        </a>
+      </h2>
+    <p>Malloy includes three different <em>kinds</em> of fields: <em>dimensions</em>, <em>measures</em>, and <em>queries</em>.</p>
+
+      <h3>
+        <a id="dimensions" class="header-link anchor" href="#dimensions">
+          Dimensions
+        </a>
+      </h3>
+    <p>Dimensions are fields representing scalar values. All fields
+inherited directly from a table are dimensions.</p>
+<p>Dimensions are defined using expressions that contain no
+aggregate functions.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">expore</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.users&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">full_name</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #001080">first_name</span><span style="color: #000000">, </span><span style="color: #A31515">&#39; &#39;</span><span style="color: #000000">, </span><span style="color: #001080">last_name</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>Dimensions may be used in both <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">reduce</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">project</span></span></code>
+queries.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// Show the top 10 full names by number of occurrences</span></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">full_name</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">occurrences</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// Show 10 users&#39; full names</span></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">full_name</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #008000">// top and limit are synonyms</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h3>
+        <a id="measures" class="header-link anchor" href="#measures">
+          Measures
+        </a>
+      </h3>
+    <p>Measures are fields representing aggregated data over
+multiple records.</p>
+<p>Measures may not be used in <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">project</span></span></code> queries. However, any measures that appear in a <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">reduce</span></span></code> query stage are "dimensionalized" as part of the query, and are therefore usable as dimensions in subsequent stages.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">} -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h3>
+        <a id="queries" class="header-link anchor" href="#queries">
+          Queries
+        </a>
+      </h3>
+    <p>Queries represent a pipelined data transformation including a source and one or more transformation stages. When queries are defined as part of an explore or query stage,
+their source is implicit.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>A named query's pipeline can always begin with another named query.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  ...</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">top_carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">5</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">);</span></span></pre><!-- TODO this does not seem to work in a query stage, but it does work in an explore or model --><p>See the <a href="nesting.html">Nesting</a> section for more details about named queries.</p>
+</div>
