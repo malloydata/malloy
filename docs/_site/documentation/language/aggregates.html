@@ -29,7 +29,7 @@
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
-              <a href="/malloy/documentation/malloy_by_example.html">
+              <a href="/malloy/documentation/index.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -53,7 +53,7 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/index.html">
+              <a href="/malloy/documentation/tao.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -83,9 +83,9 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/language/explore.html">
+              <a href="/malloy/documentation/language/source.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item '>
@@ -390,7 +390,7 @@
           Counts
         </a>
       </h3>
-    <p>The <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">count</span></span></code> aggregate function may be used to count the number of records appearing in an explore.</p>
+    <p>The <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">count</span></span></code> aggregate function may be used to count the number of records appearing in a source.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
@@ -431,7 +431,7 @@
           Distinct Counts
         </a>
       </h3>
-    <p>Distinct counts may be used to count the number of distinct values of a particular field within an explore.</p>
+    <p>Distinct counts may be used to count the number of distinct values of a particular field within a source.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">order_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #795E26">distinct</span><span style="color: #000000"> </span><span style="color: #001080">order_id</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
@@ -997,10 +997,10 @@ yielding the the average number of seats on aircraft models of aircraft listed i
           Aggregates on Fields
         </a>
       </h3>
-    <p>Aggregating "on a field," e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span></code> is exactly equivalent to aggregating that field with respect to its direct parent explore, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">avg</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">sum</span></span></code>.</p>
+    <p>Aggregating "on a field," e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span></code> is exactly equivalent to aggregating that field with respect to its direct parent source, e.g. <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span></code>. This syntax is supported for the aggregate functions which benefit from aggregate locality and require a field, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">avg</span></span></code> and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">sum</span></span></code>.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">aircraft</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_on_explore</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_on_source</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_on_field</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  ]</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
@@ -1014,14 +1014,14 @@ yielding the the average number of seats on aircraft models of aircraft listed i
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​on_​explore</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​on_​field</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td></tr></tbody></table>
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​on_​source</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">avg_​on_​field</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5.145</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
         <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_on_explore&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_on_source&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;avg_on_field&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5.145145145145145</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">]</span></span></pre></pre>
@@ -1038,7 +1038,7 @@ yielding the the average number of seats on aircraft models of aircraft listed i
 <span class="line"><span style="color: #000000">      ))</span></span>
 <span class="line"><span style="color: #000000">      -</span></span>
 <span class="line"><span style="color: #000000">       </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> (</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">1</span><span style="color: #000000">, </span><span style="color: #098658">15</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">) * </span><span style="color: #098658">4294967296</span><span style="color: #000000"> + </span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">cast</span><span style="color: #000000">(</span><span style="color: #795E26">concat</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;0x&#39;</span><span style="color: #000000">, substr(to_hex(md5(</span><span style="color: #795E26">CAST</span><span style="color: #000000">(aircraft_models_0.aircraft_model_code </span><span style="color: #0000FF">AS</span><span style="color: #000000"> STRING))), </span><span style="color: #098658">16</span><span style="color: #000000">, </span><span style="color: #098658">8</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> int64) </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">numeric</span><span style="color: #000000">)) * </span><span style="color: #098658">0</span><span style="color: #000000">.</span><span style="color: #098658">000000001</span><span style="color: #000000">)</span></span>
-<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_on_explore,</span></span>
+<span class="line"><span style="color: #000000">    )/(</span><span style="color: #098658">1</span><span style="color: #000000">*</span><span style="color: #098658">1</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">)) </span><span style="color: #0000FF">as</span><span style="color: #000000"> FLOAT64)/</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(</span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> aircraft_models_0.aircraft_model_code),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> avg_on_source,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">CAST</span><span style="color: #000000">((</span></span>
 <span class="line"><span style="color: #000000">    (</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span></span>

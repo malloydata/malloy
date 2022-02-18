@@ -29,7 +29,7 @@
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
-              <a href="/malloy/documentation/malloy_by_example.html">
+              <a href="/malloy/documentation/index.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -53,7 +53,7 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/index.html">
+              <a href="/malloy/documentation/tao.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -83,9 +83,9 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/language/explore.html">
+              <a href="/malloy/documentation/language/source.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item '>
@@ -375,23 +375,23 @@
 
 # Imports and Exports
 
-Malloy allows for explores to be reused between files, or for a set of explores
+Malloy allows for Sources to be reused between files, or for a set of sources
 to simply be split up among multiple files by using `import` and `export`.
 
 ## Exports
 
-Before an explore definition, the `export` keyword means that the explore should
+Before a source definition, the `export` keyword means that the source should
 be included in the file's _public namespace_.
 
 Consider a file <code>samples/faa/flights.malloy</code>:
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   primary_key: code
   dimension: name is concat(code, ' - ', full_name)
   measure: airport_count is count()
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   join_one: origin is airports with origin_code
   join_one: destination is airports with destination_code
 }
@@ -405,10 +405,9 @@ only `flights` is part of the file's public namespace.
           Imports
         </a>
       </h2>
-    <p>In order to reuse or extend a explore from another file, you can include all the
-exported explores from another file using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;path/to/some/file.malloy&quot;</span></span></code>.</p>
-<p>For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the
-<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">flights</span></span></code> explore, you could write:</p>
+    <p>In order to reuse or extend a source from another file, you can include all the
+exported sources from another file using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;path/to/some/file.malloy&quot;</span></span></code>.</p>
+<p>For example, if you wanted to create a file <code>samples/flights_by_carrier.malloy</code> with a query from the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">flights</span></span></code> source, you could write:</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">import</span><span style="color: #000000"> </span><span style="color: #A31515">&quot;faa/flights.malloy&quot;</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">5</span><span style="color: #000000">; </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> }</span></span></pre><!-- Because `airports` is not exported, referencing it here would be invalid. -->

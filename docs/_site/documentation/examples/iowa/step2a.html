@@ -29,7 +29,7 @@
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
-              <a href="/malloy/documentation/malloy_by_example.html">
+              <a href="/malloy/documentation/index.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -53,7 +53,7 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/index.html">
+              <a href="/malloy/documentation/tao.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -83,9 +83,9 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/language/explore.html">
+              <a href="/malloy/documentation/language/source.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item '>
@@ -386,12 +386,14 @@
       </h2>
     <p>The following sections use these definitions, created in the <a href="step2.html">previous
 section</a>.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">export</span><span style="color: #000000"> </span><span style="color: #001080">define</span><span style="color: #000000"> </span><span style="color: #001080">iowa</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> (</span><span style="color: #AF00DB">explore</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;bigquery-public-data.iowa_liquor_sales.sales&#39;</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">total_sale_dollars</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_dollars</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">total_bottles</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">bottles_sold</span><span style="color: #000000">)</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000"> / </span><span style="color: #795E26">nullif</span><span style="color: #000000">(</span><span style="color: #001080">bottle_volume_ml</span><span style="color: #000000">, </span><span style="color: #098658">0</span><span style="color: #000000">) * </span><span style="color: #098658">100</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
-<span class="line"><span style="color: #000000">)</span></span></pre>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">iowa</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.iowa_liquor_sales.sales&#39;</span><span style="color: #000000">){</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_sale_dollars</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_dollars</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_bottles</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">bottles_sold</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000"> / </span><span style="color: #795E26">nullif</span><span style="color: #000000">(</span><span style="color: #001080">bottle_volume_ml</span><span style="color: #000000">, </span><span style="color: #098658">0</span><span style="color: #000000">) * </span><span style="color: #098658">100</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
       <h2>
         <a id="most-popular-vodka-by-dollars-spent" class="header-link anchor" href="#most-popular-vodka-by-dollars-spent">
           Most popular vodka by dollars spent
@@ -480,21 +482,21 @@ section</a>.</p>
           Adding a Query to the model.
         </a>
       </h2>
-    <p>This particular view of the data is pretty useful, an something we expect to re-use.  We can add this query to the model by incorporating it into the explore definition:</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">export</span><span style="color: #000000"> </span><span style="color: #001080">define</span><span style="color: #000000"> </span><span style="color: #001080">iowa</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> (</span><span style="color: #AF00DB">explore</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;bigquery-public-data.iowa_liquor_sales.sales&#39;</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">total_sale_dollars</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_dollars</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">total_bottles</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">bottles_sold</span><span style="color: #000000">)</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000"> / </span><span style="color: #795E26">nullif</span><span style="color: #000000">(</span><span style="color: #001080">bottle_volume_ml</span><span style="color: #000000">, </span><span style="color: #098658">0</span><span style="color: #000000">) * </span><span style="color: #098658">100</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// add the query to the model</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #001080">top_sellers_by_revenue</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> (</span><span style="color: #001080">reduce</span><span style="color: #000000"> </span><span style="color: #AF00DB">top</span><span style="color: #000000"> </span><span style="color: #098658">5</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #001080">vendor_name</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #001080">item_description</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_sale_dollars</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_bottles</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_price_per_100ml</span></span>
-<span class="line"><span style="color: #000000">  )</span></span>
-<span class="line"><span style="color: #000000">)</span></span></pre>
+    <p>This particular view of the data is pretty useful, an something we expect to re-use.  We can add this query to the model by incorporating it into the source definition:</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">iowa</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;bigquery-public-data.iowa_liquor_sales.sales&#39;</span><span style="color: #000000">){</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_sale_dollars</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_dollars</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_bottles</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">bottles_sold</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">state_bottle_retail</span><span style="color: #000000"> / </span><span style="color: #795E26">nullif</span><span style="color: #000000">(</span><span style="color: #001080">bottle_volume_ml</span><span style="color: #000000">, </span><span style="color: #098658">0</span><span style="color: #000000">) * </span><span style="color: #098658">100</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">price_per_100ml</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">top_sellers_by_revenue</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">5</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span><span style="color: #001080">vendor_name</span><span style="color: #000000">, </span><span style="color: #001080">item_description</span><span style="color: #000000">]</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span><span style="color: #001080">total_sale_dollars</span><span style="color: #000000">, </span><span style="color: #001080">total_bottles</span><span style="color: #000000">, </span><span style="color: #001080">avg_price_per_100ml</span><span style="color: #000000">]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
       <h2>
         <a id="examining-tequila" class="header-link anchor" href="#examining-tequila">
           Examining Tequila

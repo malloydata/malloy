@@ -1,10 +1,10 @@
 <div class="sidebar" id="sidebar">
     <div>
-        <div id=getting_started class="sidebar-section-title {% unless /documentation/malloy_by_example.html,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html,/documentation/ contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <div id=getting_started class="sidebar-section-title {% unless /documentation/,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html,/documentation/tao.html contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
-          <div class='sidebar-item {% if page.url == "/documentation/malloy_by_example.html" %}active{% endif %}'>
-              <a href="{{ site.baseurl }}/documentation/malloy_by_example.html">
+          <div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/index.html">
                 <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -27,8 +27,8 @@
                 Connecting a Database
               </a>
             </div>
-<div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
-              <a href="{{ site.baseurl }}/documentation/index.html">
+<div class='sidebar-item {% if page.url == "/documentation/tao.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/tao.html">
                 <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -36,7 +36,7 @@
           </div>
       </div>
 <div>
-        <div id=language_reference class="sidebar-section-title {% unless /documentation/language/overview.html,/documentation/language/basic.html,/documentation/language/statement.html,/documentation/language/explore.html,/documentation/language/query.html,/documentation/language/fields.html,/documentation/language/types.html,/documentation/language/expressions.html,/documentation/language/order_by.html,/documentation/language/join.html,/documentation/language/filters.html,/documentation/language/nesting.html,/documentation/language/aggregates.html,/documentation/language/imports.html,/documentation/language/sql_blocks.html contains page.url)} %}collapsed{% endunless %}">Language Reference<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <div id=language_reference class="sidebar-section-title {% unless /documentation/language/overview.html,/documentation/language/basic.html,/documentation/language/statement.html,/documentation/language/source.html,/documentation/language/query.html,/documentation/language/fields.html,/documentation/language/types.html,/documentation/language/expressions.html,/documentation/language/order_by.html,/documentation/language/join.html,/documentation/language/filters.html,/documentation/language/nesting.html,/documentation/language/aggregates.html,/documentation/language/imports.html,/documentation/language/sql_blocks.html contains page.url)} %}collapsed{% endunless %}">Language Reference<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item {% if page.url == "/documentation/language/overview.html" %}active{% endif %}'>
@@ -57,10 +57,10 @@
                 Models
               </a>
             </div>
-<div class='sidebar-item {% if page.url == "/documentation/language/explore.html" %}active{% endif %}'>
-              <a href="{{ site.baseurl }}/documentation/language/explore.html">
+<div class='sidebar-item {% if page.url == "/documentation/language/source.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/language/source.html">
                 <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/query.html" %}active{% endif %}'>

@@ -29,7 +29,7 @@
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
-              <a href="/malloy/documentation/malloy_by_example.html">
+              <a href="/malloy/documentation/index.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -53,7 +53,7 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/index.html">
+              <a href="/malloy/documentation/tao.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -83,9 +83,9 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/language/explore.html">
+              <a href="/malloy/documentation/language/source.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item active'>
@@ -362,7 +362,7 @@
             
             <div class="linear-navigation">
     <div class="item">
-      <a href="explore.html"><img src="/malloy/img/previous.svg" alt="previous"/>Explores</a>
+      <a href="source.html"><img src="/malloy/img/previous.svg" alt="previous"/>Sources</a>
     </div>
     <div class="item">
       <a href="fields.html">Fields<img src="/malloy/img/next.svg" alt="next"/></a>
@@ -378,17 +378,17 @@
         </a>
       </h1>
     <p>The basic syntax for a query in Malloy consists of a source
-and a "pipeline" of one or more <em>stages</em> separated by <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">-&gt;</span></span></code>. The shape of the data defined in the original explore is transformed by each stage.</p>
+and a "pipeline" of one or more <em>stages</em> separated by <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">-&gt;</span></span></code>. The shape of the data defined in the original source is transformed by each stage.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre>
       <h2>
         <a id="sources" class="header-link anchor" href="#sources">
           Sources
         </a>
       </h2>
-    <p>The source of a query can be a table, an <a href="explore.html">explore</a>, or a <a href="statement.html#queries">named query</a>.</p>
+    <p>The source of a query can be a table, a <a href="source.html">source</a>, or a <a href="statement.html#queries">named query</a>.</p>
 <p><strong>A query against a table</strong></p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><p><strong>A query against an explore</strong></p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">)</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><p><strong>A query against a source</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">)</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><p><strong>A query starting from another query</strong></p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; {</span></span>
@@ -396,7 +396,7 @@ and a "pipeline" of one or more <em>stages</em> separated by <code class="langua
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: -&gt; </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000"> }</span></span></pre><p>When a query is defined as part of an explore or nested inside
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: -&gt; </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000"> }</span></span></pre><p>When a query is defined as part of a source or nested inside
 another query stage, the source is implicit.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">dep_year</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">dep_time</span><span style="color: #000000">.</span><span style="color: #0000FF">year</span></span>
@@ -410,7 +410,7 @@ another query stage, the source is implicit.</p>
           Pipelines
         </a>
       </h2>
-    <p>A pipeline transforms the shape of an explore, and is made up of a series of stages.</p>
+    <p>A pipeline transforms the shape of a source, and is made up of a series of stages.</p>
 <p>A typical stage is has either <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">group_by</span></span></code>/<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">aggregate</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">project</span></span></code>, or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">index</span></span></code> transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000">      </span><span style="color: #008000">// Filters</span></span>
@@ -452,7 +452,7 @@ the whole stage.</p>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">distance</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
-<span class="line"><span style="color: #000000">}</span></span></pre><p>Filters may also be applied to a <a href="">query's source</a>, an <a href="explore.html#filtering-explores">entire explore</a>, or to a <a href="expressions.html">measure</a>.</p>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>Filters may also be applied to a <a href="">query's source</a>, an <a href="source.html#filtering-sources">entire source</a>, or to a <a href="expressions.html">measure</a>.</p>
 <!-- TODO: improve link for filtering a measure. --><p>See the <a href="filters.html">Filters</a> section for more information.</p>
 
       <h3>

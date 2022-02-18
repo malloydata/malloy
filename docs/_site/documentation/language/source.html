@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Malloy Documentation</title>
+    <link rel="stylesheet" href="/malloy/css/document.css">
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+  </head>
+  <body>
+    <div class="top">
+      <div class="header">
+        <div class="header-banner">
+          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          Malloy
+          <span class="subtitle">Documentation</span>
+        </div>
+        <form onSubmit="() => alert('submit')" action="/malloy/search">
+          <div class="search-input-outer">
+            <img src="/malloy/img/search.svg" alt="search"/>
+            <input placeholder="Search" id="search-input" name="query" />
+          </div>
+          <input type="submit" style="display: none" />
+        </form>
+      </div>
+      <div class="main">
+        <div class="sidebar" id="sidebar">
+    <div>
+        <div id=getting_started class="sidebar-section-title collapsed">Getting Started<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/index.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy By Example
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/features.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Key Features
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/samples.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sample Models
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/connection_instructions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Connecting a Database
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/tao.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=language_reference class="sidebar-section-title collapsed">Language Reference<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/language/overview.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Introduction
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/basic.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Malloy Quickstart
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/statement.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Models
+              </a>
+            </div>
+<div class='sidebar-item active'>
+              <a href="/malloy/documentation/language/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sources
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/query.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/fields.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Fields
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/types.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Types
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/expressions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Expressions
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/order_by.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Ordering and Limiting
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/join.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Joins
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/filters.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Filters
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/nesting.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Nested Queries
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/aggregates.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Aggregates
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/imports.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Imports
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/language/sql_blocks.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                SQL Blocks
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=common_patterns class="sidebar-section-title collapsed">Common Patterns<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/yoy.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Year Over Year Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/foreign_sums.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Foreign Sums and Averages
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/percent_of_total.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Percent of Total
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/cohorts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Cohort Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/pivot_limits.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Pivot Limits
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/patterns/sessionize.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Sessionized Data
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=rendering_results class="sidebar-section-title collapsed">Rendering Results<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/dashboards.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Tables and Dashboards
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/bar_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bar Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/charts_line_chart.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Line Charts
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/shape_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Shape Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/segment_maps.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Segment Maps
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/visualizations/scatter_charts.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scatter Charts
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=examples class="sidebar-section-title collapsed">Examples<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ecommerce.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                eCommerce Analysis
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/faa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                NTSB Flight Database
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/names.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Name Game
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/ga_sessions.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Google Analytics GA360
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_iowa liquor class="sidebar-section-title collapsed">Walkthrough: Iowa Liquor<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/iowa.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                About the Data Set
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/source.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                The Malloy Data Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Basic Calculations
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step2a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Analysis: Products and Brands
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Bucketing and Mapping
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/iowa/step6.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Dashboards
+              </a>
+            </div>
+          </div>
+      </div>
+<div>
+        <div id=walkthrough:_wordle solver class="sidebar-section-title collapsed">Walkthrough: Wordle Solver<img class="chevron-open" src="/malloy/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
+          <div class="sidebar-section-item-group">
+          <div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Just Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle1a.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letters and Positioning
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle2.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Letter Frequency
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle3.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Scoring Words
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle4.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Final Model
+              </a>
+            </div>
+<div class='sidebar-item '>
+              <a href="/malloy/documentation/examples/wordle/wordle5.html">
+                <img src="/malloy/img/article_icon.svg" alt="document"/>
+                Solving Puzzles
+              </a>
+            </div>
+          </div>
+      </div>
+
+  </div>
+        <script src="/malloy/js/sidebar_state.js"></script>
+        <div class="content">
+          <div class="footer">
+            
+            <div class="linear-navigation">
+    <div class="item">
+      <a href="statement.html"><img src="/malloy/img/previous.svg" alt="previous"/>Models</a>
+    </div>
+    <div class="item">
+      <a href="query.html">Queries<img src="/malloy/img/next.svg" alt="next"/></a>
+    </div>
+  </div>
+            
+          </div>
+          <div class="document-outer">
+            <div class="document">
+      <h1>
+        <a id="sources" class="header-link anchor" href="#sources">
+          Sources
+        </a>
+      </h1>
+    <p>Malloy separates a query from the source of the data. A source can be thought of as a table and a collection of computations and relationships which are relevant to that table. These computations can consist of measures (aggregate functions), dimensions (scalar calculations) and query definitions;  joins are relationships between sources.</p>
+
+      <h2>
+        <a id="sources" class="header-link anchor" href="#sources">
+          Sources
+        </a>
+      </h2>
+    <p>A source can be any of the following:</p>
+<ul>
+<li><p>A SQL table or view</p>
+</li>
+<li><p>Another Malloy source</p>
+</li>
+<li><p>A Malloy query</p>
+</li></ul>
+
+      <h3>
+        <a id="sources-from-tables-or-views" class="header-link anchor" href="#sources-from-tables-or-views">
+          Sources from Tables or Views
+        </a>
+      </h3>
+    <p>A source can be created from a SQL table or view from a connected database.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>When defining a source in this way, all the columns from
+the source table are available for use in field definitions
+or queries.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// Columns from the source table are available</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">origin</span></span>
+<span class="line"><span style="color: #000000">  ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">origin</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ATL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>1,248,319</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DFW</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>967,916</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ORD</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>755,020</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;origin&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ATL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1248319</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;origin&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">967916</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;origin&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">755020</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   flights.origin </span><span style="color: #0000FF">as</span><span style="color: #000000"> origin,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="sources-from-other-sources" class="header-link anchor" href="#sources-from-other-sources">
+          Sources from Other Sources
+        </a>
+      </h3>
+    <p>A source can also be created from another source in order
+to add fields, impose filters, or restrict available fields.
+This is useful for performing in-depth analysis without altering
+the base source with modifications only relevant in that specific context.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #008000">// new source &#39;my_flights&#39; adds total_distance and carrier_stats to flights</span></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">total_distance</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">distance</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">carrier_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [ </span><span style="color: #001080">total_distance</span><span style="color: #000000">, </span><span style="color: #001080">flight_count</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">carrier_stats</span><span style="color: #000000"> { </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span><span style="color: #000000"> }</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">total_​distance</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,600,336,769</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>UA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,662,207,108</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,654,646</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>3,555,868,325</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4600336769</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3662207108</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3654646</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;total_distance&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3555868325</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   my_flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">SUM</span><span style="color: #000000">(my_flights.distance) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_distance,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> my_flights</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="sources-from-queries" class="header-link anchor" href="#sources-from-queries">
+          Sources from Queries
+        </a>
+      </h3>
+    <p>A Query can be used as a source.
+In Malloy, every query has a shape like that of a source,
+so the output fields of a query can be used to define a new
+source.</p>
+<p>When defining a source from a query, the query can either
+be defined inline or referenced by name.</p>
+<p><strong>Inline query as a source</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">floor</span><span style="color: #000000">(</span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> / </span><span style="color: #098658">10000</span><span style="color: #000000">) * </span><span style="color: #098658">10000</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span></pre><pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [ </span><span style="color: #001080">carrier</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights_​bucketed</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,770,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,470,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,430,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5770000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4470000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4430000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   (</span><span style="color: #795E26">floor</span><span style="color: #000000">(carrier_facts.lifetime_flights/</span><span style="color: #098658">10000</span><span style="color: #000000">))*</span><span style="color: #098658">10000</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights_bucketed,</span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.lifetime_flights </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier_facts</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p><strong>Named query as a source</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">by_carrier</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">floor</span><span style="color: #000000">(</span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> / </span><span style="color: #098658">10000</span><span style="color: #000000">) * </span><span style="color: #098658">10000</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">carrier_facts</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [ </span><span style="color: #001080">carrier</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights_bucketed</span><span style="color: #000000">, </span><span style="color: #001080">lifetime_flights</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">carrier</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights_​bucketed</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">lifetime_​flights</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>WN</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,770,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DL</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,470,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>AA</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,430,000</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WN&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5770000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4470000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights_bucketed&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4430000</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;lifetime_flights&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">     flights.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">     </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.carrier </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier,</span></span>
+<span class="line"><span style="color: #000000">   (</span><span style="color: #795E26">floor</span><span style="color: #000000">(carrier_facts.lifetime_flights/</span><span style="color: #098658">10000</span><span style="color: #000000">))*</span><span style="color: #098658">10000</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights_bucketed,</span></span>
+<span class="line"><span style="color: #000000">   carrier_facts.lifetime_flights </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_flights</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">as</span><span style="color: #000000"> carrier_facts</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p>For more information about named queries appearing in models, see the <a href="statement.html">Models</a> section.</p>
+
+      <h3>
+        <a id="sources-from-sql-blocks" class="header-link anchor" href="#sources-from-sql-blocks">
+          Sources from SQL Blocks
+        </a>
+      </h3>
+    <p>Sources can be created from a SQL block, e.g.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    first_name,</span></span>
+<span class="line"><span style="color: #000000">    last_name,</span></span>
+<span class="line"><span style="color: #000000">    gender</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">;;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">limited_users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from_sql</span><span style="color: #000000">(</span><span style="color: #001080">my_sql_query</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">user_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">limited_users</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">user_count</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control"  data-result-kind="html">HTML</button>
+        <button class="result-control" selected data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" >
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">user_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>10</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" selected>
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;user_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    first_name,</span></span>
+<span class="line"><span style="color: #000000">    last_name,</span></span>
+<span class="line"><span style="color: #000000">    gender</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> limited_users</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h2>
+        <a id="source-refinement" class="header-link anchor" href="#source-refinement">
+          Source Refinement
+        </a>
+      </h2>
+    <p>When you add fields to or modify a source we call this refinements. This can  include adding filters, specifying a <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">primary</span><span style="color: #000000"> </span><span style="color: #001080">key</span></span></code>, adding fields and
+joins, renaming fields, or limiting which fields are
+available.</p>
+
+      <h3>
+        <a id="filtering-sources" class="header-link anchor" href="#filtering-sources">
+          Filtering Sources
+        </a>
+      </h3>
+    <p>When a source is defined, filters which apply to any query against the new source may be added.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">long_sfo_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">long_sfo_flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">destination</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000">; </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span><span style="color: #000000"> }</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">destination</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ORD</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>41,026</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>JFK</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>31,108</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>DFW</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>28,158</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">41026</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;JFK&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">31108</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">28158</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   long_sfo_flights.destination </span><span style="color: #0000FF">as</span><span style="color: #000000"> destination,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> long_sfo_flights</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> (long_sfo_flights.origin=</span><span style="color: #A31515">&#39;SFO&#39;</span><span style="color: #000000">)</span><span style="color: #0000FF">and</span><span style="color: #000000">(long_sfo_flights.distance&gt;</span><span style="color: #098658">1000</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
+      <h3>
+        <a id="primary-keys" class="header-link anchor" href="#primary-keys">
+          Primary Keys
+        </a>
+      </h3>
+    <p>To be used in joins to other sources, a source must
+have a primary key specified.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.carriers&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h3>
+        <a id="joins" class="header-link anchor" href="#joins">
+          Joins
+        </a>
+      </h3>
+    <p>When sources are joined as part of their definition, queries can reference fields in the joined sources without having to specify the join relationship each time.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.carriers&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">primary_key</span><span style="color: #000000">: </span><span style="color: #001080">code</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carriers</span><span style="color: #000000">.</span><span style="color: #001080">nickname</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">nickname</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Southwest</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>5,775,777</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>Delta</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,477,929</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>American</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,434,727</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Southwest&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">5775777</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Delta&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4477929</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;nickname&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;American&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4434727</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   carriers_0.nickname </span><span style="color: #0000FF">as</span><span style="color: #000000"> nickname,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.carriers`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> carriers_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.carrier = carriers_0.code</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p>See the <a href="join.html">Joins</a> section for more information on working with joins.</p>
+
+      <h3>
+        <a id="adding-fields" class="header-link anchor" href="#adding-fields">
+          Adding Fields
+        </a>
+      </h3>
+    <p>Fields—dimensions, measures, and queries—may be defined as
+part of the source, allowing for them to be used in any
+query against the source.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// A dimension</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">has_control_tower</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">cntl_twr</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Y&#39;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// A measure</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">average_elevation</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">elevation</span><span style="color: #000000">)</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #008000">// A query</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">average_elevation_by_control_tower</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">has_control_tower</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">average_elevation</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h3>
+        <a id="renaming-fields" class="header-link anchor" href="#renaming-fields">
+          Renaming Fields
+        </a>
+      </h3>
+    <p>Fields from a source may be renamed in the context of the
+new source. This is useful when the original name is not descriptive, or has a different meaning in the new context.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">rename</span><span style="color: #000000">: </span><span style="color: #001080">facility_type</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">fac_type</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">rename</span><span style="color: #000000">: </span><span style="color: #001080">origin_code</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">origin</span></span>
+<span class="line"></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">with</span><span style="color: #000000"> </span><span style="color: #001080">origin_code</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre>
+      <h3>
+        <a id="limiting-access-to-fields" class="header-link anchor" href="#limiting-access-to-fields">
+          Limiting Access to Fields
+        </a>
+      </h3>
+    <p>The list of fields available in a source  can be limited. This can be done either by <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">accept</span></span></code>ing a list of fields to include (in which case any other field from the source is excluded, i.e. an "allow list") or by <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">except</span></span></code>ing a list of fields to exclude (any other field is included, i.e. a "deny list"). These cannot be used in conjunction with one another.</p>
+<p><strong>Accepting fields</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">accept</span><span style="color: #000000">: [ </span><span style="color: #001080">id</span><span style="color: #000000">, </span><span style="color: #001080">name</span><span style="color: #000000">, </span><span style="color: #001080">code</span><span style="color: #000000">, </span><span style="color: #001080">city</span><span style="color: #000000">, </span><span style="color: #001080">state</span><span style="color: #000000">, </span><span style="color: #001080">elevation</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p><strong>Excepting fields</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.airports&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">except</span><span style="color: #000000">: [ </span><span style="color: #001080">c_ldg_rts</span><span style="color: #000000">, </span><span style="color: #001080">aero_cht</span><span style="color: #000000">, </span><span style="color: #001080">cntl_twr</span><span style="color: #000000"> ]</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre></div>
+          </div>
+        </div>
+        <script src="/malloy/js/view_toggles.js"></script>
+      </div>
+    </div>
+  </body>
+</html>

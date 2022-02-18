@@ -29,7 +29,7 @@
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
-              <a href="/malloy/documentation/malloy_by_example.html">
+              <a href="/malloy/documentation/index.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -53,7 +53,7 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/index.html">
+              <a href="/malloy/documentation/tao.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -83,9 +83,9 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/language/explore.html">
+              <a href="/malloy/documentation/language/source.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item '>
@@ -379,7 +379,7 @@
       </h1>
     <p>Final Data Model - Goto <a href="wordle5.html">Solve Puzzles</a></p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// Make a table of 5 letter words</span></span>
-<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.words_bigger&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">five_letter_words</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #795E26">length</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">) = </span><span style="color: #098658">5</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">word</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;^[a-z]{5}$&#39;</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">upper</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">)</span></span>
@@ -387,7 +387,7 @@
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #008000">// Cross join numbers</span></span>
-<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.numbers&#39;</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">numbers</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.malloytest.numbers&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">num</span><span style="color: #000000"> &lt;= </span><span style="color: #098658">5</span></span>
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
@@ -408,7 +408,7 @@
 <span class="line"></span>
 <span class="line"></span>
 <span class="line"><span style="color: #008000">// Build a word finder that can generate a score best available guess</span></span>
-<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">wordle</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(-&gt; </span><span style="color: #001080">words_and_position</span><span style="color: #000000">) {</span></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">wordle</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(-&gt; </span><span style="color: #001080">words_and_position</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">word</span><span style="color: #000000"> !~ </span><span style="color: #811F3F">r&#39;(S|ED)$&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">word_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
 <span class="line"></span>

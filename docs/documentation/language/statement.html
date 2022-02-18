@@ -15,16 +15,15 @@ provides tools that allow for modularity and reusability of definitions.
 Whereas in SQL, queries generally define all metrics inline,
 requiring useful snippets to be saved and managed separately, in Malloy,
 <em>dimensions</em>, <em>measures</em>, and <em>queries</em> can be saved and attached to a
-modeled <em>explore</em>.</p>
+modeled source.</p>
 
       <h2>
-        <a id="explores" class="header-link anchor" href="#explores">
-          Explores
+        <a id="sources" class="header-link anchor" href="#sources">
+          Sources
         </a>
       </h2>
-    <p>A Malloy model file can contain several <em>explores</em>, which define fields that can be
-used in queries.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
+    <p>A Malloy model file can contain several <em>sources</em>, which define fields that can be used in queries.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">dimension</span><span style="color: #000000">: </span><span style="color: #001080">distance_km</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">distance</span><span style="color: #000000"> / </span><span style="color: #098658">1.609344</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
@@ -33,7 +32,7 @@ used in queries.</p>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
-<span class="line"><span style="color: #000000">}</span></span></pre><p>See <a href="explore.html">here</a> for more information on explores.</p>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>See <a href="source.html">here</a> for more information on sources.</p>
 
       <h2>
         <a id="queries" class="header-link anchor" href="#queries">

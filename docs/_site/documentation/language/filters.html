@@ -29,7 +29,7 @@
         <img class="chevron-closed" src="/malloy/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
           <div class='sidebar-item '>
-              <a href="/malloy/documentation/malloy_by_example.html">
+              <a href="/malloy/documentation/index.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 Malloy By Example
               </a>
@@ -53,7 +53,7 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/index.html">
+              <a href="/malloy/documentation/tao.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
                 The Tao of Malloy
               </a>
@@ -83,9 +83,9 @@
               </a>
             </div>
 <div class='sidebar-item '>
-              <a href="/malloy/documentation/language/explore.html">
+              <a href="/malloy/documentation/language/source.html">
                 <img src="/malloy/img/article_icon.svg" alt="document"/>
-                Explores
+                Sources
               </a>
             </div>
 <div class='sidebar-item '>
@@ -385,7 +385,7 @@
         </a>
       </h2>
     <p>Regardless of the placement of a filter, the syntax looks the same.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">source</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: [ </span><span style="color: #001080">filter_one</span><span style="color: #000000">, </span><span style="color: #001080">filter_two</span><span style="color: #000000"> ] }</span></span></pre><p>Each filter be any expression of type <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">boolean</span></span></code>, whether that's a boolean field <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">is_commercial_flight</span></span></code>, a comparison <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: [ </span><span style="color: #001080">filter_one</span><span style="color: #000000">, </span><span style="color: #001080">filter_two</span><span style="color: #000000"> ] }</span></span></pre><p>Each filter be any expression of type <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #267F99">boolean</span></span></code>, whether that's a boolean field <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">is_commercial_flight</span></span></code>, a comparison <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span></span></code>, or any of the other kinds of boolean expressions that Malloy supports. For examples see <a href="#examples-of-filter-expressions">the table below</a>, or for detailed information on the kinds of expressions Malloy supports, see the <a href="expressions.html">Expressions</a> section.</p>
 <p>Logically, the comma-separated list of filters are <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">and</span></span></code>ed together, though in reality different conditions are checked in different places in the generated SQL, depending on what types of computation occurs in the expression.</p>
 <!--
 TODO "see where vs having for more information on how Malloy generates SQL for filters"
@@ -554,8 +554,8 @@ TODO "see where vs having for more information on how Malloy generates SQL for f
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
-<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` source</span></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">percent_delayed</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> / </span><span style="color: #001080">flight_count</span></span>
 <span class="line"><span style="color: #000000">}</span></span>
@@ -625,8 +625,8 @@ measure and then create that as a percent of total.</p>
       </h3>
     <p>Even complex measures can be filtered.  A common use case is to create a filtered
 measure and then create that as a percent of total.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` explore</span></span>
-<span class="line"><span style="color: #AF00DB">explore</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #008000">// add a couple of measures to the `flights` source</span></span>
+<span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">my_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flights</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">delayed_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">flight_count</span><span style="color: #000000"> { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_delay</span><span style="color: #000000"> &gt; </span><span style="color: #098658">30</span><span style="color: #000000"> }</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">delay_stats</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
