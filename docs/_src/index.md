@@ -10,9 +10,9 @@ SQL databases.
 
 ## SQL SELECT vs Malloy's `query`
 
-The statement to run a query in malloy is `query:`.  Malloy's queries have two types, `project:` and `group_by:`/ `aggregate:`.
+The statement to run a query in Malloy is `query:`. There are two types of queries in Malloy, grouping queries which have `group_by:` or `aggregate:` statements, and projecting queries which have `project:` statements.
 
-### Simple SELECT with no GROUP BY
+### Projecting -- SELECT with no GROUP BY
 
 In SQL
 ```
@@ -30,7 +30,7 @@ query: table('malloy-data.faa.airports') -> {
 }
 ```
 
-### SELECT with GROUP BY
+### Grouping -- SELECT with GROUP BY
 
 In SQL
 ```
@@ -57,25 +57,22 @@ query: table('malloy-data.faa.airports') -> {
 
 ## Using this Guide
 
-All examples have actual results.  You can see the Malloy Query, the returned result or JSON for any of the
-presented Queries.
+For every Malloy Query you can see the formatted result, or raw result as JSON, or the SQL used to produce the result.
 
 Click tab to to see the  HTML, JSON or SQL result:  <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
 
 
-## Explore: A data source for queries
+## Source: A data source for queries
 
-Malloy can create reusable calculations and tie them to tables (and other data sources).
-In Malloy a data source is an object are called `explore:`.  One way to think of an explore is a a
-table with built in functions that can operate on it.  ([Explore Documentation](language/explore.html))
+Malloy separates a query from the source of the data. A source can be thought of as a table and a collection of computations and relationships which are relevant to that table.  ([Source Documentation](language/source.html))
 
 
 * `measure:` is a declared aggregate calculation (think function that operates across the table).  `measures:`  can be used in the `aggregate:` element in a query
 * `dimension:` is declared a scalar calculation that can be be used in a `group_by:` or `project:` element of a query
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/explore1.malloy", "isHidden": false}
-explore: airports is table('malloy-data.faa.airports') {
+--! {"isModel": true, "modelPath": "/inline/source1.malloy", "isHidden": false}
+source: airports is table('malloy-data.faa.airports') {
   dimension: elevation_in_meters is elevation * 0.3048
   dimension: state_and_county is concat(state,' - ', county)
   measure: airport_count is count()
@@ -83,51 +80,51 @@ explore: airports is table('malloy-data.faa.airports') {
 }
 ```
 
-## Querying against an Explore
+## Querying against a Source
 
-Queries can be run against `explore:` objects and can utilize the built in calculations. ([Query Documentation](language/query.html))
+Queries can be run against `source:` objects and can utilize the built in calculations. ([Query Documentation](language/query.html))
 
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/source1.malloy"}
 query: airports -> {
   limit: 10
   where: fac_type = 'HELIPORT'
   group_by: state
   aggregate: [
-    airport_count           // <-- declared in explore
-    avg_elevation_in_meters // <-- declared in explore
+    airport_count           // <-- declared in source
+    avg_elevation_in_meters // <-- declared in source
   ]
 }
 ```
 
 ## Dimensional calculations are no different than columns
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/source1.malloy"}
 query: airports -> {
-  group_by: state_and_county // <-- declared in explore
+  group_by: state_and_county // <-- declared in source
   aggregate: airport_count
   order_by: 1 desc
 }
 ```
 
 
-## Named Queries inside Explore object
+## Named Queries inside a Source
 
-Queries can be declared inside an explore and then called by name.
+A source can also contain a set of useful queries relating to that source.
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/explore2.malloy", "isHidden": false}
+--! {"isModel": true, "modelPath": "/inline/source2.malloy", "isHidden": false}
 
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
 
   query: by_state is {        // <-- can be called by name
@@ -137,28 +134,27 @@ explore: airports is table('malloy-data.faa.airports') {
 }
 ```
 
-###  Executing Named Queries
+##  Executing Named Queries
 
-Instead of writing the elements of the query, we simply write the name of the query.
+The simplest form of a query in Malloy is the name of a source, the query operator `->`, and the name of one of its contained queries.
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/source2.malloy"}
 query: airports -> by_state
 ```
 
 
 
-## Filtering Queries
+## Filtering a Source
 
-The refinement gesture `{ }` adds declarations to things (more on that later).  We can add a filter to `airports`
-and run the named query `by_state.  ([Filter Documentation](language/filters.html))
+You can filter a source by adding a filter expression using the `where:` keyword and then use this refined version of `airports` to run the `by_state` query.  ([Filter Documentation](language/filters.html))
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/source2.malloy"}
 query: airports  {
   where: fac_type = 'SEAPLANE BASE'   // <- run the query with an added filter
 }
@@ -167,12 +163,12 @@ query: airports  {
 
 ## Filtering Measures
 
-Measures can also be filtered.
+The input to an aggregate computation can be filtered.
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/source2.malloy"}
 query: airports -> {
   group_by: state
   aggregate: airport_count
@@ -182,11 +178,11 @@ query: airports -> {
 
 ## Composing with Queries
 
-For the next section assume the following explore declaration.
+For the next section assume the following source declaration.
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/explore3.malloy", "isHidden": false}
-explore: airports is table('malloy-data.faa.airports') {
+--! {"isModel": true, "modelPath": "/inline/source3.malloy", "isHidden": false}
+source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
   measure: avg_elevation is elevation.avg()
 
@@ -205,14 +201,14 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ## The `nest:` property embeds one query in another
 
-Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
-In the case below, the top level query groups by state.  The nested query groups by facility type.
+Malloy allows you to create nested subtables easily in a query.
+In the case below, the top level query groups by state amd nested query groups by facility type.
 This mechanism is really useful for understanding data and creating complex data structures. ([Nesting Documentation](language/nesting.html))
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true, "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+--! {"isRunnable": true, "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
 query: airports -> {
   group_by: state
   aggregate: airport_count
@@ -226,10 +222,10 @@ query: airports -> {
 
 Queries can contain multiple nested queries.
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
 query: airports -> {
   group_by: faa_region
   aggregate: airport_count
@@ -240,10 +236,10 @@ query: airports -> {
 
 Queries can be nested to any level of depth.
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
 query: airports -> {
   group_by: faa_region
   aggregate: airport_count
@@ -262,7 +258,7 @@ query: airports -> {
 
 ## Refining a Named Query
 
-The refine gesture `{ }` adds declarations to things.  We can add elements to a query by refining it.
+The refinement gesture `{}` extends an existing object, creating a new version with added properties
 
 For example we can add a limit and an order by to `by_state`
 
@@ -276,7 +272,7 @@ query: airports -> by_state {
 is the same as
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/source2.malloy"}
 query: airports -> {
   group_by: state
   aggregate: airport_count
@@ -285,27 +281,10 @@ query: airports -> {
 }
 ```
 
-## Refinements allow you to add elements to queries.
-
-Refinements are a way of modifying declared things as you use them.  This becomes useful when the
-declared thing isn't exactly as you would like.
-
-### You can add limits, ordering, filtering and even fields to queries when you use them.
-
-*using the above declared `airports` explore*
-
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
-query: airports -> by_facility_type {
-  limit: 2
-}
-```
-
-
 ### You can add a measure or dimension
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
 query: airports -> by_facility_type {
   aggregate: avg_elevation
 }
@@ -314,16 +293,18 @@ query: airports -> by_facility_type {
 ### You can even add another query
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
 query: airports -> top_5_states {
   nest: by_facility_type
 }
 ```
 
-### Changing the inner and outer query it around shows something very different
+## Composing with Queries
+
+Changing the inner and outer query in the example above reveals very different information.
 
 ```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
+--! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
 query: airports-> by_facility_type {
   nest: top_5_states
 }
@@ -335,11 +316,11 @@ query: airports-> by_facility_type {
 First let's model some simple tables... ([Join Documentation](language/join.html))
 
 ### Carrier table
-*simple explore declartion used in example*
+*simple source declartion used in example below*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloy-data.faa.carriers') {
   measure: carrier_count is count()
 }
 
@@ -350,10 +331,10 @@ query: carriers-> {
 
 ### Flights table
 
-*simple explore declartion used in example*
+*simple source declartion used in example below*
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
@@ -363,22 +344,20 @@ query: flights -> {
 }
 ```
 
-## Joining on Foreign Key / Primary Key pairs
+## Joining
 
-Join carriers to flights.  Each flight has one carrier so we use `join_one:`.  We are joining
-with a primary key in carriers and foreign key in flights so we can use the `with` keyword
-to name the foreign key in flights. ([Join Documentation](language/join.html))
+Join carriers to flights.  Each flight has one carrier so we use `join_one:`.
+([Join Documentation](language/join.html))
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/join1.malloy", "isHidden": false}
-explore: carriers is table('malloy-data.faa.carriers') {
-  primary_key: code                   // <-- name the primary key of the table
+source: carriers is table('malloy-data.faa.carriers') {
   measure: carrier_count is count()
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
 
-  join_one: carriers with carrier  // <-- with names foreign_key
+  join_one: carriers on carrier=carriers.code
 
   measure: [
     flight_count is count()
@@ -390,7 +369,7 @@ explore: flights is table('malloy-data.faa.flights') {
 
 ###  Query the joined tables
 
-*using the above declared `flights` explore*
+*using the above declared `flights` source*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join1.malloy"}
@@ -409,7 +388,7 @@ query: flights -> {
 ([Aggregate Documentation](language/aggregates.html))
 
 
-*using the above declared `flights` explore*
+*using the above declared `flights` source*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join1.malloy"}
@@ -429,22 +408,25 @@ query: flights -> {
 }
 ```
 
-## Condition based Joins
+## More Complex Joins
 
-This is a more complex join pattern.  Flight joins carriers with a primary key.
+The most common join pattern is a foreign key join. Malloy uses the `with:`
+to declare these and generates more efficient SQL when these joins are used.
 
-Airports join flight using a conditional join.  Many flights have the same
-airport as their origin.  Some airports have no flights at all.
+In the example below, we use a `with:` join for `carriers` and then model the more complex relationship with the `flights` originating from each `airport` using  `on:`.
+
+Many `flights` have the same
+`airport` as their origin so we use `join_many:`.
 
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/join2.malloy", "isHidden": false}
-explore: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
   measure: carrier_count is count()
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
 
   join_one: carriers with carrier  // <-- each flight has 1 carrier
 
@@ -455,10 +437,9 @@ explore: flights is table('malloy-data.faa.flights') {
   ]
 }
 
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
 
   join_many: flights on code = flights.origin  // <-- each airport has many flights
-                                               // <-- join ON like SQL
 
   measure: airport_count is count()
   dimension: elevation_in_meters is elevation * 0.3048
@@ -473,11 +454,10 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ## Calculations work properly regardless of where you are in the graph
 
-Malloy has full pathing instead of one level like SQL.  This query is very difficult to express in SQL.
-The calculations in flights and airports will be accurate even though the join pattern fans out the data.
+This query is very difficult to express in SQL. Malloy's understanding of source relationships allows it to compute aggregate computations at any node of the join path,unlike SQL which can only do aggregate computation at the. outermost level.
 ([Aggregate Documentation](language/aggregates.html))
 
-*using the above declared `airports` explore*
+*using the above declared `airports` source*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join2.malloy"}
@@ -486,7 +466,7 @@ query: airports ->  {
   aggregate: [
     flights.carriers.carrier_count  // <-- 3 levels
     flights.flight_count
-    flights.total_distance          // <-- symmetric calculation
+    flights.total_distance
     airport_count
     avg_elevation_in_meters         // <-- symmetric calculation
   ]
@@ -497,12 +477,12 @@ query: airports ->  {
 
 The output of a query can be used as the source for the next query.
 
-Assume the following query as a starting point.
+*Assume the following query as a starting point.*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
 
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
 }
 
@@ -520,15 +500,12 @@ query: airports -> {
 
 ## Unnesting in a pipeline flattens the table
 
-The output of the query above can be 'piped' into another query using the `->`.
-
-Next stage of a pipeline can be a `group_by` or `project`.  Calculations can be computed
-relative to the level of nesting.
+Queries can be chained together (pipelined), the output of one becoming the input of the next one, by simply adding another `->` operator and a new query definition.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
 
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
 }
 
@@ -553,12 +530,12 @@ query: airports -> {
 }
 ```
 
-## Pipelines can be named as queries in explores
+## Pipelines can be named as queries in sources
 
-Pipelines can do pretty complex things.  They can be built into explore objects.
+Pipelines can do pretty complex things.  They can be built into source objects.
 
 ```malloy
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
   query: county_rollup is  {
     where: fac_type = 'HELIPORT'
@@ -585,22 +562,22 @@ query: airports -> county_rollup
 
 ```
 
-## Refining Explores
+## Refining Sources
 
-(add section)
+As with a query, a source can be extended with the refinement gesture `{}` to create a new version of the source with additional properties.
 
 ```malloy
-explore: newname is from(oldname) {
+source: newname is from(oldname) {
   where: <some data limit>
   measure: added_calc is some_calc.sum()
 }
 ```
 
-## Explores based on Queries
+## Sources based on Queries
 
-### Named Source Query
+### Named Query
 
-*documentation bug: name should not be commented out* ([Explore Documentation](language/explore.html))
+*documentation bug: name should not be commented out* ([Source Documentation](language/source.html))
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium"}
@@ -632,12 +609,12 @@ query: q_airport_facts is table('malloy-data.faa.flights') -> {
 }
 ```
 
-### Explore based on a query
+### Source based on a query
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/query2.malloy", "source":"/inline/query1.malloy", "isHidden": false}
 
-explore: airport_facts is from(-> q_airport_facts) {  // <-- 'from' instead of 'table'
+source: airport_facts is from(-> q_airport_facts) {  // <-- 'from' instead of 'table'
                                                       //      '->' indicates a query name
   measure: flight_count is num_flights.sum()
   measure: total_distance is distance.sum()
@@ -661,7 +638,7 @@ explore: airport_facts is from(-> q_airport_facts) {  // <-- 'from' instead of '
 }
 ```
 
-### Querying the Summary explore
+### Querying the Summary source
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/query2.malloy"}
