@@ -100,7 +100,7 @@ Allowing us to run the following very simple command next time we want to run an
 query: order_items -> sales_by_state_2020
 ```
 
-Note that queries can be filtered at any level, by inserting filter expressions between square brackets. A filter after on a source applies to the whole source; one before the fields in a `reduce` or `project` transformation applies to that transformation; and one after an aggregate field applies to that aggregate only. See filters documentation for more information on filter expressions. Here's an example with a variety of filter usage:
+Note that queries can be filtered at any level, by inserting filter expressions between square brackets. A filter on a source applies to the whole source; one before the fields in a `reduce` or `project` transformation applies to that transformation; and one after an aggregate field applies to that aggregate only. See filters documentation for more information on filter expressions. Here's an example with a variety of filter usage:
 
 ```malloy
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}

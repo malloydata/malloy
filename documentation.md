@@ -48,7 +48,7 @@ line in a comment with an `!`, like: `--! { "isRunnable": true }`. For example,
 ~~~
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size": "large"}
-source flights | sessionize
+flights -> sessionize
 ```
 ~~~
 

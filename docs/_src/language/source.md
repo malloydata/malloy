@@ -1,8 +1,6 @@
 # Sources
 
-An source consists of a data source along with a list of
-additional properties which extend it, such as named fields, queries, and joins. When a source is used in a query,
-everything from the original source and all its extensions can be referenced.
+Malloy separates a query from the source of the data. A source can be thought of as a table and a collection of computations and relationships which are relevant to that table. These computations can consist of measures (aggregate functions), dimensions (scalar calculations) and query definitions;  joins are relationships between sources.
 
 ## Sources
 
@@ -154,11 +152,9 @@ query: limited_users -> {
 }
 ```
 
-## Source Modifications
+## Source Refinement
 
-A source can introduce a number of different
-modifications or additions to its source, including adding
-filters, specifying a `primary key`, adding fields and
+When you add fields to or modify a source we call this refinements. This can  include adding filters, specifying a `primary key`, adding fields and
 joins, renaming fields, or limiting which fields are
 available.
 
@@ -224,7 +220,7 @@ See the [Joins](join.md) section for more information on working with joins.
 ### Adding Fields
 
 Fields—dimensions, measures, and queries—may be defined as
-part of source, allowing for them to be used in any
+part of the source, allowing for them to be used in any
 query against the source.
 
 ```malloy
