@@ -2776,9 +2776,9 @@ window.SEARCH_SEGMENTS = [
       "Joins"
     ],
     "paragraphs": [
-      "Joins in malloy are different than SQL joins.  When two explores are joined,\nMalloy retains the graph nature of the the data relationships. This is unlike\nSQL, which flattens them all into a single table space.",
-      "In Malloy syntaxes for join are:",
-      "Malloy's joins are left outer joins by default.\nSince Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example)."
+      "Joins in Malloy differ from SQL joins.  When two explores are joined,\nMalloy retains the graph nature and hierarchy of the the data relationships. This is unlike\nSQL, which flattens everything into a single table space.",
+      "In Malloy, syntaxes for join are:",
+      "Malloy's joins are left outer by default.\nSince Malloy deals in graphs, some SQL Join types don't make sense (RIGHT JOIN, for example)."
     ],
     "path": "/language/join.md"
   },
@@ -2796,7 +2796,10 @@ window.SEARCH_SEGMENTS = [
       "Join Types",
       "Foreign Key to Primary Key"
     ],
-    "paragraphs": [],
+    "paragraphs": [
+      "The easiest, most error-proof way to perform a join is using the following syntax:",
+      "This syntax for the join expresses exactly the same thing a bit more explicitly:"
+    ],
     "path": "/language/join.md"
   },
   {
@@ -2810,7 +2813,7 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Joins",
-      "Inlining Joins"
+      "In-line Joins"
     ],
     "paragraphs": [],
     "path": "/language/join.md"
@@ -2818,7 +2821,7 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Joins",
-      "Using Fields in Joined Explores"
+      "Using Fields from Joined Explores"
     ],
     "paragraphs": [
       "Measures and queries defined in joined explores may be used in addition to dimensions."
@@ -2836,23 +2839,23 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Joins",
-      "SQL Joins"
+      "Inner Joins"
     ],
     "paragraphs": [
-      "Inner join are joins where the the joined table has rows. The example below, suppose we only want users that have at least one row in the orders table. The following is the equivalent of a SQL <code>INNER JOIN</code>.",
+      "Inner join are essentially left joins with an additional condition that the parent table has matches in the joined table. The example below functions logically as an INNER JOIN, returning only users that have at least one row in the orders table, and only orders that have an associated user.",
+      "Examples of the above, with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">orders</span></span></code> as the implied source explore.:",
       "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:</span></span></code> - the table we are joining has one row for each row in the source table.",
       "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_many</span><span style=\"color: #000000\">:</span></span></code> - the table we are joining has many rows for each row in the source table",
       "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_cross</span><span style=\"color: #000000\">:</span></span></code> - the join is a cross product and there will be many rows in each side of the join.",
-      "The easiest, most error proof way to perform a join is with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:/</span><span style=\"color: #AF00DB\">with</span></span></code>. The basic syntax is:",
       "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">: &lt;</span><span style=\"color: #AF00DB\">explore</span><span style=\"color: #000000\">&gt; </span><span style=\"color: #AF00DB\">with</span><span style=\"color: #000000\"> &lt;</span><span style=\"color: #001080\">foreign_key</span><span style=\"color: #000000\">&gt;</span></span></code>",
-      "To join a foreign key of the source explore to the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">primary</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">key</span></span></code> of a joined explore, reference the foreign key by name in the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">with</span></span></code> clause.",
-      "If no name is specified with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code>, the name of the join will be the name of the\nexplore being joined.",
-      "To give the joined explore a different name within the source explore, use <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> to specify the name of the explore.",
-      "Explores do not need to be named before they are used in a join. if the join\nuses <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> to give the join a name.",
-      "When an explore is joined in, it becomes a nested field within the source explore. Fields within the joined explore can be referenced by first naming the joined explore, then accessing a contained field using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code>.",
+      "To join a foreign key of the source explore to the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">primary_key</span></span></code> of a joined explore, reference the foreign key by name in the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">with</span></span></code> clause.",
+      "If no alias is specified using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code>, the name of the join will be the name of the\nexplore being joined.",
+      "To give the joined explore a different name within the source explore, use <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code> to alias the explore.",
+      "Explores do not need to be modeled before they are used in a join, though the join must be named using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">is</span></span></code>.",
+      "When an explore is joined in, its fields become nested within the parent explore. Fields from joined explores can be referenced using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">.</span></span></code>:",
       "This example demonstrates the definition of several different joins in a model and their use in a query.\nEntire subtrees of data can be joined.  In the example below, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">aircraft</span></span></code> joins <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">aircraft_models</span></span></code>.  <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code>\njoins aircraft (which already has a join to aircraft manufacturer).  The tree nature of the join relationship\nretained.",
       "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">aircraft</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">aircraft_models</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">manufacturer</span></span></code>",
-      "<a href=\"aggregates.html\">Aggregate calculations</a> use this graph to deduce\na locality of computation, so they always work regardless of join pattern.",
+      "<a href=\"aggregates.html\">Aggregate calculations</a> navigate this graph to deduce\nthe locality of computation, so they are always computed correctly regardless of join pattern, avoiding the fan and chasm traps.",
       "For more examples and how to reason about aggregation across joins, review the <a href=\"aggregates.html\">Aggregates</a> section."
     ],
     "path": "/language/join.md"
