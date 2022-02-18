@@ -11,281 +11,156 @@
  * GNU General Public License for more details.
  */
 
-import { TestTranslator } from "./test-translator";
+import { MarkedSource, markSource, TestTranslator } from "./test-translator";
 import { DocumentSymbol } from "../parse-tree-walkers/document-symbol-walker";
 
-class MalloyExplore {
-  tt: TestTranslator;
+class MalloyExplore extends TestTranslator {
   constructor(src: string) {
-    this.tt = new TestTranslator(src);
+    super(src);
   }
 
   get symbols(): DocumentSymbol[] {
-    const md = this.tt.metadata();
+    const md = this.metadata();
     return md.symbols || [];
   }
 }
 
-test("explore symbols are included", () => {
+function testSymbol(source: MarkedSource, name: string,  type: string, path: number[]) {
   const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights')"
+    source.code
   );
-  expect(doc.symbols).toMatchObject([
+  let current = { children: doc.symbols };
+  path.forEach((segment) => {
+    current = current.children[segment];
+  });
+  expect(doc.logger.hasErrors()).toBeFalsy();
+  expect(current).toMatchObject(
     {
-      children: [],
-      name: "flights",
-      range: {
-        end: { line: 0, character: 45 },
-        start: { line: 0, character: 9 },
-      },
-      type: "explore",
+      name,
+      range: source.locations[0].range,
+      type,
     },
-  ]);
+  );
+}
+
+test("explore symbols are included", () => {
+  testSymbol(
+    markSource`explore: ${"flights is table('my.table.flights')"}`,
+    "flights",
+    "explore",
+    [0]
+  );
 });
 
 test("query symbols are included", () => {
-  const doc = new MalloyExplore(
-    "query: flights_by_carrier is flights -> by_carrier"
+  testSymbol(
+    markSource`query: ${"flights_by_carrier is flights -> by_carrier"}`,
+    "flights_by_carrier",
+    "query",
+    [0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [],
-      name: "flights_by_carrier",
-      range: {
-        end: { line: 0, character: 50 },
-        start: { line: 0, character: 7 },
-      },
-      type: "query",
-    },
-  ]);
 });
 
-test.skip("expression field defs are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights')) {\n" +
-      "  dimension: one is 1\n" +
-      "}"
+test("expression field defs are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        dimension: ${"one is 1"}
+      }
+    `,
+    "one",
+    "field",
+    [0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "one",
-          range: {
-            start: { line: 1, character: 2 },
-            end: { line: 1, character: 10 },
-          },
-          type: "field",
-        },
-      ],
-      name: "flights",
-      range: {
-        start: { line: 0, character: 0 },
-        end: { line: 2, character: 1 },
-      },
-      type: "explore",
-    },
-  ]);
 });
 
-test.skip("renamed fields are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      "  dimension: field_two renames field_2\n" +
-      "};"
+test("renamed fields are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        rename: ${"field_two is field_2"}
+      }
+    `,
+    "field_two",
+    "field",
+    [0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "field_two",
-          range: {
-            start: { line: 1, character: 2 },
-            end: { line: 1, character: 27 },
-          },
-          type: "field",
-        },
-      ],
-      name: "flights",
-      range: {
-        start: { line: 0, character: 0 },
-        end: { line: 2, character: 1 },
-      },
-      type: "explore",
-    },
-  ]);
 });
 
-test.skip("name only fields are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      "  dmension: field_two is field_2\n" +
-      "};"
+test("name only fields are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        dimension: ${"field_two is field_2"}
+      }
+    `,
+    "field_two",
+    "field",
+    [0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "field_two",
-          range: {
-            start: { line: 1, character: 2 },
-            end: { line: 1, character: 22 },
-          },
-          type: "field",
-        },
-      ],
-    },
-  ]);
 });
 
-test.skip("turtle fields are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      "  query: my_turtle is { group_by: a }\n" +
-      "}"
+test("turtle fields are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        query: ${"my_turtle is { group_by: a }"}
+      }
+    `,
+    "my_turtle",
+    "query",
+    [0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "my_turtle",
-          range: {
-            start: { line: 1, character: 2 },
-            end: { line: 1, character: 25 },
-          },
-          type: "turtle",
-        },
-      ],
-    },
-  ]);
 });
 
-test.skip("turtle children fields are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      "  query: my_turtle is { group_by: a a}\n" +
-      "}"
+test("turtle children fields are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        query: my_turtle is { group_by: ${"a"} }
+      }
+    `,
+    "a",
+    "field",
+    [0, 0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "my_turtle",
-          children: [
-            {
-              name: "a",
-              range: {
-                start: { line: 1, character: 23 },
-                end: { line: 1, character: 24 },
-              },
-              type: "field",
-            },
-          ],
-        },
-      ],
-    },
-  ]);
 });
 
-test.skip("turtle children turtles are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      "  query: my_turtle is { nest: inner_turtle is { group_by: a }}\n" +
-      "}"
+test("turtle children turtles are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        query: my_turtle is { nest: ${"inner_turtle is { group_by: a }"} }
+      }
+    `,
+    "inner_turtle",
+    "query",
+    [0, 0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "my_turtle",
-          children: [
-            {
-              name: "inner_turtle",
-              range: {
-                start: { line: 1, character: 23 },
-                end: { line: 1, character: 49 },
-              },
-              type: "turtle",
-              children: [
-                {
-                  name: "a",
-                  range: {
-                    start: { line: 1, character: 47 },
-                    end: { line: 1, character: 48 },
-                  },
-                  type: "field",
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-  ]);
 });
 
-test.skip("joins are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      " join_one: a is b with c\n" +
-      "}"
+test("join withs are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        join_one: ${"a is b with c"}
+      }
+    `,
+    "a",
+    "join",
+    [0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "a",
-          range: {
-            start: { line: 1, character: 2 },
-            end: { line: 1, character: 18 },
-          },
-          type: "join",
-        },
-      ],
-    },
-  ]);
 });
 
-test.skip("join ons in join section are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      " join_one: a with b\n" +
-      "}"
+test("join ons are included", () => {
+  testSymbol(
+    markSource`
+      explore: flights is table('my.table.flights') {
+        join_one: ${"a is b on c"}
+      }
+    `,
+    "a",
+    "join",
+    [0, 0]
   );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "a",
-          range: {
-            start: { line: 1, character: 8 },
-            end: { line: 1, character: 14 },
-          },
-          type: "join",
-        },
-      ],
-    },
-  ]);
-});
-
-test.skip("join sources in join section are included", () => {
-  const doc = new MalloyExplore(
-    "explore: flights is table('my.table.flights') {\n" +
-      " join_one: a is b with c\n" +
-      "}"
-  );
-  expect(doc.symbols).toMatchObject([
-    {
-      children: [
-        {
-          name: "a",
-          range: {
-            start: { line: 1, character: 8 },
-            end: { line: 1, character: 19 },
-          },
-          type: "join",
-        },
-      ],
-    },
-  ]);
 });
