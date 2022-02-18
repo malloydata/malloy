@@ -1,6 +1,12 @@
 # Malloy by Example
 
-This  document can quickly take you through some of Malloy's notable language features.
+This document will assumes a working knowlege of SQL and will rapidly quickly take you through some of
+Malloy's notable language features.
+
+Malloy is currently available as a VSCode plugin and can query BigQuery and Posgres
+SQL databases.
+
+[Install Instructions](https://github.com/looker-open-source/malloy/)
 
 ## SQL SELECT vs Malloy's `query`
 
@@ -670,10 +676,10 @@ query: airport_facts -> flights_by_origin
 
 ### Group by on Joined Subtrees
 
-### Date/Timestamp filters and Timezones
+### Date/Timestamp filters and Timezones ([Time Documentation](expressions.html#time-ranges))
 
-### Nested data and Symmetric aggregates
+### Nested data and Symmetric aggregates  ([Aggregates Documentation](language/aggregates.html))
 
-### import
+### import ([Import Documentation](language/imports.html))
 
 ### data styles and rendering ([Rendering Documentation](visualizations/dashboards.html))
