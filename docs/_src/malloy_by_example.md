@@ -14,8 +14,6 @@ The statement to run a query in malloy is `query:`.  Malloy's queries have two t
 
 ### Simple SELECT with no GROUP BY
 
-*Click the SQL Tab to see the generated SQL query for any example* <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
-
 In SQL
 ```
 SELECT code, full_name, state, faa_region, fac_type, elevation
@@ -57,14 +55,23 @@ query: table('malloy-data.faa.airports') -> {
 }
 ```
 
+## Using this Guide
+
+All examples have actual results.  You can see the Malloy Query, the returned result or JSON for any of the
+presented Queries.
+
+Click tab to to see the  HTML, JSON or SQL result:  <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
+
+
 ## Explore: A data source for queries
 
 Malloy can create reusable calculations and tie them to tables (and other data sources).
-In Malloy a data source is an object are called `explore:`.  ([Explore Documentation](language/explore.html))
+In Malloy a data source is an object are called `explore:`.  One way to think of an explore is a a
+table with built in functions that can operate on it.  ([Explore Documentation](language/explore.html))
 
 
-* `measure:` is an calculation that can be used in the `aggregate:` element in a query
-* `dimension:` is a scalar calculation that can be be used in a `group_by:` or `project:` element of a query
+* `measure:` is a declared aggregate calculation (think function that operates across the table).  `measures:`  can be used in the `aggregate:` element in a query
+* `dimension:` is declared a scalar calculation that can be be used in a `group_by:` or `project:` element of a query
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/explore1.malloy", "isHidden": false}
