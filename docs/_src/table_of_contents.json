@@ -5,7 +5,7 @@
       "items": [
         {
           "title": "Malloy By Example",
-          "link": "/malloy_by_example.md"
+          "link": "/index.md"
         },
         {
           "title": "Key Features",
@@ -21,7 +21,7 @@
         },
         {
           "title": "The Tao of Malloy",
-          "link": "/index.md"
+          "link": "/tao.md"
         }
       ]
     },
