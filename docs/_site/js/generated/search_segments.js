@@ -458,418 +458,6 @@ window.SEARCH_SEGMENTS = [
   },
   {
     "titles": [
-      "Malloy by Example"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "SELECT with no GROUP BY"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "SELECT with only Aggregate Functions"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "SELECT with GROUP BY"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Explore: adding calculations to tables"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Querying against an Explore"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Dimensional calculations are no different than columns"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Named Queries inside Explore object"
-    ],
-    "paragraphs": [
-      "Queries can be declared inside an explore so it can be called by name."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Named Queries inside Explore object",
-      "Executing Named Queries."
-    ],
-    "paragraphs": [
-      "Instead of writing the elements of the query, we simply write the name of the query."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Filtering Queries"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Filtering Measures"
-    ],
-    "paragraphs": [
-      "Measures can also be filtered."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Composing with Queries"
-    ],
-    "paragraphs": [
-      "For the next section assume the following explore declaration.",
-      "Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.\nIn the case below, the top level query groups by state.  The nested query groups by facility type.\nThis mechanism is really useful for undstanding data and creating complex data structures.",
-      "Queries can contain multiple nested queries.",
-      "Queries can be nested to any level of depth."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refining a Named Query"
-    ],
-    "paragraphs": [
-      "is the same as"
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refinements allow you to add elements to queries."
-    ],
-    "paragraphs": [
-      "Refinements are a way of modifying declared things as you use them.  This becomes useful when the\ndeclared thing isn't exactly as you would like."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refinements allow you to add elements to queries.",
-      "You can add limits, ordering, filtering and even fields to queries when you use them."
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refinements allow you to add elements to queries.",
-      "You can add a measure or dimension"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refinements allow you to add elements to queries.",
-      "You can even add another query"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refinements allow you to add elements to queries.",
-      "Changing the inner and outer query it around shows something very different"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Joining ..."
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Joining ...",
-      "Carrier table"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Joining ...",
-      "Flights table"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Foreign Key / Primary Key Join"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Foreign Key / Primary Key Join",
-      "Query the joined tables"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Aggregates can be computed from anywhere in the Join Tree"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Graph, more complicated Joins"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Calculations work properly regardless of where you are in the graph"
-    ],
-    "paragraphs": [
-      "Malloy has full pathing instead of one level like SQL.  This query is very difficult to express in SQL.\nThe calculations in flights and airports will be accurate even though the join pattern fans out the data."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Pipelines"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Unnesting in a pipeline flattens the table"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Pipelines can be named as queries in explores"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Refining Explores"
-    ],
-    "paragraphs": [
-      "(add section)"
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Explores based on Queries"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Explores based on Queries",
-      "Named Source Query"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Explores based on Queries",
-      "Explore based on a query"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Explores based on Queries",
-      "Querying the Summary explore"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "SQL BLocks"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "Named Queries from SQL Blocks"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "Group by on Joined Subtrees"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "Date/Timestamp filters and Timezones"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "Nested data and Symmetric aggregates"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "import"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "Missing examples:",
-      "data styles and rendering"
-    ],
-    "paragraphs": [],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "SQL SELECT vs Malloy's <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">query</span></span></code>"
-    ],
-    "paragraphs": [
-      "The statement to run a query in malloy is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">query</span><span style=\"color: #000000\">:</span></span></code>.  Malloy's queries have two types, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span><span style=\"color: #000000\">:</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:/</span><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code>.",
-      "Malloy can create reusable calculations and tie them to tables (and other data sources).\nThese new object are called <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">explore</span><span style=\"color: #000000\">:</span></span></code>.",
-      "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">measure</span><span style=\"color: #000000\">:</span></span></code> is an calculation that can be used in the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code> element in a query",
-      "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">dimension</span><span style=\"color: #000000\">:</span></span></code> is a scalar calculation that can be be used in a <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span><span style=\"color: #000000\">:</span></span></code> element of a query",
-      "Queries can be run against <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">explore</span><span style=\"color: #000000\">:</span></span></code> objects and can utilize the built in calculations.",
-      "The refinement jesture <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">{ }</span></span></code> adds declarations to things (more on that later).  We can add a filter to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code>\nand run the named query <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">by_state</span></span></code>"
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another"
-    ],
-    "paragraphs": [
-      "The refine jesture <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">{ }</span></span></code> adds declarations to things.  We can add elements to a query by refining it.",
-      "For example we can add a limit and an order by to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">by_state</span></span></code>",
-      "Join carriers to flights.  Each flight has one carrier so we use <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:</span></span></code>.  We are joining\nwith a primary key in carriers and foreign key in flights so we can use the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">with</span></span></code> keyword\nto name the foreign key in flights.",
-      "Next stage of a pipeline can be a <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>.  Calculations can be computed\nreltative to the level of nesting."
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
-      "Malloy by Example",
-      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
-      "Mapping data with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code>"
-    ],
-    "paragraphs": [
-      "<em>Click the SQL Tab to see the equivalent SQL Malloy query</em>",
-      "<em>doucmentation bug: name should not be commented out</em>"
-    ],
-    "path": "/examples/malloy_by_example.md"
-  },
-  {
-    "titles": [
       "Name Game"
     ],
     "paragraphs": [
@@ -3351,6 +2939,445 @@ window.SEARCH_SEGMENTS = [
       "Alternations and partials may be used in conjunction with the <a href=\"apply.html\">apply operator</a> to test whether a value meets the given condition."
     ],
     "path": "/language/types.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example"
+    ],
+    "paragraphs": [
+      "This document will assumes a working knowlege of SQL and will rapidly quickly take you through some of\nMalloy's notable language features.",
+      "Malloy is currently available as a VSCode plugin and can query BigQuery and Posgres\nSQL databases."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Simple SELECT with no GROUP BY"
+    ],
+    "paragraphs": [
+      "In SQL",
+      "Equivalent in Malloy"
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "SELECT with GROUP BY"
+    ],
+    "paragraphs": [
+      "In SQL",
+      "Equivalent in Malloy"
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Explore: A data source for queries"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Querying against an Explore"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Dimensional calculations are no different than columns"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Named Queries inside Explore object"
+    ],
+    "paragraphs": [
+      "Queries can be declared inside an explore and then called by name."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Named Queries inside Explore object",
+      "Executing Named Queries"
+    ],
+    "paragraphs": [
+      "Instead of writing the elements of the query, we simply write the name of the query."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Filtering Queries"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Filtering Measures"
+    ],
+    "paragraphs": [
+      "Measures can also be filtered."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Composing with Queries"
+    ],
+    "paragraphs": [
+      "For the next section assume the following explore declaration.",
+      "Queries can contain multiple nested queries.",
+      "Queries can be nested to any level of depth."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refining a Named Query"
+    ],
+    "paragraphs": [
+      "is the same as"
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refinements allow you to add elements to queries."
+    ],
+    "paragraphs": [
+      "Refinements are a way of modifying declared things as you use them.  This becomes useful when the\ndeclared thing isn't exactly as you would like."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refinements allow you to add elements to queries.",
+      "You can add limits, ordering, filtering and even fields to queries when you use them."
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refinements allow you to add elements to queries.",
+      "You can add a measure or dimension"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refinements allow you to add elements to queries.",
+      "You can even add another query"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refinements allow you to add elements to queries.",
+      "Changing the inner and outer query it around shows something very different"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Joining ..."
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Joining ...",
+      "Carrier table"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Joining ...",
+      "Flights table"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Joining on Foreign Key / Primary Key pairs"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Joining on Foreign Key / Primary Key pairs",
+      "Query the joined tables"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Aggregates can be computed from anywhere in the Join Tree"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Condition based Joins"
+    ],
+    "paragraphs": [
+      "This is a more complex join pattern.  Flight joins carriers with a primary key.",
+      "Airports join flight using a conditional join.  Many flights have the same\nairport as their origin.  Some airports have no flights at all."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Calculations work properly regardless of where you are in the graph"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Pipelines"
+    ],
+    "paragraphs": [
+      "The output of a query can be used as the source for the next query.",
+      "Assume the following query as a starting point."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Unnesting in a pipeline flattens the table"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Pipelines can be named as queries in explores"
+    ],
+    "paragraphs": [
+      "Pipelines can do pretty complex things.  They can be built into explore objects."
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Refining Explores"
+    ],
+    "paragraphs": [
+      "(add section)"
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Explores based on Queries"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Explores based on Queries",
+      "Named Source Query"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Explores based on Queries",
+      "Explore based on a query"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Explores based on Queries",
+      "Querying the Summary explore"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Other Interesting Language Features:"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "Other Interesting Language Features:",
+      "Group by on Joined Subtrees"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "SQL SELECT vs Malloy's <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">query</span></span></code>"
+    ],
+    "paragraphs": [
+      "The statement to run a query in malloy is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">query</span><span style=\"color: #000000\">:</span></span></code>.  Malloy's queries have two types, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span><span style=\"color: #000000\">:</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code>/ <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code>.",
+      "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">measure</span><span style=\"color: #000000\">:</span></span></code> is an calculation that can be used in the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span><span style=\"color: #000000\">:</span></span></code> element in a query",
+      "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">dimension</span><span style=\"color: #000000\">:</span></span></code> is a scalar calculation that can be be used in a <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span><span style=\"color: #000000\">:</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span><span style=\"color: #000000\">:</span></span></code> element of a query"
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another"
+    ],
+    "paragraphs": [
+      "The refine gesture <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">{ }</span></span></code> adds declarations to things.  We can add elements to a query by refining it.",
+      "For example we can add a limit and an order by to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">by_state</span></span></code>",
+      "The output of the query above can be 'piped' into another query using the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code>.",
+      "Next stage of a pipeline can be a <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>.  Calculations can be computed\nrelative to the level of nesting.",
+      "<a href=\"https://github.com/looker-open-source/malloy/\">Install Instructions</a>",
+      "<em>Click the SQL Tab to see the generated SQL query for any example</em> <img src=\"https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png\" style=\"width:142px\"> 👈👈",
+      "Malloy can create reusable calculations and tie them to tables (and other data sources).\nIn Malloy a data source is an object are called <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">explore</span><span style=\"color: #000000\">:</span></span></code>.  (<a href=\"language/explore.html\">Explore Documentation</a>)",
+      "Queries can be run against <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">explore</span><span style=\"color: #000000\">:</span></span></code> objects and can utilize the built in calculations. (<a href=\"language/query.html\">Query Documentation</a>)",
+      "The refinement gesture <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">{ }</span></span></code> adds declarations to things (more on that later).  We can add a filter to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code>\nand run the named query `by_state.  (<a href=\"language/filters.html\">Filter Documentation</a>)",
+      "Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.\nIn the case below, the top level query groups by state.  The nested query groups by facility type.\nThis mechanism is really useful for understanding data and creating complex data structures. (<a href=\"language/nesting.html\">Nesting Documentation</a>)",
+      "First let's model some simple tables... (<a href=\"language/join.html\">Join Documentation</a>)",
+      "<em>simple explore declartion used in example</em>",
+      "<em>simple explore declartion used in example</em>",
+      "Join carriers to flights.  Each flight has one carrier so we use <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">join_one</span><span style=\"color: #000000\">:</span></span></code>.  We are joining\nwith a primary key in carriers and foreign key in flights so we can use the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">with</span></span></code> keyword\nto name the foreign key in flights. (<a href=\"language/join.html\">Join Documentation</a>)",
+      "(<a href=\"language/aggregates.html\">Aggregate Documentation</a>)",
+      "Malloy has full pathing instead of one level like SQL.  This query is very difficult to express in SQL.\nThe calculations in flights and airports will be accurate even though the join pattern fans out the data.\n(<a href=\"language/aggregates.html\">Aggregate Documentation</a>)",
+      "<em>documentation bug: name should not be commented out</em> (<a href=\"language/explore.html\">Explore Documentation</a>)"
+    ],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "SQL BLocks (<a href=\"language/sql_block.html\">SQL Block Documentation</a>)"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "Named Queries from SQL Blocks (<a href=\"language/sql_block.html\">SQL Block Documentation</a>)"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "Case statement improved with  <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> (<a href=\"language/expression.html\">Expression Documentation</a>)"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "Date/Timestamp filters and Timezones (<a href=\"expressions.html#time-ranges\">Time Documentation</a>)"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "Nested data and Symmetric aggregates  (<a href=\"language/aggregates.html\">Aggregates Documentation</a>)"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "import (<a href=\"language/imports.html\">Import Documentation</a>)"
+    ],
+    "paragraphs": [],
+    "path": "/malloy_by_example.md"
+  },
+  {
+    "titles": [
+      "Malloy by Example",
+      "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
+      "data styles and rendering (<a href=\"visualizations/dashboards.html\">Rendering Documentation</a>)"
+    ],
+    "paragraphs": [
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code> explore</em>",
+      "<em>using the above declared <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">airports</span></span></code> explore</em>"
+    ],
+    "path": "/malloy_by_example.md"
   },
   {
     "titles": [

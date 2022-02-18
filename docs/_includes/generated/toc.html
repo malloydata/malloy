@@ -1,12 +1,12 @@
 <div class="sidebar" id="sidebar">
     <div>
-        <div id=getting_started class="sidebar-section-title {% unless /documentation/,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <div id=getting_started class="sidebar-section-title {% unless /documentation/malloy_by_example.html,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html,/documentation/ contains page.url)} %}collapsed{% endunless %}">Getting Started<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
         <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
           <div class="sidebar-section-item-group">
-          <div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
-              <a href="{{ site.baseurl }}/documentation/index.html">
+          <div class='sidebar-item {% if page.url == "/documentation/malloy_by_example.html" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/malloy_by_example.html">
                 <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
-                The Tao of Malloy
+                Malloy By Example
               </a>
             </div>
 <div class='sidebar-item {% if page.url == "/documentation/features.html" %}active{% endif %}'>
@@ -25,6 +25,12 @@
               <a href="{{ site.baseurl }}/documentation/connection_instructions.html">
                 <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
                 Connecting a Database
+              </a>
+            </div>
+<div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
+              <a href="{{ site.baseurl }}/documentation/index.html">
+                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+                The Tao of Malloy
               </a>
             </div>
           </div>
