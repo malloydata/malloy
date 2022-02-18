@@ -141,6 +141,7 @@ function mapTypes(type: string) {
     case HighlightType.Property.Dimension:
     case HighlightType.Property.Except:
     case HighlightType.Property.Explore:
+    case HighlightType.Property.Source:
     case HighlightType.Property.GroupBy:
     case HighlightType.Property.Having:
     case HighlightType.Property.Index:

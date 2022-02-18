@@ -2,14 +2,14 @@
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
 
-explore: words is table('malloy-data.malloytest.words_bigger'){
+source: words is table('malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]....$'
     project: word is UPPER(word)
   }
 }
 
-explore: numbers is table('malloy-data.malloytest.numbers'){
+source: numbers is table('malloy-data.malloytest.numbers'){
   where: num <= 5
 
   -- code to fake a cross join
@@ -17,7 +17,7 @@ explore: numbers is table('malloy-data.malloytest.numbers'){
   dimension: a is 'a';
 }
 
-explore: words_and_letters is from(words->five_letter_words){
+source: words_and_letters is from(words->five_letter_words){
   -- Cross join is missing at the moment
   join_one: numbers with a
   dimension: a is 'a' -- key to fake a cross join
@@ -37,7 +37,7 @@ explore: words_and_letters is from(words->five_letter_words){
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy", "isHidden":true}
-explore: wordle is from(words_and_letters -> words_and_position) {
+source: wordle is from(words_and_letters -> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 }
@@ -81,7 +81,7 @@ query: wordle -> {
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w4.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(words_and_letters -> words_and_position) {
+source: wordle is from(words_and_letters -> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -128,7 +128,7 @@ query: wordle -> find_words -> {
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w5.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(words_and_letters -> words_and_position) {
+source: wordle is from(words_and_letters -> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 

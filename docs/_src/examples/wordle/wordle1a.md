@@ -4,7 +4,7 @@ The query below produces a table with the numbers 1 to 5
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 query: numbers -> { project: num }
@@ -13,14 +13,14 @@ query: numbers -> { project: num }
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden": true}
-explore: words is table('malloy-data.malloytest.words_bigger'){
+source: words is table('malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
   }
 }
 
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 ```

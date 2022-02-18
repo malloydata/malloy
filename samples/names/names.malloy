@@ -11,7 +11,7 @@ query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_current') ->
   nest: by_name is { group_by: name; aggregate: population is `number`.sum() }
 }
 
-explore: names is from(-> namesQuery) {
+source: names is from(-> namesQuery) {
   dimension: name is concat(by_name.name, '') // !?BUG !?
 
   measure: [

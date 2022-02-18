@@ -1,7 +1,7 @@
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "isHidden":true}
 // Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words') {
+source: words is table('malloy-data.malloytest.words') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
@@ -9,7 +9,7 @@ explore: words is table('malloy-data.malloytest.words') {
 }
 
 // Cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
@@ -30,7 +30,7 @@ query: words_and_position is from(words -> five_letter_words) {
 
 
 // Build a word finder that can generate a score best available guess
-explore: wordle is from(-> words_and_position) {
+source: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 
@@ -125,7 +125,7 @@ query: wordle -> find_words {
 
 ```malloy
 // Make a table of 5 letter words
-explore: words is table('malloy-data.malloytest.words') {
+source: words is table('malloy-data.malloytest.words') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
@@ -133,7 +133,7 @@ explore: words is table('malloy-data.malloytest.words') {
 }
 
 // Cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
@@ -154,7 +154,7 @@ query: words_and_position is from(words->five_letter_words) {
 
 
 // Build a word finder that can generate a score best available guess
-explore: wordle is from(-> words_and_position) {
+source: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 

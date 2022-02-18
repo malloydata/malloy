@@ -7,12 +7,14 @@ The following sections use these definitions, created in the [previous
 section](step2.md).
 
 ```malloy
-export define iowa is (explore 'bigquery-public-data.iowa_liquor_sales.sales'
-  total_sale_dollars is sale_dollars.sum()
-  total_bottles is sum(bottles_sold)
-  price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
-  avg_price_per_100ml is price_per_100ml.avg()
-)
+source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
+  measure: [
+    total_sale_dollars is sale_dollars.sum()
+    total_bottles is sum(bottles_sold)
+    price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
+    avg_price_per_100ml is price_per_100ml.avg()
+  ]
+}
 ```
 
 ## Most popular vodka by dollars spent
@@ -30,23 +32,23 @@ query: iowa { where: category_name ~ r'VODKA' } -> {
 ```
 
 ## Adding a Query to the model.
-This particular view of the data is pretty useful, an something we expect to re-use.  We can add this query to the model by incorporating it into the explore definition:
+This particular view of the data is pretty useful, an something we expect to re-use.  We can add this query to the model by incorporating it into the source definition:
 
 ```malloy
-export define iowa is (explore 'bigquery-public-data.iowa_liquor_sales.sales'
-  total_sale_dollars is sale_dollars.sum()
-  total_bottles is sum(bottles_sold)
-  price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
-  avg_price_per_100ml is price_per_100ml.avg()
-  // add the query to the model
-  top_sellers_by_revenue is (reduce top 5
-    vendor_name
-    item_description
-    total_sale_dollars
-    total_bottles
-    avg_price_per_100ml
-  )
-)
+source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
+  measure: [
+    total_sale_dollars is sale_dollars.sum()
+    total_bottles is sum(bottles_sold)
+    price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
+    avg_price_per_100ml is price_per_100ml.avg()
+  ]
+
+  query: top_sellers_by_revenue is {
+    top: 5
+    group_by: [vendor_name, item_description]
+    aggregate: [total_sale_dollars, total_bottles, avg_price_per_100ml]
+  }
+}
 ```
 
 ## Examining Tequila

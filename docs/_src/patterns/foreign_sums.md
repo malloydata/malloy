@@ -9,16 +9,16 @@ Malloy allows you to compute sums, averages correctly based on your join tree.  
 // `aircraft` is the plane that made the flight
 // `aircraft_models` is data about the kind of aircraft
 
-explore: aircraft_models is table('malloy-data.faa.aircraft_models') {
+source: aircraft_models is table('malloy-data.faa.aircraft_models') {
   primary_key: aircraft_model_code
 }
 
-explore: aircraft is table('malloy-data.faa.aircraft') {
+source: aircraft is table('malloy-data.faa.aircraft') {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
 }
 
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   join_one: aircraft with tail_num
 }
 

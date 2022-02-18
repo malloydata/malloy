@@ -22,7 +22,12 @@ malloyStatement
   ;
 
 defineExploreStatement
-  : EXPLORE exploreDefinitionList
+  : exploreKeyword exploreDefinitionList
+  ;
+
+exploreKeyword
+  : EXPLORE
+  | SOURCE
   ;
 
 defineQuery
@@ -462,6 +467,7 @@ PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
 PROJECT: P R O J E C T SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
+SOURCE: S O U R C E SPACE_CHAR* ':';
 SQL: S Q L SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
