@@ -24,6 +24,17 @@ explore: flights is table('malloy-data.faa.flights') {
 View [the full documentation](${DOCS_ROOT}/language/explore.html).
 `;
 
+const MODEL_SOURCE_DOC = `Use \`source\` to name, describe, and augment a data source.
+
+\`\`\`malloy
+source: flights is table('malloy-data.faa.flights') {
+  measure: flight_count is count()
+}
+\`\`\`
+
+View [the full documentation](${DOCS_ROOT}/language/explore.html).
+`;
+
 const MODEL_QUERY_DOC = `Use \`query\` to define a top-level query which can be run within this document.
 
 \`\`\`malloy
@@ -301,6 +312,7 @@ export const COMPLETION_DOCS: {
 } = {
   model_property: {
     explore: MODEL_EXPLORE_DOC,
+    source: MODEL_SOURCE_DOC,
     query: MODEL_QUERY_DOC,
     sql: MODEL_SQL_DOC,
   },
