@@ -1,12 +1,28 @@
 # Malloy by Example
 
+This document will assumes a working knowlege of SQL and will rapidly quickly take you through some of
+Malloy's notable language features.
+
+Malloy is currently available as a VSCode plugin and can query BigQuery and Posgres
+SQL databases.
+
+[Install Instructions](https://github.com/looker-open-source/malloy/)
+
 ## SQL SELECT vs Malloy's `query`
 
-The statement to run a query in malloy is `query:`.  Malloy's queries have two types, `project:` and `group_by:/aggregate:`.
+The statement to run a query in malloy is `query:`.  Malloy's queries have two types, `project:` and `group_by:`/ `aggregate:`.
 
-### SELECT with no GROUP BY
+### Simple SELECT with no GROUP BY
 
-*Click the SQL Tab to see the equivalent SQL Malloy query*
+*Click the SQL Tab to see the generated SQL query for any example* <img src="https://user-images.githubusercontent.com/1093458/154121968-6436d94e-94b2-4f16-b982-bf136a3fcf40.png" style="width:142px"> 👈👈
+
+In SQL
+```
+SELECT code, full_name, state, faa_region, fac_type, elevation
+FROM `malloy-data.faa.airports`
+ORDER BY code
+```
+Equivalent in Malloy
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -16,16 +32,20 @@ query: table('malloy-data.faa.airports') -> {
 }
 ```
 
-### SELECT with only Aggregate Functions
+### SELECT with GROUP BY
 
-```malloy
---! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-query: table('malloy-data.faa.airports') -> {
-  aggregate: airport_count is count()
-}
+In SQL
+```
+SELECT
+   base.fac_type as fac_type,
+   COUNT( 1) as airport_count
+FROM `malloy-data.faa.airports` as base
+WHERE base.state='CA'
+GROUP BY 1
+ORDER BY 2 desc
 ```
 
-### SELECT with GROUP BY
+Equivalent in Malloy
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -37,10 +57,10 @@ query: table('malloy-data.faa.airports') -> {
 }
 ```
 
-## Explore: adding calculations to tables
+## Explore: A data source for queries
 
 Malloy can create reusable calculations and tie them to tables (and other data sources).
-These new object are called `explore:`.
+In Malloy a data source is an object are called `explore:`.  ([Explore Documentation](language/explore.html))
 
 
 * `measure:` is an calculation that can be used in the `aggregate:` element in a query
@@ -58,7 +78,10 @@ explore: airports is table('malloy-data.faa.airports') {
 
 ## Querying against an Explore
 
-Queries can be run against `explore:` objects and can utilize the built in calculations.
+Queries can be run against `explore:` objects and can utilize the built in calculations. ([Query Documentation](language/query.html))
+
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
@@ -75,6 +98,8 @@ query: airports -> {
 
 ## Dimensional calculations are no different than columns
 
+*using the above declared `airports` explore*
+
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore1.malloy"}
 query: airports -> {
@@ -87,7 +112,10 @@ query: airports -> {
 
 ## Named Queries inside Explore object
 
-Queries can be declared inside an explore so it can be called by name.
+Queries can be declared inside an explore and then called by name.
+
+*using the above declared `airports` explore*
+
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/explore2.malloy", "isHidden": false}
@@ -102,9 +130,11 @@ explore: airports is table('malloy-data.faa.airports') {
 }
 ```
 
-###  Executing Named Queries.
+###  Executing Named Queries
 
 Instead of writing the elements of the query, we simply write the name of the query.
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
@@ -115,8 +145,10 @@ query: airports -> by_state
 
 ## Filtering Queries
 
-The refinement jesture `{ }` adds declarations to things (more on that later).  We can add a filter to `airports`
-and run the named query `by_state`
+The refinement gesture `{ }` adds declarations to things (more on that later).  We can add a filter to `airports`
+and run the named query `by_state.  ([Filter Documentation](language/filters.html))
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
@@ -129,6 +161,8 @@ query: airports  {
 ## Filtering Measures
 
 Measures can also be filtered.
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"small","source": "/inline/explore2.malloy"}
@@ -166,7 +200,9 @@ explore: airports is table('malloy-data.faa.airports') {
 
 Malloy allows you to create nested subtable easily in query by declaring queries inside of queries.
 In the case below, the top level query groups by state.  The nested query groups by facility type.
-This mechanism is really useful for undstanding data and creating complex data structures.
+This mechanism is really useful for understanding data and creating complex data structures. ([Nesting Documentation](language/nesting.html))
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true, "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
@@ -183,6 +219,8 @@ query: airports -> {
 
 Queries can contain multiple nested queries.
 
+*using the above declared `airports` explore*
+
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
 query: airports -> {
@@ -194,6 +232,8 @@ query: airports -> {
 ```
 
 Queries can be nested to any level of depth.
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
@@ -215,7 +255,7 @@ query: airports -> {
 
 ## Refining a Named Query
 
- The refine jesture `{ }` adds declarations to things.  We can add elements to a query by refining it.
+The refine gesture `{ }` adds declarations to things.  We can add elements to a query by refining it.
 
 For example we can add a limit and an order by to `by_state`
 
@@ -245,12 +285,15 @@ declared thing isn't exactly as you would like.
 
 ### You can add limits, ordering, filtering and even fields to queries when you use them.
 
+*using the above declared `airports` explore*
+
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/explore3.malloy"}
 query: airports -> by_facility_type {
   limit: 2
 }
 ```
+
 
 ### You can add a measure or dimension
 
@@ -282,7 +325,10 @@ query: airports-> by_facility_type {
 
 ## Joining ...
 
+First let's model some simple tables... ([Join Documentation](language/join.html))
+
 ### Carrier table
+*simple explore declartion used in example*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -297,6 +343,7 @@ query: carriers-> {
 
 ### Flights table
 
+*simple explore declartion used in example*
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
 explore: flights is table('malloy-data.faa.flights') {
@@ -309,11 +356,11 @@ query: flights -> {
 }
 ```
 
-## Foreign Key / Primary Key Join
+## Joining on Foreign Key / Primary Key pairs
 
 Join carriers to flights.  Each flight has one carrier so we use `join_one:`.  We are joining
 with a primary key in carriers and foreign key in flights so we can use the `with` keyword
-to name the foreign key in flights.
+to name the foreign key in flights. ([Join Documentation](language/join.html))
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/join1.malloy", "isHidden": false}
@@ -336,6 +383,8 @@ explore: flights is table('malloy-data.faa.flights') {
 
 ###  Query the joined tables
 
+*using the above declared `flights` explore*
+
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join1.malloy"}
 query: flights -> {
@@ -350,6 +399,10 @@ query: flights -> {
 
 ## Aggregates can be computed from anywhere in the Join Tree
 
+([Aggregate Documentation](language/aggregates.html))
+
+
+*using the above declared `flights` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join1.malloy"}
@@ -369,7 +422,13 @@ query: flights -> {
 }
 ```
 
-## Graph, more complicated Joins
+## Condition based Joins
+
+This is a more complex join pattern.  Flight joins carriers with a primary key.
+
+Airports join flight using a conditional join.  Many flights have the same
+airport as their origin.  Some airports have no flights at all.
+
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/join2.malloy", "isHidden": false}
@@ -409,10 +468,13 @@ explore: airports is table('malloy-data.faa.airports') {
 
 Malloy has full pathing instead of one level like SQL.  This query is very difficult to express in SQL.
 The calculations in flights and airports will be accurate even though the join pattern fans out the data.
+([Aggregate Documentation](language/aggregates.html))
+
+*using the above declared `airports` explore*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join2.malloy"}
-query: airports-> {
+query: airports ->  {
   group_by: state
   aggregate: [
     flights.carriers.carrier_count  // <-- 3 levels
@@ -425,6 +487,10 @@ query: airports-> {
 ```
 
 ## Pipelines
+
+The output of a query can be used as the source for the next query.
+
+Assume the following query as a starting point.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -444,9 +510,13 @@ query: airports -> {
   }
 }
 ```
+
 ## Unnesting in a pipeline flattens the table
+
+The output of the query above can be 'piped' into another query using the `->`.
+
 Next stage of a pipeline can be a `group_by` or `project`.  Calculations can be computed
-reltative to the level of nesting.
+relative to the level of nesting.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -477,6 +547,8 @@ query: airports -> {
 ```
 
 ## Pipelines can be named as queries in explores
+
+Pipelines can do pretty complex things.  They can be built into explore objects.
 
 ```malloy
 explore: airports is table('malloy-data.faa.airports') {
@@ -521,7 +593,7 @@ explore: newname is from(oldname) {
 
 ### Named Source Query
 
-*doucmentation bug: name should not be commented out*
+*documentation bug: name should not be commented out* ([Explore Documentation](language/explore.html))
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium"}
@@ -594,20 +666,20 @@ query: airport_facts -> flights_by_year
 query: airport_facts -> flights_by_origin
 ```
 
-## Missing examples:
+## Other Interesting Language Features:
 
-### SQL BLocks
+### SQL BLocks ([SQL Block Documentation](language/sql_block.html))
 
-### Named Queries from SQL Blocks
+### Named Queries from SQL Blocks ([SQL Block Documentation](language/sql_block.html))
 
-### Mapping data with `pick`
+### Case statement improved with  `pick` ([Expression Documentation](language/expression.html))
 
 ### Group by on Joined Subtrees
 
-### Date/Timestamp filters and Timezones
+### Date/Timestamp filters and Timezones ([Time Documentation](expressions.html#time-ranges))
 
-### Nested data and Symmetric aggregates
+### Nested data and Symmetric aggregates  ([Aggregates Documentation](language/aggregates.html))
 
-### import
+### import ([Import Documentation](language/imports.html))
 
-### data styles and rendering
+### data styles and rendering ([Rendering Documentation](visualizations/dashboards.html))

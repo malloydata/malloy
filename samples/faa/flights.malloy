@@ -145,11 +145,11 @@ explore: flights is table('malloy-data.faa.flights') {
 
 
   // query: southwest_flights is carrier_dashboard { where: carriers.nickname = 'Southwest' }
-  query: carrier_dashboard is {
+  query: carrier_dashboard is { //# dashboard
     aggregate: destination_count is destination.airport_count
     aggregate: flight_count
     nest: by_manufacturer
-    nest: by_month is {
+    nest: by_month is {         //# line_chart
       group_by: dep_month is dep_time.month
       aggregate: flight_count
     }
@@ -159,7 +159,7 @@ explore: flights is table('malloy-data.faa.flights') {
       group_by: hub is origin.name
       aggregate: destination_count is destination.airport_count
     }
-    nest: origin_dashboard is {
+    nest: origin_dashboard is {   //# dashboard
       top: 10
       group_by: [
         code is origin_code,
@@ -167,7 +167,11 @@ explore: flights is table('malloy-data.faa.flights') {
         origin.city
       ]
       aggregate: flight_count
-      nest: [ destinations_by_month, routes_map, year_over_year ]
+      nest: [ 
+        destinations_by_month   //# line_chart
+        routes_map              //# segment_map
+        year_over_year          //# line_chart
+      ]
     }
   }
 
