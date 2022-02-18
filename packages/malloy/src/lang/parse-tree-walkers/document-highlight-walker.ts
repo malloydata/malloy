@@ -83,6 +83,7 @@ export const HighlightType = {
     Dimension: "property.dimension",
     Except: "property.except",
     Explore: "property.explore",
+    Source: "property.source",
     GroupBy: "property.group_by",
     Having: "property.having",
     Index: "property.index",

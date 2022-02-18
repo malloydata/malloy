@@ -16,9 +16,9 @@ sql: my_sql_query is ||
 ;;
 ```
 
-## Explores from SQL Blocks
+## Sources from SQL Blocks
 
-Explores can be created from a SQL block, e.g.
+Sources can be created from a SQL block, e.g.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "size": "large" }
@@ -31,7 +31,7 @@ sql: my_sql_query is ||
   LIMIT 10
 ;;
 
-explore: limited_users is from_sql(my_sql_query) {
+source: limited_users is from_sql(my_sql_query) {
   measure: user_count is count()
 }
 

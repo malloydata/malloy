@@ -1,11 +1,11 @@
-explore: words is table('malloy-data.malloytest.words') {
+source: words is table('malloy-data.malloytest.words') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
   }
 }
 
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 
   // code to fake a cross join
@@ -13,7 +13,7 @@ explore: numbers is table('malloy-data.malloytest.numbers') {
   dimension: a is 'a';
 }
 
-explore: words_and_letters is from(words -> five_letter_words) {
+source: words_and_letters is from(words -> five_letter_words) {
   // Cross join is missing at the moment
   join_one: numbers with a
   dimension: a is 'a' // key to fake a cross join
@@ -31,7 +31,7 @@ explore: words_and_letters is from(words -> five_letter_words) {
   }
 }
 
-explore: wordle is from(words_and_letters -> words_and_position) {
+source: wordle is from(words_and_letters -> words_and_position) {
 
   where: word !~ r'(S|ED)$'
 

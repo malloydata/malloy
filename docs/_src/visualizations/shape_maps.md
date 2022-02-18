@@ -5,7 +5,7 @@ The plugin currently supports US maps and state names. The model and data styles
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}
-explore: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloy-data.faa.airports') {
   primary_key: code
   measure: airport_count is count()
   query: by_state is {

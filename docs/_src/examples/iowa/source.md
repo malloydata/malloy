@@ -3,7 +3,7 @@
 This is the malloy model used for the Analysis example.  It should be used as an reference when looking at the [following sections](step2.md).
 
 ```malloy
-explore: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
+source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   -- dimensions
   dimension: [

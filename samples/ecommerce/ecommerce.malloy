@@ -1,15 +1,15 @@
 --! styles ecommerce.styles.json
-explore: users is table('malloy-data.ecomm.users'){
+source: users is table('malloy-data.ecomm.users'){
   primary_key: id
   measure: user_count is count()
 }
 
-explore: product is table('malloy-data.ecomm.products'){
+source: product is table('malloy-data.ecomm.products'){
   primary_key: id
   measure: product_count is count()
 }
 
-explore: ii is table('malloy-data.ecomm.inventory_items'){
+source: ii is table('malloy-data.ecomm.inventory_items'){
   primary_key: id
 
   join_one: product with product_id
@@ -20,14 +20,14 @@ explore: ii is table('malloy-data.ecomm.inventory_items'){
   ]
 }
 
-explore: user_order_facts is from(
+source: user_order_facts is from(
     table('malloy-data.ecomm.order_items') ->  {
       group_by: user_id
       aggregate: lifetime_orders is count()
     }
   ) { primary_key: user_id }
 
-explore: order_items_base is table('malloy-data.ecomm.order_items'){
+source: order_items_base is table('malloy-data.ecomm.order_items'){
   primary_key: id
 
   join_one: [
@@ -43,7 +43,7 @@ explore: order_items_base is table('malloy-data.ecomm.order_items'){
   ]
 }
 
-explore: brand_synergy is from(
+source: brand_synergy is from(
   order_items_base -> {
     group_by: order_id
     nest: brand1 is { group_by: ii.product.brand }
@@ -73,7 +73,7 @@ explore: brand_synergy is from(
 )
 
 // order_items with brand_synergy as well as base definitions.
-explore: order_items is order_items_base {
+source: order_items is order_items_base {
   // join_one: brand_synergy with ii.product.brand
 
   query: top_brands is {

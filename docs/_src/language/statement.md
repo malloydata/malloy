@@ -5,16 +5,15 @@ provides tools that allow for modularity and reusability of definitions.
 Whereas in SQL, queries generally define all metrics inline,
 requiring useful snippets to be saved and managed separately, in Malloy,
 _dimensions_, _measures_, and _queries_ can be saved and attached to a
-modeled _explore_.
+modeled source.
 
-## Explores
+## Sources
 
-A Malloy model file can contain several _explores_, which define fields that can be
-used in queries.
+A Malloy model file can contain several _sources_, which define fields that can be used in queries.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}
-explore: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloy-data.faa.flights') {
   dimension: distance_km is distance / 1.609344
 
   measure: flight_count is count()
@@ -25,7 +24,7 @@ explore: flights is table('malloy-data.faa.flights') {
   }
 }
 ```
-See [here](explore.md) for more information on explores.
+See [here](source.md) for more information on sources.
 
 ## Queries
 

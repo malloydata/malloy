@@ -1,6 +1,6 @@
 --! styles hackernews.styles.json
 
-explore: stories is table('bigquery-public-data.hacker_news.full') {
+source: stories is table('bigquery-public-data.hacker_news.full') {
   rename: [
     poster is `by`
     post_type is `type`

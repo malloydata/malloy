@@ -1,6 +1,6 @@
 --! styles ga_sessions.styles.json
 
-explore:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801'){
+source:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801'){
   dimension: start_time is timestamp_seconds(visitStartTime)::timestamp
 
   measure: [

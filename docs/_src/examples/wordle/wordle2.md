@@ -1,7 +1,7 @@
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
-explore: words is table('malloy-data.malloytest.words_bigger') {
+source: words is table('malloy-data.malloytest.words_bigger') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
@@ -9,7 +9,7 @@ explore: words is table('malloy-data.malloytest.words_bigger') {
 }
 
 // cross join numbers
-explore: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
@@ -35,11 +35,11 @@ Starting with the [query we built in step one](wordle1a.md), we built a query th
 each row is the letter and position in that row.
 
 
-## Create a new explore `wordle` to query the data in this form.
+## Create a new source `wordle` to query the data in this form.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(-> words_and_position) {
+source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 }
 ```
@@ -84,11 +84,11 @@ query: wordle -> {
 ```
 
 ## Removing Plurals and words that end in 'ED'
-We've noticed there are a lots of words that end in 'S' or 'ED' in the dataset, but in our experience they don't often appear in puzzles.  We've eliminated them from our model for now, by filtering them out on the explore level:
+We've noticed there are a lots of words that end in 'S' or 'ED' in the dataset, but in our experience they don't often appear in puzzles.  We've eliminated them from our model for now, by filtering them out on the source level:
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w3.malloy", "source": "/inline/w1.malloy"}
-explore: wordle is from(-> words_and_position) {
+source: wordle is from(-> words_and_position) {
   where: word !~ r'(S|ED)$'
   measure: word_count is count()
 }

@@ -1,6 +1,6 @@
 --! styles the_met.styles.json
 
-explore: met_objects is table('bigquery-public-data.the_met.objects') {
+source: met_objects is table('bigquery-public-data.the_met.objects') {
   // eliminate some bad data
   where: object_begin_date < 2031 & > -8000
 
@@ -39,7 +39,7 @@ explore: met_objects is table('bigquery-public-data.the_met.objects') {
     aggregate: object_count
   }
 
-  query: by_object_era is { 
+  query: by_object_era is {
     order_by: 1 desc
     group_by: object_era
     aggregate: object_count
@@ -87,7 +87,7 @@ explore: met_objects is table('bigquery-public-data.the_met.objects') {
       object_count
      image_count
     ]
-    nest: by_artist is { 
+    nest: by_artist is {
       limit: 30
       group_by: artist_display_name
       aggregate: object_count

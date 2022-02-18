@@ -712,7 +712,7 @@ describe("sql backdoor", () => {
 describe("error handling", () => {
   test(
     "query reference to undefined explore",
-    badModel("query: x->{ group_by: y }", "Undefined data source 'x'")
+    badModel("query: x->{ group_by: y }", "Undefined source 'x'")
   );
   test(
     "join reference before definition",
@@ -721,7 +721,7 @@ describe("error handling", () => {
         explore: newAB is a { join_one: newB is bb on astring }
         explore: newB is b
       `,
-      "Undefined data source 'bb'"
+      "Undefined source 'bb'"
     )
   );
   test(
@@ -765,6 +765,16 @@ describe("error handling", () => {
   //   const firstError = errList[0];
   //   expect(firstError.message).toBe("Expressions in queries must have names");
   // });
+  test(
+    "query on source with errors",
+    modelErrors(
+      markSource`
+        explore: na is a { join_one: ${"n"} on astr }
+        // query: na -> { project: * }
+      `,
+      "Undefined source 'n'"
+    )
+  );
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
@@ -1047,7 +1057,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "exploreReference",
       text: "na",
@@ -1066,7 +1076,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "q",
@@ -1083,7 +1093,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "x",
@@ -1107,7 +1117,7 @@ describe("source references", () => {
       },
     });
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "sqlBlockReference",
       text: "s",
@@ -1124,7 +1134,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "queryReference",
       text: "q",
@@ -1141,7 +1151,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "queryReference",
       text: "q",
@@ -1158,7 +1168,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "queryReference",
       text: "q",
@@ -1175,7 +1185,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1194,7 +1204,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "name",
@@ -1214,7 +1224,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "astr",
@@ -1233,7 +1243,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
       text: "self",
@@ -1249,7 +1259,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1266,7 +1276,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1285,7 +1295,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1304,7 +1314,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1323,7 +1333,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "c",
@@ -1342,7 +1352,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "c",
@@ -1361,7 +1371,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1380,7 +1390,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1399,7 +1409,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1416,7 +1426,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "ai",
@@ -1426,11 +1436,8 @@ describe("source references", () => {
     });
   });
 
-  function pos(location: DocumentLocation): [DocumentPosition] {
-    return [
-      // location.url,
-      location.range.start,
-    ];
+  function pos(location: DocumentLocation): DocumentPosition {
+    return location.range.start;
   }
 
   test("reference to join in aggregate source", () => {
@@ -1442,7 +1449,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
       text: "self",
@@ -1461,7 +1468,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "joinReference",
       text: "self",
@@ -1480,7 +1487,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "exploreReference",
       text: "exp1",
@@ -1497,7 +1504,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "ai",
@@ -1515,7 +1522,7 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "abool",
@@ -1534,32 +1541,10 @@ describe("source references", () => {
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
+    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: "fieldReference",
       text: "astr",
-      definition: {
-        location: source.locations[0],
-      },
-    });
-  });
-
-  // TODO jump-to-definition this gives a weird error
-  //      Correct:  Reference to undefined value dsf
-  //      Additionally (incorrect): Cannot define ai_sum, unexpected type unknown
-  test.skip("reference to join in aggregate source", () => {
-    const source = markSource`
-      explore: na is a {
-        join_one: ${"self is a on astr = self.astr"}
-      }
-      query: na -> { aggregate: ai_sum is ${"dsf"}.sum(self.ai) }
-    `;
-    const m = new BetaModel(source.code);
-    expect(m).toTranslate();
-    expect(m.referenceAt(...pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "joinReference",
-      text: "self",
       definition: {
         location: source.locations[0],
       },
