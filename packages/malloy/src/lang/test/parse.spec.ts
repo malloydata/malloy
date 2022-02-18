@@ -712,7 +712,7 @@ describe("sql backdoor", () => {
 describe("error handling", () => {
   test(
     "query reference to undefined explore",
-    badModel("query: x->{ group_by: y }", "Undefined data source 'x'")
+    badModel("query: x->{ group_by: y }", "Undefined source 'x'")
   );
   test(
     "join reference before definition",
@@ -721,7 +721,7 @@ describe("error handling", () => {
         explore: newAB is a { join_one: newB is bb on astring }
         explore: newB is b
       `,
-      "Undefined data source 'bb'"
+      "Undefined source 'bb'"
     )
   );
   test(
@@ -765,6 +765,16 @@ describe("error handling", () => {
   //   const firstError = errList[0];
   //   expect(firstError.message).toBe("Expressions in queries must have names");
   // });
+  test(
+    "query on source with errors",
+    modelErrors(
+      markSource`
+        explore: na is a { join_one: ${"n"} on astr }
+        // query: na -> { project: * }
+      `,
+      "Undefined source 'n'"
+    )
+  );
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {

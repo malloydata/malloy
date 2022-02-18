@@ -40,7 +40,7 @@ import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
  ** to return some kind of object to type properly, the ErrorFactory is
  ** here to help you.
  */
-class ErrorFactory {
+export class ErrorFactory {
   static get structDef(): model.StructDef {
     const ret: model.StructDef = {
       type: "struct",
@@ -54,6 +54,10 @@ class ErrorFactory {
       fields: [],
     };
     return ret;
+  }
+
+  static isErrorStructdef(s: model.StructDef): boolean {
+    return s.name === this.structDef.name;
   }
 
   static get query(): model.Query {
@@ -80,8 +84,8 @@ function opOutputStruct(
   inputStruct: model.StructDef,
   opDesc: model.PipeSegment
 ): model.StructDef {
-  if (inputStruct.name === "//undefined_error_structdef") {
-    return ErrorFactory.structDef;
+  if (ErrorFactory.isErrorStructdef(inputStruct)) {
+    return inputStruct;
   }
   return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
 }
@@ -211,7 +215,18 @@ export abstract class MalloyElement {
     return trans?.sourceURL || "(missing)";
   }
 
+  private logged = new Set<string>();
   log(message: string): void {
+    if (this.codeLocation) {
+      /*
+       * If this element has a location, then don't report the same
+       * error message at the same location more than once
+       */
+      if (this.logged.has(message)) {
+        return;
+      }
+      this.logged.add(message);
+    }
     const trans = this.translator();
     const msg = { at: this.location, message };
     const logTo = trans?.root.logger;
@@ -441,13 +456,16 @@ export class DefineExplore extends MalloyElement implements DocStatement {
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
-      const struct = {
-        ...this.mallobj.withParameters(this.parameters),
-        as: this.name,
-        location: this.location,
-      };
+      const structDef = this.mallobj.withParameters(this.parameters);
+      if (ErrorFactory.isErrorStructdef(structDef)) {
+        return;
+      }
       doc.setEntry(this.name, {
-        entry: struct,
+        entry: {
+          ...structDef,
+          as: this.name,
+          location: this.location,
+        },
         exported: this.exported,
       });
     }
@@ -634,7 +652,8 @@ export class NamedSource extends Mallobj {
   modelStruct(): model.StructDef | undefined {
     const modelEnt = this.modelEntry(this.ref)?.entry;
     if (!modelEnt) {
-      this.log(`Undefined data source '${this.refName}'`);
+      const undefMsg = `Undefined source '${this.refName}'`;
+      (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
       return;
     }
     if (modelEnt.type === "query") {
