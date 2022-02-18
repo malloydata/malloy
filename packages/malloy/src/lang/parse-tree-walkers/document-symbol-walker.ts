@@ -94,10 +94,37 @@ class DocumentSymbolWalker implements MalloyListener {
     this.popScope();
   }
 
-  enterDimensionDef(pcx: parser.DimensionDefContext) {
+  handleNestEntry(pcx: parser.NestExistingContext | parser.NestDefContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.fieldDef().fieldNameDef().id().text,
+      name: pcx.queryName().id().text,
+      type: "query",
+      children: [],
+    };
+    const parent = this.peekScope();
+    if (parent) {
+      parent.children.push(symbol);
+    }
+    return symbol;
+  }
+
+  enterNestExisting(pcx: parser.NestExistingContext) {
+    this.handleNestEntry(pcx);
+  }
+
+  enterNestDef(pcx: parser.NestDefContext) {
+    const symbol = this.handleNestEntry(pcx);
+    this.scopes.push(symbol);
+  }
+
+  exitNestDef(_pcx: parser.NestDefContext) {
+    this.popScope();
+  }
+
+  enterFieldDef(pcx: parser.FieldDefContext) {
+    const symbol = {
+      range: this.translator.rangeFromContext(pcx),
+      name: pcx.fieldNameDef().id().text,
       type: "field",
       children: [],
     };
@@ -107,10 +134,10 @@ class DocumentSymbolWalker implements MalloyListener {
     }
   }
 
-  enterMeasureDef(pcx: parser.MeasureDefContext) {
+  enterQueryFieldRef(pcx: parser.QueryFieldRefContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.fieldDef().fieldNameDef().id().text,
+      name: pcx.fieldPath().text,
       type: "field",
       children: [],
     };
@@ -133,10 +160,18 @@ class DocumentSymbolWalker implements MalloyListener {
     }
   }
 
-  enterJoinNameDef(pcx: parser.JoinNameDefContext) {
+  enterJoinWith(pcx: parser.JoinWithContext) {
+    this.handleJoinDef(pcx);
+  }
+
+  enterJoinOn(pcx: parser.JoinOnContext) {
+    this.handleJoinDef(pcx);
+  }
+
+  handleJoinDef(pcx: parser.JoinWithContext | parser.JoinOnContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.id().text,
+      name: pcx.joinNameDef().id().text,
       type: "join",
       children: [],
     };
