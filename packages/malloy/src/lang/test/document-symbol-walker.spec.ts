@@ -25,22 +25,23 @@ class MalloyExplore extends TestTranslator {
   }
 }
 
-function testSymbol(source: MarkedSource, name: string,  type: string, path: number[]) {
-  const doc = new MalloyExplore(
-    source.code
-  );
+function testSymbol(
+  source: MarkedSource,
+  name: string,
+  type: string,
+  path: number[]
+) {
+  const doc = new MalloyExplore(source.code);
   let current = { children: doc.symbols };
   path.forEach((segment) => {
     current = current.children[segment];
   });
   expect(doc.logger.hasErrors()).toBeFalsy();
-  expect(current).toMatchObject(
-    {
-      name,
-      range: source.locations[0].range,
-      type,
-    },
-  );
+  expect(current).toMatchObject({
+    name,
+    range: source.locations[0].range,
+    type,
+  });
 }
 
 test("explore symbols are included", () => {
