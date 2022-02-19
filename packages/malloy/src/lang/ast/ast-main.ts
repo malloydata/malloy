@@ -1743,6 +1743,13 @@ abstract class PipelineDesc extends MalloyElement {
     firstSpace: FieldSpace
   ): model.StructDef {
     let nextFS = firstSpace;
+    if (modelPipe.length > 0) {
+      let endStruct = firstSpace.structDef();
+      for (const existingSeg of modelPipe) {
+        endStruct = opOutputStruct(endStruct, existingSeg);
+      }
+      nextFS = new StructSpace(endStruct);
+    }
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS);
       modelPipe.push(next.segment);
@@ -1925,7 +1932,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
 
   getPipeline(exploreFS: FieldSpace): model.Pipeline {
     const modelPipe: model.Pipeline = { pipeline: [] };
-    if (this.turtleName && this.headRefinement) {
+    if (this.turtleName) {
       const headEnt = this.turtleName.getField(exploreFS);
       let reportWrongType = true;
       if (headEnt.error) {
@@ -1942,8 +1949,6 @@ export class TurtleDecl extends TurtleHeadedPipe {
       if (reportWrongType) {
         this.log(`Expected '${this.turtleName}' to be as query`);
       }
-    } else if (this.turtleName) {
-      throw this.internalError("Unrefined turtle with a named head");
     } else if (this.headRefinement) {
       throw this.internalError(
         "Can't refine the head of a turtle in its definition"

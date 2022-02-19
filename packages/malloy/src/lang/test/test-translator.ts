@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { inspect } from "util";
 import {
   StructDef,
@@ -227,11 +226,13 @@ export function getField(
   return result;
 }
 
-export function getQueryField(structDef: StructDef, name: string) {
+// TODO "as" is almost always a code smell ...
+export function getQueryField(structDef: StructDef, name: string): TurtleDef {
   return getField(structDef, name) as TurtleDef;
 }
 
-export function getJoinField(structDef: StructDef, name: string) {
+// TODO "as" is almost always a code smell ...
+export function getJoinField(structDef: StructDef, name: string): StructDef {
   return getField(structDef, name) as StructDef;
 }
 
