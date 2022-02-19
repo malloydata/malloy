@@ -1656,4 +1656,14 @@ describe("pipeline comprehension", () => {
       }
     `)
   );
+  test(
+    "Querying an explore based on a query",
+    modelOK(`
+      query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }
+      explore: aq is a {
+        join_one: aq is from(->q) on astr = aq.astr
+      }
+      query: aqf is aq -> { project: * }
+    `)
+  );
 });

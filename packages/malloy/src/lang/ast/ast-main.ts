@@ -1740,16 +1740,9 @@ abstract class PipelineDesc extends MalloyElement {
 
   protected appendOps(
     modelPipe: model.PipeSegment[],
-    firstSpace: FieldSpace
+    existingEndSpace: FieldSpace
   ): model.StructDef {
-    let nextFS = firstSpace;
-    if (modelPipe.length > 0) {
-      let endStruct = firstSpace.structDef();
-      for (const existingSeg of modelPipe) {
-        endStruct = opOutputStruct(endStruct, existingSeg);
-      }
-      nextFS = new StructSpace(endStruct);
-    }
+    let nextFS = existingEndSpace;
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS);
       modelPipe.push(next.segment);
@@ -1955,7 +1948,15 @@ export class TurtleDecl extends TurtleHeadedPipe {
       );
     }
 
-    this.appendOps(modelPipe.pipeline, exploreFS);
+    let appendInput = exploreFS;
+    if (modelPipe.pipeline.length > 0) {
+      let endStruct = appendInput.structDef();
+      for (const existingSeg of modelPipe.pipeline) {
+        endStruct = opOutputStruct(endStruct, existingSeg);
+      }
+      appendInput = new StructSpace(endStruct);
+    }
+    this.appendOps(modelPipe.pipeline, appendInput);
     return modelPipe;
   }
 
