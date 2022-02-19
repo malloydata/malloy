@@ -183,7 +183,7 @@ function exprOK(s: string): TestFunc {
 function modelOK(s: string): TestFunc {
   return () => {
     const m = new BetaModel(s);
-    expect(m).toCompile();
+    expect(m).toTranslate();
     return undefined;
   };
 }
@@ -1600,4 +1600,70 @@ describe("translation need error locations", () => {
     expect(errList[0].at).toEqual(source.locations[0]);
     return undefined;
   });
+});
+
+describe("pipeline comprehension", () => {
+  test(
+    "second query gets namespace from first",
+    modelOK(`
+      explore: aq is a {
+        query: t1 is {
+          group_by: [ t1int is ai, t1str is astr ]
+        } -> {
+          project: [ t1str, t1int ]
+        }
+      }
+    `)
+  );
+  test(
+    "second query doesn't have access to original fields",
+    modelErrors(
+      markSource`
+        explore: aq is a {
+          query: t1 is {
+            group_by: [ t1int is ai, t1str is astr ]
+          } -> {
+            project: ${"ai"}
+          }
+        }
+      `,
+      "'ai' is not defined"
+    )
+  );
+  test(
+    "new query can append ops to existing query",
+    modelOK(`
+      explore: aq is a {
+        query: t0 is {
+          group_by: [ t1int is ai, t1str is astr ]
+        }
+        query: t1 is t0 -> {
+          project: [ t1str, t1int ]
+        }
+      }
+    `)
+  );
+  test(
+    "new query can refine and append to exisiting query",
+    modelOK(`
+      explore: aq is table('aTable') {
+        query: by_region is { group_by: astr }
+        query: by_region2 is by_region {
+          nest: dateNest is { group_by: ad }
+        } -> {
+          project: [astr, dateNest.ad ]
+        }
+      }
+    `)
+  );
+  test(
+    "Querying an explore based on a query",
+    modelOK(`
+      query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }
+      explore: aq is a {
+        join_one: aq is from(->q) on astr = aq.astr
+      }
+      query: aqf is aq -> { project: * }
+    `)
+  );
 });
