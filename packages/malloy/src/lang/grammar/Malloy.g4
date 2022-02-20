@@ -173,7 +173,7 @@ joinList
   ;
 
 joinDef
-  : joinNameDef (IS explore)? WITH fieldName        # joinWith
+  : joinNameDef (IS explore)? WITH fieldPath        # joinWith
   | joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
   ;
 

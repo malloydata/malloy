@@ -812,7 +812,7 @@ export class KeyJoin extends Join {
   constructor(
     readonly name: ModelEntryReference,
     readonly source: Mallobj,
-    readonly key: FieldName
+    readonly key: FieldReference
   ) {
     super({ name, source, key });
   }
