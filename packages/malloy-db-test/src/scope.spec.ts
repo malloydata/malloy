@@ -76,7 +76,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
         query: test-> {
-          where: a1 > 4
+          where: a1 > 4  // a1 needs to come from the model, not the query
           project: [
             a
             a1 is a -1
@@ -99,8 +99,46 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         .loadQuery(
           `
           query: test-> {
-            having: a1 = 1
+            having: a1 = 1  // a1 is a dimension, should throw an error
             group_by: [a]
+            order_by: a
+          }
+        `
+        )
+        .run();
+    } catch (e) {
+      caughtError = true;
+    }
+    expect(caughtError).toBe(true);
+  });
+
+  it(`Having: on dimension in query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadModel(modelText)
+      .loadQuery(
+        `
+        query: test-> {
+          having: a =  4  // dimension in queries are ok.
+          group_by: [a]
+        }
+
+      `
+      )
+      .run();
+    expect(result.data.path(0, "a").value).toBe(4);
+  });
+
+  it(`Expect Error: Having can't be on project - ${databaseName}`, async () => {
+    let caughtError = false;
+
+    try {
+      await runtime
+        .loadModel(modelText)
+        .loadQuery(
+          `
+          query: test-> {
+            having: test_count =  1  // having illegal on project
+            project: [a]
             order_by: a
           }
         `
@@ -121,7 +159,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         .loadQuery(
           `
           query: test-> {
-            where: test_count = 1
+            where: test_count = 1   // test_count is an aggregate, should throw an error.
             group_by: [a]
             order_by: a
           }
