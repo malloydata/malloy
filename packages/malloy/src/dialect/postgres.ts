@@ -18,6 +18,7 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
+  FunctionInfo,
   isDateTimeframe,
   TimestampTimeframe,
 } from "./dialect";
@@ -275,5 +276,9 @@ export class PostgresDialect extends Dialect {
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
+  }
+
+  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
+    return undefined;
   }
 }

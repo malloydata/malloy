@@ -623,10 +623,10 @@ export class ExprFunc extends ExpressionDef {
     }
     funcCall.push(")");
 
-    // TODO hack alert, type of function computation is just temporary
-    // https://github.com/looker/malloy/issues/195
+    const funcInfo = fs.getDialect().getFunctionInfo(this.name);
+    const dataType = funcInfo?.returnType ?? collectType ?? "number";
     return {
-      dataType: collectType ?? "number",
+      dataType,
       aggregate: anyAggregate,
       value: compressExpr(funcCall),
     };

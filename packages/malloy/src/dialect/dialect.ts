@@ -11,10 +11,21 @@
  * GNU General Public License for more details.
  */
 
+import { AtomicFieldType } from "..";
+
 interface DialectField {
   type: string;
   sqlExpression: string;
   sqlOutputName: string;
+}
+
+/**
+ * Someday this might be used to control how a function call in malloy is
+ * translated into a function call in SQL. Today this is just so that
+ * the expression compiler can know the output type of a function.
+ */
+export interface FunctionInfo {
+  returnType: AtomicFieldType;
 }
 
 export type DialectFieldList = DialectField[];
@@ -169,4 +180,6 @@ export abstract class Dialect {
     type: "date" | "timestamp",
     timezone: string
   ): string;
+
+  abstract getFunctionInfo(functionName: string): FunctionInfo | undefined;
 }

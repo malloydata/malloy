@@ -18,6 +18,7 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
+  FunctionInfo,
   TimestampTimeframe,
 } from "./dialect";
 
@@ -371,5 +372,9 @@ ${indent(sql)}
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
+  }
+
+  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
+    return undefined;
   }
 }
