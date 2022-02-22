@@ -35,6 +35,7 @@ export class PostgresDialect extends Dialect {
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
+  functionInfo: Record<string, FunctionInfo> = {};
 
   quoteTableName(tableName: string): string {
     return `${tableName}`;

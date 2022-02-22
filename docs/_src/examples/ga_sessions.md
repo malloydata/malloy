@@ -6,7 +6,7 @@ Start by defining a source based on a query.
 
 ```malloy
 source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {
-  dimension: start_time is timestamp_seconds(visitStartTime)::timestamp
+  dimension: start_time is timestamp_seconds(visitStartTime)
   measure: [
     user_count is count(distinct fullVisitorId)
     session_count is count()

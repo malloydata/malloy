@@ -75,6 +75,7 @@ declare global {
       toCompile(): R;
       toBeErrorless(): R;
       toTranslate(): R;
+      toReturnType(tp: string): R;
     }
   }
 }
@@ -146,6 +147,26 @@ expect.extend({
   toBeErrorless: function (trans: Testable) {
     return checkForErrors(trans);
   },
+  toReturnType: function(functionCall: string, returnType: string) {
+    const exprModel = new BetaModel(
+      `explore: x is a { dimension: d is ${functionCall} }`
+    );
+    const tx = exprModel.translate();
+    expect(exprModel).toTranslate();
+    const model = tx.translated?.modelDef;
+    if (model) {
+      const x = model.contents.x;
+      expect(x).toBeDefined();
+      if (x?.type == "struct") {
+        const d = x.fields.find((f) => f.name === "d");
+        expect(d?.type).toBe(returnType);
+      }
+    }
+    return {
+      pass: true,
+      message: () => '',
+    };
+  }
 });
 
 class BetaExpression extends Testable {
@@ -1666,4 +1687,10 @@ describe("pipeline comprehension", () => {
       query: aqf is aq -> { project: * }
     `)
   );
+});
+
+describe("standard sql function return types", () => {
+  test("timestamp_seconds", () => {
+    expect("timestamp_seconds(0)").toReturnType("timestamp");
+  });
 });

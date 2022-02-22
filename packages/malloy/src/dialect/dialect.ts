@@ -67,6 +67,7 @@ export abstract class Dialect {
   abstract hasFinalStage: boolean;
   abstract stringTypeName: string;
   abstract divisionIsInteger: boolean;
+  protected abstract functionInfo: Record<string, FunctionInfo>;
 
   // return a quoted string for use as a table name.
   abstract quoteTableName(tableName: string): string;
@@ -181,5 +182,7 @@ export abstract class Dialect {
     timezone: string
   ): string;
 
-  abstract getFunctionInfo(functionName: string): FunctionInfo | undefined;
+  getFunctionInfo(functionName: string): FunctionInfo | undefined {
+    return this.functionInfo[functionName.toLowerCase()];
+  }
 }

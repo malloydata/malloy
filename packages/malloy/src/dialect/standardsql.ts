@@ -37,6 +37,9 @@ export class StandardSQLDialect extends Dialect {
   hasFinalStage = false;
   stringTypeName = "STRING";
   divisionIsInteger = false;
+  functionInfo: Record<string, FunctionInfo> = {
+    timestamp_seconds: { returnType: "timestamp" },
+  };
 
   quoteTableName(tableName: string): string {
     return `\`${tableName}\``;
@@ -372,9 +375,5 @@ ${indent(sql)}
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
-  }
-
-  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
-    return undefined;
   }
 }
