@@ -147,7 +147,7 @@ expect.extend({
   toBeErrorless: function (trans: Testable) {
     return checkForErrors(trans);
   },
-  toReturnType: function(functionCall: string, returnType: string) {
+  toReturnType: function (functionCall: string, returnType: string) {
     const exprModel = new BetaModel(
       `explore: x is a { dimension: d is ${functionCall} }`
     );
@@ -164,9 +164,9 @@ expect.extend({
     }
     return {
       pass: true,
-      message: () => '',
+      message: () => "",
     };
-  }
+  },
 });
 
 class BetaExpression extends Testable {
