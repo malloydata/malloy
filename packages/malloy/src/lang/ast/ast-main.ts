@@ -815,7 +815,7 @@ export class KeyJoin extends Join {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
-      structRelationship: { type: "foreignKey", keyExpression: [] },
+      structRelationship: { type: "foreignKey", keyExpression: ["42.false"] },
       location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
@@ -830,7 +830,23 @@ export class KeyJoin extends Join {
 
   fixupJoinOn(outer: FieldSpace, inStruct: model.StructDef): void {
     const exprX = this.keyExpr.getExpression(outer);
-    // TODO must be type compatible with primary key ??
+    const into = outer.structDef();
+    if (into.primaryKey) {
+      const pkey = into.fields.find(
+        (f) => (f.as || f.name) === into.primaryKey
+      );
+      if (pkey == undefined) {
+        // Should already be an error from this, if so this will be a dup ..
+        this.log("Source priamry key is not defined");
+        return;
+      }
+      if (pkey.type !== exprX.dataType) {
+        this.log(
+          `Foreign key join type mismatch with primary: ${exprX.dataType}/${pkey}.type`
+        );
+        return;
+      }
+    }
     inStruct.structRelationship = {
       type: "foreignKey",
       keyExpression: exprX.value,
