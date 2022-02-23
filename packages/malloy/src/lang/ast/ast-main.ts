@@ -815,7 +815,7 @@ export class KeyJoin extends Join {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
-      structRelationship: { type: "foreignKey", keyExpression: ["42.false"] },
+      structRelationship: { type: "one", onExpression: ["1=0"] },
       location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
@@ -835,22 +835,26 @@ export class KeyJoin extends Join {
       const pkey = into.fields.find(
         (f) => (f.as || f.name) === into.primaryKey
       );
-      if (pkey == undefined) {
-        // Should already be an error from this, if so this will be a dup ..
-        this.log("Source priamry key is not defined");
-        return;
-      }
-      if (pkey.type !== exprX.dataType) {
-        this.log(
-          `Foreign key join type mismatch with primary: ${exprX.dataType}/${pkey}.type`
-        );
-        return;
+      if (pkey) {
+        if (pkey.type === exprX.dataType) {
+          inStruct.structRelationship = {
+            type: "one",
+            onExpression: [
+              { type: "field", path: into.primaryKey },
+              "=",
+              ...exprX.value,
+            ],
+          };
+          return;
+        } else {
+          this.log(
+            `join_one: with type mismatch with primary key: ${exprX.dataType}/${pkey.type}`
+          );
+        }
+      } else {
+        this.log(`join_one: with requires primary key`);
       }
     }
-    inStruct.structRelationship = {
-      type: "foreignKey",
-      keyExpression: exprX.value,
-    };
   }
 }
 

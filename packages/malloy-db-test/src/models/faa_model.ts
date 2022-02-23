@@ -14,6 +14,18 @@
 import { ModelDef, StructDef } from "@malloydata/malloy";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
 import { fStringEq, fYearEq } from "../test_utils";
+import { StructRelationship } from "@malloydata/malloy/src/model";
+
+function withJoin(leftKey: string, rightKey: string): StructRelationship {
+  return {
+    type: "one",
+    onExpression: [
+      { type: "field", path: `${leftKey}` },
+      "=",
+      { type: "field", path: `${rightKey}` },
+    ],
+  };
+}
 
 /** Flight Model */
 export const FLIGHTS_EXPLORE: StructDef = {
@@ -68,8 +80,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
       dialect: "standardsql",
       structSource: { type: "table" },
       structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: "carrier" }],
+        type: "one",
+        onExpression: [
+          { type: "field", path: "carrier" },
+          "=",
+          { type: "field", path: "carriers.code" },
+        ],
       },
       primaryKey: "code",
       fields: [
@@ -86,10 +102,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       as: "aircraft",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: "tail_num" }],
-      },
+      structRelationship: withJoin("tail_num", "aircraft.tail_num"),
       primaryKey: "tail_num",
       fields: [
         { type: "string", name: "tail_num" },
@@ -144,10 +157,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
           dialect: "standardsql",
           primaryKey: "aircraft_model_code",
           structSource: { type: "table" },
-          structRelationship: {
-            type: "foreignKey",
-            keyExpression: [{ type: "field", path: "aircraft_model_code" }],
-          },
+          structRelationship: withJoin(
+            "aircraft_model_code",
+            "aircraft_models.aircraft_model_code"
+          ),
           fields: [
             { type: "string", name: "aircraft_model_code" },
             { type: "string", name: "manufacturer" },
@@ -192,10 +205,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       as: "origin",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: "origin_code" }],
-      },
+      structRelationship: withJoin("origin_code", "origin.code"),
       primaryKey: "code",
       fields: [
         { type: "number", name: "id", numberType: "integer" },
@@ -241,10 +251,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       as: "destination",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: "destination_code" }],
-      },
+      structRelationship: withJoin("destination_code", "destination.code"),
       primaryKey: "code",
       fields: [
         { type: "number", name: "id", numberType: "integer" },
@@ -297,10 +304,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           pipeline: [],
         },
       },
-      structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: "tail_num" }],
-      },
+      structRelationship: withJoin("tail_num", "aircraft_facts.tail_num"),
       primaryKey: "tail_num",
       fields: [
         { type: "string", name: "tail_num" },

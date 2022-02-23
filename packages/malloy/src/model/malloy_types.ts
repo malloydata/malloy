@@ -457,11 +457,6 @@ export type JoinRelationship =
   | "many_to_one"
   | "many_to_many";
 
-export interface JoinForeignKey {
-  type: "foreignKey";
-  keyExpression: Expr;
-}
-
 export interface JoinOn {
   type: "one" | "many" | "cross";
   onExpression?: Expr;
@@ -470,16 +465,9 @@ export interface JoinOn {
 export function isJoinOn(sr: StructRelationship): sr is JoinOn {
   return ["one", "many", "cross"].includes(sr.type);
 }
-export function isAnyJoin(
-  sr: StructRelationship
-): sr is JoinOn | JoinForeignKey {
-  return isJoinOn(sr) || sr.type == "foreignKey";
-}
-
 /** types of joins. */
 export type StructRelationship =
   | { type: "basetable"; connectionName: string }
-  | JoinForeignKey
   | JoinOn
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };

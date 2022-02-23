@@ -52,7 +52,7 @@ import {
   isValueParameter,
   JoinRelationship,
   isPhysical,
-  isAnyJoin,
+  isJoinOn,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -558,8 +558,12 @@ class QueryFieldStruct extends QueryAtomicField {
     return {
       ...this.parent.fieldDef,
       structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: foreignKeyName }],
+        type: "one",
+        onExpression: [
+          PRIMARY_KEY_GOES_HERE,
+          "=",
+          { type: "field", path: foreignKeyName },
+        ],
       },
     };
   }
@@ -1098,7 +1102,6 @@ class JoinInstance {
       return "root";
     }
     switch (this.queryStruct.fieldDef.structRelationship.type) {
-      case "foreignKey":
       case "one":
         return "many_to_one";
       case "cross":
@@ -1744,7 +1747,7 @@ class QueryQuery extends QueryField {
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
-    if (isAnyJoin(structRelationship)) {
+    if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
@@ -1752,21 +1755,7 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined) {
         throw new Error("Expected joined struct to have a parent.");
       }
-      if (structRelationship.type === "foreignKey") {
-        const pkDim = qs.primaryKey();
-        if (!pkDim) {
-          throw new Error(
-            `Primary Key is not defined in Foreign Key relationship`
-          );
-        }
-        const fkSQL = this.generateExpressionFromExpr(
-          this.rootResult,
-          this.parent,
-          structRelationship.keyExpression
-        );
-        const pkSQL = pkDim.generateExpression(this.rootResult);
-        onCondition = `${fkSQL} = ${pkSQL}`;
-      } else if (structRelationship.onExpression) {
+      if (structRelationship.onExpression) {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",

@@ -133,11 +133,15 @@ describe("structdef comprehension", () => {
       type: "struct",
       dialect: "standardsql",
       structRelationship: {
-        type: "foreignKey",
-        keyExpression: [{ type: "field", path: "b" }],
+        type: "one",
+        onExpression: [
+          { type: "field", path: "tKey" },
+          "=",
+          { type: "field", path: "t.a" },
+        ],
       },
       structSource: { type: "table" },
-      fields: [{ type: "string", name: "a" }],
+      fields: [{ type: "string", name: "t1" }],
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);

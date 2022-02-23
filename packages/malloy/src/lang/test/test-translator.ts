@@ -110,8 +110,12 @@ export class TestTranslator extends MalloyTranslator {
             ...aTableDef,
             as: "b",
             structRelationship: {
-              type: "foreignKey",
-              keyExpression: [{ type: "field", path: "astr" }],
+              type: "one",
+              onExpression: [
+                { type: "field", path: "astr" },
+                "=",
+                { type: "field", path: "b.astr" },
+              ],
             },
           },
           {
