@@ -322,7 +322,7 @@ export class NewFieldSpace extends StructSpace {
       }
       const reorderFields = [...fields, ...joins, ...turtles];
       for (const [fieldName, field] of reorderFields) {
-        if (field instanceof JoinSpaceField && field.join.needsFixup()) {
+        if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef();
           if (!ErrorFactory.isErrorStructdef(joinStruct)) {
             this.final.fields.push(joinStruct);

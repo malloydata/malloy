@@ -557,7 +557,10 @@ class QueryFieldStruct extends QueryAtomicField {
   getAsJoinedStructDef(foreignKeyName: string): StructDef {
     return {
       ...this.parent.fieldDef,
-      structRelationship: { type: "foreignKey", foreignKey: foreignKeyName },
+      structRelationship: {
+        type: "foreignKey",
+        keyExpression: [{ type: "field", path: foreignKeyName }],
+      },
     };
   }
 }
@@ -1750,16 +1753,17 @@ class QueryQuery extends QueryField {
         throw new Error("Expected joined struct to have a parent.");
       }
       if (structRelationship.type === "foreignKey") {
-        const fkDim = qs.parent.getOrMakeDimension(
-          structRelationship.foreignKey
-        );
         const pkDim = qs.primaryKey();
         if (!pkDim) {
           throw new Error(
-            `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
+            `Primary Key is not defined in Foreign Key relationship`
           );
         }
-        const fkSQL = fkDim.generateExpression(this.rootResult);
+        const fkSQL = this.generateExpressionFromExpr(
+          this.rootResult,
+          this.parent,
+          structRelationship.keyExpression
+        );
         const pkSQL = pkDim.generateExpression(this.rootResult);
         onCondition = `${fkSQL} = ${pkSQL}`;
       } else if (structRelationship.onExpression) {

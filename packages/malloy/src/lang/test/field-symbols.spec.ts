@@ -132,7 +132,10 @@ describe("structdef comprehension", () => {
       name: "t",
       type: "struct",
       dialect: "standardsql",
-      structRelationship: { type: "foreignKey", foreignKey: "b" },
+      structRelationship: {
+        type: "foreignKey",
+        keyExpression: [{ type: "field", path: "b" }],
+      },
       structSource: { type: "table" },
       fields: [{ type: "string", name: "a" }],
     };

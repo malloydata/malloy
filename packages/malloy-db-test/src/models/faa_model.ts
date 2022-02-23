@@ -67,7 +67,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       as: "carriers",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "foreignKey", foreignKey: "carrier" },
+      structRelationship: {
+        type: "foreignKey",
+        keyExpression: [{ type: "field", path: "carrier" }],
+      },
       primaryKey: "code",
       fields: [
         { type: "string", name: "code" },
@@ -83,7 +86,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       as: "aircraft",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "foreignKey", foreignKey: "tail_num" },
+      structRelationship: {
+        type: "foreignKey",
+        keyExpression: [{ type: "field", path: "tail_num" }],
+      },
       primaryKey: "tail_num",
       fields: [
         { type: "string", name: "tail_num" },
@@ -140,7 +146,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           structSource: { type: "table" },
           structRelationship: {
             type: "foreignKey",
-            foreignKey: "aircraft_model_code",
+            keyExpression: [{ type: "field", path: "aircraft_model_code" }],
           },
           fields: [
             { type: "string", name: "aircraft_model_code" },
@@ -186,7 +192,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       as: "origin",
       dialect: "standardsql",
       structSource: { type: "table" },
-      structRelationship: { type: "foreignKey", foreignKey: "origin_code" },
+      structRelationship: {
+        type: "foreignKey",
+        keyExpression: [{ type: "field", path: "origin_code" }],
+      },
       primaryKey: "code",
       fields: [
         { type: "number", name: "id", numberType: "integer" },
@@ -234,7 +243,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       structSource: { type: "table" },
       structRelationship: {
         type: "foreignKey",
-        foreignKey: "destination_code",
+        keyExpression: [{ type: "field", path: "destination_code" }],
       },
       primaryKey: "code",
       fields: [
@@ -288,7 +297,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
           pipeline: [],
         },
       },
-      structRelationship: { type: "foreignKey", foreignKey: "tail_num" },
+      structRelationship: {
+        type: "foreignKey",
+        keyExpression: [{ type: "field", path: "tail_num" }],
+      },
       primaryKey: "tail_num",
       fields: [
         { type: "string", name: "tail_num" },
@@ -310,7 +322,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
     //         ]
     //       }
     //   },
-    //   structRelationship: {type: 'foreignKey', foreignKey: 'tail_num'},
+    //   structRelationship: {type: 'foreignKey', keyExpression: [{ type: "field", path:  'tail_num'},
     //   fields: [
     //   ]
     // },

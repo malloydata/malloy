@@ -396,7 +396,7 @@ export class MalloyToAST
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const joinOn = this.visitFieldPath(pcx.fieldPath());
+    const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }

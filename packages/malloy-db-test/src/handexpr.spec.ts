@@ -212,7 +212,7 @@ export const aircraftHandStructDef: StructDef = {
       ...modelHandBase,
       structRelationship: {
         type: "foreignKey",
-        foreignKey: "aircraft_model_code",
+        keyExpression: [{ type: "field", path: "aircraft_model_code" }],
       },
     },
   ],

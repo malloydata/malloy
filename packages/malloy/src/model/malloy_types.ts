@@ -459,7 +459,7 @@ export type JoinRelationship =
 
 export interface JoinForeignKey {
   type: "foreignKey";
-  foreignKey: FieldRef;
+  keyExpression: Expr;
 }
 
 export interface JoinOn {
