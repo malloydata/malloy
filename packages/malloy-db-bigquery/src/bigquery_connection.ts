@@ -105,10 +105,6 @@ export class BigQueryConnection implements Connection {
   private temporaryTables = new Map<string, string>();
   private defaultProject;
 
-  private resultCache = new Map<
-    string,
-    { data: MalloyQueryData; schema: bigquery.ITableFieldSchema }
-  >();
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -196,17 +192,6 @@ export class BigQueryConnection implements Connection {
   ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
-    const hash = crypto
-      .createHash("md5")
-      .update(sqlCommand)
-      .update(String(pageSize))
-      .update(String(rowIndex))
-      .digest("hex");
-
-    const cached = this.resultCache.get(hash);
-    if (cached !== undefined) {
-      return cached;
-    }
 
     try {
       const queryResultsOptions = {
@@ -232,7 +217,6 @@ export class BigQueryConnection implements Connection {
       const data = { rows: jobResult[0], totalRows };
       const schema = jobResult[2]?.schema;
 
-      this.resultCache.set(hash, { data, schema });
       return { data, schema };
     } catch (e) {
       throw maybeRewriteError(e);
