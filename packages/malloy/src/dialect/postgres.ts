@@ -18,6 +18,7 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
+  FunctionInfo,
   isDateTimeframe,
   TimestampTimeframe,
 } from "./dialect";
@@ -34,6 +35,7 @@ export class PostgresDialect extends Dialect {
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
+  functionInfo: Record<string, FunctionInfo> = {};
 
   quoteTableName(tableName: string): string {
     return `${tableName}`;
@@ -275,5 +277,9 @@ export class PostgresDialect extends Dialect {
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
+  }
+
+  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
+    return undefined;
   }
 }

@@ -18,6 +18,7 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
+  FunctionInfo,
   TimestampTimeframe,
 } from "./dialect";
 
@@ -36,6 +37,9 @@ export class StandardSQLDialect extends Dialect {
   hasFinalStage = false;
   stringTypeName = "STRING";
   divisionIsInteger = false;
+  functionInfo: Record<string, FunctionInfo> = {
+    timestamp_seconds: { returnType: "timestamp" },
+  };
 
   quoteTableName(tableName: string): string {
     return `\`${tableName}\``;
