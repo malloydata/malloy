@@ -32,7 +32,7 @@ import {
   ExpressionDef,
   FieldDeclaration,
 } from "./index";
-import { QueryField, SpaceEntry } from "../space-field";
+import { QueryField } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 
 /*
@@ -798,33 +798,24 @@ export class QuerySource extends Mallobj {
 export abstract class Join extends MalloyElement {
   abstract name: ModelEntryReference;
   abstract structDef(): model.StructDef;
-  needsFixup(): boolean {
-    return false;
-  }
-  fixupJoinOn(_outer: FieldSpace, _inStruct: model.StructDef): void {
-    return;
-  }
+  abstract fixupJoinOn(outer: FieldSpace, inStruct: model.StructDef): void;
 }
 
 export class KeyJoin extends Join {
   elementType = "joinOnKey";
-  keyField?: SpaceEntry;
   constructor(
     readonly name: ModelEntryReference,
     readonly source: Mallobj,
-    readonly key: FieldName
+    readonly keyExpr: ExpressionDef
   ) {
-    super({ name, source, key });
+    super({ name, source, keyExpr });
   }
 
   structDef(): model.StructDef {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: this.key.refString,
-      },
+      structRelationship: { type: "one", onExpression: ["1=0"] },
       location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
@@ -837,16 +828,32 @@ export class KeyJoin extends Join {
     return joinStruct;
   }
 
-  needsFixup(): boolean {
-    return this.keyField === undefined;
-  }
-
-  fixupJoinOn(outer: FieldSpace, _inStruct: model.StructDef): void {
-    const entry = this.key.getField(outer);
-    if (entry.error) {
-      this.key.log(entry.error);
+  fixupJoinOn(outer: FieldSpace, inStruct: model.StructDef): void {
+    const exprX = this.keyExpr.getExpression(outer);
+    if (inStruct.primaryKey) {
+      const pkey = inStruct.fields.find(
+        (f) => (f.as || f.name) === inStruct.primaryKey
+      );
+      if (pkey) {
+        if (pkey.type === exprX.dataType) {
+          inStruct.structRelationship = {
+            type: "one",
+            onExpression: [
+              { type: "field", path: `${this.name}.${inStruct.primaryKey}` },
+              "=",
+              ...exprX.value,
+            ],
+          };
+          return;
+        } else {
+          this.log(
+            `join_one: with type mismatch with primary key: ${exprX.dataType}/${pkey.type}`
+          );
+        }
+      } else {
+        this.log(`join_one: with requires primary key`);
+      }
     }
-    this.keyField = entry.found;
   }
 }
 
@@ -857,10 +864,6 @@ export class ExpressionJoin extends Join {
   private expr?: ExpressionDef;
   constructor(readonly name: ModelEntryReference, readonly source: Mallobj) {
     super({ name, source });
-  }
-
-  needsFixup(): boolean {
-    return this.expr != undefined;
   }
 
   set joinOn(joinExpr: ExpressionDef | undefined) {

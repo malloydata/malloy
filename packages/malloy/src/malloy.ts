@@ -1011,7 +1011,6 @@ export enum SourceRelationship {
   /**
    * The `Explore` is joined to its source
    */
-  ForeignKey = "foreign_key",
   Cross = "cross",
   One = "one",
   Many = "many",
@@ -1199,8 +1198,6 @@ export class Explore extends Entity {
         return SourceRelationship.One;
       case "cross":
         return SourceRelationship.Cross;
-      case "foreignKey":
-        return SourceRelationship.ForeignKey;
       case "inline":
         return SourceRelationship.Inline;
       case "nested":
@@ -1542,7 +1539,6 @@ export class ExploreField extends Explore {
   public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
       case "one":
-      case "foreignKey":
         return JoinRelationship.OneToMany;
       case "many":
       case "cross":

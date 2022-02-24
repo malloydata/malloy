@@ -407,6 +407,10 @@ describe("explore properties", () => {
   describe("joins", () => {
     test("with", modelOK("explore: x is a { join_one: b with astr }"));
     test("with", modelOK("explore: x is a { join_one: y is b with astr }"));
+    test(
+      "with dotted ref",
+      modelOK("explore: x is ab { join_one: xz is a with b.astr }")
+    );
     test("one on", modelOK("explore: x is a { join_one: b on astr = b.astr }"));
     test(
       "one is on",
@@ -995,7 +999,7 @@ describe("source locations", () => {
   test("location of join with", () => {
     const source = markSource`
       explore: na is a {
-        join_one: ${"x is a { primary_key: abool } with astr"}
+        join_one: ${"x is a { primary_key: astr } with astr"}
       }
     `;
     const m = new BetaModel(source.code);

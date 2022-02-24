@@ -17,12 +17,24 @@ import { fStringEq, fStringLike } from "./test_utils";
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
+import { StructRelationship } from "@malloydata/malloy/src/model";
 
 const runtimes = new RuntimeList(["bigquery"]);
 
 afterAll(async () => {
   await runtimes.closeAll();
 });
+
+function withJoin(leftKey: string, rightKey: string): StructRelationship {
+  return {
+    type: "one",
+    onExpression: [
+      { type: "field", path: `${leftKey}` },
+      "=",
+      { type: "field", path: `${rightKey}` },
+    ],
+  };
+}
 
 async function validateCompilation(
   databaseName: string,
@@ -210,10 +222,10 @@ export const aircraftHandStructDef: StructDef = {
     ...aircraftHandBase.fields,
     {
       ...modelHandBase,
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: "aircraft_model_code",
-      },
+      structRelationship: withJoin(
+        "aircraft_model_code",
+        "aircraft_models.aircraft_model_code"
+      ),
     },
   ],
 };

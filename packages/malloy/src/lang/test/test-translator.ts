@@ -109,7 +109,14 @@ export class TestTranslator extends MalloyTranslator {
           {
             ...aTableDef,
             as: "b",
-            structRelationship: { type: "foreignKey", foreignKey: "astr" },
+            structRelationship: {
+              type: "one",
+              onExpression: [
+                { type: "field", path: "astr" },
+                "=",
+                { type: "field", path: "b.astr" },
+              ],
+            },
           },
           {
             type: "number",

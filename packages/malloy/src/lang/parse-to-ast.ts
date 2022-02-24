@@ -396,7 +396,7 @@ export class MalloyToAST
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
-    const joinOn = this.getFieldName(pcx.fieldName());
+    const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
     return this.astAt(join, pcx);
   }
@@ -528,9 +528,7 @@ export class MalloyToAST
   }
 
   visitFieldPath(pcx: parse.FieldPathContext): ast.FieldReference {
-    const names = pcx.fieldName().map((nameCx) => {
-      return this.getFieldName(nameCx);
-    });
+    const names = pcx.fieldName().map((nameCx) => this.getFieldName(nameCx));
     return this.astAt(new ast.FieldReference(names), pcx);
   }
 
@@ -541,8 +539,7 @@ export class MalloyToAST
   }
 
   visitQueryFieldRef(pcx: parse.QueryFieldRefContext): ast.QueryItem {
-    const refCx = pcx.fieldPath();
-    return this.astAt(this.visitFieldPath(refCx), refCx);
+    return this.visitFieldPath(pcx.fieldPath());
   }
 
   // visitQueryFieldNameless(

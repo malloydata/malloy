@@ -52,7 +52,7 @@ import {
   isValueParameter,
   JoinRelationship,
   isPhysical,
-  isAnyJoin,
+  isJoinOn,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -550,6 +550,13 @@ class QueryFieldBoolean extends QueryAtomicField {}
 //  will include the StructDef as a foreign key join in the output
 //  StructDef.
 class QueryFieldStruct extends QueryAtomicField {
+  primaryKey: string;
+
+  constructor(fieldDef: FieldDef, parent: QueryStruct, primaryKey: string) {
+    super(fieldDef, parent);
+    this.primaryKey = primaryKey;
+  }
+
   getName() {
     return getIdentifier(this.fieldDef);
   }
@@ -557,7 +564,17 @@ class QueryFieldStruct extends QueryAtomicField {
   getAsJoinedStructDef(foreignKeyName: string): StructDef {
     return {
       ...this.parent.fieldDef,
-      structRelationship: { type: "foreignKey", foreignKey: foreignKeyName },
+      structRelationship: {
+        type: "one",
+        onExpression: [
+          {
+            type: "field",
+            path: this.primaryKey,
+          },
+          "=",
+          { type: "field", path: foreignKeyName },
+        ],
+      },
     };
   }
 }
@@ -1095,7 +1112,6 @@ class JoinInstance {
       return "root";
     }
     switch (this.queryStruct.fieldDef.structRelationship.type) {
-      case "foreignKey":
       case "one":
         return "many_to_one";
       case "cross":
@@ -1741,7 +1757,7 @@ class QueryQuery extends QueryField {
     const qs = ji.queryStruct;
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
-    if (isAnyJoin(structRelationship)) {
+    if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
       }
@@ -1749,20 +1765,7 @@ class QueryQuery extends QueryField {
       if (qs.parent === undefined) {
         throw new Error("Expected joined struct to have a parent.");
       }
-      if (structRelationship.type === "foreignKey") {
-        const fkDim = qs.parent.getOrMakeDimension(
-          structRelationship.foreignKey
-        );
-        const pkDim = qs.primaryKey();
-        if (!pkDim) {
-          throw new Error(
-            `Primary Key is not defined in Foreign Key relationship '${structRelationship.foreignKey}'`
-          );
-        }
-        const fkSQL = fkDim.generateExpression(this.rootResult);
-        const pkSQL = pkDim.generateExpression(this.rootResult);
-        onCondition = `${fkSQL} = ${pkSQL}`;
-      } else if (structRelationship.onExpression) {
+      if (structRelationship.onExpression) {
         onCondition = new QueryFieldBoolean(
           {
             type: "boolean",
@@ -2739,9 +2742,11 @@ class QueryStruct extends QueryNode {
     if (pkType !== "string" && pkType !== "number") {
       throw new Error(`Unknown Primary key data type for ${name}`);
     }
+    const aliasName = getIdentifier(this.fieldDef);
+    const pkName = this.fieldDef.primaryKey;
     const fieldDef: FieldDef = {
       type: pkType,
-      name: `${getIdentifier(this.fieldDef)}_id`,
+      name: `${aliasName}_id`,
       e: [
         {
           type: "field",
@@ -2750,7 +2755,7 @@ class QueryStruct extends QueryNode {
         },
       ],
     };
-    return new QueryFieldStruct(fieldDef, this);
+    return new QueryFieldStruct(fieldDef, this, `${aliasName}.${pkName}`);
   }
 
   // return the name of the field in SQL
