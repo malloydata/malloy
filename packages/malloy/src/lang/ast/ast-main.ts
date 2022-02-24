@@ -830,17 +830,16 @@ export class KeyJoin extends Join {
 
   fixupJoinOn(outer: FieldSpace, inStruct: model.StructDef): void {
     const exprX = this.keyExpr.getExpression(outer);
-    const into = outer.structDef();
-    if (into.primaryKey) {
-      const pkey = into.fields.find(
-        (f) => (f.as || f.name) === into.primaryKey
+    if (inStruct.primaryKey) {
+      const pkey = inStruct.fields.find(
+        (f) => (f.as || f.name) === inStruct.primaryKey
       );
       if (pkey) {
         if (pkey.type === exprX.dataType) {
           inStruct.structRelationship = {
             type: "one",
             onExpression: [
-              { type: "field", path: into.primaryKey },
+              { type: "field", path: `${this.name}.${inStruct.primaryKey}` },
               "=",
               ...exprX.value,
             ],
