@@ -37,8 +37,8 @@ describe("structdef comprehension", () => {
     };
   }
 
-  function fieldRef(...names: string[]) {
-    return names.map((name) => new FieldName(name));
+  function fieldRef(fieldPath: string): FieldName[] {
+    return fieldPath.split(".").map((name) => new FieldName(name));
   }
 
   test(`import string field`, () => {
@@ -102,7 +102,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup(fieldRef("t", "b")).found).toBeInstanceOf(
+    expect(space.lookup(fieldRef("t.b")).found).toBeInstanceOf(
       ColumnSpaceField
     );
     const oField = space.structDef().fields[0];
@@ -120,7 +120,7 @@ describe("structdef comprehension", () => {
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup(fieldRef("t", "a")).found).toBeInstanceOf(
+    expect(space.lookup(fieldRef("t.a")).found).toBeInstanceOf(
       ColumnSpaceField
     );
     const oField = space.structDef().fields[0];
@@ -135,17 +135,17 @@ describe("structdef comprehension", () => {
       structRelationship: {
         type: "one",
         onExpression: [
-          { type: "field", path: "tKey" },
+          { type: "field", path: "aKey" },
           "=",
           { type: "field", path: "t.a" },
         ],
       },
       structSource: { type: "table" },
-      fields: [{ type: "string", name: "t1" }],
+      fields: [{ type: "string", name: "a" }],
     };
     const struct = mkStructDef(field);
     const space = new StructSpace(struct);
-    expect(space.lookup(fieldRef("t", "a")).found).toBeInstanceOf(
+    expect(space.lookup(fieldRef("t.a")).found).toBeInstanceOf(
       ColumnSpaceField
     );
     const oField = space.structDef().fields[0];
