@@ -560,7 +560,12 @@ class QueryFieldStruct extends QueryAtomicField {
       structRelationship: {
         type: "one",
         onExpression: [
-          PRIMARY_KEY_GOES_HERE,
+          {
+            type: "field",
+            path: `${this.getIdentifier()}.${
+              (this.fieldDef as StructDef).primaryKey
+            }`,
+          },
           "=",
           { type: "field", path: foreignKeyName },
         ],
