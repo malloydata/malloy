@@ -550,6 +550,13 @@ class QueryFieldBoolean extends QueryAtomicField {}
 //  will include the StructDef as a foreign key join in the output
 //  StructDef.
 class QueryFieldStruct extends QueryAtomicField {
+  primaryKey: string;
+
+  constructor(fieldDef: FieldDef, parent: QueryStruct, primaryKey: string) {
+    super(fieldDef, parent);
+    this.primaryKey = primaryKey;
+  }
+
   getName() {
     return getIdentifier(this.fieldDef);
   }
@@ -562,9 +569,7 @@ class QueryFieldStruct extends QueryAtomicField {
         onExpression: [
           {
             type: "field",
-            path: `${this.getIdentifier()}.${
-              (this.fieldDef as StructDef).primaryKey
-            }`,
+            path: this.primaryKey,
           },
           "=",
           { type: "field", path: foreignKeyName },
@@ -2737,9 +2742,11 @@ class QueryStruct extends QueryNode {
     if (pkType !== "string" && pkType !== "number") {
       throw new Error(`Unknown Primary key data type for ${name}`);
     }
+    const aliasName = getIdentifier(this.fieldDef);
+    const pkName = this.fieldDef.primaryKey;
     const fieldDef: FieldDef = {
       type: pkType,
-      name: `${getIdentifier(this.fieldDef)}_id`,
+      name: `${aliasName}_id`,
       e: [
         {
           type: "field",
@@ -2748,7 +2755,7 @@ class QueryStruct extends QueryNode {
         },
       ],
     };
-    return new QueryFieldStruct(fieldDef, this);
+    return new QueryFieldStruct(fieldDef, this, `${aliasName}.${pkName}`);
   }
 
   // return the name of the field in SQL
