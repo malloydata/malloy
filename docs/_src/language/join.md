@@ -11,7 +11,7 @@ In Malloy, syntaxes for join are:
 
 ```malloy
 join_one: <source-name> [is <source-exp>] on <boolean expression>
-join_one: <source-name> [is <source-exp>] with <foreign_key>        -- slightly more concise; works with primary to foreign key joins
+join_one: <source-name> [is <source-exp>] with <foreign key expression>
 join_many: <source-name> [is <source-exp>] on <boolean expression>
 join_cross: <source-name> [is <source-exp>] [on <boolean expression>]
 ```
@@ -44,7 +44,7 @@ The easiest, most error-proof way to perform a join is using the following synta
 
 `join_one: <source> with <foreign_key>`
 
-To join a foreign key in the source to the `primary_key` of a joined source, reference the foreign key by name in the `with` clause.
+To join based on a foreign key through the `primary_key` of a joined source, use `with` to specify an expression, which could be as simple as a field name in the source. This expression is matched against the decalred `primary_key` of the joined source. Sources without a `primary_key` cannot use `with` joins.
 
 ```malloy
 source: users is table('malloy-data.ecomm.users'){
@@ -56,7 +56,8 @@ source: order_items is table('malloy-data.ecomm.order_items'){
 }
 ```
 
-This syntax for the join expresses exactly the same thing a bit more explicitly:
+This is simply a shortcut, when joining based on the primary key of a joined source. It is exactly equivalent to the `on` join written like this.
+
 ```
 source: order_items is table('malloy-data.ecomm.order_items'){
   join_one: users on order_items.user_id = users.id
