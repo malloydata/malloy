@@ -49,15 +49,16 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
-const models = new Map<string, malloy.ModelMaterializer>();
-runtimes.runtimeMap.forEach((runtime, key) => {
-  models.set(key, runtime.loadModel(joinModelText));
-});
+// const models = new Map<string, malloy.ModelMaterializer>();
+// runtimes.runtimeMap.forEach((runtime, key) => {
+//   models.set(key, runtime.loadModel(joinModelText));
+// });
 
 describe("join expression tests", () => {
-  models.forEach((model, database) => {
+  runtimes.runtimeMap.forEach((runtime, database) => {
     it(`model explore refine join - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       explore: a2 is aircraft {
@@ -77,7 +78,8 @@ describe("join expression tests", () => {
     });
 
     it(`model explore refine in query join - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       query: aircraft {
@@ -95,7 +97,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: join fact table query - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       query: aircraft_models {
@@ -119,7 +122,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: explore based on query - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       query:
@@ -142,7 +146,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: funnel - merge two queries - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
           query: from(aircraft_models->{
@@ -173,7 +178,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: modeled funnel - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       explore: foo is from(aircraft_models-> manufacturer_models){
@@ -197,7 +203,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: modeled funnel2 - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       query: funnel->{
@@ -217,7 +224,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: double_pipe - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
       query: aircraft_models->{
@@ -235,7 +243,8 @@ describe("join expression tests", () => {
     });
 
     it(`model: unnest is left join - ${database}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(joinModelText)
         .loadQuery(
           `
           // produce a table with 4 rows that has a nested element
@@ -259,6 +268,29 @@ describe("join expression tests", () => {
             }
           }
     `
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.rowCount).toBeGreaterThan(4);
+    });
+
+    // not sure how to solve this one yet.
+    it.skip(`All joins at the same level - ${database}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+        source: flights is table('malloytest.flights') {
+          join_one: aircraft is table('malloytest.aircraft')
+            on tail_num = aircraft.tail_num
+          join_one: aircraft_models is table('malloytest.aircraft_models')
+            on aircraft.aircraft_model_code = aircraft_models.aircraft_model_code
+        }
+
+        query: flights -> {
+          group_by: aircraft_models.seats
+          aggregate: flight_count is count()
+        }
+        `
         )
         .run();
       // console.log(result.data.toObject());
