@@ -775,11 +775,10 @@ describe("airport_tests", () => {
           }
         }
       } -> {
-        aggregate: [
+        aggregate:
           airport_count,
           sum_state is by_state.sum(by_state.airport_count),
           sum_fac is by_state.by_fac_type.sum(by_state.by_fac_type.airport_count)
-        ]
       }
     `
     );
@@ -812,16 +811,14 @@ describe("airport_tests", () => {
       query: table('malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
-          group_by: [
+          group_by:
             state
             county
-          ]
           aggregate: a is count()
         } -> {
-          project: [
+          project:
             state is upper(state)
             a
-          ]
         } -> {
           group_by: state
           aggregate: total_airports is a.sum()
