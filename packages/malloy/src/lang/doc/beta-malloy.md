@@ -109,7 +109,7 @@ A query is either a grouping/aggregating gesture, which would look like this ...
 ... or a detail-gesture like this ...
 
     query: flight_details {
-        project: [ carrier.nickname, flight_num, dep_time, arr_time ]
+        project: carrier.nickname, flight_num, dep_time, arr_time
     }
 
 A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha-malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
@@ -229,7 +229,7 @@ And to include a nested query in a result set, much like the `aggregate:` keywor
             destination is destination.full_name
           ]
           aggregate: flight_count
-          nest: [ carriers_by_month, routes_map, delay_by_hour_of_day ]
+          nest: carriers_by_month, routes_map, delay_by_hour_of_day
         }
     }
 

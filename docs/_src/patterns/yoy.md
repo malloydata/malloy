@@ -33,7 +33,7 @@ source: flights is table('malloy-data.faa.flights') {
 
 query: flights->{
   group_by: carrier
-  aggregate: [
+  aggregate:
     flights_in_2002 is flight_count { where: dep_time = @2002 }
     flights_in_2003 is flight_count { where: dep_time = @2003 }
     percent_change is round(
@@ -41,7 +41,6 @@ query: flights->{
         / nullif(flight_count { where: dep_time = @2003 }, 0) * 100,
       1
     )
-  ]
 }
 ```
 
@@ -64,7 +63,7 @@ source: order_items is table('malloy-data.ecomm.order_items') {
 query: order_items -> {
   top: 10
   group_by: inventory_items.product_category
-  aggregate: [
+  aggregate:
     last_year is order_item_count { where: created_at: now.year - 1 year }
     prior_year is order_item_count { where: created_at: now.year - 2 years }
     percent_change is round(
@@ -72,7 +71,6 @@ query: order_items -> {
         / nullif(order_item_count { where: created_at : now.year - 2 years }, 0) * 100,
       1
     )
-  ]
 }
 ```
 
@@ -101,13 +99,12 @@ query: order_items{
 } -> {
   top: 10
   group_by: inventory_items.product_category
-  aggregate: [
+  aggregate:
     last_year
     prior_year
     percent_change is round(
       (last_year - prior_year) / nullif(last_year, 0) * 100,
       1
     )
-  ]
 }
 ```

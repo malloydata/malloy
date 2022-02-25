@@ -32,11 +32,10 @@ to render a Kayak page in a singe query.
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 query: flights -> kayak {
-  where: [
+  where:
     origin.code : 'SJC',
     destination.code : 'LAX'|'BUR',
     dep_time : @2004-01-01
-  ]
 }
 ```
 
@@ -54,7 +53,7 @@ query: sessionize is {
     aggregate: plane_flight_count is flight_count
     nest: flight_legs is {
       order_by: 2
-      group_by: [
+      group_by:
         tail_num
         dep_minute is dep_time.minute
         origin_code
@@ -70,7 +69,7 @@ query: sessionize is {
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights { where: [ carrier:'WN', dep_time: @2002-03-03 ] } -> sessionize
+query: flights { where: carrier:'WN', dep_time: @2002-03-03 } -> sessionize
 ```
 
 ## The Malloy Model
@@ -103,10 +102,9 @@ source: aircraft is table('malloy-data.faa.aircraft') {
 source: aircraft_facts is from(
   table('malloy-data.faa.flights') -> {
     group_by: tail_num
-    aggregate: [
+    aggregate:
       lifetime_flights is count()
       lifetime_distance is distance.sum()
-    ]
   }
 ) {
   primary_key: tail_num
@@ -134,12 +132,11 @@ source: flights is table('malloy-data.faa.flights') {
   ]
 
   query: measures is {
-    aggregate: [
+    aggregate:
       flight_count
       aircraft.aircraft_count
       dest_count is destination.airport_count
       origin_count is origin.airport_count
-    ]
   }
 
   // shows carriers and number of destinations (bar chart)
@@ -160,7 +157,7 @@ source: flights is table('malloy-data.faa.flights') {
   query: by_manufacturer is {
     top: 5
     group_by: aircraft.aircraft_models.manufacturer
-    aggregate: [ aircraft.aircraft_count, flight_count ]
+    aggregate: aircraft.aircraft_count, flight_count
   }
 
   query: delay_by_hour_of_day is {
@@ -185,12 +182,11 @@ source: flights is table('malloy-data.faa.flights') {
   }
 
   query: routes_map is {
-    group_by: [
+    group_by:
       origin.latitude
       origin.longitude
       latitude2 is destination.latitude
       longitude2 is destination.longitude
-    ]
     aggregate: flight_count
   }
 
@@ -206,15 +202,15 @@ source: flights is table('malloy-data.faa.flights') {
     group_by: code is destination_code
     group_by: destination is destination.full_name
     aggregate: flight_count
-    nest: [ carriers_by_month, routes_map, delay_by_hour_of_day ]
+    nest: carriers_by_month, routes_map, delay_by_hour_of_day
   }
 
   query: plane_usage is {
     order_by: 1 desc
     where: aircraft.aircraft_count > 1
     group_by: aircraft_facts.lifetime_flights_bucketed
-    aggregate: [aircraft.aircraft_count, flight_count]
-    nest: [ by_manufacturer, by_carrier ]
+    aggregate: aircraft.aircraft_count, flight_count
+    nest: by_manufacturer, by_carrier
   }
 
 
@@ -235,25 +231,23 @@ source: flights is table('malloy-data.faa.flights') {
     }
     nest: origin_dashboard is {
       top: 10
-      group_by: [
+      group_by:
         code is origin_code,
         origin is origin.full_name,
         origin.city
-      ]
       aggregate: flight_count
-      nest: [ destinations_by_month, routes_map, year_over_year]
+      nest: destinations_by_month, routes_map, year_over_year
     }
   }
 
   query: detail is {
     top: 30 by dep_time
-    project: [
+    project:
       id2, dep_time, tail_num, carrier, origin_code, destination_code, distance, aircraft.aircraft_model_code
-    ]
   }
 
   // query that you might run for to build a flight search interface
-  // query flights { where: [ origin.code: 'SJC', destination.code: 'LAX' | 'BUR', dep_time: @2004-01-01 ] } -> kayak
+  // query flights { where: origin.code: 'SJC', destination.code: 'LAX' | 'BUR', dep_time: @2004-01-01 } -> kayak
   query: kayak is {
     nest: carriers is {
       group_by: carriers.nickname
@@ -265,7 +259,7 @@ source: flights is table('malloy-data.faa.flights') {
       aggregate: flight_count
     }
     nest: flights is {
-      group_by: [
+      group_by:
         dep_minute is dep_time.minute
         carriers.name
         flight_num
@@ -273,7 +267,6 @@ source: flights is table('malloy-data.faa.flights') {
         destination_code
         aircraft.aircraft_models.manufacturer
         aircraft.aircraft_models.model
-      ]
     }
   }
 
@@ -288,14 +281,13 @@ source: flights is table('malloy-data.faa.flights') {
       aggregate: plane_flight_count is flight_count
       nest: flight_legs is {
         order_by: 2
-        group_by: [
+        group_by:
           tail_num
           dep_minute is dep_time.minute
           origin_code
           dest_code is destination_code
           dep_delay
           arr_delay
-        ]
       }
     }
   }

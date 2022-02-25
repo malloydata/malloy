@@ -46,11 +46,10 @@ query: flights -> {
     aggregate: flight_count
   }
 } -> {
-  project: [
+  project:
     main_query.nickname
     main_query.flight_count
     flight_count_as_a_percent_of_total is main_query.flight_count / flight_count * 100.0
-  ]
 }
 
 ```
@@ -66,9 +65,8 @@ query: flights -> {
     aggregate: flight_count
   }
 } -> {
-  project: [
+  project:
     main_query.*
     flight_count_as_a_percent_of_total is main_query.flight_count / flight_count * 100.0
-  ]
 }
 ```

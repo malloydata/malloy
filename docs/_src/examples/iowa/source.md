@@ -45,56 +45,49 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   query: top_sellers_by_revenue is {
     top: 5
-    group_by: [
+    group_by:
       vendor_name
       item_description
       total_sale_dollars
-    ]
-    aggregate: [
+    aggregate:
       total_bottles
       avg_price_per_100ml
-    ]
   }
 
   query: most_expensive_products is {
     top: 10
     order_by: avg_price_per_100ml desc
-    group_by: [
+    group_by:
       vendor_name
       item_description
-    ]
-    aggregate: [
+    aggregate:
       total_sale_dollars
       total_bottles
       avg_price_per_100ml
-    ]
   }
 
   query: by_vendor_bar_chart is {
     top: 10
     group_by: vendor_name
-    aggregate: [
+    aggregate:
       total_sale_dollars
       total_bottles
-    ]
   }
 
   query: by_class is {
     top: 10
     group_by: category_class
-    aggregate: [
+    aggregate:
       total_sale_dollars
       item_count
-    ]
   }
 
   query: by_category is {
     top: 10
     group_by: category_name
-    aggregate: [
+    aggregate:
       total_sale_dollars
       item_count
-    ]
   }
 
   query: by_sku is {
@@ -105,10 +98,9 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   query: vendor_dashboard is {
     group_by: vendor_count is count(distinct vendor_number)
-    aggregate: [
+    aggregate:
       total_sale_dollars
       total_bottles
-    ]
     nest: by_month
     nest: by_class
     nest: by_vendor_bar_chart

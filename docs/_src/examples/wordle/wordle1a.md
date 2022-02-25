@@ -38,10 +38,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 

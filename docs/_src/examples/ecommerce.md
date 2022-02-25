@@ -37,10 +37,9 @@ Next question: In 2020, how much did we sell to users in each state? This requir
 query: table('malloy-data.ecomm.order_items') {
   join_one: users is table('malloy-data.ecomm.users') on user_id = users.id
 } -> {
-  where: [
+  where:
     created_at: @2020,
     status != 'Cancelled' & != 'Returned'
-  ]
   group_by: users.state
   aggregate: total_sales is sale_price.sum()
 }
@@ -105,16 +104,14 @@ Note that queries can be filtered at any level, by inserting filter expressions 
 ```malloy
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
 query: order_items {
-  where: [
+  where:
     users.state: 'California' | 'New York' | 'Texas',
     status: != 'Cancelled' & != 'Processing'
-  ]
 } -> {
   group_by: users.state
-  aggregate: [
+  aggregate:
     total_sale_price_2020 is sale_price.sum() { where: created_at : @2020 },
     percent_items_returned is 100.0 * (count() { where: status = 'Returned' }) / count()
-  ]
 }
 ```
 
@@ -125,10 +122,9 @@ Queries can contain other nested structures, by including additional transformat
 query: order_items -> {
   group_by: users.state
   aggregate: total_sales
-  nest: [
+  nest:
     orders_by_status
     sales_by_month_2020
-  ]
 }
 ```
 
@@ -152,13 +148,11 @@ Putting a few named queries together as nested structures allows us to produce a
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large", "queryName": "state_dashboard", "dataStyles": { "sales_by_month_2020": { "renderer" : "line_chart" },  "orders_by_status": { "renderer": "bar_chart" }}}
 query: state_dashboard is order_items -> {
   group_by: users.state
-  aggregate: [
+  aggregate:
     total_sales
     order_count
-  ]
-  nest: [
+  nest:
     orders_by_status
     sales_by_month_2020
-  ]
 }
 ```

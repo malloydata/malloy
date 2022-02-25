@@ -49,14 +49,13 @@ We can then add a few named queries to the model to easily access or reference e
 ```malloy
 --! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large", "queryName": "sessions_dashboard"}
 query: sessions_dashboard is ga_sessions -> {
-  nest: [
+  nest:
     by_region
     by_device
     by_source
     by_category is {
       group_by: category is hits.product.v2ProductCategory
-      aggregate: [ total_productRevenue, sold_count ]
+      aggregate: total_productRevenue, sold_count
     }
-  ]
 }
 ```

@@ -57,11 +57,10 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "pageSize":20, "size":"large" }
 source: names is from(
   table('bigquery-public-data.usa_names.usa_1910_2013') -> {
-    group_by: [
+    group_by:
       decade is floor(`year` / 10) * 10
       state
       gender
-    ]
     aggregate: cohort_population is `number`.sum()
     nest: by_name is {
       group_by: name
@@ -75,10 +74,9 @@ source: names is from(
 }
 
 query: names -> {
-  group_by: [
+  group_by:
     state
     gender
-  ]
   aggregate: total_cohort_population
   nest: names is {
     where: name : 'Michael' | 'Lloyd' | 'Olivia'

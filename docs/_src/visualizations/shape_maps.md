@@ -53,9 +53,8 @@ query: airports -> {
 query: airports -> {
   group_by: faa_region
   aggregate: airport_count
-  nest: [
+  nest:
     heliports is by_state { where: fac_type = 'HELIPORT' }
     seaplane_bases is by_state { where: fac_type = 'SEAPLANE BASE' }
-  ]
 }
 ```

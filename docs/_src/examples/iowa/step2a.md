@@ -26,8 +26,8 @@ Notice that the greatest sales by dollar volume is *Hawkeye Vodka*, closely foll
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 query: iowa { where: category_name ~ r'VODKA' } -> {
   top: 5
-  group_by: [ vendor_name, item_description ]
-  aggregate: [ total_sale_dollars, total_bottles, avg_price_per_100ml ]
+  group_by: vendor_name, item_description
+  aggregate: total_sale_dollars, total_bottles, avg_price_per_100ml
 }
 ```
 
@@ -45,8 +45,8 @@ source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
 
   query: top_sellers_by_revenue is {
     top: 5
-    group_by: [vendor_name, item_description]
-    aggregate: [total_sale_dollars, total_bottles, avg_price_per_100ml]
+    group_by: vendor_name, item_description
+    aggregate: total_sale_dollars, total_bottles, avg_price_per_100ml
   }
 }
 ```
@@ -71,7 +71,7 @@ The magic happens when we call a named query in the same way we would use any ot
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
 query: iowa { where: category_name ~ r'TEQUILA' } -> {
   group_by: vendor_name
-  aggregate: [ total_sale_dollars, avg_price_per_100ml ]
+  aggregate: total_sale_dollars, avg_price_per_100ml
   nest: top_sellers_by_revenue // entire query is a field
 }
 ```

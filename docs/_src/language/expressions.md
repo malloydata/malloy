@@ -106,10 +106,9 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
 query: flights -> {
-  aggregate: [
+  aggregate:
     distance_2003 is sum(distance) { where: dep_time: @2003 }
     ca_flights is count() { where: origin.state: 'CA' }
-  ]
 }
 ```
 

@@ -21,10 +21,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -35,10 +34,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
@@ -75,11 +73,10 @@ query: wordle -> find_words
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     // word ~ r'[]',
     // word ~ r'.....',
     word !~ r'[SAUCE]'
-  ]
 }
 ```
 
@@ -96,11 +93,10 @@ query: wordle -> find_words {
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'B' and word ~ r'O' and word ~ r'T',
     word ~ r'[^B]O[^O][^T].',
     word !~ r'[SAUCEY]'
-  ]
 }
 ```
 
@@ -135,10 +131,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -148,10 +143,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
