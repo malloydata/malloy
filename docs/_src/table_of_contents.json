@@ -91,6 +91,35 @@
       ]
     },
     {
+      "title": "Rendering Results",
+      "items": [
+        {
+          "title": "Intro: Charts & Dashboards",
+          "link": "/visualizations/dashboards.md"
+        },
+        {
+          "title": "Bar Charts",
+          "link": "/visualizations/bar_charts.md"
+        },
+        {
+          "title": "Line Charts",
+          "link": "/visualizations/charts_line_chart.md"
+        },
+        {
+          "title": "Scatter Charts",
+          "link": "/visualizations/scatter_charts.md"
+        },
+        {
+          "title": "Shape Maps",
+          "link": "/visualizations/shape_maps.md"
+        },
+        {
+          "title": "Segment Maps",
+          "link": "/visualizations/segment_maps.md"
+        }
+      ]
+    },
+    {
       "title": "Common Patterns",
       "items": [
         {
@@ -116,35 +145,6 @@
         {
           "title": "Sessionized Data",
           "link": "/patterns/sessionize.md"
-        }
-      ]
-    },
-    {
-      "title": "Rendering Results",
-      "items": [
-        {
-          "title": "Intro to Charts & Dashboards",
-          "link": "/visualizations/dashboards.md"
-        },
-        {
-          "title": "Bar Charts",
-          "link": "/visualizations/bar_charts.md"
-        },
-        {
-          "title": "Line Charts",
-          "link": "/visualizations/charts_line_chart.md"
-        },
-        {
-          "title": "Scatter Charts",
-          "link": "/visualizations/scatter_charts.md"
-        },
-        {
-          "title": "Shape Maps",
-          "link": "/visualizations/shape_maps.md"
-        },
-        {
-          "title": "Segment Maps",
-          "link": "/visualizations/segment_maps.md"
         }
       ]
     },
