@@ -8,6 +8,10 @@
           "link": "/index.md"
         },
         {
+          "title": "Malloy Quickstart",
+          "link": "/language/basic.md"
+        },
+        {
           "title": "Key Features",
           "link": "/features.md"
         },
@@ -33,10 +37,6 @@
           "link": "/language/overview.md"
         },
         {
-          "title": "Malloy Quickstart",
-          "link": "/language/basic.md"
-        },
-        {
           "title": "Models",
           "link": "/language/statement.md"
         },
@@ -53,6 +53,14 @@
           "link": "/language/fields.md"
         },
         {
+          "title": "Aggregates",
+          "link": "/language/aggregates.md"
+        },
+        {
+          "title": "Filters",
+          "link": "/language/filters.md"
+        },
+        {
           "title": "Ordering and Limiting",
           "link": "/language/order_by.md"
         },
@@ -61,16 +69,12 @@
           "link": "/language/join.md"
         },
         {
-          "title": "Filtering",
-          "link": "/language/filters.md"
-        },
-        {
           "title": "Nested Queries",
           "link": "/language/nesting.md"
         },
         {
-          "title": "Aggregates",
-          "link": "/language/aggregates.md"
+          "title": "Expressions",
+          "link": "/language/expressions.md"
         },
         {
           "title": "SQL Blocks",
@@ -83,10 +87,6 @@
         {
           "title": "Types",
           "link": "/language/types.md"
-        },
-        {
-          "title": "Expressions",
-          "link": "/language/expressions.md"
         }
       ]
     },
