@@ -1,14 +1,36 @@
 # Rendering Results
 
-Malloy, when running a query simply returns the data.  By default in the VSCode extension,
-this data is shown as JSON.  Malloy includes a rendering library that can show this data in different ways.
-The rendering library is a separate layer from Malloy's data access layer and using configuration an
-convention to figure out how to show data.
+Malloy simply returns the data when running a query.  In the VS Code extension, this is rendered as an HTML table, JSON, or can show the generated SQL by  toggling in the top right of the Query Results window.
 
-The rendering engine works by mapping at the names of the fields to a renderer.
-By default nested queries are rendered in tables, but, for example the field name ends in '_bar_chart' it is rendered as a bar chart instead.
+The extension additionally includes the [Vega-Lite](https://vega.github.io/vega-lite/) rendering library for charting, allowing visualization of results. This rendering library is a separate layer from Malloy's data access layer. The preferred approach to specify visualization the extension is to use a a separate styles file.
 
-This map can also be specified in a data styles file and included in the model.
+To set up a styles file for a Malloy model:
+1. Create a new file with the `.styles.json` suffix (for example, `flights.styles.json`).
+2. Specify styles
+3. Reference your styles document in your `.malloy` file, by adding `--! styles ecommerce.styles.json` to the first line.
+
+We recommend looking at the individual visualization documents in this section as well as the [sample models](/documentation/samples.html) for examples of how this looks in action.
+
+While the above approach is preferred, the extension additionally allows the renderer to utilize naming conventions as a shortcut for visualization specification. For example:
+
+```
+query: flights_bar_chart is table('malloy-data.faa.flights') -> {
+  group_by: origin
+  aggregate: flight_count is count()
+}
+```
+
+Will render as a Bar Chart because of the `bar_chart` suffix.
+
+These naming convention shortcuts currently include:
+* [Bar Chart](/documentation/visualizations/bar_charts.html): `_bar_chart`
+* [Line Chart](/documentation/visualizations/charts_line_chart.html): `_line_chart`
+* [Scatter Chart](/documentation/visualizations/scatter_charts.html): `_scatter_chart`
+* [Shape Map](/documentation/visualizations/shape_maps.html): `_shape_map`
+* [Segment Map](/documentation/visualizations/segment_maps.html): `_segment_map`
+* Dashboard: `_dashboard`
+
+Styles apply to standalone queries as well as when nested.
 
 ## Example Model
 
@@ -36,35 +58,16 @@ source: airports is table('malloy-data.faa.airports') {
 }
 ```
 
-## Results as JSON
-Pressing the run button, shows the results as JSON.
 
-```malloy
---! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
-query: airports -> by_state_and_county
-```
-
-
-## Render shows results as a Table
-By default, the renderer shows tabular results are rendered as tables.
-```malloy
---! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy"}
-query: airports -> by_state_and_county
-```
-
-## Render shows results as a Dashboard
-Naming the field with '_dashboard' is a quick way of telling the renderer to show the results as a dashboard.  You can also do this
-by tying the field name to a renderer in the styles file.
+## Shows results as a Dashboard
+The `dashboard` style can be invoked either through the styles file or the `_dashboard` suffix.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "source": "/inline/airports_mini.malloy", "queryName": "county_dashboard"}
 query: county_dashboard is airports -> by_state_and_county
 ```
 
-## Charting.
-The Malloy Renderer uses [Vega](https://vega.github.io/vega-lite/) for charting.  Including some style information (that gets returned with the results) allows the renderer to
-style nested queries using charts and more.
-
+## Example
 Add styles for `by_fac_type` and `by_county`
 
 Data Style:
@@ -83,3 +86,6 @@ Data Style:
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size":"large", "isPaginationEnabled": true, "queryName": "county_dashboard", "source": "/inline/airports_mini.malloy", "dataStyles": {"by_fac_type": {"renderer": "bar_chart"},"by_county": {"renderer": "bar_chart"}}}
 query: county_dashboard is airports -> by_state_and_county
 ```
+
+## Additional Charting with Vega Lite
+The `vega` renderer allows much more customization of rendering than the default visualization options provided in the Extension, using the [Vega-Lite](https://vega.github.io/vega-lite/) library. For examples of using these in Malloy, check out the `flights_custom_vis` model and styles files in the FAA [Sample Models](/documentation/samples.html) download.

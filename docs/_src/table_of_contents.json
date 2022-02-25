@@ -123,7 +123,7 @@
       "title": "Rendering Results",
       "items": [
         {
-          "title": "Tables and Dashboards",
+          "title": "Intro to Charts & Dashboards",
           "link": "/visualizations/dashboards.md"
         },
         {
@@ -135,16 +135,16 @@
           "link": "/visualizations/charts_line_chart.md"
         },
         {
+          "title": "Scatter Charts",
+          "link": "/visualizations/scatter_charts.md"
+        },
+        {
           "title": "Shape Maps",
           "link": "/visualizations/shape_maps.md"
         },
         {
           "title": "Segment Maps",
           "link": "/visualizations/segment_maps.md"
-        },
-        {
-          "title": "Scatter Charts",
-          "link": "/visualizations/scatter_charts.md"
         }
       ]
     },
