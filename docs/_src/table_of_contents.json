@@ -53,14 +53,6 @@
           "link": "/language/fields.md"
         },
         {
-          "title": "Types",
-          "link": "/language/types.md"
-        },
-        {
-          "title": "Expressions",
-          "link": "/language/expressions.md"
-        },
-        {
           "title": "Ordering and Limiting",
           "link": "/language/order_by.md"
         },
@@ -69,7 +61,7 @@
           "link": "/language/join.md"
         },
         {
-          "title": "Filters",
+          "title": "Filtering",
           "link": "/language/filters.md"
         },
         {
@@ -81,12 +73,20 @@
           "link": "/language/aggregates.md"
         },
         {
+          "title": "SQL Blocks",
+          "link": "/language/sql_blocks.md"
+        },
+        {
           "title": "Imports",
           "link": "/language/imports.md"
         },
         {
-          "title": "SQL Blocks",
-          "link": "/language/sql_blocks.md"
+          "title": "Types",
+          "link": "/language/types.md"
+        },
+        {
+          "title": "Expressions",
+          "link": "/language/expressions.md"
         }
       ]
     },

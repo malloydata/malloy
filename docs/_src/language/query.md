@@ -1,7 +1,6 @@
 # Queries
 
-The basic syntax for a query in Malloy consists of a source
-and a "pipeline" of one or more _stages_ separated by `->`. The shape of the data defined in the original source is transformed by each stage.
+The basic syntax for a query in Malloy consists of a source and a "pipeline" of one or more _stages_ separated by `->`. The shape of the data defined in the original source is transformed by each stage.
 
 ```malloy
 query: flights -> { group_by: carrier; aggregate: flight_count is count() }
@@ -14,19 +13,23 @@ The source of a query can be a table, a [source](source.md), or a [named query](
 **A query against a table**
 
 ```malloy
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.flights') -> { aggregate: flight_count is count() }
 ```
 
 **A query against a source**
 
 ```malloy
---! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true}
 source: flights is table('malloy-data.faa.flights')
 
 query: flights -> { aggregate: flight_count is count() }
 ```
 
 **A query starting from another query**
+
+The leading `->` is used when the source is a query:
+
 ```malloy
 query: flights_by_carrier is table('malloy-data.faa.flights') -> {
   group_by: carrier
@@ -36,9 +39,20 @@ query: flights_by_carrier is table('malloy-data.faa.flights') -> {
 query: -> flights_by_carrier -> { project: carrier; limit: 2 }
 ```
 
-When a query is defined as part of a source or nested inside
-another query stage, the source is implicit.
+**Implicit Sources**
+When a query is defined as part of a source or nested inside another query stage, the source is implicit.
 
+Defined as part of a source:
+```malloy
+source: flights is table('malloy-data.faa.flights'){
+  query: flights_by_carrier is {
+    group_by: carrier
+    aggregate: flight_count is count()
+  }
+}
+```
+
+Nested inside another query stage:
 ```malloy
 query: table('malloy-data.faa.flights') -> {
   group_by: dep_year is dep_time.year
@@ -51,19 +65,32 @@ query: table('malloy-data.faa.flights') -> {
 
 ## Pipelines
 
-A pipeline transforms the shape of a source, and is made up of a series of stages.
+A each stage of a pipeline performs transformation on the the source or a previous stage.
 
-A typical stage is has either `group_by`/`aggregate` or `project`, or `index` transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.
+A stage can do one of:
+* a Reduction: a query containing `group_by`/`aggregate` which includes aggregation and/or a group_by to reduce the grain of the data being transformed
+* a Projection: select fields without reducing using `project`.
 
+Example of a Reduction:
 ```malloy
 query: flights -> {
-  where: distance > 1000      // Filters
-  top: 2
-  order_by: flight_count desc // Ordering/limiting
-  group_by: carrier
+  where: distance > 1000        // Filtering
+  top: 2                        // Limiting
+  order_by: flight_count desc   // Ordering
+  group_by: carrier             // Reducing
   aggregate: flight_count is count()
 }
 ```
+
+Example of a Projection:
+```malloy
+  query: flights -> {
+    project: *
+    limit: 20
+  }
+```
+
+Note that the operations in a stage are not order-sensitive like SQL; they can be arranged
 
 A reference to a [named query](nesting.md) (which defines its own pipeline) can be the first stage in a pipeline.
 
