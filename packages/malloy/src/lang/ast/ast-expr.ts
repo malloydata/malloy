@@ -980,19 +980,15 @@ export class Pick extends ExpressionDef {
     if (this.elsePick === undefined) {
       return undefined;
     }
-    const isPartialPick = function (c: PickWhen): boolean {
+    for (const c of this.choices) {
       if (c.pick == undefined) {
-        return true;
+        return undefined;
       }
       const whenResp = c.when.requestExpression(fs);
-      if (whenResp?.dataType != "boolean") {
-        // If the when value is not a boolean, assume it is a partial compare
-        return true;
+      if (whenResp == undefined || whenResp.dataType != "boolean") {
+        // If when is not a boolean, we'll treat it like a partial compare
+        return undefined;
       }
-      return whenResp == undefined;
-    };
-    if (this.choices.find(isPartialPick)) {
-      return undefined;
     }
     return this.getExpression(fs);
   }
