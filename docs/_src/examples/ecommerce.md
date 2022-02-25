@@ -54,10 +54,9 @@ source: users is table('malloy-data.ecomm.users') {
 source: order_items is table('malloy-data.ecomm.order_items') {
   primary_key: id
   join_one: users with user_id
-  measure: [
+  measure:
     total_sales is sale_price.sum()
     order_count is count(distinct order_id)
-  ]
 }
 ```
 

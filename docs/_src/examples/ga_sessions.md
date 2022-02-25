@@ -7,7 +7,7 @@ Start by defining a source based on a query.
 ```malloy
 source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {
   dimension: start_time is timestamp_seconds(visitStartTime)
-  measure: [
+  measure:
     user_count is count(distinct fullVisitorId)
     session_count is count()
     total_visits is totals.visits.sum()
@@ -15,7 +15,6 @@ source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_ses
     total_page_views is totals.pageviews.sum()
     total_productRevenue is hits.product.productRevenue.sum()
     sold_count is hits.count() { where: hits.product.productQuantity > 0 }
-  ]
 }
 ```
 

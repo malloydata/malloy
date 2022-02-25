@@ -119,7 +119,7 @@ A `group by` or a `project` have a list of references, or new dimensions.  An `a
 The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
     explore: flights_21st_century is flights {
-      where: [ dep_time >= @2001 ]
+      where: dep_time >= @2001
     }
 
 ## Farewell `|`
@@ -193,11 +193,11 @@ Because filtering is ubiquitous, there is a shorthand for filtering. We expect a
 
     -- long form
     flights {
-        where: [ dep_time: @2003 ]
+        where: dep_time: @2003
     }->by_carrier
 
     -- one line version
-    flights { where: [ dep_time: @2003 ] }->by_carrier
+    flights { where: dep_time: @2003 }->by_carrier
 
     -- short form
     flights {? dep_time: @2003}->by_carrier

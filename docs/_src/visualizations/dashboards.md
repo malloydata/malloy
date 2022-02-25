@@ -23,10 +23,9 @@ source: airports is table('malloy-data.faa.airports') {
     nest: by_county is {
       limit: 5
       group_by: county
-      aggregate:[
+      aggregate:
         airport_count
         average_elevation is avg(elevation)
-      ]
     }
     nest: by_fac_type is {
       group_by: fac_type

@@ -122,14 +122,13 @@ source: flights is table('malloy-data.faa.flights') {
   join_one: aircraft with tail_num
   join_one: aircraft_facts with tail_num
 
-  measure: [
+  measure:
     flight_count is count()
     total_distance is sum(distance)
     seats_for_sale is sum(aircraft.aircraft_models.seats)
     seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
     // average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
     // average_seats is aircraft.aircraft_models.seats.avg()
-  ]
 
   query: measures is {
     aggregate:

@@ -91,11 +91,10 @@ source: order_items is table('malloy-data.ecomm.order_items') {
 }
 
 query: order_items{
-  measure: [
+  measure:
     // these caclulations can be used in multipe parts of the query
     last_year is order_item_count { where: created_at: now.year - 1 year }
     prior_year is order_item_count { where: created_at: now.year - 2 years }
-  ]
 } -> {
   top: 10
   group_by: inventory_items.product_category

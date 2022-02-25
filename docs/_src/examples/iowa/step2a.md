@@ -8,12 +8,11 @@ section](step2.md).
 
 ```malloy
 source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
-  measure: [
+  measure:
     total_sale_dollars is sale_dollars.sum()
     total_bottles is sum(bottles_sold)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
     avg_price_per_100ml is price_per_100ml.avg()
-  ]
 }
 ```
 
@@ -36,12 +35,11 @@ This particular view of the data is pretty useful, an something we expect to re-
 
 ```malloy
 source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
-  measure: [
+  measure:
     total_sale_dollars is sale_dollars.sum()
     total_bottles is sum(bottles_sold)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
     avg_price_per_100ml is price_per_100ml.avg()
-  ]
 
   query: top_sellers_by_revenue is {
     top: 5

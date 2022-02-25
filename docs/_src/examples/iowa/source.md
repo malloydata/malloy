@@ -6,7 +6,7 @@ This is the malloy model used for the Analysis example.  It should be used as an
 source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   -- dimensions
-  dimension: [
+  dimension:
     gross_margin is 100 * (state_bottle_retail - state_bottle_cost) / nullif(state_bottle_retail, 0)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
 
@@ -25,16 +25,14 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       pick 'jumbo (over 1000ml)' when > 1001
       pick 'liter-ish' when >= 750
       else 'small or mini (under 750ml)'
-  ]
 
   -- measures
-  measure: [
+  measure:
     total_sale_dollars is sale_dollars.sum()
     item_count is count(distinct item_number)
     total_bottles is bottles_sold.sum()
     line_item_count is count()
     avg_price_per_100ml is price_per_100ml.avg()
-  ]
 
   -- turtles
   query: by_month is {
