@@ -22,11 +22,9 @@ source: words_and_letters is from(words -> five_letter_words) {
     group_by: word
     nest: letters is {
       order_by: 2
-      group_by: [
+      group_by:
         letter is substr(word, numbers.num, 1)
         position is numbers.num
-
-      ]
     }
   }
 }
@@ -43,18 +41,16 @@ source: wordle is from(words_and_letters -> words_and_position) {
 
   query: common_letters is {
     group_by: letters.letter
-    aggregate: [
+    aggregate:
       word_count
       use_count is letters.count()
-    ]
   }
 
   query: common_letters_and_positions is {
     group_by: letters.letter
-    aggregate: [
+    aggregate:
       word_count
       use_count is letters.count()
-    ]
     nest: positition_order_bar_chart is {
       group_by: letters.position
       aggregate: word_count
@@ -62,19 +58,17 @@ source: wordle is from(words_and_letters -> words_and_position) {
   }
 
   query: letter_position is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
   }
 
 
   query: letter_position_and_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
@@ -82,10 +76,9 @@ source: wordle is from(words_and_letters -> words_and_position) {
   }
 
   query: word_score is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words is {
       group_by: word
@@ -99,9 +92,8 @@ source: wordle is from(words_and_letters -> words_and_position) {
 // Example Guess 'roast'
 //  clues  (O- green, A - yellow, RST - gray)
 query: wordle -> word_score {
-  where: [
+  where:
     word ~ r'C',           // YELLOW: has these characters
     word ~ r'...[^C]E',    // GREEN/YELLOW: characters in these spots/not spots
     not word ~ r'[SLAT]'   // GRAY: doesn't have these characters
-  ]
 }

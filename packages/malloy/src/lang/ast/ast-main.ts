@@ -472,6 +472,22 @@ export class DefineExplore extends MalloyElement implements DocStatement {
   }
 }
 
+export class DefineSourceList
+  extends ListOf<DefineExplore>
+  implements DocStatement
+{
+  constructor(sourceList: DefineExplore[]) {
+    super("defineSources", sourceList);
+    this.has({ sourceList });
+  }
+
+  execute(doc: Document): void {
+    for (const dq of this.list) {
+      dq.execute(doc);
+    }
+  }
+}
+
 /**
  * A Mallobj made from a source and a set of refinements
  */

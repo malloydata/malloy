@@ -1,23 +1,20 @@
 --! styles hackernews.styles.json
 
 source: stories is table('bigquery-public-data.hacker_news.full') {
-  rename: [
+  rename:
     poster is `by`
     post_type is `type`
-  ]
 
-  dimension: [
+  dimension:
     threshold is 10
     is_good is score >= threshold
-  ]
 
-  measure: [
+  measure:
     post_count is count()
     good_post_count is post_count { where: is_good }
     percent_good is floor(good_post_count / post_count * 100)
-  ]
 
-  dimension: [
+  dimension:
     post_time is timestamp_seconds(`time`)
     site is regexp_extract(
       regexp_extract(url, '^http://([^\\/]*)\\/'),
@@ -29,7 +26,6 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
       pick 'hmmm' when < 10
       pick 'oooh' when < 100
       else 'wow'
-  ]
 
   query: by_date is {
     group_by: posted_month is post_time.month
@@ -78,14 +74,13 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
   query: stories is {
     top: 100
     order_by: post_time desc
-    group_by: [
+    group_by:
       post_time
       poster
       score
       title
       post_type
       url
-    ]
   }
 
   query: term_dashboard is {
@@ -94,35 +89,32 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
       aggregate: post_count
       group_by: post_type
     }
-    nest: [
+    nest:
       top_poster
       top_sites
       stories
-    ]
   }
 
   query: poster_dashboard is {
     top: 20
-    where: [ poster != null, post_type = 'story' ]
+    where:  poster != null, post_type = 'story'
     group_by: poster
-    aggregate: [
+    aggregate:
       post_count
       percent_good
-    ]
-    nest: [
+    nest:
       posts_over_time
       percent_good_over_time
-    ]
     aggregate: first_post is min(post_time)
     nest: by_sites is {
       top: 10
       group_by: site
-      aggregate: [ post_count, percent_good ]
+      aggregate: post_count, percent_good
     }
     nest: best_stories is {
       top: 10
       order_by: score desc
-      group_by: [ post_time, title, score, site ]
+      group_by: post_time, title, score, site
     }
   }
 }
