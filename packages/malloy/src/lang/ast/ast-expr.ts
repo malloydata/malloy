@@ -969,7 +969,6 @@ interface Choice {
 
 export class Pick extends ExpressionDef {
   elementType = "pick";
-  isPartialMap = false;
   constructor(readonly choices: PickWhen[], readonly elsePick?: ExpressionDef) {
     super({ choices });
     this.has({ elsePick });
@@ -981,13 +980,15 @@ export class Pick extends ExpressionDef {
     if (this.elsePick === undefined) {
       return undefined;
     }
-    if (
-      this.choices.find(
-        (c) =>
-          c.pick === undefined || c.when.requestExpression(fs) === undefined
-      )
-    ) {
-      return undefined;
+    for (const c of this.choices) {
+      if (c.pick == undefined) {
+        return undefined;
+      }
+      const whenResp = c.when.requestExpression(fs);
+      if (whenResp == undefined || whenResp.dataType != "boolean") {
+        // If when is not a boolean, we'll treat it like a partial compare
+        return undefined;
+      }
     }
     return this.getExpression(fs);
   }
@@ -1026,7 +1027,7 @@ export class Pick extends ExpressionDef {
     return {
       dataType: returnType.dataType,
       aggregate: anyAggregate || elseVal.aggregate,
-      value: [...caseValue, " ELSE ", ...elseVal.value, " END"],
+      value: compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"]),
     };
   }
 
@@ -1094,7 +1095,7 @@ export class Pick extends ExpressionDef {
     return {
       dataType: returnType.dataType,
       aggregate: !!anyAggregate,
-      value: caseValue,
+      value: compressExpr(caseValue),
     };
   }
 }
