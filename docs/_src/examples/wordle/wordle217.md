@@ -140,7 +140,7 @@ There it is, and our solution also happens to describe our reaction after missin
 [⬅️ Previous Puzzle](wordle216.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle218.md)
 
 
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 // Make a table of 5 letter words

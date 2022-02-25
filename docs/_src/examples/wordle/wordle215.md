@@ -111,7 +111,7 @@ query: wordle -> find_words {
 
 [⬅️ Previous Puzzle](wordle214.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle216.md)
 
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 // Make a table of 5 letter words

@@ -2,7 +2,7 @@
 
 Malloy simply returns the data when running a query.  In the VS Code extension, this is rendered as an HTML table, JSON, or can show the generated SQL by  toggling in the top right of the Query Results window.
 
-The extension additionally includes the [Vega-Lite](https://vega.github.io/vega-lite/) rendering library for charting, allowing visualization of results. This rendering library is a separate layer from Malloy's data access layer. The preferred approach to specify visualization the extension is to use a a separate styles file.
+The extension additionally includes the [Vega-Lite](https://vega.github.io/vega-lite/) rendering library for charting, allowing visualization of results. This rendering library is a separate layer from Malloy's data access layer. The preferred approach to specify visualization in the extension is to use a styles file.
 
 To set up a styles file for a Malloy model:
 1. Create a new file with the `.styles.json` suffix (for example, `flights.styles.json`).
