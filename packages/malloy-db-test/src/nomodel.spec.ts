@@ -102,7 +102,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         join_many: a on a.aircraft_model_code=aircraft_model_code
         measure: avg_seats is floor(avg(seats))
       }
-      query: m->{aggregate: [avg_seats, a.avg_year]}
+      query: m->{aggregate: avg_seats, a.avg_year}
       `
       )
       .run();

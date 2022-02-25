@@ -440,14 +440,13 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
     .loadQuery(
       `
           query: aircraft->{
-            aggregate: [
+            aggregate:
               aircraft_models.total_seats,
               total_seats2 is sum(aircraft_models.seats),
               total_seats3 is aircraft_models.sum(aircraft_models.seats),
               aircraft_models.boeing_seats,
               boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer: 'BOEING'},
               boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer: ~'B%'}
-            ]
           }
         `
     )
@@ -482,10 +481,9 @@ it(`hand: expression fixups. - ${databaseName}`, async () => {
     .loadQuery(
       `
             query: aircraft->{
-              aggregate: [
+              aggregate:
                 aircraft_models.total_seats,
                 aircraft_models.boeing_seats
-              ]
             }
           `
     )

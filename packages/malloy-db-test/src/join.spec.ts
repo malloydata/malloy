@@ -12,7 +12,6 @@
  */
 /* eslint-disable no-console */
 
-import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 const joinModelText = `
@@ -66,10 +65,9 @@ describe("join expression tests", () => {
       }
 
       query: a2 -> {
-        aggregate: [
+        aggregate:
           aircraft_count
           aircraft_models.model_count
-        ]
       }
       `
         )
@@ -85,10 +83,9 @@ describe("join expression tests", () => {
       query: aircraft {
         join_one: aircraft_models with aircraft_model_code
       } -> {
-        aggregate: [
+        aggregate:
           aircraft_count
           aircraft_models.model_count
-        ]
       }
       `
         )
@@ -108,10 +105,9 @@ describe("join expression tests", () => {
             aggregate: num_models is count(*)
           }) with manufacturer
       } -> {
-        project: [
+        project:
           manufacturer
           am_facts.num_models
-        ]
         order_by: 2 desc
         limit: 1
       }
@@ -132,10 +128,9 @@ describe("join expression tests", () => {
             aggregate: num_models is count(*)
           }
       -> {
-        project: [
+        project:
           m
           num_models
-        ]
         order_by: 2 desc
         limit: 1
       }
@@ -162,11 +157,10 @@ describe("join expression tests", () => {
             ) with m
           }
           -> {
-            project: [
+            project:
               m
               num_models
               seats.total_seats
-            ]
             order_by: 2 desc
             limit: 1
           }
@@ -187,11 +181,10 @@ describe("join expression tests", () => {
           with manufacturer
       }
       query: foo-> {
-        project: [
+        project:
           manufacturer,
           num_models,
           seats.total_seats
-        ]
         order_by: 2 desc
         limit: 1
       }
@@ -208,11 +201,10 @@ describe("join expression tests", () => {
         .loadQuery(
           `
       query: funnel->{
-        project: [
+        project:
          manufacturer
           num_models
           seats.total_seats
-        ]
         order_by: 2 desc
         limit: 1
       }

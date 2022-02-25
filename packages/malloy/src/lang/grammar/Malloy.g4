@@ -56,7 +56,7 @@ importURL
   ;
 
 topLevelQueryDefs
-  : topLevelQueryDef (COMMA? topLevelQueryDef)*
+  : topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
@@ -98,7 +98,7 @@ exploreQueryName : id;
 queryName : id;
 
 exploreDefinitionList
-  : exploreDefinition (COMMA? exploreDefinition)*
+  : exploreDefinition (COMMA? exploreDefinition)* COMMA?
   ;
 
 exploreDefinition
@@ -138,7 +138,7 @@ exploreStatement
   ;
 
 renameList
-  : exploreRenameDef (COMMA? exploreRenameDef COMMA?)*
+  : exploreRenameDef (COMMA? exploreRenameDef)* COMMA?
   ;
 
 exploreRenameDef
@@ -146,11 +146,11 @@ exploreRenameDef
   ;
 
 dimensionDefList
-  : dimensionDef (COMMA? dimensionDef)*
+  : dimensionDef (COMMA? dimensionDef)* COMMA?
   ;
 
 measureDefList
-  : measureDef (COMMA? measureDef)*
+  : measureDef (COMMA? measureDef)* COMMA?
   ;
 
 fieldDef
@@ -163,7 +163,7 @@ joinNameDef: id;
 measureDef: fieldDef;
 
 joinList
-  : joinDef (COMMA? joinDef)*
+  : joinDef (COMMA? joinDef)* COMMA?
   ;
 
 joinDef
@@ -184,7 +184,7 @@ filteredBy
   ;
 
 filterClauseList
-  : fieldExpr (COMMA fieldExpr)*
+  : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 whereStatement
@@ -196,7 +196,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : exploreQueryDef (COMMA? exploreQueryDef)*
+  : exploreQueryDef (COMMA? exploreQueryDef)* COMMA?
   ;
 
 exploreQueryNameDef: id;
@@ -223,7 +223,7 @@ groupByStatement
   ;
 
 queryFieldList
-  : queryFieldEntry (COMMA? queryFieldEntry)*
+  : queryFieldEntry (COMMA? queryFieldEntry)* COMMA?
   ;
 
 dimensionDef: fieldDef;
@@ -238,7 +238,7 @@ nestStatement
   ;
 
 nestedQueryList
-  : nestEntry (COMMA? nestEntry)*
+  : nestEntry (COMMA? nestEntry)* COMMA?
   ;
 
 nestEntry
@@ -259,7 +259,7 @@ orderByStatement
   ;
 
 ordering
-  : orderBySpec (COMMA? orderBySpec)*
+  : orderBySpec (COMMA? orderBySpec)* COMMA?
   ;
 
 orderBySpec
@@ -364,7 +364,7 @@ argumentList
   ;
 
 fieldNameList
-  : fieldOrStar (COMMA? fieldOrStar)*
+  : fieldOrStar (COMMA? fieldOrStar)* COMMA?
   ;
 
 fieldOrStar
@@ -373,7 +373,7 @@ fieldOrStar
   ;
 
 fieldCollection
-  : collectionMember (COMMA? collectionMember)*
+  : collectionMember (COMMA? collectionMember)* COMMA?
   ;
 
 collectionMember

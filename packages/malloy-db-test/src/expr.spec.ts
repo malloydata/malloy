@@ -25,14 +25,13 @@ const runtimes = new RuntimeList([
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
   primary_key: aircraft_model_code
-  measure: [
+  measure:
     airport_count is count(*),
     aircraft_model_count is count(),
     total_seats is sum(seats),
     boeing_seats is sum(seats) {? manufacturer: 'BOEING'},
     percent_boeing is boeing_seats / total_seats * 100,
     percent_boeing_floor is FLOOR(boeing_seats / total_seats * 100),
-  ]
   dimension: seats_bucketed is FLOOR(seats/20)*20.0
 }
 
@@ -60,7 +59,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
         query: aircraft_models->{
-          aggregate: [
+          aggregate:
             total_seats,
             total_seats2 is sum(seats),
             boeing_seats,
@@ -70,7 +69,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
             percent_boeing2 is boeing_seats / total_seats * 100,
             -- percent_boeing_floor,
             -- percent_boeing_floor2 is FLOOR(boeing_seats / total_seats * 100)
-          ]
         }
         `
       )
@@ -95,10 +93,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
         query: aircraft_models->{
-          aggregate: [
+          aggregate:
             percent_boeing_floor
             percent_boeing_floor2 is FLOOR(boeing_seats / total_seats * 100)
-          ]
         }
       `
       )
@@ -113,10 +110,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
             query: aircraft->{
-              aggregate: [
+              aggregate:
                 aircraft_models.total_seats
                 aircraft_models.boeing_seats
-              ]
             }
           `
       )
@@ -229,7 +225,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       query: aircraft_models->{
         order_by: 1
-        having: [seats_bucketed > 0, aircraft_model_count > 400]
+        having: seats_bucketed > 0, aircraft_model_count > 400
         group_by: seats_bucketed
         aggregate: aircraft_model_count
         nest: foo is {
@@ -248,7 +244,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
         query: aircraft_models->{
-          aggregate: [
+          aggregate:
             distinct_seats is count(distinct seats),
             boeing_distinct_seats is count(distinct seats) {?manufacturer: 'BOEING'},
             min_seats is min(seats),
@@ -259,7 +255,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
             boeing_min_model is min(model) {? manufacturer: 'BOEING'},
             max_model is max(model),
             boeing_max_model is max(model) {? manufacturer: 'BOEING'},
-          ]
         }
         `
       )
@@ -283,7 +278,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .loadQuery(
           `
         query: table('malloytest.alltypes')->{
-          group_by: [
+          group_by:
             t_date,
             t_date_month is t_date.month,
             t_date_year is t_date.year,
@@ -294,7 +289,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
             t_timestamp_second is t_timestamp.second,
             t_timestamp_month is t_timestamp.month,
             t_timestamp_year is t_timestamp.year,
-          ]
         }
 
         `
@@ -414,10 +408,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
             }
           }
         } -> {
-          project: [
+          project:
             aircraft.aircraft.first_three
             aircraft_count
-          ]
         }
       `
       )
@@ -464,10 +457,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
     }
 
     query: aircraft2->{
-      aggregate: [
+      aggregate:
         model.model_count
         aircraft_count
-      ]
     }
         `
       )
@@ -483,7 +475,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     explore: bo_models is
       from(
           table('malloytest.aircraft_models') {? manufacturer: ~ 'BO%' }
-          -> { project: [ aircraft_model_code, manufacturer, seats ] }
+          -> { project: aircraft_model_code, manufacturer, seats }
         ) {
           primary_key: aircraft_model_code
           measure: bo_count is count()
@@ -492,7 +484,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     explore: b_models is
         from(
           table('malloytest.aircraft_models') {? manufacturer: ~ 'B%' }
-          -> { project: [ aircraft_model_code, manufacturer, seats ] }
+          -> { project: aircraft_model_code, manufacturer, seats }
         ) {
           where: bo_models.seats > 200
           primary_key: aircraft_model_code
