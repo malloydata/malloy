@@ -179,7 +179,10 @@ class BetaExpression extends Testable {
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
-        const _exprDef = exprAst.getExpression(new StructSpace(aStruct));
+        const exprDef = exprAst.getExpression(new StructSpace(aStruct));
+        if (inspectCompile) {
+          console.log("EXPRESSION: ", pretty(exprDef));
+        }
       } else {
         throw new Error("Can't get simple namespace for expression tests");
       }
@@ -700,6 +703,15 @@ describe("expressions", () => {
           pick 'medium' when < 100
           else 'large'
     `)
+    );
+
+    test(
+      "when single values",
+      exprOK(`
+        ai :
+          pick 'one' when 1
+          else 'a lot'
+      `)
     );
   });
 });
