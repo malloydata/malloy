@@ -152,11 +152,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         join_cross: a
       }
       query: f->{
-        aggregate:[
+        aggregate:
           row_count is count(distinct concat(state,a.state))
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
-        ]
       }
       `
       )
@@ -180,12 +179,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         join_one: a is from(->q)
       }
       query: f->{
-        aggregate:[
+        aggregate:
           row_count is count(distinct concat(state,a.r))
           left_sum is airport_count.sum()
           right_sum is a.r.sum()
           sum_sum is sum(airport_count + a.r)
-        ]
       }
       `
       )
@@ -208,11 +206,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         join_cross: a on a.state = 'CA' | 'NY'
       }
       query: f->{
-        aggregate:[
+        aggregate:
           row_count is count(distinct concat(state,a.state))
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
-        ]
       }
       `
       )
