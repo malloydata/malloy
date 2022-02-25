@@ -32,6 +32,13 @@ These naming convention shortcuts currently include:
 
 Styles apply to standalone queries as well as when nested.
 
+
+A quick video demonstration of using styles:
+https://user-images.githubusercontent.com/7178946/155807662-795b0966-88fc-4527-b05e-ac97b9429b7c.mp4
+
+
+
+
 ## Example Model
 
 ```malloy
