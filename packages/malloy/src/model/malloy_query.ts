@@ -971,10 +971,22 @@ class FieldInstanceResult implements FieldInstance {
     return [];
   }
 
-  addStructToJoin(qs: QueryStruct, mayNeedUniqueKey: boolean): JoinInstance {
+  addStructToJoin(
+    qs: QueryStruct,
+    query: QueryQuery,
+    mayNeedUniqueKey: boolean
+  ): JoinInstance {
+    // const sr = qs.fieldDef.structRelationship;
+    // if (isJoinOn(sr) && sr.onExpression !== undefined) {
+    //   query.addDependantExpr(this, qs, sr.onExpression);
+    // }
     let parent: JoinInstance | undefined;
     if (qs.parent && qs.parent.getJoinableParent()) {
-      parent = this.addStructToJoin(qs.parent.getJoinableParent(), false);
+      parent = this.addStructToJoin(
+        qs.parent.getJoinableParent(),
+        query,
+        false
+      );
     }
     const name = qs.getIdentifier();
     let join;
@@ -986,12 +998,16 @@ class FieldInstanceResult implements FieldInstance {
     return join;
   }
 
-  findJoins() {
+  findJoins(query: QueryQuery) {
     for (const dim of this.fields()) {
-      this.addStructToJoin(dim.f.getJoinableParent(), dim.f.mayNeedUniqueKey());
+      this.addStructToJoin(
+        dim.f.getJoinableParent(),
+        query,
+        dim.f.mayNeedUniqueKey()
+      );
     }
     for (const s of this.structs()) {
-      s.findJoins();
+      s.findJoins(query);
     }
   }
 
@@ -1395,7 +1411,7 @@ class QueryQuery extends QueryField {
     }
     resultStruct
       .root()
-      .addStructToJoin(struct.getJoinableParent(), mayNeedUniqueKey);
+      .addStructToJoin(struct.getJoinableParent(), this, mayNeedUniqueKey);
   }
 
   addDependantExpr(
@@ -1411,7 +1427,7 @@ class QueryQuery extends QueryField {
         } else {
           resultStruct
             .root()
-            .addStructToJoin(field.parent.getJoinableParent(), false);
+            .addStructToJoin(field.parent.getJoinableParent(), this, false);
           // this.addDependantPath(resultStruct, field.parent, expr.path, false);
         }
       } else if (isFilterFragment(expr)) {
@@ -1424,7 +1440,7 @@ class QueryQuery extends QueryField {
             this.addDependantPath(resultStruct, context, expr.structPath, true);
           } else {
             // we are doing a sum in the root.  It may need symetric aggregates
-            resultStruct.addStructToJoin(context, true);
+            resultStruct.addStructToJoin(context, this, true);
           }
         }
         this.addDependantExpr(resultStruct, context, expr.e);
@@ -1548,7 +1564,7 @@ class QueryQuery extends QueryField {
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
       this.expandFields(this.rootResult);
-      this.rootResult.findJoins();
+      this.rootResult.findJoins(this);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
     }

@@ -275,7 +275,7 @@ describe("join expression tests", () => {
     });
 
     // not sure how to solve this one yet.
-    it.skip(`All joins at the same level - ${database}`, async () => {
+    it(`All joins at the same level - ${database}`, async () => {
       const result = await runtime
         .loadQuery(
           `
