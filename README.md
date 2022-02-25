@@ -105,4 +105,6 @@ Key features and advantages:
 
 If you would like to [work on Malloy](CONTRIBUTING.md), you can find some helpful instructions about [developing Malloy](developing.md) and [developing documentation](documentation.md).
 
+To report security issues please see our [security policy](https://github.com/looker-open-source/malloy/security/policy).
+
 Malloy is not an officially supported Google product.
