@@ -925,6 +925,7 @@ export type QueryProperty =
   | ProjectStatement
   | NestReference
   | NestDefinition
+  | NestReference
   | Nests
   | Aggregate
   | GroupBy;
@@ -938,8 +939,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof ProjectStatement ||
     q instanceof Aggregate ||
     q instanceof Nests ||
-    q instanceof NestReference ||
-    q instanceof NestDefinition ||
+    isNestedQuery(q) ||
     q instanceof GroupBy
   );
 }
@@ -1340,8 +1340,7 @@ class ProjectExecutor extends ReduceExecutor {
       return true;
     }
     if (
-      qp instanceof NestDefinition ||
-      qp instanceof NestReference ||
+      isNestedQuery(qp) ||
       qp instanceof Nests ||
       qp instanceof Aggregate ||
       qp instanceof GroupBy
@@ -1472,8 +1471,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
         }
       } else if (
         el instanceof Nests ||
-        el instanceof NestDefinition ||
-        el instanceof NestReference ||
+        isNestedQuery(el) ||
         el instanceof GroupBy
       ) {
         firstGuess ||= "grouping";
@@ -1981,6 +1979,14 @@ export class NestReference extends FieldReference {
   }
 }
 
+export class NestRefinement extends TurtleDecl {
+  elementType = "nestRefinement";
+  constructor(turtleName: FieldName) {
+    super(turtleName.refString);
+    this.turtleName = turtleName;
+  }
+}
+
 export class NestDefinition extends TurtleDecl {
   elementType = "nestDefinition";
   constructor(name: string) {
@@ -1988,9 +1994,13 @@ export class NestDefinition extends TurtleDecl {
   }
 }
 
-export type NestedQuery = NestReference | NestDefinition;
+export type NestedQuery = NestReference | NestDefinition | NestRefinement;
 export function isNestedQuery(me: MalloyElement): me is NestedQuery {
-  return me instanceof NestReference || me instanceof NestDefinition;
+  return (
+    me instanceof NestRefinement ||
+    me instanceof NestReference ||
+    me instanceof NestDefinition
+  );
 }
 
 export class Nests extends ListOf<NestedQuery> {
