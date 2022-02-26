@@ -1694,6 +1694,15 @@ describe("pipeline comprehension", () => {
     `)
   );
   test(
+    "reference to a query can include a refinement",
+    modelOK(`
+      query: ab -> {
+        group_by: ai
+        nest: aturtle { limit: 1 }
+      }
+    `)
+  );
+  test(
     "Querying an explore based on a query",
     modelOK(`
       query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }

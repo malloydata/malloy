@@ -27,11 +27,11 @@ import {
   HasParameter,
   FieldCollectionMember,
   QueryItem,
-  NestDefinition,
   MalloyElement,
   NestReference,
   FieldReference,
   ErrorFactory,
+  isNestedQuery,
 } from "./ast";
 import {
   SpaceField,
@@ -389,7 +389,7 @@ export abstract class QueryFieldSpace extends NewFieldSpace {
         this.addReference(qi);
       } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);
-      } else if (qi instanceof NestDefinition) {
+      } else if (isNestedQuery(qi)) {
         this.setEntry(qi.name, new QueryFieldAST(this.inputSpace, qi, qi.name));
       } else {
         throw new Error("INTERNAL ERROR: QueryFieldSpace unknown element");

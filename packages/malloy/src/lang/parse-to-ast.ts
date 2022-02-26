@@ -733,6 +733,13 @@ export class MalloyToAST
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getFieldName(pcx.queryName());
+    const propsCx = pcx.queryProperties();
+    if (propsCx) {
+      const nestRefine = new ast.NestRefinement(name);
+      const queryDesc = this.visitQueryProperties(propsCx);
+      nestRefine.refineHead(queryDesc);
+      return this.astAt(nestRefine, pcx);
+    }
     return this.astAt(new ast.NestReference(name), pcx);
   }
 
