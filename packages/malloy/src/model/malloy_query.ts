@@ -974,22 +974,37 @@ class FieldInstanceResult implements FieldInstance {
   addStructToJoin(
     qs: QueryStruct,
     query: QueryQuery,
-    mayNeedUniqueKey: boolean
+    mayNeedUniqueKey: boolean,
+    joinStack: string[]
   ): JoinInstance {
-    // const sr = qs.fieldDef.structRelationship;
-    // if (isJoinOn(sr) && sr.onExpression !== undefined) {
-    //   query.addDependantExpr(this, qs, sr.onExpression);
-    // }
+    const name = qs.getIdentifier();
+    let join;
+    if ((join = this.root().joins.get(name))) {
+      return join;
+    }
     let parent: JoinInstance | undefined;
     if (qs.parent && qs.parent.getJoinableParent()) {
+      // add dependant expressions first...
       parent = this.addStructToJoin(
         qs.parent.getJoinableParent(),
         query,
-        false
+        false,
+        joinStack
       );
+      const sr = qs.fieldDef.structRelationship;
+      if (
+        isJoinOn(sr) &&
+        sr.onExpression !== undefined &&
+        joinStack.indexOf(name) === -1
+      ) {
+        query.addDependantExpr(
+          this,
+          qs.parent.getJoinableParent(),
+          sr.onExpression,
+          [...joinStack, name]
+        );
+      }
     }
-    const name = qs.getIdentifier();
-    let join;
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
@@ -1003,7 +1018,8 @@ class FieldInstanceResult implements FieldInstance {
       this.addStructToJoin(
         dim.f.getJoinableParent(),
         query,
-        dim.f.mayNeedUniqueKey()
+        dim.f.mayNeedUniqueKey(),
+        []
       );
     }
     for (const s of this.structs()) {
@@ -1398,7 +1414,8 @@ class QueryQuery extends QueryField {
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     path: string,
-    mayNeedUniqueKey: boolean
+    mayNeedUniqueKey: boolean,
+    joinStack: string[]
   ) {
     const node = context.getFieldByName(path);
     let struct;
@@ -1411,46 +1428,73 @@ class QueryQuery extends QueryField {
     }
     resultStruct
       .root()
-      .addStructToJoin(struct.getJoinableParent(), this, mayNeedUniqueKey);
+      .addStructToJoin(
+        struct.getJoinableParent(),
+        this,
+        mayNeedUniqueKey,
+        joinStack
+      );
   }
 
   addDependantExpr(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
-    e: Expr
+    e: Expr,
+    joinStack: string[]
   ): void {
     for (const expr of e) {
       if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {
-          this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e);
+          this.addDependantExpr(
+            resultStruct,
+            field.parent,
+            field.fieldDef.e,
+            joinStack
+          );
         } else {
           resultStruct
             .root()
-            .addStructToJoin(field.parent.getJoinableParent(), this, false);
+            .addStructToJoin(
+              field.parent.getJoinableParent(),
+              this,
+              false,
+              joinStack
+            );
           // this.addDependantPath(resultStruct, field.parent, expr.path, false);
         }
       } else if (isFilterFragment(expr)) {
         for (const filterCond of expr.filterList) {
-          this.addDependantExpr(resultStruct, context, filterCond.expression);
+          this.addDependantExpr(
+            resultStruct,
+            context,
+            filterCond.expression,
+            joinStack
+          );
         }
       } else if (isAggregateFragment(expr)) {
         if (isAsymmetricFragment(expr)) {
           if (expr.structPath) {
-            this.addDependantPath(resultStruct, context, expr.structPath, true);
+            this.addDependantPath(
+              resultStruct,
+              context,
+              expr.structPath,
+              true,
+              joinStack
+            );
           } else {
             // we are doing a sum in the root.  It may need symetric aggregates
-            resultStruct.addStructToJoin(context, this, true);
+            resultStruct.addStructToJoin(context, this, true, joinStack);
           }
         }
-        this.addDependantExpr(resultStruct, context, expr.e);
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       }
     }
   }
 
   addDependancies(resultStruct: FieldInstanceResult, field: QueryField): void {
     if (hasExpression(field.fieldDef)) {
-      this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e);
+      this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e, []);
     }
   }
 
@@ -1518,12 +1562,12 @@ class QueryQuery extends QueryField {
     // in the correct catgory.
     for (const cond of resultStruct.firstSegment.filterList || []) {
       const context = this.parent;
-      this.addDependantExpr(resultStruct, context, cond.expression);
+      this.addDependantExpr(resultStruct, context, cond.expression, []);
     }
     for (const join of resultStruct.root().joins.values() || []) {
       for (const qf of join.joinFilterConditions || []) {
         if (qf.fieldDef.type === "boolean" && qf.fieldDef.e) {
-          this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e);
+          this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e, []);
         }
       }
     }
