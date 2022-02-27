@@ -980,6 +980,7 @@ class FieldInstanceResult implements FieldInstance {
     const name = qs.getIdentifier();
     let join;
     if ((join = this.root().joins.get(name))) {
+      join.mayNeedUniqueKey ||= mayNeedUniqueKey;
       return;
     }
 
