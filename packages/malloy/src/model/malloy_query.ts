@@ -976,41 +976,41 @@ class FieldInstanceResult implements FieldInstance {
     query: QueryQuery,
     mayNeedUniqueKey: boolean,
     joinStack: string[]
-  ): JoinInstance {
+  ): void {
     const name = qs.getIdentifier();
     let join;
     if ((join = this.root().joins.get(name))) {
-      return join;
+      return;
     }
+
+    // if we have a parent, join it first.
     let parent: JoinInstance | undefined;
-    if (qs.parent && qs.parent.getJoinableParent()) {
+    const parentStruct = qs.parent?.getJoinableParent();
+    if (parentStruct) {
       // add dependant expressions first...
-      parent = this.addStructToJoin(
-        qs.parent.getJoinableParent(),
-        query,
-        false,
-        joinStack
-      );
-      const sr = qs.fieldDef.structRelationship;
-      if (
-        isJoinOn(sr) &&
-        sr.onExpression !== undefined &&
-        joinStack.indexOf(name) === -1
-      ) {
-        query.addDependantExpr(
-          this,
-          qs.parent.getJoinableParent(),
-          sr.onExpression,
-          [...joinStack, name]
-        );
-      }
+      this.addStructToJoin(parentStruct, query, false, joinStack);
+      parent = this.root().joins.get(parentStruct.getIdentifier());
     }
+
+    // add any dependant joins based on the ON
+    const sr = qs.fieldDef.structRelationship;
+    if (
+      isJoinOn(sr) &&
+      qs.parent && // if the join has an ON, it must thave a parent
+      sr.onExpression !== undefined &&
+      joinStack.indexOf(name) === -1
+    ) {
+      query.addDependantExpr(this, qs.parent, sr.onExpression, [
+        ...joinStack,
+        name,
+      ]);
+    }
+
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
     join.mayNeedUniqueKey ||= mayNeedUniqueKey;
-    return join;
   }
 
   findJoins(query: QueryQuery) {
