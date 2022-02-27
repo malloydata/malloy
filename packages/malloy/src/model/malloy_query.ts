@@ -971,27 +971,60 @@ class FieldInstanceResult implements FieldInstance {
     return [];
   }
 
-  addStructToJoin(qs: QueryStruct, mayNeedUniqueKey: boolean): JoinInstance {
-    let parent: JoinInstance | undefined;
-    if (qs.parent && qs.parent.getJoinableParent()) {
-      parent = this.addStructToJoin(qs.parent.getJoinableParent(), false);
-    }
+  addStructToJoin(
+    qs: QueryStruct,
+    query: QueryQuery,
+    mayNeedUniqueKey: boolean,
+    joinStack: string[]
+  ): void {
     const name = qs.getIdentifier();
     let join;
+    if ((join = this.root().joins.get(name))) {
+      join.mayNeedUniqueKey ||= mayNeedUniqueKey;
+      return;
+    }
+
+    // if we have a parent, join it first.
+    let parent: JoinInstance | undefined;
+    const parentStruct = qs.parent?.getJoinableParent();
+    if (parentStruct) {
+      // add dependant expressions first...
+      this.addStructToJoin(parentStruct, query, false, joinStack);
+      parent = this.root().joins.get(parentStruct.getIdentifier());
+    }
+
+    // add any dependant joins based on the ON
+    const sr = qs.fieldDef.structRelationship;
+    if (
+      isJoinOn(sr) &&
+      qs.parent && // if the join has an ON, it must thave a parent
+      sr.onExpression !== undefined &&
+      joinStack.indexOf(name) === -1
+    ) {
+      query.addDependantExpr(this, qs.parent, sr.onExpression, [
+        ...joinStack,
+        name,
+      ]);
+    }
+
     if (!(join = this.root().joins.get(name))) {
       join = new JoinInstance(qs, name, parent);
       this.root().joins.set(name, join);
     }
     join.mayNeedUniqueKey ||= mayNeedUniqueKey;
-    return join;
   }
 
-  findJoins() {
+  findJoins(query: QueryQuery) {
     for (const dim of this.fields()) {
-      this.addStructToJoin(dim.f.getJoinableParent(), dim.f.mayNeedUniqueKey());
+      this.addStructToJoin(
+        dim.f.getJoinableParent(),
+        query,
+        dim.f.mayNeedUniqueKey(),
+        []
+      );
     }
     for (const s of this.structs()) {
-      s.findJoins();
+      s.findJoins(query);
     }
   }
 
@@ -1382,7 +1415,8 @@ class QueryQuery extends QueryField {
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     path: string,
-    mayNeedUniqueKey: boolean
+    mayNeedUniqueKey: boolean,
+    joinStack: string[]
   ) {
     const node = context.getFieldByName(path);
     let struct;
@@ -1395,46 +1429,73 @@ class QueryQuery extends QueryField {
     }
     resultStruct
       .root()
-      .addStructToJoin(struct.getJoinableParent(), mayNeedUniqueKey);
+      .addStructToJoin(
+        struct.getJoinableParent(),
+        this,
+        mayNeedUniqueKey,
+        joinStack
+      );
   }
 
   addDependantExpr(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
-    e: Expr
+    e: Expr,
+    joinStack: string[]
   ): void {
     for (const expr of e) {
       if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {
-          this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e);
+          this.addDependantExpr(
+            resultStruct,
+            field.parent,
+            field.fieldDef.e,
+            joinStack
+          );
         } else {
           resultStruct
             .root()
-            .addStructToJoin(field.parent.getJoinableParent(), false);
+            .addStructToJoin(
+              field.parent.getJoinableParent(),
+              this,
+              false,
+              joinStack
+            );
           // this.addDependantPath(resultStruct, field.parent, expr.path, false);
         }
       } else if (isFilterFragment(expr)) {
         for (const filterCond of expr.filterList) {
-          this.addDependantExpr(resultStruct, context, filterCond.expression);
+          this.addDependantExpr(
+            resultStruct,
+            context,
+            filterCond.expression,
+            joinStack
+          );
         }
       } else if (isAggregateFragment(expr)) {
         if (isAsymmetricFragment(expr)) {
           if (expr.structPath) {
-            this.addDependantPath(resultStruct, context, expr.structPath, true);
+            this.addDependantPath(
+              resultStruct,
+              context,
+              expr.structPath,
+              true,
+              joinStack
+            );
           } else {
             // we are doing a sum in the root.  It may need symetric aggregates
-            resultStruct.addStructToJoin(context, true);
+            resultStruct.addStructToJoin(context, this, true, joinStack);
           }
         }
-        this.addDependantExpr(resultStruct, context, expr.e);
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       }
     }
   }
 
   addDependancies(resultStruct: FieldInstanceResult, field: QueryField): void {
     if (hasExpression(field.fieldDef)) {
-      this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e);
+      this.addDependantExpr(resultStruct, field.parent, field.fieldDef.e, []);
     }
   }
 
@@ -1502,12 +1563,12 @@ class QueryQuery extends QueryField {
     // in the correct catgory.
     for (const cond of resultStruct.firstSegment.filterList || []) {
       const context = this.parent;
-      this.addDependantExpr(resultStruct, context, cond.expression);
+      this.addDependantExpr(resultStruct, context, cond.expression, []);
     }
     for (const join of resultStruct.root().joins.values() || []) {
       for (const qf of join.joinFilterConditions || []) {
         if (qf.fieldDef.type === "boolean" && qf.fieldDef.e) {
-          this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e);
+          this.addDependantExpr(resultStruct, qf.parent, qf.fieldDef.e, []);
         }
       }
     }
@@ -1548,7 +1609,7 @@ class QueryQuery extends QueryField {
   prepare(_stageWriter: StageWriter | undefined) {
     if (!this.prepared) {
       this.expandFields(this.rootResult);
-      this.rootResult.findJoins();
+      this.rootResult.findJoins(this);
       this.rootResult.calculateSymmetricAggregates();
       this.prepared = true;
     }
