@@ -64,9 +64,11 @@ topLevelQueryDef
   : queryName IS query
   ;
 
+refineOperator: PLUS ;
+
 query
   : explore ARROW pipelineFromName                  # exploreArrowQuery
-  | ARROW queryName queryProperties? pipeElement*   # arrowQuery
+  | ARROW queryName (refineOperator? queryProperties)? pipeElement*   # arrowQuery
   ;
 
 pipelineFromName
@@ -75,7 +77,7 @@ pipelineFromName
 
 firstSegment
   : queryProperties
-  | exploreQueryName queryProperties?
+  | exploreQueryName (refineOperator? queryProperties)?
   ;
 
 pipeElement
@@ -108,7 +110,7 @@ exploreDefinition
   ;
 
 explore
-  : exploreSource exploreProperties?
+  : exploreSource (refineOperator? exploreProperties)?
   ;
 
 exploreSource
