@@ -52,10 +52,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
-        project: [
+        project:
           t_date
           t_timestamp
-        ]
       }
       `
       )
@@ -74,7 +73,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
-        aggregate: [
+        aggregate:
           d1 is count() { where: t_date: @2021-02-24} = 1
           d2 is count() { where: t_date: @2021-02-23 for 2 days} = 1
           // d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
@@ -84,7 +83,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           t1 is count() { where: t_timestamp: @2021-02-24} = 1
           // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
           t3 is count() { where: t_timestamp: @2021-02-23 00:00:00 for 2 days} = 1
-        ]
       }
       `
       )
@@ -105,7 +103,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
-        aggregate: [
+        aggregate:
           works is count() = 1
 
           // this is actually not working quite right, needs to be a date comparison, not a
@@ -114,7 +112,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
           // the end of the range is a date which can't be casted to a timezone.
           // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
-        ]
       }
       `
       )

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2021 Google LLC
  *
@@ -75,10 +76,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
       .loadQuery(
         `
         query: models->{
-          group_by: [
+          group_by:
             manufacturer,
             big is seats >=21
-          ]
           aggregate: model_count is count()
         }->{
           group_by: big
@@ -132,10 +132,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
           aggregate: fetch is count()
         }
       } -> {
-        project: [
+        project:
           withxz is lower(withx.select)
           fetch is withx.fetch
-        ]
       }
       `
       )
@@ -188,7 +187,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
         query: popular_names->{
           order_by: 2
-          project: [manufacturer, model_count]
+          project: manufacturer, model_count
         }
         `
       )
@@ -213,7 +212,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
         query: popular_names->{
          order_by: 2
-         project: [manufacturer, model_count]
+         project: manufacturer, model_count
         }
         `
       )

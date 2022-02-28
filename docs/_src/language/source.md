@@ -29,10 +29,9 @@ or queries.
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e1.malloy"}
 query: flights -> {
   // Columns from the source table are available
-  group_by: [
+  group_by:
     carrier
     origin
-  ]
   aggregate: flight_count
   limit: 3
 }
@@ -57,7 +56,7 @@ source: my_flights is flights {
 
   query: carrier_stats is {
     group_by: carrier
-    aggregate: [ total_distance, flight_count ]
+    aggregate: total_distance, flight_count
   }
 }
 ```
@@ -97,7 +96,7 @@ source: carrier_facts is from(
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e2.malloy"}
 query: carrier_facts -> {
-  project: [ carrier, lifetime_flights_bucketed, lifetime_flights ]
+  project: carrier, lifetime_flights_bucketed, lifetime_flights
   limit: 3
 }
 ```
@@ -122,7 +121,7 @@ source: carrier_facts is from(flights -> by_carrier) {
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e3.malloy"}
 query: carrier_facts -> {
-  project: [ carrier, lifetime_flights_bucketed, lifetime_flights ]
+  project: carrier, lifetime_flights_bucketed, lifetime_flights
   limit: 3
 }
 ```

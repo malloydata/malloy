@@ -26,10 +26,9 @@ source: words_and_letters is from(words->five_letter_words){
     group_by: word
     nest: letters is {
       order_by: 2
-      group_by: [
+      group_by:
         letter is substr(word, numbers.num, 1)
         position is numbers.num
-      ]
     }
   }
 }
@@ -51,10 +50,9 @@ This query finds the most common letter-position matches.
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> {
-  group_by: [
+  group_by:
     letters.letter
     letters.position
-  ]
   aggregate: word_count
 }
 ```
@@ -66,10 +64,9 @@ We can see that 'E' in position 5 occurs in 498 words, 'S' in position 1  occurs
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> {
-  group_by: [
+  group_by:
     letters.letter
     letters.position
-  ]
   aggregate: word_count
   nest: words_list is {
     group_by: word
@@ -86,10 +83,9 @@ source: wordle is from(words_and_letters -> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
@@ -103,11 +99,10 @@ source: wordle is from(words_and_letters -> words_and_position) {
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w4.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'[Y]',
     word ~ r'.O...',
     word !~ r'[SLA]'
-  ]
 }
 ```
 
@@ -133,10 +128,9 @@ source: wordle is from(words_and_letters -> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
@@ -154,10 +148,9 @@ The score should give us then best pick.
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w5.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'[Y]',
     word ~ r'.O...',
     word !~ r'[SLA]'
-  ]
 }
 ```

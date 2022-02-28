@@ -7,7 +7,7 @@ import "hackernews.malloy"
 
 source: faang_analysis is stories {
 
-  dimension: [
+  dimension:
     faang is title :
       pick 'Facebook' when ~ r'(Facebook|Instagram|Whatsapp)'
       pick 'Apple' when ~ r'(Apple|iPhone|IOS|Macbook)'
@@ -15,26 +15,24 @@ source: faang_analysis is stories {
       pick 'Netflix' when ~ r'Netflix'
       pick 'Google' when ~ r'(Google|GOOG|Alphabet|GCloud|Chrome)'
       else 'OTHER'
-  ]
 
   query: apple_dashboard is term_dashboard {
-    where: [ faang = 'Apple', score >= threshold ]
+    where: faang = 'Apple', score >= threshold
   }
 
   query: google_dashboard is term_dashboard {
-    where: [ faang = 'Google', score >= threshold ]
+    where: faang = 'Google', score >= threshold
   }
 
   query: faang_stories is stories {
-    where: [ faang != 'OTHER', score >= threshold ]
+    where: faang != 'OTHER', score >= threshold
   }
 
   query: faang_dashboard is {
-    where: [
+    where:
       faang != 'OTHER',
       score >= threshold,
       post_type = 'story'
-    ]
     nest: faang_story_chart is {
       group_by: posted_month is post_time.month
       aggregate: post_count

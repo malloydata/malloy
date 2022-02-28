@@ -56,8 +56,7 @@ importURL
   ;
 
 topLevelQueryDefs
-  : topLevelQueryDef
-  | OBRACK (topLevelQueryDef COMMA?)* CBRACK
+  : topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
@@ -101,8 +100,7 @@ exploreQueryName : id;
 queryName : id;
 
 exploreDefinitionList
-  : OBRACK (exploreDefinition COMMA?)* CBRACK   # defineManyExplores
-  | exploreDefinition                           # defineOneExplore
+  : exploreDefinition (COMMA? exploreDefinition)* COMMA?
   ;
 
 exploreDefinition
@@ -142,8 +140,7 @@ exploreStatement
   ;
 
 renameList
-  : OBRACK (exploreRenameDef COMMA?)* CBRACK
-  | exploreRenameDef
+  : exploreRenameDef (COMMA? exploreRenameDef)* COMMA?
   ;
 
 exploreRenameDef
@@ -151,13 +148,11 @@ exploreRenameDef
   ;
 
 dimensionDefList
-  : OBRACK (dimensionDef COMMA?)* CBRACK
-  | dimensionDef
+  : dimensionDef (COMMA? dimensionDef)* COMMA?
   ;
 
 measureDefList
-  : OBRACK (measureDef COMMA?)* CBRACK
-  | measureDef
+  : measureDef (COMMA? measureDef)* COMMA?
   ;
 
 fieldDef
@@ -170,8 +165,7 @@ joinNameDef: id;
 measureDef: fieldDef;
 
 joinList
-  : OBRACK (joinDef COMMA?)* CBRACK
-  | joinDef
+  : joinDef (COMMA? joinDef)* COMMA?
   ;
 
 joinDef
@@ -192,8 +186,7 @@ filteredBy
   ;
 
 filterClauseList
-  : fieldExpr
-  | OBRACK fieldExprList CBRACK
+  : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 whereStatement
@@ -205,8 +198,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : OBRACK (exploreQueryDef COMMA?)* CBRACK
-  | exploreQueryDef
+  : exploreQueryDef (COMMA? exploreQueryDef)* COMMA?
   ;
 
 exploreQueryNameDef: id;
@@ -233,8 +225,7 @@ groupByStatement
   ;
 
 queryFieldList
-  : OBRACK (queryFieldEntry COMMA?)* CBRACK
-  | queryFieldEntry
+  : queryFieldEntry (COMMA? queryFieldEntry)* COMMA?
   ;
 
 dimensionDef: fieldDef;
@@ -242,7 +233,6 @@ dimensionDef: fieldDef;
 queryFieldEntry
   : fieldPath      # queryFieldRef
   | dimensionDef   # queryFieldDef
-  // | fieldExpr      # queryFieldNameless
   ;
 
 nestStatement
@@ -250,8 +240,7 @@ nestStatement
   ;
 
 nestedQueryList
-  : nestEntry
-  | OBRACK (nestEntry COMMA?)* CBRACK
+  : nestEntry (COMMA? nestEntry)* COMMA?
   ;
 
 nestEntry
@@ -272,8 +261,7 @@ orderByStatement
   ;
 
 ordering
-  : orderBySpec
-  | OBRACK orderBySpec (COMMA orderBySpec)* COMMA? CBRACK
+  : orderBySpec (COMMA? orderBySpec)* COMMA?
   ;
 
 orderBySpec
@@ -356,7 +344,7 @@ fieldExpr
       aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
-  | (id | timeframe) OPAREN ( fieldExprList? ) CPAREN      # exprFunc
+  | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
   ;
 
@@ -373,13 +361,12 @@ pick
   : PICK (pickValue=fieldExpr)? WHEN pickWhen=partialAllowedFieldExpr
   ;
 
-fieldExprList
+argumentList
   : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 fieldNameList
-  : fieldOrStar
-  | OBRACK fieldOrStar ( COMMA fieldOrStar)* COMMA? CBRACK
+  : fieldOrStar (COMMA? fieldOrStar)* COMMA?
   ;
 
 fieldOrStar
@@ -388,8 +375,7 @@ fieldOrStar
   ;
 
 fieldCollection
-  : collectionMember
-  | OBRACK (collectionMember COMMA?)* COMMA? CBRACK
+  : collectionMember (COMMA? collectionMember)* COMMA?
   ;
 
 collectionMember

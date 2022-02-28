@@ -8,12 +8,11 @@ section](step2.md).
 
 ```malloy
 source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
-  measure: [
+  measure:
     total_sale_dollars is sale_dollars.sum()
     total_bottles is sum(bottles_sold)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
     avg_price_per_100ml is price_per_100ml.avg()
-  ]
 }
 ```
 
@@ -26,8 +25,8 @@ Notice that the greatest sales by dollar volume is *Hawkeye Vodka*, closely foll
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 query: iowa { where: category_name ~ r'VODKA' } -> {
   top: 5
-  group_by: [ vendor_name, item_description ]
-  aggregate: [ total_sale_dollars, total_bottles, avg_price_per_100ml ]
+  group_by: vendor_name, item_description
+  aggregate: total_sale_dollars, total_bottles, avg_price_per_100ml
 }
 ```
 
@@ -36,17 +35,16 @@ This particular view of the data is pretty useful, an something we expect to re-
 
 ```malloy
 source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
-  measure: [
+  measure:
     total_sale_dollars is sale_dollars.sum()
     total_bottles is sum(bottles_sold)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
     avg_price_per_100ml is price_per_100ml.avg()
-  ]
 
   query: top_sellers_by_revenue is {
     top: 5
-    group_by: [vendor_name, item_description]
-    aggregate: [total_sale_dollars, total_bottles, avg_price_per_100ml]
+    group_by: vendor_name, item_description
+    aggregate: total_sale_dollars, total_bottles, avg_price_per_100ml
   }
 }
 ```
@@ -71,7 +69,7 @@ The magic happens when we call a named query in the same way we would use any ot
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "medium"}
 query: iowa { where: category_name ~ r'TEQUILA' } -> {
   group_by: vendor_name
-  aggregate: [ total_sale_dollars, avg_price_per_100ml ]
+  aggregate: total_sale_dollars, avg_price_per_100ml
   nest: top_sellers_by_revenue // entire query is a field
 }
 ```

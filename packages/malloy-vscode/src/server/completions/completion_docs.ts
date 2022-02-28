@@ -89,7 +89,7 @@ const QUERY_PROJECT_DOC = `Use \`project\` to retrieve dimensional values withou
 
 \`\`\`malloy
 query: flights -> {
-  project: [ id2, carrier, dep_time ]
+  project: id2, carrier, dep_time
   limit: 10
 }
 \`\`\`
@@ -113,10 +113,9 @@ const QUERY_AGGREGATE_DOC = `Use \`aggregate\` to perform aggregate computations
 \`\`\`malloy
 query: flights -> {
   group_by: carrier
-  aggregate: [
+  aggregate:
     flight_count is count()
     total_distance is sum(distance)
-  ]
 }
 \`\`\`
 

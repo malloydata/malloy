@@ -162,11 +162,10 @@ source: flights is table('malloy-data.faa.flights') {
 
 query: flights->{
   group_by: aircraft.aircraft_models.manufacturer
-  aggregate: [
+  aggregate:
     flight_count is count()
     aircraft_count is aircraft.count()
     aircraft_model_count is aircraft.aircraft_models.count()
-  ]
 }
 ```
 
