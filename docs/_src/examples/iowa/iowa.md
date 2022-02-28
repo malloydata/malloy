@@ -34,10 +34,9 @@ query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> 
   }
   nest: other_columns is {
     where: field_type != 'string'
-    group_by: [
+    group_by:
       column_name is field_name
       ranges_of_values is field_value
-    ]
   }
 }
 ```

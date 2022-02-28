@@ -15,7 +15,7 @@ Having added this to the model, we can now reference `total_sale_dollars` to see
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
 query: iowa -> {
-  group_by: [ vendor_name, item_description ]
+  group_by: vendor_name, item_description
   aggregate: total_sale_dollars
 }
 ```
@@ -33,8 +33,8 @@ We can see which Vendors have the greatest breadth of products as it relates to 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
 query: iowa -> {
-  group_by: [ vendor_name ]
-  aggregate: [ item_count, total_sale_dollars ]
+  group_by: vendor_name
+  aggregate: item_count, total_sale_dollars
 }
 ```
 
@@ -54,7 +54,7 @@ Looking at gross margin across top selling items, we see that the gross margin i
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
 query: iowa -> {
-  group_by: [ item_description, state_bottle_retail, state_bottle_cost, gross_margin ]
+  group_by: item_description, state_bottle_retail, state_bottle_cost, gross_margin
   aggregate: total_sale_dollars
 }
 ```

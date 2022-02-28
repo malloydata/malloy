@@ -36,14 +36,12 @@ In the query below, the data will be grouped by `state` and will produce an aggr
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports') -> {
-  group_by: [
+  group_by:
     state
     county
-  ]
-  aggregate: [
+  aggregate:
     airport_count is count()
     average_elevation is avg(elevation)
-  ]
 }
 ```
 
@@ -67,7 +65,7 @@ query: table('malloy-data.faa.airports') -> {
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports') -> {
-  project: [ code, full_name, city, county ]
+  project: code, full_name, city, county
   where: county = 'SANTA CRUZ'
 }
 ```
@@ -94,10 +92,9 @@ Named objects, like columns from a table, and fields defined in a source, can be
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports') -> {
-  project: [
+  project:
     full_name
     elevation
-  ]
 }
 ```
 
@@ -109,12 +106,11 @@ Many SQL expressions will work unchanged in Malloy, and many functions available
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
 query: table('malloy-data.faa.airports') -> {
   group_by: county_and_state is concat(county, ', ', state)
-  aggregate: [
+  aggregate:
     airport_count is count()
     max_elevation is max(elevation)
     min_elevation is min(elevation)
     avg_elevation is avg(elevation)
-  ]
 }
 ```
 
@@ -197,11 +193,10 @@ query: table('malloy-data.faa.airports') -> {
   where: state: 'AL' | 'KY'
   top: 5
   group_by: state
-  aggregate: [
+  aggregate:
     airports  is count() { where: fac_type: 'AIRPORT' }
     heliports is count() { where: fac_type: 'HELIPORT' }
     total     is count()
-  ]
 }
 ```
 
@@ -231,11 +226,10 @@ A filter on an aggregate calculation (a _measure_) narrows down the data used in
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports') -> {
   group_by: state
-  aggregate: [
+  aggregate:
     airports is count() { where: fac_type = 'AIRPORT' }
     heliports is count() { where: fac_type = 'HELIPORT' }
     total is count()
-  ]
 }
 ```
 
@@ -272,10 +266,9 @@ Time values can be truncated to a given timeframe, which can be `second`, `minut
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
 query: table('malloy-data.faa.flights') -> {
-  group_by: [
+  group_by:
     flight_year is dep_time.year
     flight_month is dep_time.month
-  ]
   aggregate: flight_count is count()
 }
 ```
@@ -424,12 +417,11 @@ query: airports -> {
   }
 } -> {
   top: 10; order_by: 4 desc
-  project: [
+  project:
     by_county.county
     airports_in_county is by_county.airport_count
     airports_in_state is airport_count
     percent_in_county is by_county.airport_count / airport_count
-  ]
 }
 ```
 
@@ -452,11 +444,10 @@ source: flights is table('malloy-data.faa.flights') {
 query: flights->{
   where: dep_time: @2003-01
   group_by: aircraft.aircraft_models.manufacturer
-  aggregate: [
+  aggregate:
     flight_count is count()
     aircraft_count is aircraft.count()
     average_seats_per_model is aircraft.aircraft_models.seats.avg()
-  ]
 }
 ```
 
@@ -472,12 +463,11 @@ Aggregates may be computed with respect to any joined source, allowing for a wid
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/flights.malloy"}
 query: aircraft -> {
-  aggregate: [
+  aggregate:
     // The average number of seats on models of registered aircraft
     models_avg_seats is aircraft_models.seats.avg()
     // The average number of seats on registered aircraft
     aircraft_avg_seats is avg(aircraft_models.seats)
-  ]
 }
 ```
 
@@ -500,7 +490,7 @@ query: flights -> {
  */
 query: flights -> {
   group_by: carrier
-  aggregate: [ flight_count /* , total_distance */ ]
+  aggregate: flight_count /* , total_distance */
 }
 ```
 

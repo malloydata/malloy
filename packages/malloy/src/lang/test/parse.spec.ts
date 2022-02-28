@@ -376,10 +376,9 @@ describe("explore properties", () => {
     "multiple dimensions",
     modelOK(`
       explore: aa is a {
-        dimension: [
+        dimension:
           x is 1
           y is 2
-        ]
       }
     `)
   );
@@ -388,10 +387,9 @@ describe("explore properties", () => {
     "multiple measures",
     modelOK(`
       explore: aa is a {
-        dimension: [
+        dimension:
           x is count()
           y is x * x
-        ]
       }
     `)
   );
@@ -400,10 +398,9 @@ describe("explore properties", () => {
     "multiple where",
     modelOK(`
       explore: aa is a {
-        where: [
+        where:
           ai > 10,
           af < 1000
-        ]
       }
     `)
   );
@@ -434,10 +431,9 @@ describe("explore properties", () => {
       "multiple joins",
       modelOK(`
         explore: nab is a {
-          join_one: [
+          join_one:
             b with astr,
             br is b with astr
-          ]
         }
       `)
     );
@@ -445,9 +441,9 @@ describe("explore properties", () => {
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
   test("accept single", modelOK("explore: c is a { accept: astr }"));
-  test("accept multi", modelOK("explore: c is a { accept: [ astr, af ] }"));
+  test("accept multi", modelOK("explore: c is a { accept: astr, af }"));
   test("except single", modelOK("explore: c is a { except: astr }"));
-  test("except multi", modelOK("explore: c is a { except: [ astr, af ] }"));
+  test("except multi", modelOK("explore: c is a { except: astr, af }"));
   test(
     "explore-query",
     modelOK("explore: c is a {query: q is { group_by: astr }}")
@@ -477,10 +473,9 @@ describe("explore properties", () => {
     "multiple explore-query",
     modelOK(`
       explore: abNew is ab {
-        query: [
+        query:
           q1 is { group_by: astr },
           q2 is { group_by: ai }
-        ]
       }
     `)
   );
@@ -489,13 +484,13 @@ describe("explore properties", () => {
 describe("qops", () => {
   test("group by single", modelOK("query: a->{ group_by: astr }"));
   test("group_by x is x'", modelOK("query: a->{ group_by: ai is ai/2 }"));
-  test("group by multiple", modelOK("query: a->{ group_by: [astr,ai] }"));
+  test("group by multiple", modelOK("query: a->{ group_by: astr,ai }"));
   test("aggregate single", modelOK("query: a->{ aggregate: num is count() }"));
   test(
     "aggregate multiple",
     modelOK(`
       query: a->{
-        aggregate: [ num is count(), total is sum(ai) ]
+        aggregate: num is count(), total is sum(ai)
       }
     `)
   );
@@ -506,12 +501,12 @@ describe("qops", () => {
     "project multiple",
     modelOK(`
       query: a->{
-        project: [ one is 1, astr ]
+        project: one is 1, astr
       }
     `)
   );
   test("index single", modelOK("query:a->{index: astr}"));
-  test("index multiple", modelOK("query:a->{index: [astr,af]}"));
+  test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
   test("index by", modelOK("query:a->{index: * by ai}"));
   test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
@@ -535,8 +530,8 @@ describe("qops", () => {
     "order by multiple",
     modelOK(`
       query: a->{
-        order_by: [1 asc, af desc]
-        group_by: [ astr, af ]
+        order_by: 1 asc, af desc
+        group_by: astr, af
       }
     `)
   );
@@ -549,7 +544,7 @@ describe("qops", () => {
   );
   test(
     "where multiple",
-    modelOK("query:a->{ group_by: astr; where: [af > 10,astr~'a%'] }")
+    modelOK("query:a->{ group_by: astr; where: af > 10,astr~'a%' }")
   );
   test(
     "nest single",
@@ -565,10 +560,9 @@ describe("qops", () => {
     modelOK(`
       query: a->{
         group_by: ai
-        nest: [
+        nest:
           nestbystr is { group_by: astr; aggregate: N is count() },
           renest is { group_by: astr; aggregate: N is count() }
-        ]
       }
     `)
   );
@@ -941,10 +935,9 @@ describe("source locations", () => {
     const source = markSource`
       explore: na is from(
         ${"table('aTable')"} -> {
-          group_by: [
+          group_by:
             abool
             ${"y is 1"}
-          ]
         }
       )
     `;
@@ -1645,9 +1638,9 @@ describe("pipeline comprehension", () => {
     modelOK(`
       explore: aq is a {
         query: t1 is {
-          group_by: [ t1int is ai, t1str is astr ]
+          group_by: t1int is ai, t1str is astr
         } -> {
-          project: [ t1str, t1int ]
+          project: t1str, t1int
         }
       }
     `)
@@ -1658,7 +1651,7 @@ describe("pipeline comprehension", () => {
       markSource`
         explore: aq is a {
           query: t1 is {
-            group_by: [ t1int is ai, t1str is astr ]
+            group_by: t1int is ai, t1str is astr
           } -> {
             project: ${"ai"}
           }
@@ -1672,10 +1665,10 @@ describe("pipeline comprehension", () => {
     modelOK(`
       explore: aq is a {
         query: t0 is {
-          group_by: [ t1int is ai, t1str is astr ]
+          group_by: t1int is ai, t1str is astr
         }
         query: t1 is t0 -> {
-          project: [ t1str, t1int ]
+          project: t1str, t1int
         }
       }
     `)
@@ -1688,7 +1681,7 @@ describe("pipeline comprehension", () => {
         query: by_region2 is by_region {
           nest: dateNest is { group_by: ad }
         } -> {
-          project: [astr, dateNest.ad ]
+          project: astr, dateNest.ad
         }
       }
     `)

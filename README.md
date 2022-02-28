@@ -26,10 +26,9 @@ We recommend starting with the [Quickstart](https://looker-open-source.github.io
 query: table('malloy-data.faa.flights') -> {
   where: origin: 'SFO'
   group_by: carrier
-  aggregate: [
+  aggregate:
     flight_count is count()
     average_flight_time is flight_time.avg()
-  ]
 }
 ```
 
@@ -49,7 +48,7 @@ ORDER BY flight_count desc         -- malloy automatically orders by the first a
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
 # Get Started
-This walkthrough covers installing the extension, connecting a database, and the basics of using Malloy in VS Code. 
+This walkthrough covers installing the extension, connecting a database, and the basics of using Malloy in VS Code.
 
 _GitHub mutes videos by default, so make sure to unmute._
 

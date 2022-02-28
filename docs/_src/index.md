@@ -25,7 +25,7 @@ Equivalent in Malloy
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
 query: table('malloy-data.faa.airports') -> {
-  project: [code, full_name, state, faa_region, fac_type, elevation]
+  project: code, full_name, state, faa_region, fac_type, elevation
   order_by: code
 }
 ```
@@ -93,10 +93,9 @@ query: airports -> {
   limit: 10
   where: fac_type = 'HELIPORT'
   group_by: state
-  aggregate: [
+  aggregate:
     airport_count           // <-- declared in source
     avg_elevation_in_meters // <-- declared in source
-  ]
 }
 ```
 
@@ -339,7 +338,7 @@ source: flights is table('malloy-data.faa.flights') {
 }
 
 query: flights -> {
-  project: [ id2, tail_num, dep_time, carrier, origin, destination, distance, dep_delay ]
+  project: id2, tail_num, dep_time, carrier, origin, destination, distance, dep_delay
   limit: 10
 }
 ```
@@ -359,11 +358,10 @@ source: flights is table('malloy-data.faa.flights') {
 
   join_one: carriers on carrier=carriers.code
 
-  measure: [
+  measure:
     flight_count is count()
     total_distance is distance.sum()
     avg_distance is distance.avg()
-  ]
 }
 ```
 
@@ -375,11 +373,10 @@ source: flights is table('malloy-data.faa.flights') {
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join1.malloy"}
 query: flights -> {
   group_by: carriers.nickname
-  aggregate: [
+  aggregate:
     flight_count
     total_distance
     avg_distance
-  ]
 }
 ```
 
@@ -399,11 +396,10 @@ query: flights -> {
   nest: top_3_carriers is {
     limit: 3
     group_by: carriers.nickname
-    aggregate: [
+    aggregate:
         flight_count
         total_distance
         avg_distance
-    ]
   }
 }
 ```
@@ -430,11 +426,10 @@ source: flights is table('malloy-data.faa.flights') {
 
   join_one: carriers with carrier  // <-- each flight has 1 carrier
 
-  measure: [
+  measure:
     flight_count is count()
     total_distance is distance.sum()
     avg_distance is distance.avg()
-  ]
 }
 
 source: airports is table('malloy-data.faa.airports') {
@@ -463,13 +458,12 @@ This query is very difficult to express in SQL. Malloy's understanding of source
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/join2.malloy"}
 query: airports ->  {
   group_by: state
-  aggregate: [
+  aggregate:
     flights.carriers.carrier_count  // <-- 3 levels
     flights.flight_count
     flights.total_distance
     airport_count
     avg_elevation_in_meters         // <-- symmetric calculation
-  ]
 }
 ```
 
@@ -520,13 +514,12 @@ query: airports -> {
   }
 }
 -> {
-  project: [
+  project:
     state
     top_3_county.county
     airports_in_state is airport_count
     airports_in_county is top_3_county.airport_count
     percent_of_state is top_3_county.airport_count/airport_count
-  ]
 }
 ```
 
@@ -548,13 +541,12 @@ source: airports is table('malloy-data.faa.airports') {
     }
   }
   -> {
-    project: [
+    project:
       state
       top_3_county.county
       airports_in_state is airport_count
       airports_in_county is top_3_county.airport_count
       percent_of_state is top_3_county.airport_count/airport_count
-    ]
   }
 }
 
@@ -582,30 +574,26 @@ source: newname is from(oldname) {
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium"}
 query: /* q_airport_facts is */ table('malloy-data.faa.flights') -> {
-  group_by: [
+  group_by:
     flight_year is dep_time.year
     origin
     carrier
-  ]
-  aggregate: [
+  aggregate:
     num_flights is count()
     distance is distance.sum()
-  ]
 }
 ```
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/query1.malloy", "isHidden": true}
 query: q_airport_facts is table('malloy-data.faa.flights') -> {
-  group_by: [
+  group_by:
     flight_year is dep_time.year
     origin
     carrier
-  ]
-  aggregate: [
+  aggregate:
     num_flights is count()
     distance is distance.sum()
-  ]
 }
 ```
 
@@ -621,19 +609,17 @@ source: airport_facts is from(-> q_airport_facts) {  // <-- 'from' instead of 't
 
   query: flights_by_year is {
     group_by: flight_year
-    aggregate: [
+    aggregate:
       flight_count
       carrier_count is count(distinct carrier)
       origin_count is count(distinct origin)
-    ]
   }
 
   query: flights_by_origin is {
     group_by: origin
-    aggregate: [
+    aggregate:
       flight_count
       carrier_count is count(distinct carrier)
-    ]
   }
 }
 ```

@@ -21,10 +21,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 ```
@@ -59,10 +58,9 @@ letter more than once.
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> {
   group_by: letters.letter
-  aggregate: [
-  word_count
+  aggregate:
+    word_count
     use_count is letters.count()
-  ]
 }
 ```
 
@@ -72,10 +70,9 @@ query: wordle -> {
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"large","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> {
   group_by: letters.letter
-  aggregate: [
+  aggregate:
     word_count
     use_count is letters.count()
-  ]
   nest: positition_order_bar_chart is {
     group_by: letters.position
     aggregate: word_count

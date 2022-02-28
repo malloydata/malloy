@@ -21,10 +21,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -35,10 +34,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
@@ -75,10 +73,9 @@ One green match--not a bad start. Let's find more words ending in E.
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'....E',      // GREEN: E at the end
     not word ~ r'[SLAT]'  // GRAY doesn't have these characters
-  ]
 }
 ```
 
@@ -92,11 +89,10 @@ That worked nicely for us, we have two green matches and now we need to figure o
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'I',
     word ~ r'..[^I]CE',
     word !~ r'[SLATPR]'
-  ]
 }
 ```
 
@@ -107,10 +103,9 @@ Another tie, today with a chance to guess just how into cooking the Wordle creat
   query: wordle -> {
     where: letters.position = 1
     group_by: letters.letter
-    aggregate: [
+    aggregate:
       word_count
       use_count is letters.count()
-    ]
   }
   ```
 
@@ -126,10 +121,9 @@ Another tie, today with a chance to guess just how into cooking the Wordle creat
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'.INCE',
     word !~ r'[SLATPRM]'
-  ]
 }
 ```
 
@@ -164,10 +158,9 @@ query: words_and_position is from(words->five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -177,10 +170,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word

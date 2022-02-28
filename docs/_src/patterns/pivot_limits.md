@@ -8,10 +8,9 @@ Let's suppose we wanted to look flight data but only at only the top 5 carriers 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
 query: flights -> {
-  group_by: [
+  group_by:
     carriers.nickname
     destination_code
-  ]
   aggregate: flight_count
 }
 ```
@@ -43,10 +42,9 @@ Produces a table with a single row and three columns.  Each column essentially c
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
 query: flights -> {
   nest: main_query is {
-    group_by: [
+    group_by:
       carriers.nickname
       destination_code
-    ]
     aggregate: flight_count
   }
   nest: top_carriers is {
@@ -69,10 +67,9 @@ dimensional values that are produce in the filtering queries.
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
 query: flights -> {
   nest: main_query is {
-    group_by: [
+    group_by:
       carriers.nickname
       destination_code
-    ]
     aggregate: flight_count
   }
   nest: top_carriers is {
@@ -86,10 +83,9 @@ query: flights -> {
     aggregate: flight_count
   }
 } -> {
-  where: [
+  where:
     main_query.nickname = top_carriers.nickname,
     main_query.destination_code = top_destinations.destination_code
-  ]
   project: main_query.*
 }
 ```
@@ -99,10 +95,9 @@ query: flights -> {
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "isPaginationEnabled": true, "pageSize":100, "size":"small"}
 query: flights -> {
   nest: main_query is {
-    group_by: [
+    group_by:
       carriers.nickname
       destination_code
-    ]
     aggregate: flight_count
   }
   nest: top_carriers is {
@@ -121,10 +116,9 @@ query: flights -> {
     main_query.destination_code = top_destinations.destination_code
   group_by: main_query.nickname
   nest: destination_pivot is {
-    project: [
+    project:
       main_query.destination_code
       main_query.flight_count
-    ]
   }
 }
 ```

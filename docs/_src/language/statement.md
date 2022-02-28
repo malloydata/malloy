@@ -51,10 +51,9 @@ query: flights { where: origin = 'SFO' } -> by_carrier { limit: 2 }
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights -> {
   group_by: destination
-  aggregate: [
+  aggregate:
     flight_count
     average_distance_in_km is distance_km.avg()
-  ]
 }
 ```
 
@@ -63,10 +62,9 @@ query: flights -> {
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
 query: flights -> {
   group_by: destination
-  aggregate: [
+  aggregate:
     flight_count
     average_distance_in_km is distance_km.avg()
-  ]
   nest: top_carriers is by_carrier { limit: 2 }
 }
 ```

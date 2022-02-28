@@ -109,7 +109,7 @@ A query is either a grouping/aggregating gesture, which would look like this ...
 ... or a detail-gesture like this ...
 
     query: flight_details {
-        project: [ carrier.nickname, flight_num, dep_time, arr_time ]
+        project: carrier.nickname, flight_num, dep_time, arr_time
     }
 
 A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha-malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
@@ -119,7 +119,7 @@ A `group by` or a `project` have a list of references, or new dimensions.  An `a
 The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
     explore: flights_21st_century is flights {
-      where: [ dep_time >= @2001 ]
+      where: dep_time >= @2001
     }
 
 ## Farewell `|`
@@ -193,11 +193,11 @@ Because filtering is ubiquitous, there is a shorthand for filtering. We expect a
 
     -- long form
     flights {
-        where: [ dep_time: @2003 ]
+        where: dep_time: @2003
     }->by_carrier
 
     -- one line version
-    flights { where: [ dep_time: @2003 ] }->by_carrier
+    flights { where: dep_time: @2003 }->by_carrier
 
     -- short form
     flights {? dep_time: @2003}->by_carrier
@@ -229,7 +229,7 @@ And to include a nested query in a result set, much like the `aggregate:` keywor
             destination is destination.full_name
           ]
           aggregate: flight_count
-          nest: [ carriers_by_month, routes_map, delay_by_hour_of_day ]
+          nest: carriers_by_month, routes_map, delay_by_hour_of_day
         }
     }
 
