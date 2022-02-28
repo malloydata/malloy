@@ -523,8 +523,7 @@ export class RefinedExplore extends Mallobj {
         }
         fieldListEdit = el;
       } else if (
-        el instanceof Measures ||
-        el instanceof Dimensions ||
+        el instanceof DeclareFields ||
         el instanceof Joins ||
         el instanceof Turtles ||
         el instanceof Renames
@@ -963,8 +962,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
 export type ExploreProperty =
   | Filter
   | Joins
-  | Measures
-  | Dimensions
+  | DeclareFields
   | FieldListEdit
   | Renames
   | PrimaryKey
@@ -973,8 +971,7 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
   return (
     p instanceof Filter ||
     p instanceof Joins ||
-    p instanceof Measures ||
-    p instanceof Dimensions ||
+    p instanceof DeclareFields ||
     p instanceof FieldListEdit ||
     p instanceof Renames ||
     p instanceof PrimaryKey ||
@@ -1049,18 +1046,24 @@ export class Filter extends ListOf<FilterElement> {
   }
 }
 
-export class Measures extends ListOf<FieldDeclaration> {
+export class DeclareFields extends ListOf<FieldDeclaration> {
+  constructor(fields: FieldDeclaration[], fieldType = "declare") {
+    super(fieldType, fields);
+  }
+}
+
+export class Measures extends DeclareFields {
   constructor(measures: FieldDeclaration[]) {
-    super("measure", measures);
+    super(measures, "measure");
     for (const dim of measures) {
       dim.isMeasure = true;
     }
   }
 }
 
-export class Dimensions extends ListOf<FieldDeclaration> {
+export class Dimensions extends DeclareFields {
   constructor(dimensions: FieldDeclaration[]) {
-    super("dimension", dimensions);
+    super(dimensions, "dimension");
     for (const dim of dimensions) {
       dim.isMeasure = false;
     }

@@ -63,9 +63,11 @@ topLevelQueryDef
   : queryName IS query
   ;
 
+refineOperator: PLUS ;
+
 query
   : explore ARROW pipelineFromName                  # exploreArrowQuery
-  | ARROW queryName queryProperties? pipeElement*   # arrowQuery
+  | ARROW queryName (refineOperator? queryProperties)? pipeElement*   # arrowQuery
   ;
 
 pipelineFromName
@@ -74,7 +76,7 @@ pipelineFromName
 
 firstSegment
   : queryProperties
-  | exploreQueryName queryProperties?
+  | exploreQueryName (refineOperator? queryProperties)?
   ;
 
 pipeElement
@@ -106,7 +108,7 @@ exploreDefinition
   ;
 
 explore
-  : exploreSource exploreProperties?
+  : exploreSource (refineOperator? exploreProperties)?
   ;
 
 exploreSource
@@ -127,6 +129,7 @@ exploreProperties
 exploreStatement
   : DIMENSION dimensionDefList         # defExploreDimension
   | MEASURE measureDefList             # defExploreMeasure
+  | declareStatement                   # defDeclare_stub
   | JOIN_ONE joinList                  # defJoinOne
   | JOIN_MANY joinList                 # defJoinMany
   | JOIN_CROSS joinList                # defJoinCross
@@ -161,6 +164,10 @@ fieldNameDef: id;
 joinNameDef: id;
 
 measureDef: fieldDef;
+
+declareStatement
+  : DECLARE fieldDef (COMMA? fieldDef)* COMMA?
+  ;
 
 joinList
   : joinDef (COMMA? joinDef)* COMMA?
@@ -436,6 +443,7 @@ fragment SPACE_CHAR: [ \u000B\t\r\n];
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
+DECLARE: D E C L A R E  ':' ;
 DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
 EXCEPT: E X C E P T SPACE_CHAR* ':';
 EXPLORE: E X P L O R E SPACE_CHAR* ':';
