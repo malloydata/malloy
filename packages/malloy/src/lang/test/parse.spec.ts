@@ -382,6 +382,17 @@ describe("explore properties", () => {
       }
     `)
   );
+  test("single declare", modelOK("explore: aa is a { declare: x is 1 }"));
+  test(
+    "multiple declare",
+    modelOK(`
+      explore: aa is a {
+        declare:
+          x is 1
+          y is 2
+      }
+    `)
+  );
   test("single measure", modelOK("explore: aa is a { measure: x is count() }"));
   test(
     "multiple measures",

@@ -423,6 +423,12 @@ export class MalloyToAST
     return this.astAt(stmt, pcx);
   }
 
+  visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
+    const defs = this.getFieldDefs(pcx.fieldDef(), true);
+    const stmt = new ast.DeclareFields(defs);
+    return this.astAt(stmt, pcx);
+  }
+
   visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
     const newName = pcx.fieldName(0).id();
     const oldName = pcx.fieldName(1).id();
