@@ -87,6 +87,10 @@
         {
           "title": "Types",
           "link": "/language/types.md"
+        },
+        {
+          "title": "Major Change Log",
+          "link": "/language/major_change_log.md"
         }
       ]
     },
