@@ -8,6 +8,10 @@
           "link": "/index.md"
         },
         {
+          "title": "Malloy Quickstart",
+          "link": "/language/basic.md"
+        },
+        {
           "title": "Key Features",
           "link": "/features.md"
         },
@@ -33,10 +37,6 @@
           "link": "/language/overview.md"
         },
         {
-          "title": "Malloy Quickstart",
-          "link": "/language/basic.md"
-        },
-        {
           "title": "Models",
           "link": "/language/statement.md"
         },
@@ -53,12 +53,12 @@
           "link": "/language/fields.md"
         },
         {
-          "title": "Types",
-          "link": "/language/types.md"
+          "title": "Aggregates",
+          "link": "/language/aggregates.md"
         },
         {
-          "title": "Expressions",
-          "link": "/language/expressions.md"
+          "title": "Filters",
+          "link": "/language/filters.md"
         },
         {
           "title": "Ordering and Limiting",
@@ -69,24 +69,53 @@
           "link": "/language/join.md"
         },
         {
-          "title": "Filters",
-          "link": "/language/filters.md"
-        },
-        {
           "title": "Nested Queries",
           "link": "/language/nesting.md"
         },
         {
-          "title": "Aggregates",
-          "link": "/language/aggregates.md"
+          "title": "Expressions",
+          "link": "/language/expressions.md"
+        },
+        {
+          "title": "SQL Blocks",
+          "link": "/language/sql_blocks.md"
         },
         {
           "title": "Imports",
           "link": "/language/imports.md"
         },
         {
-          "title": "SQL Blocks",
-          "link": "/language/sql_blocks.md"
+          "title": "Types",
+          "link": "/language/types.md"
+        }
+      ]
+    },
+    {
+      "title": "Rendering Results",
+      "items": [
+        {
+          "title": "Intro: Charts & Dashboards",
+          "link": "/visualizations/dashboards.md"
+        },
+        {
+          "title": "Bar Charts",
+          "link": "/visualizations/bar_charts.md"
+        },
+        {
+          "title": "Line Charts",
+          "link": "/visualizations/charts_line_chart.md"
+        },
+        {
+          "title": "Scatter Charts",
+          "link": "/visualizations/scatter_charts.md"
+        },
+        {
+          "title": "Shape Maps",
+          "link": "/visualizations/shape_maps.md"
+        },
+        {
+          "title": "Segment Maps",
+          "link": "/visualizations/segment_maps.md"
         }
       ]
     },
@@ -116,35 +145,6 @@
         {
           "title": "Sessionized Data",
           "link": "/patterns/sessionize.md"
-        }
-      ]
-    },
-    {
-      "title": "Rendering Results",
-      "items": [
-        {
-          "title": "Tables and Dashboards",
-          "link": "/visualizations/dashboards.md"
-        },
-        {
-          "title": "Bar Charts",
-          "link": "/visualizations/bar_charts.md"
-        },
-        {
-          "title": "Line Charts",
-          "link": "/visualizations/charts_line_chart.md"
-        },
-        {
-          "title": "Shape Maps",
-          "link": "/visualizations/shape_maps.md"
-        },
-        {
-          "title": "Segment Maps",
-          "link": "/visualizations/segment_maps.md"
-        },
-        {
-          "title": "Scatter Charts",
-          "link": "/visualizations/scatter_charts.md"
         }
       ]
     },

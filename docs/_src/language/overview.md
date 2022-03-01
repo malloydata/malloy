@@ -6,10 +6,10 @@ needed to extract useful information from a relational database.
 Malloy is essentially a Domain-specific Language (DSL) where the
 "domain" is "exploration and transformation of SQL datasets."
 
-This section is designed to be an explorable reference to the
-underlying language. For an overview of malloy, refer to the [Malloy Quickstart](../language/basic.md) introduction.
+This section is designed to be an explorable reference to the underlying language.
 
-* [About Malloy](about-malloy.md) – A longer read, why is there Malloy and why does it look like it does
-* [Queries](query.md) – How to write data transformations in malloy
-* [Expressions](expressions.md) – How to write expressions in malloy
-* [Models](statement.md) – How to collect and share transformations in malloy
+* [Malloy Quickstart](../language/basic.md) An overview and introduction to the language with lots of examples and explanation.
+* [Malloy by Example](/documentation/index.html) A faster-paced introduction to the language.
+* [About Malloy](about-malloy.md) – Why Malloy was created and why it looks the way it does
+* [Queries](query.md) – How to write data transformations in Malloy
+* [Models](statement.md) – How to work more efficiently by building reusable models

@@ -63,7 +63,7 @@ Our luck on these tie-breakers really hasn't been so great, but all in all anoth
 [⬅️ Previous Puzzle](wordle218.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
 
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 // Make a table of 5 letter words

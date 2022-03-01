@@ -1,18 +1,17 @@
 # Malloy by Example
 
-This document will assumes a working knowlege of SQL and will rapidly quickly take you through some of
-Malloy's notable language features.
+This document will assumes a working knowledge of SQL and will rapidly take you through some of
+Malloy's key language features.
 
-Malloy is currently available as a VSCode plugin and can query BigQuery and Posgres
-SQL databases.
+Malloy is currently available as a VS Code extension and can query BigQuery and Postgres SQL databases.
 
 [Install Instructions](https://github.com/looker-open-source/malloy/)
 
 ## SQL SELECT vs Malloy's `query`
 
-The statement to run a query in Malloy is `query:`. There are two types of queries in Malloy, grouping queries which have `group_by:` or `aggregate:` statements, and projecting queries which have `project:` statements.
+The statement to run a query in Malloy is `query:`. There are two types of queries in Malloy, reductions which have `group_by:` or `aggregate:` statements, and projections which have `project:` statements and do not group or aggregate results.
 
-### Projecting -- SELECT with no GROUP BY
+### Projection: SELECT with no GROUP BY
 
 In SQL
 ```
@@ -30,7 +29,7 @@ query: table('malloy-data.faa.airports') -> {
 }
 ```
 
-### Grouping -- SELECT with GROUP BY
+### Reduction: SELECT with GROUP BY and/or aggregation
 
 In SQL
 ```
@@ -64,11 +63,13 @@ Click tab to to see the  HTML, JSON or SQL result:  <img src="https://user-image
 
 ## Source: A data source for queries
 
-Malloy separates a query from the source of the data. A source can be thought of as a table and a collection of computations and relationships which are relevant to that table.  ([Source Documentation](language/source.html))
+Malloy separates a query from the source of the data. A source can be thought of as a table and a collection of computations and relationships which are relevant to that table.  ([Source Documentation](language/source.html)).
+
+[Fields](language/fields.html) can be defined as part of a source.
 
 
-* `measure:` is a declared aggregate calculation (think function that operates across the table).  `measures:`  can be used in the `aggregate:` element in a query
-* `dimension:` is declared a scalar calculation that can be be used in a `group_by:` or `project:` element of a query
+* A `measure:` is a declared aggregate calculation (think function that operates across the table) which can be used in `aggregate:` elements in a query stage
+* A `dimension:` is a declared scalar calculation which that can be used in `group_by:` or `project:` elements of a query stage
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/source1.malloy", "isHidden": false}
@@ -82,7 +83,7 @@ source: airports is table('malloy-data.faa.airports') {
 
 ## Querying against a Source
 
-Queries can be run against `source:` objects and can utilize the built in calculations. ([Query Documentation](language/query.html))
+Queries can be run against `source:` objects and can utilize the modeled fields from that source, as well as introduce new ones. ([Query Documentation](language/query.html))
 
 
 *using the above declared `airports` source*
@@ -99,7 +100,7 @@ query: airports -> {
 }
 ```
 
-## Dimensional calculations are no different than columns
+## Dimensional calculations are no different from columns
 
 *using the above declared `airports` source*
 
@@ -113,7 +114,7 @@ query: airports -> {
 ```
 
 
-## Named Queries inside a Source
+## Defining Named Queries inside a Source
 
 A source can also contain a set of useful queries relating to that source.
 
@@ -132,6 +133,8 @@ source: airports is table('malloy-data.faa.airports') {
   }
 }
 ```
+
+Note that the source is implied, so the query operator (`->`) and source are not needed to define the named query.
 
 ##  Executing Named Queries
 
@@ -201,7 +204,7 @@ source: airports is table('malloy-data.faa.airports') {
 ## The `nest:` property embeds one query in another
 
 Malloy allows you to create nested subtables easily in a query.
-In the case below, the top level query groups by state amd nested query groups by facility type.
+In the case below, the top level query groups by state and nested query groups by facility type.
 This mechanism is really useful for understanding data and creating complex data structures. ([Nesting Documentation](language/nesting.html))
 
 *using the above declared `airports` source*
@@ -289,7 +292,7 @@ query: airports -> by_facility_type {
 }
 ```
 
-### You can even add another query
+### You can nest another query
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "size":"medium","source": "/inline/source3.malloy"}
@@ -310,12 +313,12 @@ query: airports-> by_facility_type {
 ```
 
 
-## Joining ...
+## Joining
 
 First let's model some simple tables... ([Join Documentation](language/join.html))
 
 ### Carrier table
-*simple source declartion used in example below*
+*simple source declaration used in example below*
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
@@ -330,7 +333,7 @@ query: carriers-> {
 
 ### Flights table
 
-*simple source declartion used in example below*
+*simple source declaration used in example below*
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
 source: flights is table('malloy-data.faa.flights') {
@@ -343,7 +346,7 @@ query: flights -> {
 }
 ```
 
-## Joining
+## Declare a Join
 
 Join carriers to flights.  Each flight has one carrier so we use `join_one:`.
 ([Join Documentation](language/join.html))
@@ -492,7 +495,7 @@ query: airports -> {
 }
 ```
 
-## Unnesting in a pipeline flattens the table
+## Un-nesting in a pipeline flattens the table
 
 Queries can be chained together (pipelined), the output of one becoming the input of the next one, by simply adding another `->` operator and a new query definition.
 
@@ -650,6 +653,6 @@ query: airport_facts -> flights_by_origin
 
 ### Nested data and Symmetric aggregates  ([Aggregates Documentation](language/aggregates.html))
 
-### import ([Import Documentation](language/imports.html))
+### Import ([Import Documentation](language/imports.html))
 
-### data styles and rendering ([Rendering Documentation](visualizations/dashboards.html))
+### Data styles and rendering ([Rendering Documentation](visualizations/dashboards.html))

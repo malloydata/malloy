@@ -44,7 +44,7 @@ The easiest, most error-proof way to perform a join is using the following synta
 
 `join_one: <source> with <foreign_key>`
 
-To join based on a foreign key through the `primary_key` of a joined source, use `with` to specify an expression, which could be as simple as a field name in the source. This expression is matched against the decalred `primary_key` of the joined source. Sources without a `primary_key` cannot use `with` joins.
+To join based on a foreign key through the `primary_key` of a joined source, use `with` to specify an expression, which could be as simple as a field name in the source. This expression is matched against the declared `primary_key` of the joined source. Sources without a `primary_key` cannot use `with` joins.
 
 ```malloy
 source: users is table('malloy-data.ecomm.users'){
@@ -58,7 +58,7 @@ source: order_items is table('malloy-data.ecomm.order_items'){
 
 This is simply a shortcut, when joining based on the primary key of a joined source. It is exactly equivalent to the `on` join written like this.
 
-```
+```malloy
 source: order_items is table('malloy-data.ecomm.order_items'){
   join_one: users on order_items.user_id = users.id
 }
@@ -97,7 +97,6 @@ source: flights is table('malloy-data.faa.flights'){
 Sources do not need to be modeled before they are used in a join, though the join must be named using `is`.
 
 ```malloy
-
 source: flights is table('malloy-data.faa.flights'){
   join_one: carriers is table('malloy-data.faa.carriers'){primary_key: code} with carrier
 }

@@ -117,7 +117,7 @@ It doesn't really feel like we can give ourselves this one with equal scores on 
 [⬅️ Previous Puzzle](wordle215.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle217.md)
 
 
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 source: words is table('malloy-data.malloytest.words') {
