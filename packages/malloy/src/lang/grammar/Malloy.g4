@@ -249,7 +249,7 @@ nestedQueryList
   ;
 
 nestEntry
-  : queryName queryProperties?      # nestExisting
+  : queryName (refineOperator? queryProperties)?      # nestExisting
   | queryName IS pipelineFromName   # nestDef
   ;
 
