@@ -326,7 +326,6 @@
     "react-popper-tooltip": "^4.3.1",
     "shiki": "^0.10.0",
     "styled-components": "^5.3.3",
-    "us-atlas": "^3.0.0",
     "vega": "5.17.3",
     "vega-lite": "4.17.0",
     "vscode-languageclient": "^7.0.0",

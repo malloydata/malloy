@@ -11,6 +11,7 @@
     "build": "yarn tsc --build"
   },
   "dependencies": {
-    "@malloydata/malloy": "*"
+    "@malloydata/malloy": "*",
+    "us-atlas": "^3.0.0"
   }
 }
