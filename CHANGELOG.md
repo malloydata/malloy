@@ -4,7 +4,8 @@ _Breaking changes indicated with *_
 We will use this space to highlight major and/or breaking changes to Malloy.
 
 ## (v0.0.9)
-###Deprecation of brackets for lists of items
+
+### Deprecation of brackets for lists of items
 
 Prior to v0.0.9, lists of things were contained inside `[ ]`. Going forward, the brackets have been removed. Our hope is that this will be one less piece of punctuation to track, and will make it easier to change from a single item in a list to multiple without adding in brackets.
 
