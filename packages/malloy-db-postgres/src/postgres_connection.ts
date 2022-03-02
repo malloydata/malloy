@@ -15,7 +15,7 @@ import {
   StructDef,
   MalloyQueryData,
   NamedStructDefs,
-  AtomicFieldType,
+  AtomicFieldTypeInner,
   QueryData,
   PooledConnection,
   parseTableURL,
@@ -24,7 +24,7 @@ import {
 } from "@malloydata/malloy";
 import { Client, Pool } from "pg";
 
-const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
+const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
   name: "string",
   text: "string",

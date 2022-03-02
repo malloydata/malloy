@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { AtomicFieldType } from "..";
+import { AtomicFieldTypeInner } from "..";
 
 interface DialectField {
   type: string;
@@ -25,7 +25,7 @@ interface DialectField {
  * the expression compiler can know the output type of a function.
  */
 export interface FunctionInfo {
-  returnType: AtomicFieldType;
+  returnType: AtomicFieldTypeInner;
 }
 
 export type DialectFieldList = DialectField[];
