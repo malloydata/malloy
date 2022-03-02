@@ -14,7 +14,7 @@ The statement to run a query in Malloy is `query:`. There are two types of queri
 ### Projection: SELECT with no GROUP BY
 
 In SQL
-```
+```sql
 SELECT code, full_name, state, faa_region, fac_type, elevation
 FROM `malloy-data.faa.airports`
 ORDER BY code
@@ -32,7 +32,7 @@ query: table('malloy-data.faa.airports') -> {
 ### Reduction: SELECT with GROUP BY and/or aggregation
 
 In SQL
-```
+```sql
 SELECT
    base.fac_type as fac_type,
    COUNT( 1) as airport_count

@@ -87,6 +87,10 @@
         {
           "title": "Types",
           "link": "/language/types.md"
+        },
+        {
+          "title": "Change Log",
+          "link": "/language/changelog.md"
         }
       ]
     },
