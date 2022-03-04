@@ -130,9 +130,7 @@ exploreStatement
   : DIMENSION dimensionDefList         # defExploreDimension
   | MEASURE measureDefList             # defExploreMeasure
   | declareStatement                   # defDeclare_stub
-  | JOIN_ONE joinList                  # defJoinOne
-  | JOIN_MANY joinList                 # defJoinMany
-  | JOIN_CROSS joinList                # defJoinCross
+  | joinStatement                      # defJoin_stub
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
@@ -167,6 +165,12 @@ measureDef: fieldDef;
 
 declareStatement
   : DECLARE fieldDef (COMMA? fieldDef)* COMMA?
+  ;
+
+joinStatement
+  : JOIN_ONE joinList                  # defJoinOne
+  | JOIN_MANY joinList                 # defJoinMany
+  | JOIN_CROSS joinList                # defJoinCross
   ;
 
 joinList
@@ -214,6 +218,8 @@ exploreQueryDef
 
 queryStatement
   : groupByStatement
+  | declareStatement
+  | joinStatement
   | projectStatement
   | indexStatement
   | aggregateStatement

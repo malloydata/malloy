@@ -21,7 +21,7 @@ import {
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
-import { StructSpace } from "../field-space";
+import { StaticSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
 import {
   TestTranslator,
@@ -179,7 +179,7 @@ class BetaExpression extends Testable {
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
-        const exprDef = exprAst.getExpression(new StructSpace(aStruct));
+        const exprDef = exprAst.getExpression(new StaticSpace(aStruct));
         if (inspectCompile) {
           console.log("EXPRESSION: ", pretty(exprDef));
         }
