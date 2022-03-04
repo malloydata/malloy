@@ -442,6 +442,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface QuerySegment extends Filtered {
   type: "reduce" | "project";
   fields: QueryFieldDef[];
+  extendSource?: FieldDef[];
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.

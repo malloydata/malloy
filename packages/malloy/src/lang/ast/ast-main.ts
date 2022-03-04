@@ -1200,12 +1200,12 @@ export class Aggregate extends ListOf<QueryItem> {
 interface QueryExecutor {
   execute(qp: QueryProperty): void;
   finalize(refineFrom: model.PipeSegment | undefined): model.PipeSegment;
-  outputFS: QueryOperationSpace;
+  queryFS: QueryOperationSpace;
 }
 
 class ReduceExecutor implements QueryExecutor {
   inputFS: FieldSpace;
-  outputFS: QuerySpace;
+  queryFS: QuerySpace;
   filters: model.FilterExpression[] = [];
   order?: Top | Ordering;
   limit?: number;
@@ -1213,7 +1213,7 @@ class ReduceExecutor implements QueryExecutor {
 
   constructor(baseFS: FieldSpace, out?: QuerySpace) {
     this.inputFS = baseFS;
-    this.outputFS = out || new ReduceFieldSpace(baseFS);
+    this.queryFS = out || new ReduceFieldSpace(baseFS);
   }
 
   execute(qp: QueryProperty): void {
@@ -1222,9 +1222,9 @@ class ReduceExecutor implements QueryExecutor {
       qp instanceof Aggregate ||
       qp instanceof Nests
     ) {
-      this.outputFS.addQueryItems(...qp.list);
+      this.queryFS.addQueryItems(...qp.list);
     } else if (isNestedQuery(qp)) {
-      this.outputFS.addQueryItems(qp);
+      this.queryFS.addQueryItems(qp);
     } else if (qp instanceof Filter) {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Top) {
@@ -1253,14 +1253,9 @@ class ReduceExecutor implements QueryExecutor {
         this.order = qp;
       }
     } else if (qp instanceof Joins || qp instanceof DeclareFields) {
-      if (!this.refinedInputFS) {
-        this.refinedInputFS = new DynamicSpace(this.inputFS.structDef());
+      for (const qel of qp.list) {
+        this.queryFS.extendSource(qel);
       }
-      /*
-        OK here is the rub ... these need to go in the "refinedfFields"
-        array of the qop, but when the qop feeds to the next, these
-        need to be in the "fields" of the output structdef ...
-      */
     }
   }
 
@@ -1286,13 +1281,13 @@ class ReduceExecutor implements QueryExecutor {
     }
 
     if (this.order instanceof Top) {
-      const topBy = this.order.getBy(this.outputFS);
+      const topBy = this.order.getBy(this.queryFS);
       if (topBy) {
         to.by = topBy;
       }
     }
     if (this.order instanceof Ordering) {
-      to.orderBy = this.order.getOrderBy(this.outputFS);
+      to.orderBy = this.order.getOrderBy(this.queryFS);
     }
 
     const oldFilters = from?.filterList || [];
@@ -1309,11 +1304,11 @@ class ReduceExecutor implements QueryExecutor {
       if (fromSeg.type == "reduce") {
         from = fromSeg;
       } else {
-        this.outputFS.log(`Can't refine reduce with ${fromSeg.type}`);
+        this.queryFS.log(`Can't refine reduce with ${fromSeg.type}`);
         return ErrorFactory.reduceSegment;
       }
     }
-    const reduceSegment = this.outputFS.getPipeSegment(from?.fields);
+    const reduceSegment = this.queryFS.getPipeSegment(from);
     this.refineFrom(from, reduceSegment);
 
     return reduceSegment;
@@ -1327,7 +1322,7 @@ class ProjectExecutor extends ReduceExecutor {
 
   execute(qp: QueryProperty): void {
     if (qp instanceof ProjectStatement) {
-      this.outputFS.addMembers(qp.list);
+      this.queryFS.addMembers(qp.list);
     } else if (
       (qp instanceof Filter && qp.elementType === "having") ||
       qp instanceof Measures ||
@@ -1345,11 +1340,11 @@ class ProjectExecutor extends ReduceExecutor {
       if (fromSeg.type == "project") {
         from = fromSeg;
       } else {
-        this.outputFS.log(`Can't refine project with ${fromSeg.type}`);
+        this.queryFS.log(`Can't refine project with ${fromSeg.type}`);
         return ErrorFactory.projectSegment;
       }
     }
-    const projectSegment = this.outputFS.getPipeSegment(from?.fields);
+    const projectSegment = this.queryFS.getPipeSegment(from);
     this.refineFrom(from, projectSegment);
 
     return projectSegment;
@@ -1358,14 +1353,14 @@ class ProjectExecutor extends ReduceExecutor {
 
 class IndexExecutor implements QueryExecutor {
   inputFS: FieldSpace;
-  outputFS: IndexFieldSpace;
+  queryFS: IndexFieldSpace;
   filters: model.FilterExpression[] = [];
   limit?: Limit;
   indexOn?: FieldName;
 
   constructor(baseFS: FieldSpace) {
     this.inputFS = baseFS;
-    this.outputFS = new IndexFieldSpace(baseFS);
+    this.queryFS = new IndexFieldSpace(baseFS);
   }
 
   execute(qp: QueryProperty): void {
@@ -1377,7 +1372,7 @@ class IndexExecutor implements QueryExecutor {
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
-      this.outputFS.addMembers(qp.fields.list);
+      this.queryFS.addMembers(qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
           this.indexOn.log("Ignoring previous BY");
@@ -1391,11 +1386,11 @@ class IndexExecutor implements QueryExecutor {
 
   finalize(from: model.PipeSegment | undefined): model.PipeSegment {
     if (from && from.type !== "index") {
-      this.outputFS.log(`Can't refine index with ${from.type}`);
+      this.queryFS.log(`Can't refine index with ${from.type}`);
       return ErrorFactory.indexSegment;
     }
 
-    const indexSegment = this.outputFS.getPipeSegment(from?.fields);
+    const indexSegment = this.queryFS.getPipeSegment(from);
 
     const oldFilters = from?.filterList || [];
     if (this.filters.length > 0 && !oldFilters) {
@@ -1501,7 +1496,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   getOp(inputFS: FieldSpace): OpDesc {
     const qex = this.getExecutor(inputFS);
-    qex.outputFS.astEl = this;
+    qex.queryFS.astEl = this;
     for (const qp of this.list) {
       qex.execute(qp);
     }
