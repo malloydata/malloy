@@ -304,6 +304,22 @@ export class FANSPaceField extends SpaceField {
   }
 }
 
+export class ReferenceField extends SpaceField {
+  constructor(readonly fieldRef: FieldReference) {
+    super();
+  }
+
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined {
+    // Lookup string and generate error if it isn't defined.
+    this.fieldRef.getField(fs);
+    return this.fieldRef.refString;
+  }
+
+  type(): FieldType {
+    return { type: "unknown" };
+  }
+}
+
 export class ExpressionFieldFromAst extends SpaceField {
   fieldName: string;
   defType?: FieldType;

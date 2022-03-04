@@ -42,13 +42,13 @@ import {
   QueryFieldAST,
   QueryFieldStruct,
   ColumnSpaceField,
-  FANSPaceField,
   WildSpaceField,
   DefinedParameter,
   SpaceEntry,
   AbstractParameter,
   SpaceParam,
   RenameSpaceField,
+  ReferenceField,
 } from "./space-field";
 
 type FieldMap = Record<string, SpaceEntry>;
@@ -328,6 +328,10 @@ export class DynamicSpace extends StaticSpace {
     }
   }
 
+  addFieldDef(fd: model.FieldDef): void {
+    this.setEntry(nameOf(fd), this.fromFieldDef(fd));
+  }
+
   structDef(): model.StructDef {
     const parameters = this.fromStruct.parameters || {};
     if (this.final === undefined) {
@@ -443,12 +447,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
   }
 
   addReference(ref: FieldReference): void {
-    const refIs = ref.getField(this.inputFS());
-    if (refIs.error) {
-      ref.log(refIs.error);
-      return;
-    }
-    this.setEntry(ref.refString, new FANSPaceField(ref, this));
+    this.setEntry(ref.refString, new ReferenceField(ref));
   }
 
   log(s: string): void {
@@ -471,10 +470,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         ? extendField.name.refString
         : extendField.defineName
     );
-    if (!this.extendedInput) {
-      this.extendedInput = new DynamicSpace(this.queryInput.sourceSpec);
-    }
-    this.extendedInput.addField(extendField);
+    this.extendInto().addField(extendField);
   }
 
   inputFS(): FieldSpace {
@@ -484,12 +480,25 @@ export abstract class QuerySpace extends QueryOperationSpace {
     return this.queryInput.fieldSpace;
   }
 
+  private extendInto(): DynamicSpace {
+    if (!this.extendedInput) {
+      this.extendedInput = new DynamicSpace(this.queryInput.sourceSpec);
+    }
+    return this.extendedInput;
+  }
+
   getPipeSegment(
     refineFrom: model.QuerySegment | undefined
   ): model.QuerySegment {
     const reduceOrProject = this.segType;
     if (reduceOrProject === "index") {
       throw new Error("IndexSegment getPipeSegment should not call super");
+    }
+
+    if (refineFrom?.extendSource) {
+      for (const xField of refineFrom.extendSource) {
+        this.extendInto().addFieldDef(xField);
+      }
     }
     const segment: model.QuerySegment = {
       type: reduceOrProject,
