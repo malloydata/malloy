@@ -53,6 +53,7 @@ import {
   JoinRelationship,
   isPhysical,
   isJoinOn,
+  isQuerySegment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -61,6 +62,16 @@ import md5 from "md5";
 import { ResultStructMetadataDef } from ".";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
+
+function extendStructDef(
+  structDef: StructDef,
+  extendSource: FieldDef[]
+): StructDef {
+  return {
+    ...structDef,
+    fields: [...structDef.fields, ...extendSource],
+  };
+}
 
 class StageWriter {
   withs: string[] = [];
@@ -1191,13 +1202,19 @@ export class Segment {
     segmentInput: StructDef,
     segment: PipeSegment
   ): StructDef {
-    const qs = new QueryStruct(segmentInput, {
+    let structDef: StructDef = segmentInput;
+    let pipeSegment = segment;
+    if (isQuerySegment(segment) && segment.extendSource !== undefined) {
+      structDef = extendStructDef(segmentInput, segment.extendSource);
+      pipeSegment = { ...segment, extendSource: undefined };
+    }
+    const qs = new QueryStruct(structDef, {
       model: new QueryModel(undefined),
     });
     const turtleDef: TurtleDef = {
       type: "turtle",
       name: "ignoreme",
-      pipeline: [segment],
+      pipeline: [pipeSegment],
     };
     const queryQueryQuery = QueryQuery.makeQuery(turtleDef, qs);
     return queryQueryQuery.getResultStructDef();
@@ -3251,24 +3268,29 @@ export class QueryModel {
     }
   }
 
-  getStructByName(name: string, makeNew = false): QueryStruct {
+  getStructByName(name: string): QueryStruct {
     let s;
     if ((s = this.structs.get(name))) {
-      if (makeNew) {
-        return new QueryStruct(s.fieldDef, { model: this });
-      } else {
-        return s;
-      }
+      return s;
     } else {
       throw new Error(`Struct ${name} not found in model.`);
     }
   }
 
-  getStructFromRef(structRef: StructRef, makeNew = false): QueryStruct {
+  getStructFromRef(
+    structRef: StructRef,
+    extendSource: FieldDef[] | undefined
+  ): QueryStruct {
+    let structDef;
     if (typeof structRef === "string") {
-      return this.getStructByName(structRef, makeNew);
+      const qs = this.getStructByName(structRef);
+      // if there are no extensions, just return the named object.
+      if (extendSource === undefined) {
+        return qs;
+      }
+      structDef = qs.fieldDef;
     } else if (structRef.type === "struct") {
-      return new QueryStruct(structRef, { model: this });
+      structDef = structRef;
     } else {
       throw new Error("Broken for now");
       // return new QueryStruct(
@@ -3276,6 +3298,30 @@ export class QueryModel {
       //   { model: this }
       // );
     }
+    return new QueryStruct(
+      extendSource ? extendStructDef(structDef, extendSource) : structDef,
+      { model: this }
+    );
+  }
+
+  getExtendedSource(pipeline: PipeSegment[]): {
+    pipeline: PipeSegment[];
+    extendSource: FieldDef[] | undefined;
+  } {
+    let extendSource;
+    let querySegment: QuerySegment | undefined;
+    if (
+      pipeline !== undefined &&
+      isQuerySegment(pipeline[0]) &&
+      pipeline[0].extendSource !== undefined
+    ) {
+      querySegment = pipeline[0];
+      extendSource = pipeline[0].extendSource;
+      querySegment = { ...querySegment, extendSource: undefined };
+      pipeline = [...pipeline];
+      pipeline[0] = querySegment;
+    }
+    return { pipeline, extendSource };
   }
 
   loadQuery(
@@ -3289,15 +3335,17 @@ export class QueryModel {
       stageWriter = new StageWriter(undefined);
     }
 
+    const { pipeline, extendSource } = this.getExtendedSource(query.pipeline);
+
     const turtleDef: TurtleDefPlus = {
       type: "turtle",
       name: "ignoreme",
       pipeHead: query.pipeHead,
-      pipeline: query.pipeline,
+      pipeline: pipeline,
       filterList: query.filterList,
     };
 
-    const struct = this.getStructFromRef(query.structRef);
+    const struct = this.getStructFromRef(query.structRef, extendSource);
     const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
 
     const ret = q.generateSQLFromPipeline(stageWriter);
