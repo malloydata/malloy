@@ -22,6 +22,7 @@ import {
 import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
 import { StaticSpace } from "../field-space";
+import {ExprExprContext} from "../lib/Malloy/MalloyParser";
 import { DataRequestResponse } from "../parse-malloy";
 import {
   TestTranslator,
@@ -578,6 +579,42 @@ describe("qops", () => {
     `)
   );
   test("nest ref", modelOK("query: ab->{group_by: ai; nest: aturtle}"));
+  test("refine query source with field", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle + { declare: aratio is ai / acount }
+    `);
+    expect(m).toTranslate();
+    const t = m.translate();
+    if (t.translated) {
+      const q = t.translated.queryList[0].pipeline[0];
+      if (q.type == "reduce" && q.extendSource) {
+        expect(q.extendSource.length).toBe(1);
+        const f = q.extendSource[0];
+        expect(f.type).toBe("number");
+        if (f.type == "number") {
+          expect(f.aggregate).toBeTruthy();
+        }
+      } else {
+        fail("Did not generate extendSource");
+      }
+    }
+  });
+  test("refine query source with join", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle + { join_one: bb is b on bb.astr = astr }
+    `);
+    expect(m).toTranslate();
+    const t = m.translate();
+    if (t.translated) {
+      const q = t.translated.queryList[0].pipeline[0];
+      if (q.type == "reduce" && q.extendSource) {
+        expect(q.extendSource.length).toBe(1);
+        expect(q.extendSource[0].type).toBe("struct");
+      } else {
+        fail("Did not generate extendSource");
+      }
+    }
+  });
 });
 
 describe("expressions", () => {
