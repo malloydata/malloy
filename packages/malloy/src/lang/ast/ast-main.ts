@@ -88,12 +88,15 @@ function opOutputStruct(
   if (ErrorFactory.isErrorStructdef(inputStruct)) {
     return inputStruct;
   }
-  try {
-    return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
-  } catch (e) {
-    logTo.log(`INTERNAL ERROR model/Segment.nextStructDef: ${e.message}`);
-    return ErrorFactory.structDef;
+  // Do not call into model if we have any errors
+  if (!logTo.errorsExist()) {
+    try {
+      return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
+    } catch (e) {
+      logTo.log(`INTERNAL ERROR model/Segment.nextStructDef: ${e.message}`);
+    }
   }
+  return ErrorFactory.structDef;
 }
 
 type ChildBody = MalloyElement | MalloyElement[];
@@ -219,6 +222,14 @@ export abstract class MalloyElement {
   private get sourceURL() {
     const trans = this.translator();
     return trans?.sourceURL || "(missing)";
+  }
+
+  errorsExist(): boolean {
+    const logger = this.translator()?.root.logger;
+    if (logger) {
+      return logger.hasErrors();
+    }
+    return true;
   }
 
   private logged = new Set<string>();
