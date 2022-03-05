@@ -311,7 +311,10 @@ export class ReferenceField extends SpaceField {
 
   getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined {
     // Lookup string and generate error if it isn't defined.
-    this.fieldRef.getField(fs);
+    const check = this.fieldRef.getField(fs);
+    if (check.error) {
+      this.fieldRef.log(check.error);
+    }
     return this.fieldRef.refString;
   }
 
