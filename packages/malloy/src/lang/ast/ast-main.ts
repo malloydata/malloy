@@ -85,11 +85,10 @@ function opOutputStruct(
   inputStruct: model.StructDef,
   opDesc: model.PipeSegment
 ): model.StructDef {
-  if (ErrorFactory.isErrorStructdef(inputStruct)) {
-    return inputStruct;
-  }
-  // Do not call into model if we have any errors
-  if (!logTo.errorsExist()) {
+  const badModel =
+    logTo.errorsExist() || ErrorFactory.isErrorStructdef(inputStruct);
+  // Don't call into the model code with a broken model
+  if (!badModel) {
     try {
       return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
     } catch (e) {
