@@ -81,13 +81,19 @@ export class ErrorFactory {
 }
 
 function opOutputStruct(
+  logTo: MalloyElement,
   inputStruct: model.StructDef,
   opDesc: model.PipeSegment
 ): model.StructDef {
   if (ErrorFactory.isErrorStructdef(inputStruct)) {
     return inputStruct;
   }
-  return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
+  try {
+    return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
+  } catch (e) {
+    logTo.log(`INTERNAL ERROR model/Segment.nextStructDef: ${e.message}`);
+    return ErrorFactory.structDef;
+  }
 }
 
 type ChildBody = MalloyElement | MalloyElement[];
@@ -1504,7 +1510,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment,
       outputSpace: () =>
-        new DynamicSpace(opOutputStruct(inputFS.structDef(), segment)),
+        new DynamicSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
   }
 }
@@ -1773,7 +1779,7 @@ abstract class PipelineDesc extends MalloyElement {
     pipeline: model.PipeSegment[]
   ): model.StructDef {
     for (const modelQop of pipeline) {
-      walkStruct = opOutputStruct(walkStruct, modelQop);
+      walkStruct = opOutputStruct(this, walkStruct, modelQop);
     }
     return walkStruct;
   }
@@ -1927,7 +1933,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
     if (modelPipe.pipeline.length > 0) {
       let endStruct = appendInput.structDef();
       for (const existingSeg of modelPipe.pipeline) {
-        endStruct = opOutputStruct(endStruct, existingSeg);
+        endStruct = opOutputStruct(this, endStruct, existingSeg);
       }
       appendInput = new DynamicSpace(endStruct);
     }
