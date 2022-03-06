@@ -3311,7 +3311,7 @@ export class QueryModel {
     let extendSource;
     let querySegment: QuerySegment | undefined;
     if (
-      pipeline !== undefined &&
+      pipeline?.length > 0 &&
       isQuerySegment(pipeline[0]) &&
       pipeline[0].extendSource !== undefined
     ) {
