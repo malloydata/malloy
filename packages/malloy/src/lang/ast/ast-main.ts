@@ -34,6 +34,7 @@ import {
 } from "./index";
 import { QueryField } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
+import { inspect } from "util";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -92,7 +93,10 @@ function opOutputStruct(
     try {
       return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
     } catch (e) {
-      logTo.log(`INTERNAL ERROR model/Segment.nextStructDef: ${e.message}`);
+      logTo.log(
+        `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
+          `QUERY: ${inspect(opDesc, { breakLength: 72, depth: Infinity })}`
+      );
     }
   }
   return ErrorFactory.structDef;
@@ -846,7 +850,10 @@ export class KeyJoin extends Join {
     const sourceDef = this.source.structDef();
     const joinStruct: model.StructDef = {
       ...sourceDef,
-      structRelationship: { type: "one", onExpression: ["1=0"] },
+      structRelationship: {
+        type: "one",
+        onExpression: ["('join fixup'='not done yet')"],
+      },
       location: this.location,
     };
     if (sourceDef.structSource.type === "query") {
