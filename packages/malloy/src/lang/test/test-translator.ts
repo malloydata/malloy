@@ -91,7 +91,7 @@ export class TestTranslator extends MalloyTranslator {
    *   explore: ab is a {
    *     join_one: b with astr
    *     measure: acount is count()
-   *     query: aturtle is { group_bY: astr; aggregate: acount }
+   *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
    */
   internalModel: ModelDef = {
