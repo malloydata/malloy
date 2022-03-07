@@ -308,4 +308,75 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.data.value[0].a).toBe(1);
   });
+
+  // local declarations
+  it(`local declarations external query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      query: from_sql(one) -> {
+        declare: c is a + 1
+        project: c
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(2);
+  });
+
+  it(`local declarations named query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      source: foo is from_sql(one) + {
+        query: bar is {
+          declare: c is a + 1
+          project: c
+        }
+      }
+
+      query: foo-> bar
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(2);
+  });
+
+  it(`local declarations refined named query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      source: foo is from_sql(one) + {
+        query: bar is {
+          declare: c is a + 1
+          project: c
+        }
+
+        query: baz is bar + {
+          declare: d is c + 1
+          project: d
+        }
+      }
+
+      query: foo-> baz
+      `
+      )
+      .run();
+    expect(result.data.value[0].d).toBe(3);
+  });
 });

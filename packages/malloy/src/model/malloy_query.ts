@@ -1198,25 +1198,21 @@ class QueryTurtle extends QueryField {}
  */
 export class Segment {
   // static nextStructDef(s: StructDef, q: AnonymousQueryDef): StructDef
-  static nextStructDef(
-    segmentInput: StructDef,
-    segment: PipeSegment
-  ): StructDef {
-    let structDef: StructDef = segmentInput;
-    let pipeSegment = segment;
-    if (isQuerySegment(segment) && segment.extendSource !== undefined) {
-      structDef = extendStructDef(segmentInput, segment.extendSource);
-      pipeSegment = { ...segment, extendSource: undefined };
-    }
+  static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
     const qs = new QueryStruct(structDef, {
       model: new QueryModel(undefined),
     });
     const turtleDef: TurtleDef = {
       type: "turtle",
       name: "ignoreme",
-      pipeline: [pipeSegment],
+      pipeline: [segment],
     };
-    const queryQueryQuery = QueryQuery.makeQuery(turtleDef, qs);
+
+    const queryQueryQuery = QueryQuery.makeQuery(
+      turtleDef,
+      qs,
+      new StageWriter(undefined) // stage write indicates we want to get a result.
+    );
     return queryQueryQuery.getResultStructDef();
   }
 }
@@ -1256,12 +1252,42 @@ class QueryQuery extends QueryField {
 
   static makeQuery(
     fieldDef: TurtleDef,
-    parent: QueryStruct,
+    parentStruct: QueryStruct,
     stageWriter: StageWriter | undefined = undefined
   ): QueryQuery {
-    const flatTurtleDef = parent.flattenTurtleDef(fieldDef);
+    let flatTurtleDef = parentStruct.flattenTurtleDef(fieldDef);
+    let parent = parentStruct;
 
     const firstStage = flatTurtleDef.pipeline[0];
+
+    // if we are generating code
+    //  and have extended declaration, we need to make a new QueryStruct
+    //  copy the definitions into a new structdef
+    //  edit the declations from the pipeline
+    if (
+      stageWriter !== undefined &&
+      isQuerySegment(firstStage) &&
+      firstStage.extendSource !== undefined
+    ) {
+      parent = new QueryStruct(
+        {
+          ...parentStruct.fieldDef,
+          fields: [...parentStruct.fieldDef.fields, ...firstStage.extendSource],
+        },
+        parent.parent ? { struct: parent } : { model: parent.model }
+      );
+      flatTurtleDef = {
+        ...flatTurtleDef,
+        pipeline: [
+          {
+            ...firstStage,
+            extendSource: undefined,
+          },
+          ...flatTurtleDef.pipeline.slice(1),
+        ],
+      };
+    }
+
     switch (firstStage.type) {
       case "reduce":
         return new QueryQueryReduce(flatTurtleDef, parent, stageWriter);
@@ -3277,51 +3303,16 @@ export class QueryModel {
     }
   }
 
-  getStructFromRef(
-    structRef: StructRef,
-    extendSource: FieldDef[] | undefined
-  ): QueryStruct {
+  getStructFromRef(structRef: StructRef): QueryStruct {
     let structDef;
     if (typeof structRef === "string") {
-      const qs = this.getStructByName(structRef);
-      // if there are no extensions, just return the named object.
-      if (extendSource === undefined) {
-        return qs;
-      }
-      structDef = qs.fieldDef;
+      return this.getStructByName(structRef);
     } else if (structRef.type === "struct") {
       structDef = structRef;
     } else {
       throw new Error("Broken for now");
-      // return new QueryStruct(
-      //   this.getQueryFromDef(structRef, undefined).getResultStructDef(),
-      //   { model: this }
-      // );
     }
-    return new QueryStruct(
-      extendSource ? extendStructDef(structDef, extendSource) : structDef,
-      { model: this }
-    );
-  }
-
-  getExtendedSource(pipeline: PipeSegment[]): {
-    pipeline: PipeSegment[];
-    extendSource: FieldDef[] | undefined;
-  } {
-    let extendSource;
-    let querySegment: QuerySegment | undefined;
-    if (
-      pipeline?.length > 0 &&
-      isQuerySegment(pipeline[0]) &&
-      pipeline[0].extendSource !== undefined
-    ) {
-      querySegment = pipeline[0];
-      extendSource = pipeline[0].extendSource;
-      querySegment = { ...querySegment, extendSource: undefined };
-      pipeline = [...pipeline];
-      pipeline[0] = querySegment;
-    }
-    return { pipeline, extendSource };
+    return new QueryStruct(structDef, { model: this });
   }
 
   loadQuery(
@@ -3335,23 +3326,24 @@ export class QueryModel {
       stageWriter = new StageWriter(undefined);
     }
 
-    const { pipeline, extendSource } = this.getExtendedSource(query.pipeline);
-
     const turtleDef: TurtleDefPlus = {
       type: "turtle",
       name: "ignoreme",
       pipeHead: query.pipeHead,
-      pipeline: pipeline,
+      pipeline: query.pipeline,
       filterList: query.filterList,
     };
 
-    const struct = this.getStructFromRef(query.structRef, extendSource);
-    const q = QueryQuery.makeQuery(turtleDef, struct, stageWriter);
+    const q = QueryQuery.makeQuery(
+      turtleDef,
+      this.getStructFromRef(query.structRef),
+      stageWriter
+    );
 
     const ret = q.generateSQLFromPipeline(stageWriter);
-    if (emitFinalStage && struct.dialect.hasFinalStage) {
+    if (emitFinalStage && q.parent.dialect.hasFinalStage) {
       ret.lastStageName = stageWriter.addStage(
-        struct.dialect.sqlFinalStage(ret.lastStageName)
+        q.parent.dialect.sqlFinalStage(ret.lastStageName)
       );
     }
     return {
@@ -3359,7 +3351,7 @@ export class QueryModel {
       malloy,
       stageWriter,
       structs: [ret.outputStruct],
-      connectionName: struct.connectionName,
+      connectionName: q.parent.connectionName,
     };
   }
 
