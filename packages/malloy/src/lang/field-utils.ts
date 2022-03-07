@@ -22,7 +22,13 @@ export function nameOf(qfd: Field): string {
   return qfd.as || qfd.name;
 }
 
-export function mergeFields<T extends Field>(older: T[], newer: T[]): T[] {
+export function mergeFields<T extends Field>(
+  older: T[] | undefined,
+  newer: T[]
+): T[] {
+  if (older == undefined) {
+    return newer;
+  }
   const redefined = new Set(newer.map((f) => nameOf(f)));
   const merged = older.filter((f) => !redefined.has(nameOf(f)));
   merged.push(...newer);
