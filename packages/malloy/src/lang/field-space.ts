@@ -50,6 +50,7 @@ import {
   RenameSpaceField,
   ReferenceField,
 } from "./space-field";
+import { nameOf, mergeFields } from "./field-utils";
 
 type FieldMap = Record<string, SpaceEntry>;
 
@@ -386,13 +387,6 @@ export class DynamicSpace extends StaticSpace {
 
 type QuerySegType = "reduce" | "project" | "index";
 
-function nameOf(qfd: model.QueryFieldDef): string {
-  if (typeof qfd === "string") {
-    return qfd;
-  }
-  return qfd.as || qfd.name;
-}
-
 /**
  * A namespace for Query operations. The have an input and an
  * output set of fields.
@@ -505,44 +499,27 @@ export abstract class QuerySpace extends QueryOperationSpace {
       fields: this.queryFieldDefs(),
     };
 
-    if (refineFrom?.fields) {
-      const newFields: model.QueryFieldDef[] = [];
-      const newDefinition: Record<string, boolean> = {};
-      for (const field of newFields) {
-        const fieldName = nameOf(field);
-        newDefinition[fieldName] = true;
-      }
-      for (const field of refineFrom.fields) {
-        const fieldName = nameOf(field);
-        if (!newDefinition[fieldName]) {
-          newFields.push(field);
-        }
-      }
-      newFields.push(...segment.fields);
-      segment.fields = newFields;
-    }
+    segment.fields = mergeFields(refineFrom?.fields, segment.fields);
 
+    if (refineFrom?.extendSource) {
+      segment.extendSource = refineFrom.extendSource;
+    }
     if (this.extendedInput) {
-      const allRefines = new Set(this.extendedFields);
-      if (refineFrom?.extendSource) {
-        for (const f in refineFrom.extendSource) {
-          allRefines.add(nameOf(f));
-        }
-      }
-      segment.extendSource = [];
+      const newExtends: model.FieldDef[] = [];
       // have to get the whole structdef because we need all the join
       // resolution to happen and that only happens at the completion
       // of the structdef generation.
       const extendedStruct = this.extendedInput.structDef();
 
-      for (const extendName of allRefines) {
+      for (const extendName of this.extendedFields) {
         const extendEnt = extendedStruct.fields.find(
           (f) => nameOf(f) == extendName
         );
         if (extendEnt) {
-          segment.extendSource.push(extendEnt);
+          newExtends.push(extendEnt);
         }
       }
+      segment.extendSource = mergeFields(segment.extendSource, newExtends);
     }
     return segment;
   }
