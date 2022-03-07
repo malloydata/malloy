@@ -1782,7 +1782,7 @@ abstract class PipelineDesc extends MalloyElement {
   } {
     const turtle = getStructFieldDef(fromStruct, turtleName);
     if (!turtle) {
-      this.log(`Reference to undefined explore query '${turtleName}'`);
+      this.log(`Query '${turtleName}' is not defined in source`);
     } else if (turtle.type !== "turtle") {
       this.log(`'${turtleName}' is not a query`);
     } else {
