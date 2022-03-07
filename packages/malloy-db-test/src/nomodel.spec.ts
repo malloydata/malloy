@@ -379,5 +379,4 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.data.value[0].d).toBe(3);
   });
-
 });
