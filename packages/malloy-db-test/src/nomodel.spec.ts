@@ -369,7 +369,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
         query: baz is bar + {
           declare: d is c + 1
-          project: c
+          project: d
         }
       }
 

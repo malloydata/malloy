@@ -1198,25 +1198,21 @@ class QueryTurtle extends QueryField {}
  */
 export class Segment {
   // static nextStructDef(s: StructDef, q: AnonymousQueryDef): StructDef
-  static nextStructDef(
-    segmentInput: StructDef,
-    segment: PipeSegment
-  ): StructDef {
-    let structDef: StructDef = segmentInput;
-    let pipeSegment = segment;
-    if (isQuerySegment(segment) && segment.extendSource !== undefined) {
-      structDef = extendStructDef(segmentInput, segment.extendSource);
-      pipeSegment = { ...segment, extendSource: undefined };
-    }
+  static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
     const qs = new QueryStruct(structDef, {
       model: new QueryModel(undefined),
     });
     const turtleDef: TurtleDef = {
       type: "turtle",
       name: "ignoreme",
-      pipeline: [pipeSegment],
+      pipeline: [segment],
     };
-    const queryQueryQuery = QueryQuery.makeQuery(turtleDef, qs);
+
+    const queryQueryQuery = QueryQuery.makeQuery(
+      turtleDef,
+      qs,
+      new StageWriter(undefined) // stage write indicates we want to get a result.
+    );
     return queryQueryQuery.getResultStructDef();
   }
 }
