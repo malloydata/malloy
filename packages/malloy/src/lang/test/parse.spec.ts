@@ -684,18 +684,16 @@ describe("qops", () => {
       }
     }
   });
-  test(
-    "refine query source bad with join",
-    badModel(
-      `
+  test("refine query source errors with illegal join", () => {
+    expect(
+      markSource`
         query: ab -> aturtle + {
           join_one: bb is table('aTable') with astr
           group_by: bb_astr is bb.astr
         }
-      `,
-      "mising primary key"
-    )
-  );
+    `
+    ).compileToFailWith("mising primary key");
+  });
 });
 
 describe("expressions", () => {
@@ -870,20 +868,19 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
-  test(
-    "query reference to undefined explore",
-    badModel("query: x->{ group_by: y }", "Undefined source 'x'")
-  );
-  test(
-    "join reference before definition",
-    badModel(
-      `
-        explore: newAB is a { join_one: newB is bb on astring }
+  test("query reference to undefined explore", () => {
+    expect(markSource`query: ${"x"}->{ group_by: y }`).compileToFailWith(
+      "Undefined source 'x'"
+    );
+  });
+  test("join reference before definition", () => {
+    expect(
+      markSource`
+        explore: newAB is a { join_one: newB is ${"bb"} on astring }
         explore: newB is b
-      `,
-      "Undefined source 'bb'"
-    )
-  );
+      `
+    ).compileToFailWith("Undefined source 'bb'");
+  });
   test(
     "non-rename rename",
     badModel(
