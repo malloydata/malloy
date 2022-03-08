@@ -38,35 +38,48 @@ const run = (sql: string) => {
   });
 };
 
-console.log(`Creating database at ${databasePath}, this may take some time`);
+console.log(`Creating database at ${databasePath}`);
 
 (async () => {
   try {
     await run(
-      `CREATE TABLE aircraft AS SELECT * FROM '${cwd}aircraft.parquet'`
+      `CREATE TABLE aircraft AS SELECT * FROM parquet_scan('${cwd}aircraft.parquet')`
     );
     await run(
-      `CREATE TABLE aircraft_models AS SELECT * FROM '${cwd}aircraft_models.parquet'`
+      `CREATE TABLE aircraft_models AS SELECT * FROM parquet_scan('${cwd}aircraft_models.parquet')`
     );
     await run(
-      `CREATE TABLE airports AS SELECT * FROM '${cwd}airports.parquet'`
+      `CREATE TABLE airports AS SELECT * FROM parquet_scan('${cwd}airports.parquet')`
     );
     await run(
-      `CREATE TABLE carriers AS SELECT * FROM '${cwd}carriers.parquet'`
+      `CREATE TABLE alltypes AS SELECT * FROM parquet_scan('${cwd}alltypes.parquet')`
     );
     await run(
-      `CREATE TABLE flights AS SELECT * FROM parquet_scan([
-        '${cwd}flights-000000000000.parquet',
-        '${cwd}flights-000000000001.parquet',
-        '${cwd}flights-000000000002.parquet',
-        '${cwd}flights-000000000003.parquet',
-        '${cwd}flights-000000000004.parquet',
-        '${cwd}flights-000000000005.parquet',
-        '${cwd}flights-000000000006.parquet',
-        '${cwd}flights-000000000007.parquet',
-        '${cwd}flights-000000000008.parquet',
-        '${cwd}flights-000000000009.parquet'
-      ]);`
+      `CREATE TABLE alltypes2 AS SELECT * FROM parquet_scan('${cwd}alltypes2.parquet')`
+    );
+    await run(
+      `CREATE TABLE bq_medicare_test AS SELECT * FROM parquet_scan('${cwd}bq_medicare_test.parquet')`
+    );
+    await run(
+      `CREATE TABLE carriers AS SELECT * FROM parquet_scan('${cwd}carriers.parquet')`
+    );
+    await run(
+      `CREATE TABLE flights AS SELECT * FROM parquet_scan('${cwd}flights.parquet')`
+    );
+    await run(
+      `CREATE TABLE flights_partitioned AS SELECT * FROM parquet_scan('${cwd}flights_partitioned.parquet')`
+    );
+    await run(
+      `CREATE TABLE numbers AS SELECT * FROM parquet_scan('${cwd}numbers.parquet')`
+    );
+    await run(
+      `CREATE TABLE state_facts AS SELECT * FROM parquet_scan('${cwd}state_facts.parquet')`
+    );
+    await run(
+      `CREATE TABLE words AS SELECT * FROM parquet_scan('${cwd}words.parquet')`
+    );
+    await run(
+      `CREATE TABLE words_bigger AS SELECT * FROM parquet_scan('${cwd}words_bigger.parquet')`
     );
   } catch (e) {
     console.log(e);
