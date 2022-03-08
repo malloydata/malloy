@@ -441,7 +441,12 @@ export abstract class QueryOperationSpace extends DynamicSpace {
   }
 
   addReference(ref: FieldReference): void {
-    this.setEntry(ref.refString, new ReferenceField(ref));
+    const refName = ref.outputName;
+    if (this.entry(refName)) {
+      ref.log(`Output already has a field named '${refName}'`);
+    } else {
+      this.setEntry(refName, new ReferenceField(ref));
+    }
   }
 
   log(s: string): void {

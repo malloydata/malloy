@@ -932,8 +932,13 @@ describe("error handling", () => {
 
   test("detect duplicate output field names", () => {
     expect(
+      markSource`query: ab -> { group_by: astr, ${"astr"} }`
+    ).compileToFailWith("Output already has a field named 'astr'");
+  });
+  test("detect join tail overlap existing ref", () => {
+    expect(
       markSource`query: ab -> { group_by: astr, ${"b.astr"} }`
-    ).compileToFailWith("duplicate field names");
+    ).compileToFailWith("Output already has a field named 'astr'");
   });
 });
 

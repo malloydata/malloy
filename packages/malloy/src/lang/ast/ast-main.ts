@@ -1136,6 +1136,11 @@ export class FieldReference extends ListOf<FieldName> {
     return this.list.map((n) => n.refString).join(".");
   }
 
+  get outputName(): string {
+    const last = this.list[this.list.length - 1];
+    return last.refString;
+  }
+
   get sourceString(): string | undefined {
     if (this.list.length > 1) {
       return this.list
