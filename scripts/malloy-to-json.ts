@@ -55,6 +55,12 @@ async function translateMalloy(fileSrc: string, url: string, c: Connection) {
       );
       mt.update({ tables, errors: { tables: errors } });
     }
+    if (mr.sqlStructs) {
+      const { schemas: sqlStructs, errors } = await c.fetchSchemaForSQLBlocks(
+        mr.sqlStructs
+      );
+      mt.update({ sqlStructs, errors: { sqlStructs: errors } });
+    }
     if (mr.final) {
       translating = false;
     } else {
