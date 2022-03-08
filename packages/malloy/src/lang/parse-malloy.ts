@@ -766,8 +766,16 @@ export abstract class MalloyTranslation {
     return {};
   }
 
+  private finalAnswer?: TranslateResponse;
   translate(extendingModel?: ModelDef): TranslateResponse {
-    return this.translateStep.step(this, extendingModel);
+    if (this.finalAnswer) {
+      return this.finalAnswer;
+    }
+    const attempt = this.translateStep.step(this, extendingModel);
+    if (attempt.final) {
+      this.finalAnswer = attempt;
+    }
+    return attempt;
   }
 
   metadata(): MetadataResponse {

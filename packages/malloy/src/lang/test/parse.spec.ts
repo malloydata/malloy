@@ -21,7 +21,7 @@ import {
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { ExpressionDef } from "../ast";
-import { StructSpace } from "../field-space";
+import { StaticSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
 import {
   TestTranslator,
@@ -35,6 +35,8 @@ import {
   markSource,
   MarkedSource,
 } from "./test-translator";
+import { isEqual } from "lodash";
+import { inspect } from "util";
 
 const inspectCompile = false;
 
@@ -76,6 +78,7 @@ declare global {
       toBeErrorless(): R;
       toTranslate(): R;
       toReturnType(tp: string): R;
+      compileToFailWith(expectedError: string): R;
     }
   }
 }
@@ -167,6 +170,37 @@ expect.extend({
       message: () => "",
     };
   },
+  compileToFailWith: function (s: MarkedSource | string, msg: string) {
+    const src = typeof s == "string" ? s : s.code;
+    const emsg = `Compile Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
+    const m = new BetaModel(src);
+    const t = m.translate();
+    if (t.translated) {
+      return { pass: false, message: () => emsg };
+    } else {
+      const errList = m.errors().errors;
+      const firstError = errList[0];
+      if (firstError.message != msg) {
+        return {
+          pass: false,
+          message: () => `Received errror: ${firstError.message}\n${emsg}`,
+        };
+      }
+      if (typeof s != "string") {
+        const have = errList[0].at?.range;
+        const want = s.locations[0].range;
+        if (!this.equals(have, want)) {
+          return {
+            pass: false,
+            message: () =>
+              `Expected location: ${inspect(want)}\n` +
+              `Received location: ${inspect(have)}\n${emsg}`,
+          };
+        }
+      }
+    }
+    return { pass: true, message: () => `Found expected error '${msg}` };
+  },
 });
 
 class BetaExpression extends Testable {
@@ -179,7 +213,7 @@ class BetaExpression extends Testable {
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
-        const exprDef = exprAst.getExpression(new StructSpace(aStruct));
+        const exprDef = exprAst.getExpression(new StaticSpace(aStruct));
         if (inspectCompile) {
           console.log("EXPRESSION: ", pretty(exprDef));
         }
@@ -212,24 +246,29 @@ function modelOK(s: string): TestFunc {
   };
 }
 
-function badModel(s: string, e: string): TestFunc {
+function badModel(s: MarkedSource | string, msg: string): TestFunc {
   return () => {
-    const m = new BetaModel(s);
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    const firstError = errList[0];
-    expect(firstError.message).toBe(e);
-    return undefined;
-  };
-}
-
-function modelErrors(s: MarkedSource, msg: string): TestFunc {
-  return () => {
-    const m = new BetaModel(s.code);
-    expect(m).not.toCompile();
-    const errList = m.errors().errors;
-    expect(errList[0].message).toBe(msg);
-    expect(errList[0].at).toEqual(s.locations[0]);
+    const src = typeof s == "string" ? s : s.code;
+    const emsg = `Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
+    const m = new BetaModel(src);
+    const t = m.translate();
+    if (t.translated) {
+      fail(emsg);
+    } else {
+      const errList = m.errors().errors;
+      const firstError = errList[0];
+      if (firstError.message != msg) {
+        fail(`Received errror: ${firstError.message}\n${emsg}`);
+      }
+      if (typeof s != "string") {
+        if (!isEqual(errList[0].at, s.locations[0])) {
+          fail(
+            `Expected location: ${s.locations[0]}\n` +
+              `Received location: ${errList[0].at}\n${emsg}`
+          );
+        }
+      }
+    }
     return undefined;
   };
 }
@@ -448,6 +487,17 @@ describe("explore properties", () => {
         }
       `)
     );
+    test("with requires primary key", () => {
+      expect(
+        markSource`
+          source: nb is b {
+            join_one: ${"bb is table('aTable') with astr"}
+          }
+        `
+      ).compileToFailWith(
+        "join_one: Cannot use with unless source has a primary key"
+      );
+    });
   });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
@@ -578,6 +628,73 @@ describe("qops", () => {
     `)
   );
   test("nest ref", modelOK("query: ab->{group_by: ai; nest: aturtle}"));
+  test("refine query with extended source", () => {
+    const m = new BetaModel(`
+      source: nab is ab {
+        query: xturtle is aturtle + {
+          declare: aratio is ai / acount
+        }
+      }
+      query: nab -> xturtle + { aggregate: aratio }
+    `);
+    expect(m).toTranslate();
+    const t = m.translate();
+    if (t.translated) {
+      const q = t.translated.queryList[0].pipeline[0];
+      if (q.type == "reduce" && q.extendSource) {
+        expect(q.extendSource.length).toBe(1);
+        const f = q.extendSource[0];
+        expect(f.type).toBe("number");
+        if (f.type == "number") {
+          expect(f.aggregate).toBeTruthy();
+        }
+      } else {
+        fail("Did not generate extendSource");
+      }
+    }
+  });
+  test("refine query source with field", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle + {
+        declare: aratio is ai / acount
+        aggregate: aratio
+      }
+    `);
+    expect(m).toTranslate();
+    const t = m.translate();
+    if (t.translated) {
+      const q = t.translated.queryList[0].pipeline[0];
+      if (q.type == "reduce" && q.extendSource) {
+        expect(q.extendSource.length).toBe(1);
+        const f = q.extendSource[0];
+        expect(f.type).toBe("number");
+        if (f.type == "number") {
+          expect(f.aggregate).toBeTruthy();
+        }
+      } else {
+        fail("Did not generate extendSource");
+      }
+    }
+  });
+  test("refine query source with join", () => {
+    const m = new BetaModel(`
+      query: ab -> aturtle + {
+        join_one: bb is b on bb.astr = astr
+        group_by: foo is bb.astr
+      }
+    `);
+    expect(m).toTranslate();
+    const t = m.translate();
+    if (t.translated) {
+      const q = t.translated.queryList[0].pipeline[0];
+      if (q.type == "reduce" && q.extendSource) {
+        expect(q.extendSource.length).toBe(1);
+        expect(q.extendSource[0].type).toBe("struct");
+      } else {
+        fail("Did not generate extendSource");
+      }
+    }
+  });
 });
 
 describe("expressions", () => {
@@ -752,20 +869,19 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
-  test(
-    "query reference to undefined explore",
-    badModel("query: x->{ group_by: y }", "Undefined source 'x'")
-  );
-  test(
-    "join reference before definition",
-    badModel(
-      `
-        explore: newAB is a { join_one: newB is bb on astring }
+  test("query reference to undefined explore", () => {
+    expect(markSource`query: ${"x"}->{ group_by: y }`).compileToFailWith(
+      "Undefined source 'x'"
+    );
+  });
+  test("join reference before definition", () => {
+    expect(
+      markSource`
+        explore: newAB is a { join_one: newB is ${"bb"} on astring }
         explore: newB is b
-      `,
-      "Undefined source 'bb'"
-    )
-  );
+      `
+    ).compileToFailWith("Undefined source 'bb'");
+  });
   test(
     "non-rename rename",
     badModel(
@@ -807,16 +923,23 @@ describe("error handling", () => {
   //   const firstError = errList[0];
   //   expect(firstError.message).toBe("Expressions in queries must have names");
   // });
-  test(
-    "query on source with errors",
-    modelErrors(
-      markSource`
+  test("query on source with errors", () => {
+    expect(markSource`
         explore: na is a { join_one: ${"n"} on astr }
         // query: na -> { project: * }
-      `,
-      "Undefined source 'n'"
-    )
-  );
+      `).compileToFailWith("Undefined source 'n'");
+  });
+
+  test("detect duplicate output field names", () => {
+    expect(
+      markSource`query: ab -> { group_by: astr, ${"astr"} }`
+    ).compileToFailWith("Output already has a field named 'astr'");
+  });
+  test("detect join tail overlap existing ref", () => {
+    expect(
+      markSource`query: ab -> { group_by: astr, ${"b.astr"} }`
+    ).compileToFailWith("Output already has a field named 'astr'");
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
@@ -1053,21 +1176,21 @@ describe("source locations", () => {
 
   test(
     "undefined query location",
-    modelErrors(
+    badModel(
       markSource`query: ${"-> xyz"}`,
       "Reference to undefined query 'xyz'"
     )
   );
   test(
     "undefined field reference",
-    modelErrors(
+    badModel(
       markSource`query: a -> { group_by: ${"xyz"} }`,
       "'xyz' is not defined"
     )
   );
   test(
     "bad query",
-    modelErrors(
+    badModel(
       markSource`query: a -> { group_by: astr; ${"project: *"} }`,
       "project: not legal in grouping query"
     )
@@ -1075,7 +1198,7 @@ describe("source locations", () => {
 
   test.skip(
     "undefined field reference in top",
-    modelErrors(
+    badModel(
       markSource`query: a -> { group_by: one is 1; top: 1 by ${"xyz"} }`,
       "'xyz' is not defined"
     )
@@ -1083,7 +1206,7 @@ describe("source locations", () => {
 
   test.skip(
     "undefined field reference in order_by",
-    modelErrors(
+    badModel(
       markSource`query: a -> { group_by: one is 1; order_by: ${"xyz"} }`,
       "'xyz' is not defined"
     )
@@ -1658,7 +1781,7 @@ describe("pipeline comprehension", () => {
   );
   test(
     "second query doesn't have access to original fields",
-    modelErrors(
+    badModel(
       markSource`
         explore: aq is a {
           query: t1 is {
