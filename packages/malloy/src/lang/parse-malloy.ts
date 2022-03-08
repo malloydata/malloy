@@ -758,20 +758,25 @@ export abstract class MalloyTranslation {
   }
 
   getChildExports(importURL: string): NamedStructDefs {
+    const exports: NamedStructDefs = {};
     const childURL = new URL(importURL, this.sourceURL).toString();
     const child = this.childTranslators.get(childURL);
     if (child) {
-      child.translate();
-      const exports: NamedStructDefs = {};
-      for (const fromChild of child.modelDef.exports) {
-        const modelEntry = child.modelDef.contents[fromChild];
-        if (modelEntry.type === "struct") {
-          exports[fromChild] = modelEntry;
+      const did = child.translate();
+      if (!did.translated) {
+        this.root.logger.log({
+          message: `INTERNAL ERROR: Load failure on import of ${importURL}`,
+        });
+      } else {
+        for (const fromChild of child.modelDef.exports) {
+          const modelEntry = child.modelDef.contents[fromChild];
+          if (modelEntry.type === "struct") {
+            exports[fromChild] = modelEntry;
+          }
         }
       }
-      return exports;
     }
-    return {};
+    return exports;
   }
 
   private finalAnswer?: TranslateResponse;
