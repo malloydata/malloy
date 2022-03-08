@@ -21,7 +21,7 @@ import {
   StructDef,
 } from "@malloydata/malloy";
 
-// duckdb node bindings do not come with types, require is required
+// duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const duckdb = require("duckdb");
@@ -47,14 +47,13 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   regtype: "string",
   numeric: "number",
   bytea: "string",
-  pg_ndistinct: "number",
 };
 
 export class DuckDBConnection implements Connection {
   public readonly name;
 
-  private connection;
-  private database;
+  protected connection;
+  protected database;
 
   constructor(name: string) {
     this.name = name;
