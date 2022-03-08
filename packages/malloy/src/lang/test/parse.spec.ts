@@ -487,6 +487,17 @@ describe("explore properties", () => {
         }
       `)
     );
+    test("with requires primary key", () => {
+      expect(
+        markSource`
+          source: nb is b {
+            join_one: ${"bb is table('aTable') with astr"}
+          }
+        `
+      ).compileToFailWith(
+        "join_one: Cannot use with unless source has a primary key"
+      );
+    });
   });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
@@ -683,16 +694,6 @@ describe("qops", () => {
         fail("Did not generate extendSource");
       }
     }
-  });
-  test("refine query source errors with illegal join", () => {
-    expect(
-      markSource`
-        query: ab -> aturtle + {
-          join_one: bb is table('aTable') with astr
-          group_by: bb_astr is bb.astr
-        }
-    `
-    ).compileToFailWith("mising primary key");
   });
 });
 

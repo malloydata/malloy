@@ -889,8 +889,10 @@ export class KeyJoin extends Join {
           );
         }
       } else {
-        this.log(`join_one: with requires primary key`);
+        this.log(`join_one: Primary key '${pkey}' not found in source`);
       }
+    } else {
+      this.log(`join_one: Cannot use with unless source has a primary key`);
     }
   }
 }
