@@ -91,7 +91,6 @@ const mockSchema: Record<string, StructDef> = {
       { name: "diverted", type: "string" },
       { name: "id2", type: "number", numberType: "integer" },
     ],
-    parameters: {},
     as: "flights",
   },
   "malloytest.airports": {

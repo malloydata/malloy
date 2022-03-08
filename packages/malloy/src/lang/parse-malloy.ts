@@ -489,6 +489,14 @@ class ASTStep implements TranslationStep {
       }
     }
 
+    // Now make sure that every child also has all sql blocks resolved
+    for (const child of that.childTranslators.values()) {
+      const kidNeeds = child.astStep.step(child);
+      if (isNeedResponse(kidNeeds)) {
+        return kidNeeds;
+      }
+    }
+
     // TODO report errors from here!
     const missingSqlStructs = sqlZone.getUndefinedBlocks();
     if (missingSqlStructs) {
