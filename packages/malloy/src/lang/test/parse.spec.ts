@@ -982,7 +982,7 @@ describe("error handling", () => {
     expect(
       `
         source: c is a {
-          dimension: d is meaning_of_life = r'(forty two|fifty four)'
+          dimension: d is meaning_of_life ~ r'(forty two|fifty four)'
         }
       `
     ).compileToFailWith("'meaning_of_life' is not defined");
