@@ -58,8 +58,8 @@ export class DuckDBConnection implements Connection {
   constructor(name: string) {
     this.name = name;
 
-    // TODO temp! For now, just create in-memory database. Production usage will require more options here
-    this.database = new duckdb.Database(":memory:");
+    // TODO temp! For now, just connect to the test database
+    this.database = new duckdb.Database("test/data/duckdb/duckdb_test.db");
     this.connection = this.database.connect();
   }
 
@@ -72,11 +72,17 @@ export class DuckDBConnection implements Connection {
   }
 
   protected async runDuckDBQuery(sql: string): Promise<MalloyQueryData> {
-    const result = await this.connection.all(sql);
-    return {
-      rows: result,
-      totalRows: result.length,
-    };
+    return new Promise((resolve, reject) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      this.connection.all(sql, (err: any, result: any) => {
+        if (err) reject(err);
+        else
+          resolve({
+            rows: result,
+            totalRows: result.length,
+          });
+      });
+    });
   }
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {

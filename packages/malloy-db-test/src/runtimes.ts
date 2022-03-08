@@ -56,15 +56,6 @@ export class DuckDBTestConnection extends DuckDBConnection {
     super(name);
   }
 
-  public async loadData(): Promise<void> {
-    // TEMP - try loading from parquet
-    const result = await this.database.run("select * from 'airports.parquet'");
-
-    this.connection.all("show tables", function (err: any, rows: any) {
-      console.log(rows);
-    });
-  }
-
   public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
     try {
       return await super.runSQL(sqlCommand);

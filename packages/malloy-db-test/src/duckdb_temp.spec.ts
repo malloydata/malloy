@@ -17,18 +17,8 @@ import { DuckDBTestConnection } from "./runtimes";
 
 const duckDB = new DuckDBTestConnection("duckdb");
 
-it(`blank test}`, async () => {
+it(`silly test}`, async () => {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const duckdb = require("duckdb");
-
-  const db = new duckdb.Database(":memory:");
-  db.all(
-    "DESCRIBE SELECT * FROM 'packages/malloy-db-test/src/airports.parquet';",
-    function (err: any, res: any) {
-      if (err) {
-        throw err;
-      }
-      console.log(res);
-    }
-  );
+  const count = await duckDB.runSQL("SELECT COUNT(*) FROM 'airports';");
+  console.log(count);
 });
