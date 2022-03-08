@@ -12,9 +12,15 @@
  */
 /* eslint-disable no-console */
 import * as readline from "readline";
-import { Malloy, MalloyTranslator } from "@malloydata/malloy";
-import { pretty } from "@malloydata/malloy/src/lang/test-translator";
+import { inspect } from "util";
+import { MalloyTranslator, Connection } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { readFileSync } from "fs";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
+export function pretty(thing: any): string {
+  return inspect(thing, { breakLength: 72, depth: Infinity });
+}
 
 /*
 
@@ -37,15 +43,17 @@ CURRENTLY HAS TWO MODES
 
 */
 
-async function translateMalloy(fileSrc: string, url = "malloy://cli/stdin") {
+async function translateMalloy(fileSrc: string, url: string, c: Connection) {
   const mt = new MalloyTranslator(url);
   mt.update({ urls: { [url]: fileSrc } });
   let translating = true;
   let mr = mt.translate();
   while (translating) {
     if (mr.tables) {
-      const tables = await Malloy.db.fetchSchemaForTables(mr.tables);
-      mt.update({ tables });
+      const { schemas: tables, errors } = await c.fetchSchemaForTables(
+        mr.tables
+      );
+      mt.update({ tables, errors: { tables: errors } });
     }
     if (mr.final) {
       translating = false;
@@ -76,12 +84,13 @@ function fullPath(fn: string): string {
 }
 
 async function main() {
+  const connection = new BigQueryConnection("bigquery");
   if (process.argv.length > 2) {
     for (const fileArg of process.argv.slice(2)) {
       const filePath = fullPath(fileArg);
       const src = readFileSync(filePath, "utf-8");
       const url = `file:/${filePath}`;
-      await translateMalloy(src, url);
+      await translateMalloy(src, url, connection);
     }
   } else {
     const rl = readline.createInterface({
@@ -92,7 +101,7 @@ async function main() {
     while (translating) {
       const src = await ask(rl, "malloy> ");
       if (src) {
-        await translateMalloy(src);
+        await translateMalloy(src, "malloy://cli/stdin", connection);
       } else {
         translating = false;
       }
