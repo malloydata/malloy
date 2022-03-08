@@ -1,5 +1,5 @@
 {
-  "name": "@malloydata/db-test",
+  "name": "@malloydata/db-duckdb",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -12,9 +12,6 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/malloy": "*",
-    "@malloydata/db-bigquery": "*",
-    "@malloydata/db-postgres": "*",
-    "@malloydata/db-duckdb": "*"
+    "duckdb": "^0.3.2"
   }
 }

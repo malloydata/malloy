@@ -8,15 +8,6 @@
   "references": [
     {
       "path": "../malloy"
-    },
-    {
-      "path": "../malloy-db-bigquery"
-    },
-    {
-      "path": "../malloy-db-postgres"
-    },
-    {
-      "path": "../malloy-db-duckdb"
     }
   ]
 }

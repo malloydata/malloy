@@ -19,6 +19,7 @@ import {
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
+import { DuckDBConnection } from "@malloydata/db-duckdb";
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -27,6 +28,7 @@ export class BigQueryTestConnection extends BigQueryConnection {
     try {
       return await super.runSQL(sqlCommand);
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.log(`Error in SQL:\n ${sqlCommand}`);
       throw e;
     }
@@ -40,6 +42,21 @@ export class PostgresTestConnection extends PooledPostgresConnection {
     try {
       return await super.runSQL(sqlCommand);
     } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
+export class DuckDBTestConnection extends DuckDBConnection {
+  // we probably need a better way to do this.
+
+  public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand);
+    } catch (e) {
+      // eslint-disable-next-line no-console
       console.log(`Error in SQL:\n ${sqlCommand}`);
       throw e;
     }
@@ -53,7 +70,7 @@ export function rows(qr: Result): any[] {
   return qr.data.value;
 }
 
-const allDatabases = ["postgres", "bigquery"];
+const allDatabases = ["postgres", "bigquery", "duckdb"];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
@@ -62,7 +79,7 @@ export class RuntimeList {
     {},
     { defaultProject: "malloy-data" }
   );
-  postgresConnection = new PostgresTestConnection("postgres");
+
   runtimeMap = new Map<string, SingleConnectionRuntime>();
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
@@ -81,11 +98,20 @@ export class RuntimeList {
             )
           );
           break;
-        case "postgres": {
-          const pg = new PostgresTestConnection("postgres");
+        case "postgres":
+          {
+            const pg = new PostgresTestConnection("postgres");
+            this.runtimeMap.set(
+              "postgres",
+              new SingleConnectionRuntime(files, pg)
+            );
+          }
+          break;
+        case "duckdb": {
+          const duckdb = new DuckDBTestConnection("duckdb");
           this.runtimeMap.set(
-            "postgres",
-            new SingleConnectionRuntime(files, pg)
+            "duckdb",
+            new SingleConnectionRuntime(files, duckdb)
           );
         }
       }
