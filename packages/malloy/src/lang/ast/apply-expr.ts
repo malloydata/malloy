@@ -150,40 +150,44 @@ function equality(
   const rhs = right.getExpression(fs);
   let value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
-  switch (op) {
-    case "~":
-    case "!~": {
-      if (lhs.dataType === "string" && rhs.dataType === "string") {
-        value = compose(lhs.value, "LIKE", rhs.value);
-      } else {
-        const regexCmp = regexEqual(lhs, rhs);
-        if (regexCmp === undefined) {
-          throw new TypeMistmatch("Incompatible types for match('~') operator");
+  if (lhs.dataType != "unknown" && rhs.dataType != "unknown") {
+    switch (op) {
+      case "~":
+      case "!~": {
+        if (lhs.dataType === "string" && rhs.dataType === "string") {
+          value = compose(lhs.value, "LIKE", rhs.value);
+        } else {
+          const regexCmp = regexEqual(lhs, rhs);
+          if (regexCmp === undefined) {
+            throw new TypeMistmatch(
+              "Incompatible types for match('~') operator"
+            );
+          }
+          value = regexCmp;
         }
-        value = regexCmp;
+        value = nullsafeNot(value, op);
+        break;
       }
-      value = nullsafeNot(value, op);
-      break;
-    }
-    case "=":
-    case "!=": {
-      const nullCmp = nullCompare(lhs, op, rhs);
-      if (nullCmp) {
-        value = nullCmp;
-      } else {
-        value = nullsafeNot(
-          regexEqual(lhs, rhs) || compose(lhs.value, "=", rhs.value),
-          op
-        );
+      case "=":
+      case "!=": {
+        const nullCmp = nullCompare(lhs, op, rhs);
+        if (nullCmp) {
+          value = nullCmp;
+        } else {
+          value = nullsafeNot(
+            regexEqual(lhs, rhs) || compose(lhs.value, "=", rhs.value),
+            op
+          );
+        }
+        break;
       }
-      break;
     }
   }
 
   return {
     dataType: "boolean",
     aggregate: lhs.aggregate || rhs.aggregate,
-    value: value,
+    value,
   };
 }
 
