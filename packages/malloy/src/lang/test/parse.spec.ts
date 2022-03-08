@@ -978,6 +978,15 @@ describe("error handling", () => {
       markSource`query: ab -> { group_by: astr, ${"b.astr"} }`
     ).compileToFailWith("Output already has a field named 'astr'");
   });
+  test("undefined in expression with regex compare", () => {
+    expect(
+      `
+        source: c is a {
+          dimension: d is meaning_of_life = r'(forty two|fifty four)'
+        }
+      `
+    ).compileToFailWith("'meaning_of_life' is not defined");
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
