@@ -839,6 +839,20 @@ describe("expressions", () => {
 });
 
 describe("sql backdoor", () => {
+  function makeSchemaResponse(sql: SQLBlock): StructDef {
+    return {
+      type: "struct",
+      name: sql.name,
+      dialect: "standardsql'",
+      structSource: {
+        type: "sql",
+        method: "subquery",
+        sqlBlock: { ...sql },
+      },
+      structRelationship: { type: "basetable", connectionName: "bigquery" },
+      fields: aTableDef.fields,
+    };
+  }
   test(
     "single sql statement",
     modelOK("sql: users is || SELECT * FROM USERS;;")
@@ -846,7 +860,7 @@ describe("sql backdoor", () => {
   test("explore from sql", () => {
     const model = new BetaModel(`
       sql: users IS || SELECT * FROM aTable ;;
-      explore: malloyUsers is from_sql(users) { primary_key: ai }
+      source: malloyUsers is from_sql(users) { primary_key: ai }
     `);
     const needReq = model.translate();
     expect(model).toBeErrorless();
@@ -859,10 +873,34 @@ describe("sql backdoor", () => {
       const refKey = needs[0].name;
       expect(refKey).toBeDefined();
       if (refKey) {
-        model.update({
-          sqlStructs: { [refKey]: aTableDef },
-        });
-        expect(model).toCompile();
+        model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
+        expect(model).toTranslate();
+      }
+    }
+  });
+  test("explore from imported sql-based-source", () => {
+    const createModel = `
+      sql: users IS || SELECT * FROM aTable ;;
+      source: malloyUsers is from_sql(users) { primary_key: ai }
+    `;
+    const model = new BetaModel(`
+      import "createModel.malloy"
+      source: foo is malloyUsers
+    `);
+    model.importZone.define("internal://test/createModel.malloy", createModel);
+    const needReq = model.translate();
+    expect(model).toBeErrorless();
+    const needs = needReq?.sqlStructs;
+    expect(needs).toBeDefined();
+    if (needs) {
+      expect(needs.length).toBe(1);
+      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      expect(needs[0]).toMatchObject(sql);
+      const refKey = needs[0].name;
+      expect(refKey).toBeDefined();
+      if (refKey) {
+        model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
+        expect(model).toTranslate();
       }
     }
   });
