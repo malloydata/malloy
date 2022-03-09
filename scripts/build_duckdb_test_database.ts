@@ -42,44 +42,42 @@ console.log(`Creating database at ${databasePath}`);
 
 (async () => {
   try {
+    await run(`CREATE SCHEMA malloytest`);
     await run(
-      `CREATE TABLE aircraft AS SELECT * FROM parquet_scan('${cwd}aircraft.parquet')`
+      `CREATE TABLE malloytest.aircraft AS SELECT * FROM parquet_scan('${cwd}aircraft.parquet')`
     );
     await run(
-      `CREATE TABLE aircraft_models AS SELECT * FROM parquet_scan('${cwd}aircraft_models.parquet')`
+      `CREATE TABLE malloytest.aircraft_models AS SELECT * FROM parquet_scan('${cwd}aircraft_models.parquet')`
     );
     await run(
-      `CREATE TABLE airports AS SELECT * FROM parquet_scan('${cwd}airports.parquet')`
+      `CREATE TABLE malloytest.airports AS SELECT * FROM parquet_scan('${cwd}airports.parquet')`
     );
     await run(
-      `CREATE TABLE alltypes AS SELECT * FROM parquet_scan('${cwd}alltypes.parquet')`
+      `CREATE TABLE malloytest.alltypes AS SELECT * FROM parquet_scan('${cwd}alltypes.parquet')`
     );
     await run(
-      `CREATE TABLE alltypes2 AS SELECT * FROM parquet_scan('${cwd}alltypes2.parquet')`
+      `CREATE TABLE malloytest.alltypes2 AS SELECT * FROM parquet_scan('${cwd}alltypes2.parquet')`
     );
     await run(
-      `CREATE TABLE bq_medicare_test AS SELECT * FROM parquet_scan('${cwd}bq_medicare_test.parquet')`
+      `CREATE TABLE malloytest.bq_medicare_test AS SELECT * FROM parquet_scan('${cwd}bq_medicare_test.parquet')`
     );
     await run(
-      `CREATE TABLE carriers AS SELECT * FROM parquet_scan('${cwd}carriers.parquet')`
+      `CREATE TABLE malloytest.carriers AS SELECT * FROM parquet_scan('${cwd}carriers.parquet')`
     );
     await run(
-      `CREATE TABLE flights AS SELECT * FROM parquet_scan('${cwd}flights.parquet')`
+      `CREATE TABLE malloytest.flights AS SELECT * FROM parquet_scan('${cwd}flights.parquet')`
     );
     await run(
-      `CREATE TABLE flights_partitioned AS SELECT * FROM parquet_scan('${cwd}flights_partitioned.parquet')`
+      `CREATE TABLE malloytest.numbers AS SELECT * FROM parquet_scan('${cwd}numbers.parquet')`
     );
     await run(
-      `CREATE TABLE numbers AS SELECT * FROM parquet_scan('${cwd}numbers.parquet')`
+      `CREATE TABLE malloytest.state_facts AS SELECT * FROM parquet_scan('${cwd}state_facts.parquet')`
     );
     await run(
-      `CREATE TABLE state_facts AS SELECT * FROM parquet_scan('${cwd}state_facts.parquet')`
+      `CREATE TABLE malloytest.words AS SELECT * FROM parquet_scan('${cwd}words.parquet')`
     );
     await run(
-      `CREATE TABLE words AS SELECT * FROM parquet_scan('${cwd}words.parquet')`
-    );
-    await run(
-      `CREATE TABLE words_bigger AS SELECT * FROM parquet_scan('${cwd}words_bigger.parquet')`
+      `CREATE TABLE malloytest.words_bigger AS SELECT * FROM parquet_scan('${cwd}words_bigger.parquet')`
     );
   } catch (e) {
     console.log(e);

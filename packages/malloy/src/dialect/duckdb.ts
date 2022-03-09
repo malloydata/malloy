@@ -30,9 +30,9 @@ const castMap: Record<string, string> = {
 
 export class DuckDBDialect extends Dialect {
   name = "duckdb";
-  defaultNumberType = "DOUBLE PRECISION";
+  defaultNumberType = "DOUBLE";
   udfPrefix = "pg_temp.__udf";
-  hasFinalStage = true;
+  hasFinalStage = false;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   functionInfo: Record<string, FunctionInfo> = {};
@@ -111,7 +111,12 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    return `('x' || MD5(${sqlDistinctKey}::varchar))::bit(64)::bigint::DECIMAL(65,0)  *18446744073709551616 + ('x' || SUBSTR(MD5(${sqlDistinctKey}::varchar),17))::bit(64)::bigint::DECIMAL(65,0)`;
+    // return `('x' || MD5(${sqlDistinctKey}::varchar))::bit(64)::bigint::DECIMAL(65,0)  *18446744073709551616 + ('x' || SUBSTR(MD5(${sqlDistinctKey}::varchar),17))::bit(64)::bigint::DECIMAL(65,0)`;
+    return `(
+      SELECT
+     0::HUGEINT + sum(10::HUGEINT^rr::hugeint * CASE WHEN f >= 'a' THEN ord(f)- ord('a') ELSE  ord(f) - ord('0') END) + 4
+     FROM (SELECT f, row_number() over () as rr FROM (SELECT UNNEST(STR_SPLIT(MD5(${sqlDistinctKey})[1:16],'')) f) as x)
+    )`;
   }
 
   sqlGenerateUUID(): string {
@@ -154,10 +159,6 @@ export class DuckDBDialect extends Dialect {
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
     return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
-  }
-
-  sqlFinalStage(lastStageName: string): string {
-    return `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {

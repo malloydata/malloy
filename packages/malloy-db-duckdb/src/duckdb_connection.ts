@@ -27,26 +27,13 @@ import {
 const duckdb = require("duckdb");
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
-  name: "string",
-  text: "string",
-  date: "date",
-  integer: "number",
-  bigint: "number",
-  "double precision": "number",
-  oid: "string",
-  boolean: "boolean",
-  // ARRAY: "string",
-  "timestamp with time zone": "timestamp",
-  timestamp: "timestamp",
-  '"char"': "string",
-  smallint: "number",
-  xid: "string",
-  real: "number",
-  interval: "string",
-  inet: "string",
-  regtype: "string",
-  numeric: "number",
-  bytea: "string",
+  BIGINT: "number",
+  DOUBLE: "number",
+  VARCHAR: "string",
+  DATE: "date",
+  TIMESTAMP: "timestamp",
+  "DECIMAL(38,9)": "number",
+  BOOLEAN: "boolean",
 };
 
 export class DuckDBConnection implements Connection {
