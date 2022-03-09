@@ -1,0 +1,27 @@
+import "imdb.malloy"
+source: people_names is people + {
+  declare: 
+    first_name is REGEXP_EXTRACT(primaryName, r'([A-Za-z]+)\s')
+    birth_decade is FLOOR(birth/10) * 10
+    people_count is count(distinct nconst)
+
+  query: by_first_name is {
+    where: first_name != null
+    group_by: first_name
+    aggregate: people_count
+  }
+
+  query: by_decade is {
+    where: birth_decade != null
+    group_by: birth_decade
+    aggregate: people_count
+    order_by: 1 desc
+  }
+
+  query: by_decade_and_name is by_decade + {
+    where: primaryProfession ~ r'actor'
+    nest: name_list_detail is by_first_name + {
+      limit: 20
+    }
+  }
+}

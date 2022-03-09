@@ -1,0 +1,52 @@
+
+
+source: people is table('coconut-crab.movies.imdb_people') + {
+  primary_key: nconst
+  declare:
+    person_count is count(distinct nconst)
+}
+
+sql: sql_cast_crew is ||
+  SELECT * except(crew)
+  FROM `coconut-crab.movies.imdb_cast_crew`,
+  UNNEST(split(crew,',')) as person_id
+;;
+
+source: cast_crew is from_sql(sql_cast_crew) + {
+  join_one: people with person_id
+}
+
+source: titles is table('coconut-crab.movies.imdb_titles') {
+
+  join_many: cast_crew on tconst = cast_crew.tconst
+  declare:
+    title_count is count(distinct tconst)
+    cast_count is cast_crew.people.person_count
+
+  query: by_type is {
+    group_by: titleType
+    aggregate: title_count
+  }
+  query: by_year is {
+    group_by: startYear
+    aggregate: title_count
+    order_by: startYear desc
+  }
+
+  query: by_name is {
+    group_by: cast_crew.people.primaryName
+    aggregate: title_count
+  }
+
+  query: by_role is {
+    group_by: cast_crew.role
+    aggregate: title_count
+  }
+
+  query: by_cast is {
+    group_by: cast_crew.role
+    aggregate: cast_count
+    nest: by_name_list is by_name
+  }
+}
+

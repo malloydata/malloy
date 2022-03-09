@@ -1,0 +1,68 @@
+import "imdb.malloy"
+
+source: movies is titles + {
+  where: titleType = 'movie'
+
+  declare:
+    movie_variant_count is count()
+
+  query: language_list is {
+    where: language != null & '\\N'
+    group_by: language
+  }
+
+  query: secondary_titles is {
+    group_by: title
+    limit: 10
+  }
+
+  query: details is {
+    group_by: tconst, primaryTitle, startYear, runtimeMinutes, titleType
+    aggregate: movie_variant_count
+    nest: 
+      language_list,
+      // secondary_title_list
+      by_cast
+  }
+  query: titles_dashboard is {
+    group_by: 
+      production_year is startYear
+      primaryTitle
+      runtimeMinutes
+      movie_url is concat('https://www.imdb.com/title/',tconst)
+    aggregate:
+      movie_variant_count
+    nest:
+      language_list
+      by_cast
+      secondary_titles
+    limit: 20
+    order_by: 1 desc
+  }
+}
+
+
+// The movie filter filters the movie we are interested in
+// The imdb dashboard shows the people involved and the title detail
+query: movie_filter is  movies -> {
+  // where: cast_crew.people.primaryName ~ r'Tom Hanks'
+  where: cast_crew.people.primaryName ~ r'Steven Spielberg'
+  // where: cast_crew.characters ~ r'Batman'
+  // where: cast_crew.characters ~ r'Superman'
+  // where: cast_crew.role = 'director' 
+  //  and cast_crew.people.primaryName ~ r'Brian De Palma'
+  group_by: tconst
+}
+
+// set the filter above and click 'run' below.
+query: imdb_dashboard is movies + {
+  join_one: x is from(->movie_filter) on tconst = x.tconst
+  where: x.tconst != null
+}
+->  {
+  nest: works_with is by_name + {
+    nest: by_role_list is by_role
+    limit: 10
+  }
+  nest: titles_dashboard
+}
