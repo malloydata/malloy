@@ -7,18 +7,31 @@ source: people is table('coconut-crab.movies.imdb_people') + {
 }
 
 sql: sql_cast_crew is ||
-  SELECT * except(crew)
-  FROM `coconut-crab.movies.imdb_cast_crew`,
-  UNNEST(split(crew,',')) as person_id
+  SELECT 
+    * except(crew,characters),
+    ARRAY((SELECT AS STRUCT value  
+      FROM  UNNEST(split(crew,',')) as value )) as crew,
+    ARRAY((SELECT AS STRUCT value  
+      FROM  UNNEST(split(characters,',')) as value )) as characters
+  FROM `coconut-crab.movies.imdb_cast_crew`
 ;;
 
 source: cast_crew is from_sql(sql_cast_crew) + {
-  join_one: people with person_id
+  primary_key: tconst
+  join_one: people on crew.value=people.nconst
 }
 
-source: titles is table('coconut-crab.movies.imdb_titles') {
+sql: sql_titles is ||
+  SELECT 
+    * except(genres),
+    ARRAY((SELECT AS STRUCT value  
+      FROM  UNNEST(split(genres,',')) as value )) as genres
+  FROM `coconut-crab.movies.imdb_titles`
+;;
 
-  join_many: cast_crew on tconst = cast_crew.tconst
+source: titles is from_sql(sql_titles) + {
+
+  join_one: cast_crew with tconst
   declare:
     title_count is count(distinct tconst)
     cast_count is cast_crew.people.person_count
@@ -43,10 +56,20 @@ source: titles is table('coconut-crab.movies.imdb_titles') {
     aggregate: title_count
   }
 
+  query: by_genre is {
+    group_by: genres.value
+    aggregate: title_count
+  }
+
+  query: by_language is {
+    where: language != null & '\\N'
+    group_by: language
+  }
+
   query: by_cast is {
     group_by: cast_crew.role
     aggregate: cast_count
-    nest: by_name_list is by_name
+    nest: by_name_list is by_name + {limit: 200}
   }
 }
 
