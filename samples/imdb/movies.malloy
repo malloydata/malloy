@@ -1,0 +1,22 @@
+import "imdb.malloy"
+
+// Titles contain TV Episode and more.  Filter to just
+//  movies (and remove the adult titles)
+
+source: movies is titles + {
+  where: titleType = 'movie' and isAdult = '0'
+
+  // Pull back interesting informaiton for a given title.
+  query: titles_dashboard is {
+    group_by: 
+      production_year is startYear
+      primaryTitle
+      runtimeMinutes
+      movie_url is concat('https://www.imdb.com/title/',tconst)
+    nest:
+      genre_list is by_genre
+      by_cast
+    limit: 20
+    order_by: 1 desc
+  }
+}
