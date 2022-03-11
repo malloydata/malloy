@@ -6,7 +6,7 @@ sql: sql_people is ||
       FROM  UNNEST(split(primaryProfession,',')) as value )) as primaryProfession,
     ARRAY((SELECT AS STRUCT value  
       FROM  UNNEST(split(knownForTitles,',')) as value )) as knownForTitles
-  FROM `malloy-data.imdb.name_basics`
+  FROM `imdb.name_basics`
 ;;
 
 
@@ -21,7 +21,7 @@ sql: sql_crew is ||
       FROM  UNNEST(split(directors,',')) as value )) as director_ids,
     ARRAY((SELECT AS STRUCT value  
       FROM  UNNEST(split(writers,',')) as value )) as writer_ids
-  FROM `malloy-data.imdb.title_crew`
+  FROM `imdb.title_crew`
 ;;
 
 
@@ -35,7 +35,7 @@ source: crew is from_sql(sql_crew) {
 sql: sql_principals is ||
   SELECT 
     *
-  FROM `malloy-data.imdb.title_principals`
+  FROM `imdb.title_principals`
 ;;
 
 source: principals is from_sql(sql_principals) + {
@@ -49,7 +49,7 @@ sql: sql_ratings is ||
     tconst, 
     cast(averageRating as float64) averageRaging,
     cast(numVotes as int64) numVotes
-  FROM `malloy-data.imdb.title_ratings`
+  FROM `imdb.title_ratings`
 ;;
 
 sql: sql_titles is ||
@@ -58,7 +58,7 @@ sql: sql_titles is ||
     NULLIF(safe_cast(startYear as int64),0) startYear,
     ARRAY((SELECT AS STRUCT value  
       FROM  UNNEST(split(genres,',')) as value )) as genres
-  FROM `malloy-data.imdb.title_basics`
+  FROM `imdb.title_basics`
 ;;
 
 
