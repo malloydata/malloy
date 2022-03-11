@@ -1,40 +1,80 @@
-
-
-source: people is table('coconut-crab.movies.imdb_people') + {
-  primary_key: nconst
-  declare:
-    person_count is count(distinct nconst)
-}
-
-sql: sql_cast_crew is ||
+sql: sql_people is ||
   SELECT 
-    * except(crew,characters),
+    * except(primaryProfession, knownForTitles, birthYear),
+    NULLIF(safe_cast(birthYear as int64),0) birthYear,
     ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(crew,',')) as value )) as crew,
+      FROM  UNNEST(split(primaryProfession,',')) as value )) as primaryProfession,
     ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(characters,',')) as value )) as characters
-  FROM `coconut-crab.movies.imdb_cast_crew`
+      FROM  UNNEST(split(knownForTitles,',')) as value )) as knownForTitles
+  FROM `malloy-data.imdb.name_basics`
 ;;
 
-source: cast_crew is from_sql(sql_cast_crew) + {
-  primary_key: tconst
-  join_one: people on crew.value=people.nconst
+
+source: people is from_sql(sql_people) {
+  primary_key: nconst
 }
+
+sql: sql_crew is ||
+  SELECT 
+    * except(directors,writers),
+    ARRAY((SELECT AS STRUCT value  
+      FROM  UNNEST(split(directors,',')) as value )) as director_ids,
+    ARRAY((SELECT AS STRUCT value  
+      FROM  UNNEST(split(writers,',')) as value )) as writer_ids
+  FROM `malloy-data.imdb.title_crew`
+;;
+
+
+source: crew is from_sql(sql_crew) {
+  primary_key: tconst
+  join_one: writers is people on writer_ids.value = writers.nconst
+  join_one: directors is people on director_ids.value = directors.nconst
+}
+
+
+sql: sql_principals is ||
+  SELECT 
+    *
+  FROM `malloy-data.imdb.title_principals`
+;;
+
+source: principals is from_sql(sql_principals) + {
+  join_one: people on nconst = people.nconst
+  declare:
+    avg_ordering is avg(ordering::number)
+}
+
+sql: sql_ratings is ||
+  SELECT 
+    tconst, 
+    cast(averageRating as float64) averageRaging,
+    cast(numVotes as int64) numVotes
+  FROM `malloy-data.imdb.title_ratings`
+;;
 
 sql: sql_titles is ||
   SELECT 
-    * except(genres),
+    * except(genres,startYear,endYear),
+    NULLIF(safe_cast(startYear as int64),0) startYear,
     ARRAY((SELECT AS STRUCT value  
       FROM  UNNEST(split(genres,',')) as value )) as genres
-  FROM `coconut-crab.movies.imdb_titles`
+  FROM `malloy-data.imdb.title_basics`
 ;;
 
-source: titles is from_sql(sql_titles) + {
 
-  join_one: cast_crew with tconst
+
+source: titles is from_sql(sql_titles) + {
+  where: titleType = 'movie' and isAdult = '0'
+
+  join_one: crew with tconst
+  join_many: principals on tconst = principals.tconst
+  join_one: ratings is from_sql(sql_ratings) 
+    on tconst = ratings.tconst
+
+  // join_one: cast_crew with tconst
   declare:
     title_count is count(distinct tconst)
-    cast_count is cast_crew.people.person_count
+    // cast_count is cast_crew.people.person_count
 
   query: by_type is {
     group_by: titleType
@@ -46,13 +86,24 @@ source: titles is from_sql(sql_titles) + {
     order_by: startYear desc
   }
 
-  query: by_name is {
-    group_by: cast_crew.people.primaryName
+  query: by_director is {
+    group_by: crew.directors.primaryName
+    aggregate: known_for_count is count(distinct crew.directors.knownForTitles.value)
     aggregate: title_count
   }
 
-  query: by_role is {
-    group_by: cast_crew.role
+  query: by_name is {
+    group_by: principals.people.primaryName
+    aggregate: title_count, principals.avg_ordering
+  }
+
+  query: by_rank is {
+    group_by: principals.ordering
+    aggregate: title_count
+  }
+
+  query: by_category is {
+    group_by: principals.category
     aggregate: title_count
   }
 
@@ -61,14 +112,7 @@ source: titles is from_sql(sql_titles) + {
     aggregate: title_count
   }
 
-  query: by_language is {
-    where: language != null & '\\N'
-    group_by: language
-  }
-
-  query: by_cast is {
-    group_by: cast_crew.role
-    aggregate: cast_count
+  query: by_cast is by_category {
     nest: by_name_list is by_name + {limit: 200}
   }
 }
