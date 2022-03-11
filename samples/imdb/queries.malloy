@@ -15,18 +15,15 @@ query: movies + {
 -> titles_dashboard
 
 // Steven Spielberg Titles
-query: movies -> {
-  where: principals.people.primaryName ~ r'Steven Spielberg' 
+query: spielberg_movie_filter is  movies -> {
+  where: principals.people.primaryName ~ r'Steven Spielberg'
   group_by: tconst
 }
 
 // Join that query into our model and filter on it 
 //  (we need little better syntax, for this use case)
 query: movies + {
-  join_one: x is from( movies-> {
-    where: principals.people.primaryName ~ r'Steven Spielberg' 
-    group_by: tconst
-  } ) with tconst
+  join_one: x is from(->spielberg_movie_filter ) with tconst
   where: x.tconst != null
 }
 -> titles_dashboard
@@ -35,10 +32,7 @@ query: movies + {
 // co-occurence is generally a pretty hard pattern
 //  who does steven spielberg work with?
 query: movies + {
-  join_one: x is from( movies->{
-    where: principals.people.primaryName ~ r'Steven Spielberg' 
-    group_by: tconst
-  } ) with tconst
+  join_one: x is from(->spielberg_movie_filter ) with tconst
   where: x.tconst != null
 }
 ->  by_name + {
@@ -68,19 +62,38 @@ query: movies + {
 
 // The movie filter filters the movie we are interested in
 // The imdb dashboard shows the people involved and the title detail
-query: movie_filter is  movies -> {
+query: spielberg_movie_filter is  movies -> {
   where: principals.people.primaryName ~ r'Steven Spielberg'
-  // where: principals.people.primaryName ~ r'Tom Hanks'
-  // where: principals.characters ~ r'Batman'
-  // where: principals.characters ~ r'Superman'
-  // where: principals.role = 'director' 
-  //  and principals.people.primaryName ~ r'Brian De Palma'
   group_by: tconst
 }
 
-// set the filter above and click 'run' below.
+// hanks movies
+query: tomhanks_movie_filter is  movies -> {
+  where: principals.people.primaryName  ~ r'Tom Hanks'
+  group_by: tconst
+}
+
+// batman movies
+query: batman_movie_filter is  movies -> {
+  where: principals.characters ~ r'Batman'
+  group_by: tconst
+}
+
+// superman movies
+query: superman_movie_filter is  movies -> {
+  where: principals.characters ~ r'Batman'
+  group_by: tconst
+}
+
+// depalma movies
+query: depalma_movie_filter is  movies -> {
+  where: principals.category = 'director' 
+    and principals.people.primaryName ~ r'Brian De Palma'
+  group_by: tconst
+}
+
 query: imdb_dashboard is movies + {
-  join_one: x is from(->movie_filter) on tconst = x.tconst
+  join_one: x is from(->spielberg_movie_filter) with tconst
   where: x.tconst != null
 }
 ->  {
