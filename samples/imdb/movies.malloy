@@ -3,12 +3,26 @@ import "imdb.malloy"
 // Titles contain TV Episode and more.  Filter to just
 //  movies (and remove the adult titles)
 
-source: movies is titles + {
+source: movies_base is titles {
   where: titleType = 'movie' and isAdult = '0'
+}
+
+source: movies is movies_base + {
+
+  // attributes
+  join_one: top_10000 is from(movies_base -> {
+    group_by: tconst, ratings.numVotes
+    order_by: 2 desc
+    limit: 100
+  }) on top_10000.tconst = tconst
+
+  declare: in_top_10000 is top_10000.tconst != null
+
 
   // Pull back interesting informaiton for a given title.
   query: titles_dashboard is {
     group_by: 
+      movie_image is concat('https://artifacts.flyxit.com/flyx-artifacts/',tconst,'.jpg')
       production_year is startYear
       primaryTitle
       runtimeMinutes
@@ -17,6 +31,6 @@ source: movies is titles + {
       genre_list is by_genre
       by_cast
     limit: 20
-    order_by: 1 desc
+    order_by: 2 desc
   }
 }

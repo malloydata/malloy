@@ -4,7 +4,7 @@ import "movies.malloy"
 
 // Start Trek Movies
 query: movies + {
-  where: primaryTitle ~ r'Star Trek'
+  where: primaryTitle ~ r'Star Trek' and startYear < 2020
 }
 -> titles_dashboard
 
@@ -93,8 +93,8 @@ query: depalma_movie_filter is  movies -> {
 }
 
 query: imdb_dashboard is movies + {
-  join_one: x is from(->spielberg_movie_filter) with tconst
-  where: x.tconst != null
+  join_one: x is from(->superman_movie_filter) with tconst
+  where: x.tconst != null and startYear < 2010
 }
 ->  {
   nest: works_with is by_name + {
@@ -113,11 +113,20 @@ query: imdb_dashboard is movies + {
 }
 
 
-  // from a source:
-  // where: tconst in movies+{where:principals.people.primaryName ~ r'Steven Spielberg'} 
-
-  // implied source
-  // where: tconst in this+{where:principals.people.primaryName ~ r'Steven Spielberg'} 
-
-  // explicit query with primary key
-  // where tconst in movies->{where: principals.people.primaryName ~ r'Steven Spielberg' group_by: tconst}
+// Genre - Genre, by number of votes
+query: movies + {
+  join_many: x is from( movies-> {
+    group_by: tconst, genres.value 
+  } ) on tconst = x.tconst
+}
+->  by_genre + {
+  where: genres.value != x.value
+  nest: genre is {
+    group_by: genre2 is x.value
+    nest: by_title_list is { 
+      group_by: primaryTitle, ratings.numVotes
+      order_by: 2 desc
+      limit: 10
+    }
+  }
+}
