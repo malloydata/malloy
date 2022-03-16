@@ -489,6 +489,14 @@ class ASTStep implements TranslationStep {
       }
     }
 
+    // Now make sure that every child also has all sql blocks resolved
+    for (const child of that.childTranslators.values()) {
+      const kidNeeds = child.astStep.step(child);
+      if (isNeedResponse(kidNeeds)) {
+        return kidNeeds;
+      }
+    }
+
     // TODO report errors from here!
     const missingSqlStructs = sqlZone.getUndefinedBlocks();
     if (missingSqlStructs) {
@@ -750,24 +758,37 @@ export abstract class MalloyTranslation {
   }
 
   getChildExports(importURL: string): NamedStructDefs {
+    const exports: NamedStructDefs = {};
     const childURL = new URL(importURL, this.sourceURL).toString();
     const child = this.childTranslators.get(childURL);
     if (child) {
-      child.translate();
-      const exports: NamedStructDefs = {};
-      for (const fromChild of child.modelDef.exports) {
-        const modelEntry = child.modelDef.contents[fromChild];
-        if (modelEntry.type === "struct") {
-          exports[fromChild] = modelEntry;
+      const did = child.translate();
+      if (!did.translated) {
+        this.root.logger.log({
+          message: `INTERNAL ERROR: Load failure on import of ${importURL}`,
+        });
+      } else {
+        for (const fromChild of child.modelDef.exports) {
+          const modelEntry = child.modelDef.contents[fromChild];
+          if (modelEntry.type === "struct") {
+            exports[fromChild] = modelEntry;
+          }
         }
       }
-      return exports;
     }
-    return {};
+    return exports;
   }
 
+  private finalAnswer?: TranslateResponse;
   translate(extendingModel?: ModelDef): TranslateResponse {
-    return this.translateStep.step(this, extendingModel);
+    if (this.finalAnswer) {
+      return this.finalAnswer;
+    }
+    const attempt = this.translateStep.step(this, extendingModel);
+    if (attempt.final) {
+      this.finalAnswer = attempt;
+    }
+    return attempt;
   }
 
   metadata(): MetadataResponse {

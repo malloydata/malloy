@@ -27,7 +27,7 @@ import {
   StructDef,
   Expr,
 } from "../../model/malloy_types";
-import { CircleSpace, FieldSpace, LookupResult } from "../field-space";
+import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
   Filter,
   MalloyElement,
@@ -134,6 +134,7 @@ class DollarReference extends ExpressionDef {
 }
 
 class ConstantFieldSpace implements FieldSpace {
+  readonly type = "fieldSpace";
   structDef(): StructDef {
     return {
       type: "struct",
@@ -227,8 +228,7 @@ export class FieldDeclaration extends MalloyElement {
      * a refactor of QueryFieldSpace might someday be the place where this should
      * happen.
      */
-    const circleFS = new CircleSpace(fs, this);
-    return this.queryFieldDef(circleFS, exprName);
+    return this.queryFieldDef(new DefSpace(fs, this), exprName);
   }
 
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
@@ -256,11 +256,10 @@ export class FieldDeclaration extends MalloyElement {
       }
       return template;
     }
-    const complained = exprFS instanceof CircleSpace && exprFS.foundCircle;
-    if (!complained) {
-      this.log(
-        `Cannot define ${exprName}, unexpected type ${FT.inspect(exprValue)}`
-      );
+    const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
+    if (!circularDef) {
+      const badType = FT.inspect(exprValue);
+      this.log(`Cannot define '${exprName}', unexpected type ${badType}`);
     }
     return {
       name: `error_defining_${exprName}`,

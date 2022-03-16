@@ -1,0 +1,132 @@
+import "movies.malloy"
+
+// Queries...  
+
+// Start Trek Movies
+query: movies + {
+  where: primaryTitle ~ r'Star Trek' and startYear < 2020
+}
+-> titles_dashboard
+
+// PROBLEM: filtering on Steven Spielberg removes all the other people
+query: movies + {
+  where: principals.people.primaryName ~ r'Steven Spielberg' 
+}
+-> titles_dashboard
+
+// Steven Spielberg Titles
+query: spielberg_movie_filter is  movies -> {
+  where: principals.people.primaryName ~ r'Steven Spielberg'
+  group_by: tconst
+}
+
+// Join that query into our model and filter on it 
+//  (we need little better syntax, for this use case)
+query: movies + {
+  join_one: x is from(->spielberg_movie_filter ) with tconst
+  where: x.tconst != null
+}
+-> titles_dashboard
+
+
+// co-occurence is generally a pretty hard pattern
+//  who does steven spielberg work with?
+query: movies + {
+  join_one: x is from(->spielberg_movie_filter ) with tconst
+  where: x.tconst != null
+}
+->  by_name + {
+    nest: by_role_list is by_category
+    limit: 20
+}
+
+// genre co-occurence.  For Horror movies what
+//  genres co-occur.  And some example titles.
+query: movies + {
+  join_one: x is from( movies->{
+    where: genres.value = 'Horror' 
+    group_by: tconst
+  } ) with tconst
+  where: x.tconst != null
+
+  // where: tconst exists in people + { where: } -> tconst
+}
+->  by_genre + {
+  nest: by_title is { 
+    group_by: primaryTitle, ratings.numVotes
+    order_by: 2 desc
+    limit: 10
+  }
+}
+
+
+// The movie filter filters the movie we are interested in
+// The imdb dashboard shows the people involved and the title detail
+query: spielberg_movie_filter is  movies -> {
+  where: principals.people.primaryName ~ r'Steven Spielberg'
+  group_by: tconst
+}
+
+// hanks movies
+query: tomhanks_movie_filter is  movies -> {
+  where: principals.people.primaryName  ~ r'Tom Hanks'
+  group_by: tconst
+}
+
+// batman movies
+query: batman_movie_filter is  movies -> {
+  where: principals.characters ~ r'Batman'
+  group_by: tconst
+}
+
+// superman movies
+query: superman_movie_filter is  movies -> {
+  where: principals.characters ~ r'Batman'
+  group_by: tconst
+}
+
+// depalma movies
+query: depalma_movie_filter is  movies -> {
+  where: principals.category = 'director' 
+    and principals.people.primaryName ~ r'Brian De Palma'
+  group_by: tconst
+}
+
+query: imdb_dashboard is movies + {
+  join_one: x is from(->superman_movie_filter) with tconst
+  where: x.tconst != null and startYear < 2010
+}
+->  {
+  nest: works_with is by_name + {
+    nest: by_role_list is by_category
+    limit: 10
+  }
+  nest: title_list_detail is  {
+    group_by: primaryTitle, startYear
+    order_by: 2 desc
+  }
+  nest: by_genre_bar_chart is by_genre {
+    where: startYear != null
+    aggregate: avg_year is startYear.avg()
+  }
+  nest: titles_dashboard
+}
+
+
+// Genre - Genre, by number of votes
+query: movies + {
+  join_many: x is from( movies-> {
+    group_by: tconst, genres.value 
+  } ) on tconst = x.tconst
+}
+->  by_genre + {
+  where: genres.value != x.value
+  nest: genre is {
+    group_by: genre2 is x.value
+    nest: by_title_list is { 
+      group_by: primaryTitle, ratings.numVotes
+      order_by: 2 desc
+      limit: 10
+    }
+  }
+}
