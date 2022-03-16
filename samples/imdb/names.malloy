@@ -1,27 +1,54 @@
-import "imdb.malloy"
-source: people_names is people + {
-  declare: 
-    first_name is REGEXP_EXTRACT(primaryName, r'([A-Za-z]+)\s')
-    birth_decade is FLOOR(birthYear/10) * 10
-    people_count is count(distinct nconst)
+import "movies.malloy"
 
-  query: by_first_name is {
-    where: first_name != null
-    group_by: first_name
-    aggregate: people_count
+
+// lets fined the top actors in the 100 top movies per year.
+
+query: top_movies_year is movies -> {
+  where: startYear != null and startYear <= 2022
+  group_by: production_year is startYear
+  nest: top_movies is {
+    group_by: tconst, ratings.numVotes
+    order_by: 2 desc
+    limit: 50
   }
+}
+-> {
+  project: top_movies.tconst, production_year
+}
 
-  query: by_decade is {
-    where: birth_decade != null
-    group_by: birth_decade
-    aggregate: people_count
-    order_by: 1 desc
+query: top_actor_year is movies + {
+  join_one: topm is from(->top_movies_year) on topm.tconst = tconst
+  where: topm.tconst != null
+}
+-> {
+  group_by: primaryTitle, startYear
+  order_by: 2 desc
+  nest: top_actors is {
+    where:  principals.category ~ 'act%'
+      and principals.people.birthYear != null
+    group_by: 
+      principals.people.primaryName
+      gender is principals.category: 
+        pick 'M' when 'actor'
+        pick 'F' when 'actress'
+      age_at_production is startYear -  principals.people.birthYear
   }
+}
 
-  query: by_decade_and_name is by_decade + {
-    where: primaryProfession.value = 'actor'
-    nest: name_list_detail is by_first_name + {
-      limit: 20
+query: under_40_by_year_gender is from(-> top_actor_year) -> {
+  declare:
+    first_name is REGEXP_EXTRACT(top_actors.primaryName, r'([A-Za-z]+)\s')
+  group_by: 
+    startYear
+  nest: by_gender is {
+    group_by: top_actors.gender
+    nest: by_name_list_detail is {
+      where: first_name != null and top_actors.age_at_production <= 40
+      group_by:
+        first_name
+        avg_age is  top_actors.age_at_production.avg()
     }
   }
+  order_by: 1 desc
+  limit: 100
 }
