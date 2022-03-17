@@ -51,7 +51,9 @@ query: movies + {
 
   // where: tconst exists in people + { where: } -> tconst
 }
-->  by_genre + {
+-> {
+  group_by: genre_combo is concat('Horror + ', genres.value)
+  aggregate: title_count
   nest: by_title is { 
     group_by: primaryTitle, ratings.numVotes
     order_by: 2 desc
@@ -93,7 +95,7 @@ query: depalma_movie_filter is  movies -> {
 }
 
 query: imdb_dashboard is movies + {
-  join_one: x is from(->superman_movie_filter) with tconst
+  join_one: x is from(->spielberg_movie_filter) with tconst
   where: x.tconst != null and startYear < 2010
 }
 ->  {

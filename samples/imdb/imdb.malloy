@@ -1,74 +1,28 @@
-sql: sql_people is ||
-  SELECT 
-    * except(primaryProfession, knownForTitles, birthYear),
-    NULLIF(safe_cast(birthYear as int64),0) birthYear,
-    ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(primaryProfession,',')) as value )) as primaryProfession,
-    ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(knownForTitles,',')) as value )) as knownForTitles
-  FROM `imdb.name_basics`
-;;
-
-
-source: people is from_sql(sql_people) {
+source: people is table('imdb.name_basics') {
   primary_key: nconst
 }
 
-sql: sql_crew is ||
-  SELECT 
-    * except(directors,writers),
-    ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(directors,',')) as value )) as director_ids,
-    ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(writers,',')) as value )) as writer_ids
-  FROM `imdb.title_crew`
-;;
 
+source: crew is table('imdb.title_crew') {
 
-source: crew is from_sql(sql_crew) {
   primary_key: tconst
   join_one: writers is people on writer_ids.value = writers.nconst
   join_one: directors is people on director_ids.value = directors.nconst
 }
 
 
-sql: sql_principals is ||
-  SELECT 
-    *
-  FROM `imdb.title_principals`
-;;
-
-source: principals is from_sql(sql_principals) + {
+source: principals is table('imdb.title_principals') + {
   join_one: people on nconst = people.nconst
   declare:
     avg_ordering is avg(ordering::number)
 }
 
-sql: sql_ratings is ||
-  SELECT 
-    tconst, 
-    cast(averageRating as float64) averageRaging,
-    cast(numVotes as int64) numVotes
-  FROM `imdb.title_ratings`
-;;
-
-sql: sql_titles is ||
-  SELECT 
-    * except(genres,startYear,endYear),
-    NULLIF(safe_cast(startYear as int64),0) startYear,
-    ARRAY((SELECT AS STRUCT value  
-      FROM  UNNEST(split(genres,',')) as value )) as genres
-  FROM `imdb.title_basics`
-;;
-
-
-
-source: titles is from_sql(sql_titles) + {
+source: titles is table('imdb.title_basics') + {
   where: titleType = 'movie' and isAdult = '0'
 
   join_one: crew with tconst
   join_many: principals on tconst = principals.tconst
-  join_one: ratings is from_sql(sql_ratings) 
+  join_one: ratings is table('imdb.title_ratings') 
     on tconst = ratings.tconst
 
   // join_one: cast_crew with tconst
