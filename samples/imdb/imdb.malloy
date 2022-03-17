@@ -1,9 +1,9 @@
-source: people is table('imdb_test.name_basics') {
+source: people is table('imdb.name_basics') {
   primary_key: nconst
 }
 
 
-source: crew is table('imdb_test.title_crew') {
+source: crew is table('imdb.title_crew') {
 
   primary_key: tconst
   join_one: writers is people on writer_ids.value = writers.nconst
@@ -11,18 +11,18 @@ source: crew is table('imdb_test.title_crew') {
 }
 
 
-source: principals is table('imdb_test.title_principals') + {
+source: principals is table('imdb.title_principals') + {
   join_one: people on nconst = people.nconst
   declare:
     avg_ordering is avg(ordering::number)
 }
 
-source: titles is table('imdb_test.title_basics') + {
+source: titles is table('imdb.title_basics') + {
   where: titleType = 'movie' and isAdult = '0'
 
   join_one: crew with tconst
   join_many: principals on tconst = principals.tconst
-  join_one: ratings is table('imdb_test.title_ratings') 
+  join_one: ratings is table('imdb.title_ratings') 
     on tconst = ratings.tconst
 
   // join_one: cast_crew with tconst

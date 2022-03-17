@@ -1,11 +1,11 @@
 BUCKET=imdb_data_upload
-DATASET=imdb_test
+DATASET=imdb
 
 gsutil rm -r gs://$BUCKET
 gsutil mb gs://$BUCKET
 rm *.tsv *.gz
 
-for filename in name.basics titles.akas title.basics title.crew \
+for filename in name.basics title.akas title.basics title.crew \
   title.episode title.principals title.ratings 
 do 
   wget https://datasets.imdbws.com/$filename.tsv.gz
