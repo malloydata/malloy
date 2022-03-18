@@ -2,37 +2,19 @@ source: people is table('imdb.name_basics') {
   primary_key: nconst
 }
 
+source: movies is table('imdb.movies') + {
+  
+  join_one: people is people on principals.nconst = people.nconst
 
-source: crew is table('imdb.title_crew') {
-
-  primary_key: tconst
-  join_one: writers is people on writer_ids.value = writers.nconst
-  join_one: directors is people on director_ids.value = directors.nconst
-}
-
-
-source: principals is table('imdb.title_principals') + {
-  join_one: people on nconst = people.nconst
-  declare:
-    avg_ordering is avg(ordering::number)
-}
-
-source: titles is table('imdb.title_basics') + {
-  where: titleType = 'movie' and isAdult = '0'
-
-  join_one: crew with tconst
-  join_many: principals on tconst = principals.tconst
-  join_one: ratings is table('imdb.title_ratings') 
-    on tconst = ratings.tconst
 
   // join_one: cast_crew with tconst
   declare:
     title_count is count(distinct tconst)
-    // cast_count is cast_crew.people.person_count
+    total_ratings is sum(ratings.numVotes)
 
-  query: by_type is {
-    group_by: titleType
-    aggregate: title_count
+  query: by_title is {
+    group_by: primaryTitle, startYear, ratings.numVotes
+    order_by: 3 desc
   }
   query: by_year is {
     group_by: startYear
@@ -40,24 +22,15 @@ source: titles is table('imdb.title_basics') + {
     order_by: startYear desc
   }
 
-  query: by_director is {
-    group_by: crew.directors.primaryName
-    aggregate: known_for_count is count(distinct crew.directors.knownForTitles.value)
-    aggregate: title_count
-  }
-
   query: by_name is {
-    group_by: principals.people.primaryName
-    aggregate: title_count, principals.avg_ordering
+    group_by: 
+      people.primaryName, principals.nconst
+    aggregate: 
+      total_ratings
+      title_count
   }
-
-  query: by_rank is {
-    group_by: principals.ordering
-    aggregate: title_count
-  }
-
-  query: by_category is {
-    group_by: principals.category
+  query: by_job_category is {
+    group_by: job_category is principals.category
     aggregate: title_count
   }
 
@@ -66,8 +39,8 @@ source: titles is table('imdb.title_basics') + {
     aggregate: title_count
   }
 
-  query: by_cast is by_category {
-    nest: by_name_list is by_name + {limit: 200}
+  query: by_character is {
+    group_by: principals.characters.value
+    aggregate: title_count
   }
 }
-
