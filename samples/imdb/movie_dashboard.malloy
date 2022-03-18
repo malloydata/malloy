@@ -1,0 +1,46 @@
+import "imdb.malloy"
+import "movie_filters.malloy"
+
+// Queries can be used to filter other queries.  Each of these
+//  queries produces a list of movie ids.
+
+source: movies_plus is movies + {
+  declare: 
+    movie_image is concat('https://artifacts.flyxit.com/flyx-artifacts/',tconst,'.jpg')
+    movie_url is concat('https://www.imdb.com/title/',tconst)
+
+  // Pull back interesting informaiton for a given title.
+  query: titles_dashboard is {
+    group_by: 
+      movie_image
+      production_year is startYear
+      primaryTitle
+      runtimeMinutes
+      movie_url 
+    nest:
+      genre_list is by_genre
+      by_cast is by_job_category {
+        nest: by_name_list is by_name + {limit: 200}
+      }
+    limit: 20
+    order_by: 2 desc
+  }
+}
+
+// Start Trek Movies
+query: star_trek_dashboard is movies_plus -> titles_dashboard + { 
+  where: primaryTitle ~ r'Star Trek' and startYear < 2020
+}
+
+// PROBLEM: filtering on Steven Spielberg removes all the other people
+query: spielberg_broken_dashboard is movies_plus -> titles_dashboard + { 
+  where: people.primaryName ~ r'Steven Spielberg' 
+}
+
+query: spielberg_dashboard is movies_plus + { 
+  join_one: x is from(movie_filters->spielberg) with tconst
+  where: x.tconst != null
+}
+-> titles_dashboard
+
+

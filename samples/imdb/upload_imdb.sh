@@ -49,7 +49,11 @@ bq query --replace=true --use_legacy_sql=false --target_dataset=$DATASET --datas
   );
 
   create or replace table title_principals as (
-    SELECT * from title_principals_raw
+    SELECT 
+      * except (characters),
+      ARRAY((SELECT AS STRUCT value
+        FROM UNNEST(JSON_VALUE_ARRAY(characters)) as value )) as characters
+    from title_principals_raw
   );
 
   create or replace table title_basics as (
@@ -60,5 +64,54 @@ bq query --replace=true --use_legacy_sql=false --target_dataset=$DATASET --datas
         FROM  UNNEST(split(genres,',')) as value )) as genres
     FROM title_basics_raw
   );
+
+  create or replace table movies
+  as (
+    with crew as (
+      SELECT 
+        tconst,
+        ARRAY_AGG((SELECT AS STRUCT
+          ARRAY((SELECT AS STRUCT value  
+            FROM  UNNEST(split(directors,',')) as value )) as director_ids,
+          ARRAY((SELECT AS STRUCT value  
+            FROM  UNNEST(split(writers,',')) as value )) as writer_ids
+        )) as crew
+      FROM title_crew_raw c
+      GROUP BY 1
+    ),
+    ratings as (
+      SELECT 
+        tconst, 
+        (SELECT AS STRUCT
+        cast(averageRating as float64) averageRaging,
+        cast(numVotes as int64) numVotes
+        ) as ratings
+      FROM title_ratings_raw
+    ),
+    principals as (
+      SELECT 
+        tconst,
+        ARRAY_AGG((SELECT AS STRUCT 
+          ordering, nconst, category, job,
+          ARRAY((SELECT AS STRUCT value
+            FROM UNNEST(JSON_VALUE_ARRAY(characters)) as value )) as characters
+        )) as principals
+      from title_principals_raw
+      group by 1
+    )
+    SELECT 
+        basics.* except(genres,startYear,endYear),
+        NULLIF(safe_cast(startYear as int64),0) startYear,
+        ARRAY((SELECT AS STRUCT value  
+          FROM  UNNEST(split(genres,',')) as value )) as genres,
+        ratings.ratings,
+        principals.principals,
+        crew.crew
+      FROM title_basics_raw as basics
+      LEFT JOIN ratings  ON basics.tconst = ratings.tconst
+      LEFT JOIN principals ON basics.tconst = principals.tconst
+      LEFT JOIN crew on basics.tconst = crew.tconst
+      WHERE titleTYpe = 'movie'
+  ) 
 EOF
 
