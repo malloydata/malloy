@@ -13,7 +13,7 @@
  */
 
 import { ModelDef, Query, StructDef } from "@malloydata/malloy";
-import { fStringEq, fStringLike } from "./test_utils";
+import { fStringEq, fStringLike } from "./test-utils";
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";

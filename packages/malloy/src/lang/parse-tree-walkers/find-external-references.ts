@@ -16,7 +16,7 @@ import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import type { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
-import { DocumentRange } from "../../model/malloy_types";
+import { DocumentRange } from "../../model/malloy-types";
 import { MalloyTranslation } from "../parse-malloy";
 
 type References = Record<string, DocumentRange>;

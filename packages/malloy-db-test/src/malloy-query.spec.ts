@@ -13,7 +13,7 @@
 
 import { test } from "@jest/globals";
 import { testModel } from "./models/faa_model";
-import { fStringEq } from "./test_utils";
+import { fStringEq } from "./test-utils";
 
 import * as malloy from "@malloydata/malloy";
 

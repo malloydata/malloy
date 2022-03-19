@@ -50,7 +50,7 @@ import {
   URL,
   URLReader,
   Connection,
-} from "./runtime_types";
+} from "./runtime-types";
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

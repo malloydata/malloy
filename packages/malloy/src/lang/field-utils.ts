@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { QueryFieldDef, FieldDef } from "../model/malloy_types";
+import { QueryFieldDef, FieldDef } from "../model/malloy-types";
 
 type Field = QueryFieldDef | FieldDef;
 

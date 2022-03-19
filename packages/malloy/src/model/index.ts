@@ -11,5 +11,5 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { QueryModel } from "./malloy_query";
+export * from "./malloy-types";
+export { QueryModel } from "./malloy-query";

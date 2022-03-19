@@ -17,7 +17,7 @@ We provide a task in VS Code (.vscode/tasks.json) to watch the entire Malloy rep
 
 ## Malloy VSCode Extension
 
-The Malloy VSCode extension's source is in the `malloy-vscode` directory.
+The Malloy VSCode extension's source is in the `vscode-extension` directory.
 
 ### Installation
 
@@ -29,11 +29,11 @@ yarn package-extension
 
 Next, in VSCode _EITHER_:
 
-1. Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/packages/malloy-vscode/malloy-vscode-x.x.x.vsix`
+1. Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `/malloy/vscode-extension/malloy-vscode-x.x.x.vsix`
 
 _OR_
 
-2. Open the `malloy-vscode` package root directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
+1. Open the `vscode-extension` directory in VSCode, right click on `malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
 # Malloy and Extension Development
 

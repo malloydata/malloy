@@ -14,10 +14,10 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { build } from "esbuild";
-import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
+import { nativeNodeModulesPlugin } from "../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
 import { execSync } from "child_process";
-import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
+import { noNodeModulesSourceMaps } from "../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 
 // importing this in normal fashion seems to import an older API?!
 // for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"

@@ -23,7 +23,7 @@ import {
   PipeSegment,
   TurtleDef,
   DocumentLocation,
-} from "../../model/malloy_types";
+} from "../../model/malloy-types";
 import { MalloyElement, ModelEntry, NameSpace } from "../ast";
 import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
 

@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.packages.json",
+  "extends": "../tsconfig.packages.json",
   "compilerOptions": {
     "jsx": "react",
     "outDir": "out",
@@ -9,16 +9,16 @@
   "exclude": ["node_modules", ".vscode-test", "out"],
   "references": [
     {
-      "path": "../malloy"
+      "path": "../packages/malloy"
     },
     {
-      "path": "../malloy-db-bigquery"
+      "path": "../packages/malloy-db-bigquery"
     },
     {
-      "path": "../malloy-db-postgres"
+      "path": "../packages/malloy-db-postgres"
     },
     {
-      "path": "../malloy-render"
+      "path": "../packages/malloy-render"
     }
   ]
 }

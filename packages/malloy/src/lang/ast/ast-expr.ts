@@ -26,7 +26,7 @@ import {
   isConditionParameter,
   StructDef,
   Expr,
-} from "../../model/malloy_types";
+} from "../../model/malloy-types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
   Filter,

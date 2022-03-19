@@ -19,7 +19,7 @@ import {
   SQLBlock,
   StructDef,
 } from "../../model";
-import { makeSQLBlock } from "../../model/sql_block";
+import { makeSQLBlock } from "../../model/sql-block";
 import { ExpressionDef } from "../ast";
 import { StaticSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";

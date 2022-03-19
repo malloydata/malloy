@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DocumentLocation } from "../model/malloy_types";
+import { DocumentLocation } from "../model/malloy-types";
 
 export type ZoneData<TValue> = Record<string, TValue>;
 

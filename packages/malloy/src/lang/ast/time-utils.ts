@@ -12,7 +12,7 @@
  */
 
 import { Dialect } from "../../dialect";
-import { Expr, Fragment, TimeTimeframe } from "../../model/malloy_types";
+import { Expr, Fragment, TimeTimeframe } from "../../model/malloy-types";
 import { compressExpr, ExprValue, TimeType } from "./ast-types";
 
 export function dateOffset(

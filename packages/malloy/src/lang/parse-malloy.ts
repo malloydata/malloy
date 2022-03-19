@@ -30,7 +30,7 @@ import {
   DocumentPosition,
   DocumentLocation,
   DocumentRange,
-} from "../model/malloy_types";
+} from "../model/malloy-types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";

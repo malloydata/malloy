@@ -17,7 +17,7 @@ import {
   isAtomicFieldType,
   TimeTimeframe,
   Expr,
-} from "../../model/malloy_types";
+} from "../../model/malloy-types";
 
 // These are the types which a field expression will evaluate to
 export type ExpressionValueType =

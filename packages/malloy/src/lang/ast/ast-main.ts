@@ -12,8 +12,8 @@
  */
 import { URL } from "url";
 import { cloneDeep } from "lodash";
-import * as model from "../../model/malloy_types";
-import { Segment as ModelQuerySegment } from "../../model/malloy_query";
+import * as model from "../../model/malloy-types";
+import { Segment as ModelQuerySegment } from "../../model/malloy-query";
 import {
   FieldSpace,
   ReduceFieldSpace,
@@ -33,7 +33,7 @@ import {
   FieldDeclaration,
 } from "./index";
 import { QueryField } from "../space-field";
-import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
+import { makeSQLBlock, SQLBlockRequest } from "../../model/sql-block";
 import { inspect } from "util";
 
 /*

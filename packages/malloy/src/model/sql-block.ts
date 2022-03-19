@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { SQLBlock } from "./malloy_types";
+import { SQLBlock } from "./malloy-types";
 import md5 from "md5";
 
 /**

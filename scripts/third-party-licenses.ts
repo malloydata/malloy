@@ -45,7 +45,7 @@ axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 const malloyPackages = [
   "@malloydata/malloy",
   "@malloydata/render",
-  "malloy-vscode",
+  "vscode-extension",
   "@malloydata/db-test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",

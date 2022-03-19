@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import * as model from "../model/malloy_types";
+import * as model from "../model/malloy-types";
 import { FieldSpace, DynamicSpace, StaticSpace } from "./field-space";
 import {
   FieldValueType,

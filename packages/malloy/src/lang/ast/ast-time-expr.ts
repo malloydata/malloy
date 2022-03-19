@@ -17,7 +17,7 @@ import {
   Fragment,
   isTimeTimeframe,
   TimeTimeframe,
-} from "../../model/malloy_types";
+} from "../../model/malloy-types";
 import { FieldSpace } from "../field-space";
 import {
   dateOffset,

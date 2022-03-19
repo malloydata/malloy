@@ -85,6 +85,6 @@ export type {
   ModelURL,
   PooledConnection,
   TestableConnection,
-} from "./runtime_types";
-export { URL } from "./runtime_types";
+} from "./runtime-types";
+export { URL } from "./runtime-types";
 export type { Loggable } from "./malloy";

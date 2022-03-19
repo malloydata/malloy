@@ -14,7 +14,7 @@
 /* eslint-disable no-useless-constructor */
 import { cloneDeep } from "lodash";
 import { Dialect, getDialect } from "../dialect";
-import * as model from "../model/malloy_types";
+import * as model from "../model/malloy-types";
 import {
   ExploreField,
   FieldListEdit,

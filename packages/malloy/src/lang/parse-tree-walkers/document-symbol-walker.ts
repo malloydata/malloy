@@ -16,7 +16,7 @@ import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
 import { MalloyListener } from "../lib/Malloy/MalloyListener";
 import * as parser from "../lib/Malloy/MalloyParser";
-import { DocumentRange } from "../../model/malloy_types";
+import { DocumentRange } from "../../model/malloy-types";
 import { MalloyTranslation } from "../parse-malloy";
 
 export interface DocumentSymbol {

@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Expr } from "../../model/malloy_types";
+import { Expr } from "../../model/malloy-types";
 import { FieldSpace } from "../field-space";
 import {
   ExprDuration,

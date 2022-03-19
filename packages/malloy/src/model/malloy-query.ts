@@ -54,7 +54,7 @@ import {
   isPhysical,
   isJoinOn,
   isQuerySegment,
-} from "./malloy_types";
+} from "./malloy-types";
 
 import { indent, AndChain } from "./utils";
 import { parseTableURL } from "../malloy";
