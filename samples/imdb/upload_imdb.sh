@@ -1,3 +1,8 @@
+#
+# To run this script
+#
+#  bash upload_imdb.sh
+#
 BUCKET=imdb_data_upload
 DATASET=imdb
 
