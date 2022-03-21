@@ -8,16 +8,18 @@ source: movies_queries is movies + {
   // Top Movies by numVotes (total number of people that liked it)
   query: top20 is by_title + { limit: 20 } 
 
+  query: top20_horror is top20 + { 
+    where: genres.value = 'Horror'
+  }
+
   // Movie Stars
-  query:  top_star is by_name + { 
+  query: top_stars is by_name + { 
     limit: 20 
   } 
 
-  // Movie Stars and jobs
-  query: top_stars_andjobs is  by_name + { 
-    nest: by_job_category
-    limit: 20 
-  } 
+  query: top_stars_comedy is top_stars + {
+    where: genres.value = 'Comedy'
+  }
 
   // Movie Stars Titles time and jobs
   query: top_stars_jobs_and_more_dashboard is by_name + { 
@@ -27,6 +29,10 @@ source: movies_queries is movies + {
       by_job_category
     limit: 20 
   } 
+
+  query: top_comedy_star_dashboard is top_stars_jobs_and_more_dashboard + {
+    where: genres.value = 'Comedy'
+  }
 
   // top Directors and their 5 best movies
   query: top_directors is by_name + {
@@ -51,5 +57,10 @@ source: movies_queries is movies + {
       where: principals.category ~ 'act%'
       limit: 5
     }
+  }
+
+  query: searchme is by_title + {
+    where: primaryTitle ~ r'700'
+    group_by: tconst
   }
 }

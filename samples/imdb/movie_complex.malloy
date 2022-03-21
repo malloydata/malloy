@@ -36,7 +36,7 @@ query: horror_combo is movies + {
 }
 
 query: imdb_dashboard is movies_plus + {
-  join_one: x is from(movie_filters -> spielberg) with tconst
+  join_one: x is from(movie_filters -> tomhanks) with tconst
   where: x.tconst != null and startYear < 2010
 }
 ->  {
