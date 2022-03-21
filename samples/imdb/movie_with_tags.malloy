@@ -9,6 +9,7 @@ source: movies_with_tags is movies_plus+ {
 
   declare: 
     tag is movielens.tags.tag
+    relevance is movielens.tags.relevance
 
   query: by_tags_list is {
     group_by: movielens.tags.tag
@@ -44,7 +45,9 @@ query:  movies_with_tags -> by_job_category + {
 
 }
 
-// Tom hanks Nudity?
-query:  movies_with_tags -> by_title + {
-  where: people.primaryName = 'Tom Hanks' and tag ~ r'nudity'
+// Tom hanks catastrophy ?
+query:  movies_with_tags -> titles_tags + {
+  where: people.primaryName = 'Tom Hanks' and tag ~ r'catas'
+  group_by: relevance
+  order_by: relevance desc
 }
