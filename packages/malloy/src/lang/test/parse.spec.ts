@@ -454,6 +454,18 @@ describe("explore properties", () => {
       }
     `)
   );
+  test(
+    "where clause can use the join namespace in source refined query",
+    modelOK(`
+    source: flights is table('malloytest.flights') + {
+      query: boo is {
+        join_one: carriers is table('malloytest.carriers') on carrier = carriers.code
+        where: carriers.code = 'WN' | 'AA'
+        group_by: carriers.nickname
+        aggregate: flight_count is count()
+      }
+    }`)
+  );
   describe("joins", () => {
     test("with", modelOK("explore: x is a { join_one: b with astr }"));
     test("with", modelOK("explore: x is a { join_one: y is b with astr }"));
