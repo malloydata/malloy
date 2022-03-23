@@ -1256,7 +1256,7 @@ class ReduceExecutor implements QueryExecutor {
     } else if (isNestedQuery(qp)) {
       this.queryFS.addQueryItems(qp);
     } else if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      this.filters.push(...qp.getFilterList(this.queryFS.inputFS()));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.log("Query operation already limited");
