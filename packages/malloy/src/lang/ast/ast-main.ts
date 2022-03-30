@@ -1024,12 +1024,12 @@ export class FilterElement extends MalloyElement {
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
       return {
-        source: this.exprSrc,
+        code: this.exprSrc,
         expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
       };
     }
     const exprCond: model.FilterExpression = {
-      source: this.exprSrc,
+      code: this.exprSrc,
       expression: compressExpr(exprVal.value),
     };
     if (exprVal.aggregate) {
@@ -1331,7 +1331,7 @@ class ReduceExecutor implements QueryExecutor {
   finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
     let from: model.ReduceSegment | undefined;
     if (fromSeg) {
-      if (fromSeg.type == "reduce") {
+      if (model.isReduceSegment(fromSeg)) {
         from = fromSeg;
       } else {
         this.queryFS.log(`Can't refine reduce with ${fromSeg.type}`);
@@ -1367,7 +1367,7 @@ class ProjectExecutor extends ReduceExecutor {
   finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
     let from: model.ProjectSegment | undefined;
     if (fromSeg) {
-      if (fromSeg.type == "project") {
+      if (model.isProjectSegment(fromSeg)) {
         from = fromSeg;
       } else {
         this.queryFS.log(`Can't refine project with ${fromSeg.type}`);
@@ -1765,7 +1765,7 @@ abstract class PipelineDesc extends MalloyElement {
     }
     const pipeline: model.PipeSegment[] = [];
     if (modelPipe.pipeHead) {
-      const { pipeline: turtlePipe } = this.importTurtle(
+      const { pipeline: turtlePipe } = this.expandTurtle(
         modelPipe.pipeHead.name,
         fs.structDef()
       );
@@ -1780,7 +1780,7 @@ abstract class PipelineDesc extends MalloyElement {
     return { pipeline };
   }
 
-  protected importTurtle(
+  protected expandTurtle(
     turtleName: string,
     fromStruct: model.StructDef
   ): {
@@ -1900,7 +1900,7 @@ export class FullQuery extends TurtleHeadedPipe {
       const { error } = this.turtleName.getField(pipeFs);
       if (error) this.log(error);
       const name = this.turtleName.refString;
-      const { pipeline, location } = this.importTurtle(name, structDef);
+      const { pipeline, location } = this.expandTurtle(name, structDef);
       destQuery.location = location;
       const refined = this.refinePipeline(pipeFs, { pipeline }).pipeline;
       if (this.headRefinement) {

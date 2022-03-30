@@ -19,6 +19,7 @@ import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
+import { Interval as StreamInterval } from "antlr4ts/misc";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -182,7 +183,13 @@ export class MalloyToAST
 
   protected getFilterElement(cx: parse.FieldExprContext): ast.FilterElement {
     const expr = this.getFieldExpr(cx);
-    const fel = new ast.FilterElement(expr, cx.text);
+    const from = cx.start.startIndex;
+    const lastToken = cx.stop || cx.start;
+    const sourceRange = new StreamInterval(from, lastToken.stopIndex);
+    const fel = new ast.FilterElement(
+      expr,
+      this.parse.sourceStream.getText(sourceRange)
+    );
     return this.astAt(fel, cx);
   }
 

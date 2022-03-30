@@ -44,7 +44,7 @@ function getTableFilters(table: DataArray): FilterItem[] {
   const filters = [];
   for (const f of table.field.filters || []) {
     if (!f.aggregate) {
-      filters.push({ key: f.source, value: undefined });
+      filters.push({ key: f.code, value: undefined });
     }
   }
   return filters;

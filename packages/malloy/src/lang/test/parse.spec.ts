@@ -619,6 +619,20 @@ describe("qops", () => {
     "where multiple",
     modelOK("query:a->{ group_by: astr; where: af > 10,astr~'a%' }")
   );
+  test(`filters preserve source formatting in code:`, () => {
+    const model = new BetaModel(`source: notb is a + { where: astr  !=  'b' }`);
+    expect(model).toTranslate();
+    const t = model.translate();
+    const notb = t.translated?.modelDef.contents.notb;
+    expect(notb).toBeDefined();
+    if (notb) {
+      const f = notb.filterList;
+      expect(f).toBeDefined();
+      if (f) {
+        expect(f[0].code).toBe("astr  !=  'b'");
+      }
+    }
+  });
   test(
     "nest single",
     modelOK(`

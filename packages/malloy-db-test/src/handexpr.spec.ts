@@ -121,7 +121,7 @@ export const modelHandBase: StructDef = {
           filterList: [
             {
               aggregate: false,
-              source: "manufacturer='BOEING'",
+              code: "manufacturer='BOEING'",
               expression: [
                 {
                   type: "field",
@@ -576,7 +576,7 @@ export const modelB: StructDef = {
   filterList: [
     {
       expression: [{ type: "field", path: "manufacturer" }, " LIKE 'B%'"],
-      source: "manufacturer ~ 'B%'",
+      code: "manufacturer ~ 'B%'",
     },
   ],
 };
