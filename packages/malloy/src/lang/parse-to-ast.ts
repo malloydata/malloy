@@ -19,7 +19,7 @@ import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
-import { Interval as StreamInterval } from "antlr4ts/misc";
+import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
