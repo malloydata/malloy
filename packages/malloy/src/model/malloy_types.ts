@@ -409,24 +409,24 @@ export interface Query extends Pipeline, Filtered, HasLocation {
 
 export type NamedQuery = Query & NamedObject;
 
-export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
+export type PipeSegment = QuerySegment | IndexSegment;
 
 export interface ReduceSegment extends QuerySegment {
   type: "reduce";
 }
 export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
-  return (pe as ReduceSegment).type === "reduce";
+  return pe.type === "reduce";
 }
 
 export interface ProjectSegment extends QuerySegment {
   type: "project";
 }
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
-  return (pe as ProjectSegment).type === "project";
+  return pe.type === "project";
 }
 
 export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
-  return pe.type === "project" || pe.type === "reduce";
+  return isProjectSegment(pe) || isReduceSegment(pe);
 }
 
 export interface IndexSegment extends Filtered {
@@ -572,7 +572,7 @@ export type PrimaryKeyRef = string;
 /** filters */
 export interface FilterExpression {
   expression: Expr;
-  source: string;
+  code: string;
   aggregate?: boolean;
 }
 

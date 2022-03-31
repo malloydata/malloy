@@ -16,14 +16,14 @@ import { FilterExpression, Fragment } from "@malloydata/malloy";
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
     expression: [{ type: "field", path: field }, `='${value}'`],
-    source: `${field}='${value}'`,
+    code: `${field}='${value}'`,
   };
 }
 
 export function fStringLike(field: string, value: string): FilterExpression {
   return {
     expression: [{ type: "field", path: field }, ` LIKE '${value}'`],
-    source: `${field}~'${value}'`,
+    code: `${field}~'${value}'`,
   };
 }
 
@@ -33,6 +33,6 @@ export function fYearEq(field: string, year: number): FilterExpression {
   const fx: Fragment = { type: "field", path: field };
   return {
     expression: [fx, `>=${yBegin} and `, fx, `<${yEnd}`],
-    source: `${field}:@${year}`,
+    code: `${field}:@${year}`,
   };
 }
