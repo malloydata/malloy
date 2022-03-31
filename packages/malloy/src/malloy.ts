@@ -158,10 +158,9 @@ export class Malloy {
     model?: Model;
   }): Promise<Model> {
     const translator = parse._translator;
-    translator.translate(model?._modelDef);
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const result = translator.translate();
+      const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.translated) {
           return new Model(

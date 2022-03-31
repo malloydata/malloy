@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import { URL } from "url";
 import {
   ANTLRErrorListener,
   Token,
