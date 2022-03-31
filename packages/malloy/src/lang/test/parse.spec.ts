@@ -633,6 +633,24 @@ describe("qops", () => {
       }
     }
   });
+  test(`field expressions preserve source formatting in code:`, () => {
+    const model = new BetaModel(
+      `source: notb is a + { dimension: d is 1 +   2 }`
+    );
+    expect(model).toTranslate();
+    const t = model.translate();
+    const notb = t.translated?.modelDef.contents.notb;
+    expect(notb).toBeDefined();
+    expect(notb?.type).toBe("struct");
+    if (notb?.type === "struct") {
+      const d = notb.fields.find((f) => f.as || f.name === "d");
+      expect(d).toBeDefined();
+      expect(d?.type).toBe("number");
+      if (d?.type === "number") {
+        expect(d.code).toBe("1 +   2");
+      }
+    }
+  });
   test(
     "nest single",
     modelOK(`

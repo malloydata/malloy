@@ -248,7 +248,7 @@ export class FieldDeclaration extends MalloyElement {
         template.aggregate = true;
       }
       if (this.exprSrc) {
-        template.source = this.exprSrc;
+        template.code = this.exprSrc;
       }
       // TODO this should work for dates too
       if (isGranularResult(exprValue) && template.type === "timestamp") {
