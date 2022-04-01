@@ -214,7 +214,7 @@ export type Expr = Fragment[];
 export interface Expression {
   e?: Expr;
   aggregate?: boolean;
-  source?: string;
+  code?: string;
 }
 
 interface JustExpression {

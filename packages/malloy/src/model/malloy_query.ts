@@ -1668,7 +1668,7 @@ class QueryQuery extends QueryField {
         let filterList;
         const sourceField =
           fi.f.parent.getFullOutputName() + (fieldDef.name || fieldDef.as);
-        const sourceExpression: string | undefined = fieldDef.source;
+        const sourceExpression: string | undefined = fieldDef.code;
         const sourceClasses = [sourceField];
         if (isAggregateField(fi.f)) {
           filterList = fi.f.getFilterList();
