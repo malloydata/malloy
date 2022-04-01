@@ -54,6 +54,8 @@ import {
   isPhysical,
   isJoinOn,
   isQuerySegment,
+  isTimeDiffFragment,
+  TimeDiffFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -62,16 +64,6 @@ import md5 from "md5";
 import { ResultStructMetadataDef } from ".";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
-
-function extendStructDef(
-  structDef: StructDef,
-  extendSource: FieldDef[]
-): StructDef {
-  return {
-    ...structDef,
-    fields: [...structDef.fields, ...extendSource],
-  };
-}
 
 class StageWriter {
   withs: string[] = [];
@@ -441,6 +433,27 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateTimeDiff(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: TimeDiffFragment
+  ): string {
+    const left = this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      expr.left.value
+    );
+    const right = this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      expr.right.value
+    );
+    // ok here is where i left off
+    // this needs to ask the dialect to write the diff expression
+    // which means i need to add a function to dialect
+    throw new Error("TIME DIFF NOT YET IMPLEMENTED");
+  }
+
   generateExpressionFromExpr(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -492,6 +505,8 @@ class QueryField extends QueryNode {
             `Internal Error: Partial application value referenced but not provided`
           );
         }
+      } else if (isTimeDiffFragment(expr)) {
+        s += this.generateTimeDiff(resultSet, context, expr);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(

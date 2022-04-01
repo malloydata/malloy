@@ -200,6 +200,22 @@ export function isApplyFragment(f: Fragment): f is ApplyFragment {
   return (f as ApplyFragment)?.type === "apply";
 }
 
+export interface RangeValue {
+  type: "date" | "timestamp";
+  value: Expr;
+}
+
+export function isTimeDiffFragment(f: Fragment): f is TimeDiffFragment {
+  return (f as TimeDiffFragment)?.type === "timeDiff";
+}
+
+export interface TimeDiffFragment {
+  type: "timeDiff";
+  units: string;
+  left: RangeValue;
+  right: RangeValue;
+}
+
 export type Fragment =
   | string
   | ApplyFragment
@@ -207,7 +223,8 @@ export type Fragment =
   | FieldFragment
   | ParameterFragment
   | FilterFragment
-  | AggregateFragment;
+  | AggregateFragment
+  | TimeDiffFragment;
 
 export type Expr = Fragment[];
 
