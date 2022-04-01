@@ -715,4 +715,11 @@ export function isValueDate(
   return field.type === "date";
 }
 
+export interface SearchIndexResult {
+  fieldName: string;
+  fieldValue: string;
+  fieldType: string;
+  weight: number;
+}
+
 // clang-format on

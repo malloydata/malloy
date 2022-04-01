@@ -59,18 +59,24 @@ import {
 import { indent, AndChain } from "./utils";
 import { parseTableURL } from "../malloy";
 import md5 from "md5";
-import { ResultStructMetadataDef } from ".";
+import { ResultStructMetadataDef, SearchIndexResult } from ".";
+import { Connection } from "..";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
-function extendStructDef(
-  structDef: StructDef,
-  extendSource: FieldDef[]
-): StructDef {
-  return {
-    ...structDef,
-    fields: [...structDef.fields, ...extendSource],
-  };
+// function extendStructDef(
+//   structDef: StructDef,
+//   extendSource: FieldDef[]
+// ): StructDef {
+//   return {
+//     ...structDef,
+//     fields: [...structDef.fields, ...extendSource],
+//   };
+// }
+
+// quote a string for SQL use.  Perhaps should be in dialect.
+function generateSQLStringLiteral(sourceString: string): string {
+  return `'${sourceString}'`;
 }
 
 class StageWriter {
@@ -2632,19 +2638,19 @@ class QueryQueryIndex extends QueryQuery {
     for (let i = 0; i < fields.length; i++) {
       s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    s += `  END as field_name,`;
+    s += `  END as fieldName,`;
     s += `  CASE group_set\n`;
     for (let i = 0; i < fields.length; i++) {
       s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    s += `  END as field_type,`;
+    s += `  END as fieldType,`;
     s += `  CASE group_set\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === "string") {
         s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    s += `  END as field_value,\n`;
+    s += `  END as fieldValue,\n`;
     s += ` ${measureSQL} as weight,\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
@@ -2661,7 +2667,7 @@ class QueryQueryIndex extends QueryQuery {
         )})\n`;
       }
     }
-    s += `  END as field_range\n`;
+    s += `  END as fieldRange\n`;
 
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
@@ -2687,9 +2693,9 @@ class QueryQueryIndex extends QueryQuery {
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
       `SELECT
-  field_name,
-  field_type,
-  COALESCE(field_value, field_range) as field_value,
+  fieldName,
+  fieldType,
+  COALESCE(fieldValue, fieldRange) as fieldValue,
   weight
 FROM ${resultStage}\n`
     );
@@ -2703,9 +2709,9 @@ FROM ${resultStage}\n`
       name: this.resultStage || "result",
       dialect: this.parent.fieldDef.dialect,
       fields: [
-        { type: "string", name: "field_name" },
-        { type: "string", name: "field_value" },
-        { type: "string", name: "field_type" },
+        { type: "string", name: "fieldName" },
+        { type: "string", name: "fieldValue" },
+        { type: "string", name: "fieldType" },
         { type: "number", name: "weight", numberType: "integer" },
       ],
       structRelationship: {
@@ -3387,31 +3393,48 @@ export class QueryModel {
     };
   }
 
-  // async searchIndex(explore: string, searchValue: string): Promise<QueryData> {
-  //   // make a search index if one isn't modelled.
-  //   const struct = this.getStructByName(explore);
-  //   let malloy;
-  //   if (!struct.nameMap.get("search_index")) {
-  //     malloy = `EXPLORE ${explore} | INDEX`;
-  //   } else {
-  //     malloy = `EXPLORE ${explore} | search_index`;
-  //   }
+  exploreSearchSQLMap = new Map();
 
-  //   // if we've compiled the SQL before use it otherwise
-  //   let sqlPDT = exploreSearchSQLMap.get(explore);
-  //   if (sqlPDT === undefined) {
-  //     sqlPDT = (await this.compileQuery(malloy)).sql;
-  //     exploreSearchSQLMap.set(explore, sqlPDT);
-  //   }
-  //   const result = await Malloy.db.runQuery(
-  //     `SELECT field_name, field_value, weight \n` +
-  //       `FROM  \`${await Malloy.db.manifestTemporaryTable(sqlPDT)}\` \n` +
-  //       `WHERE lower(field_name || '|' || field_value) LIKE lower(${generateSQLStringLiteral(
-  //         "%" + searchValue + "%"
-  //       )})\n ` +
-  //       `ORDER BY 3 DESC\n` +
-  //       `LIMIT 1000\n`
-  //   );
-  //   return result;
-  // }
+  async searchIndex(
+    connection: Connection,
+    explore: string,
+    searchValue: string
+  ): Promise<SearchIndexResult[] | undefined> {
+    if (!connection.canPersist()) {
+      return undefined;
+    }
+    // make a search index if one isn't modelled.
+    const struct = this.getStructByName(explore);
+    let indexQuery: Query;
+
+    if (!struct.nameMap.get("search_index")) {
+      indexQuery = {
+        structRef: explore,
+        pipeline: [{ type: "index", fields: ["*"] }],
+      };
+    } else {
+      indexQuery = {
+        structRef: explore,
+        pipeHead: { name: "search_index" },
+        pipeline: [],
+      };
+    }
+
+    // if we've compiled the SQL before use it otherwise
+    let sqlPDT = this.exploreSearchSQLMap.get(explore);
+    if (sqlPDT === undefined) {
+      sqlPDT = (await this.compileQuery(indexQuery)).sql;
+      this.exploreSearchSQLMap.set(explore, sqlPDT);
+    }
+    const result = await connection.runSQL(
+      `SELECT fieldName, fieldValue, fieldType, weight \n` +
+        `FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\` \n` +
+        `WHERE lower(fieldName || '|' || fieldValue) LIKE lower(${generateSQLStringLiteral(
+          "%" + searchValue + "%"
+        )})\n ` +
+        `ORDER BY 4 DESC\n` +
+        `LIMIT 1000\n`
+    );
+    return result.rows as unknown as SearchIndexResult[];
+  }
 }
