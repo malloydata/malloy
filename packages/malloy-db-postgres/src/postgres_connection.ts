@@ -22,6 +22,7 @@ import {
   SQLBlock,
   Connection,
 } from "@malloydata/malloy";
+import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -120,6 +121,10 @@ export class PostgresConnection implements Connection {
   }
 
   public isPool(): this is PooledConnection {
+    return false;
+  }
+
+  public canPersist(): this is PersistSQLResults {
     return false;
   }
 
