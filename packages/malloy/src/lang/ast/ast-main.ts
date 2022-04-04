@@ -717,7 +717,12 @@ export class NamedSource extends Mallobj {
 
     const ret = this.modelStruct();
     if (!ret) {
-      return ErrorFactory.structDef;
+      const noSql = {
+        ...ErrorFactory.structDef,
+        name: "_reference_undefined_" + this.refName,
+        dialect: "MISSING_reference_undefined_" + this.refName,
+      };
+      return noSql;
     }
     const declared = { ...ret.parameters } || {};
 

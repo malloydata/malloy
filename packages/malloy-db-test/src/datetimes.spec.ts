@@ -14,6 +14,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
+import { Result } from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
@@ -122,6 +123,50 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
         `true ${field.name}`
       );
+    });
+  });
+
+  describe(`time difference - ${databaseName}`, () => {
+    const loggingSql = false;
+
+    async function diffGo(diffExpr: string) {
+      return await runtime
+        .loadQuery(
+          `
+            sql: nothing is || SELECT NULL as nothing;;
+            query: from_sql(nothing) -> { project: calc is (${diffExpr}) }
+          `
+        )
+        .run();
+    }
+    function calc(result: Result) {
+      if (loggingSql) {
+        console.log(result.sql);
+      }
+      return result.data.path(0, "calc").value;
+    }
+    // discovered this writing tests ...
+    test("valid timestamp without seconds", async () => {
+      const result = await diffGo("year(@2000-01-01 00:00)");
+      expect(calc(result)).toBe(2000);
+    });
+
+    test("@2000 to @2001", async () => {
+      const result = await diffGo("year(@2000 to @2001)");
+      expect(calc(result)).toBe(1);
+    });
+
+    test("forwards is positive", async () => {
+      const result = await diffGo(
+        "day(@2000-01-01 00:00:00 to @2000-01-02 00:00:00)"
+      );
+      expect(calc(result)).toBe(1);
+    });
+    test("reverse is negative", async () => {
+      const result = await diffGo(
+        "day(@2000-01-02 00:00:00 to @2000-01-01 00:00:00)"
+      );
+      expect(calc(result)).toBe(-1);
     });
   });
 });

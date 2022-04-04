@@ -35,7 +35,7 @@ import {
   markSource,
   MarkedSource,
 } from "./test-translator";
-import { isEqual } from "lodash";
+import { isEqual, padEnd } from "lodash";
 import { inspect } from "util";
 
 const inspectCompile = false;
@@ -761,10 +761,10 @@ describe("expressions", () => {
       }
     });
 
-    describe("timestamp extraction", () => {
+    describe("timestamp difference", () => {
       for (const unit of timeframes) {
         // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(ats)`));
+        test(`timestamp extract ${unit}`, exprOK(`${unit}(@2021 to ats)`));
       }
     });
   });

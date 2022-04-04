@@ -576,7 +576,7 @@ export class ExprTimeExtract extends ExpressionDef {
     SECONDS: "SECOND",
   };
   static isExtractor(funcName: string): boolean {
-    return ExprTimeExtract.extractorMap[funcName] != undefined;
+    return ExprTimeExtract.extractorMap[funcName.toUpperCase()] != undefined;
   }
 
   constructor(readonly name: string, readonly args: ExpressionDef[]) {
@@ -608,7 +608,7 @@ export class ExprTimeExtract extends ExpressionDef {
           value: [
             {
               type: "timeDiff",
-              units: this.name,
+              units: extractTo,
               left: { type: first.dataType, value: first.value },
               right: { type: last.dataType, value: last.value },
             },
