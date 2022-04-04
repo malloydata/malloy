@@ -30,6 +30,9 @@ export interface FunctionInfo {
 
 export type DialectFieldList = DialectField[];
 
+export const timeTypes = ["date", "timestamp "];
+export type TimeType = "date" | "timestamp";
+
 const dateTimeframes = ["day", "week", "month", "quarter", "year"];
 export type DateTimeframe = typeof dateTimeframes[number];
 
@@ -185,4 +188,12 @@ export abstract class Dialect {
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
     return this.functionInfo[functionName.toLowerCase()];
   }
+
+  abstract timeDiff(
+    leftType: TimeType,
+    leftValue: string,
+    rightType: TimeType,
+    rightValue: string,
+    units: string
+  ): string;
 }

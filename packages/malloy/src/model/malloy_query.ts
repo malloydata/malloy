@@ -438,20 +438,13 @@ class QueryField extends QueryNode {
     context: QueryStruct,
     expr: TimeDiffFragment
   ): string {
-    const left = this.generateExpressionFromExpr(
-      resultSet,
-      context,
-      expr.left.value
+    return context.dialect.timeDiff(
+      expr.left.type,
+      this.generateExpressionFromExpr(resultSet, context, expr.left.value),
+      expr.right.type,
+      this.generateExpressionFromExpr(resultSet, context, expr.right.value),
+      expr.units
     );
-    const right = this.generateExpressionFromExpr(
-      resultSet,
-      context,
-      expr.right.value
-    );
-    // ok here is where i left off
-    // this needs to ask the dialect to write the diff expression
-    // which means i need to add a function to dialect
-    throw new Error("TIME DIFF NOT YET IMPLEMENTED");
   }
 
   generateExpressionFromExpr(

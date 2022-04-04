@@ -20,6 +20,7 @@ import {
   ExtractDateTimeframe,
   FunctionInfo,
   TimestampTimeframe,
+  TimeType,
 } from "./dialect";
 
 const timeTruncMap: { [key: string]: string } = {
@@ -375,5 +376,34 @@ ${indent(sql)}
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
+  }
+
+  timeDiff(
+    lType: TimeType,
+    lVal: string,
+    rType: TimeType,
+    rVal: string,
+    units: string
+  ): string {
+    let diffUsing = "TIMESTAMP_DIFF";
+    const diffUnits = units.toUpperCase();
+
+    if (diffUnits == "SECOND" || diffUnits == "MINUTE" || diffUnits == "HOUR") {
+      if (lType != "timestamp") {
+        lVal = `TIMESTAMP(${lVal})`;
+      }
+      if (rType != "timestamp") {
+        rVal = `TIMESTAMP(${rVal})`;
+      }
+    } else {
+      diffUsing = "DATE_DIFF";
+      if (lType != "date") {
+        lVal = `DATE(${lVal})`;
+      }
+      if (rType != "date") {
+        rVal = `DATE(${rVal})`;
+      }
+    }
+    return `${diffUsing}(${rVal}, ${lVal}, ${diffUnits})`;
   }
 }

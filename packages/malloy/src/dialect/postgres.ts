@@ -21,6 +21,7 @@ import {
   FunctionInfo,
   isDateTimeframe,
   TimestampTimeframe,
+  TimeType,
 } from "./dialect";
 
 const castMap: Record<string, string> = {
@@ -281,5 +282,23 @@ export class PostgresDialect extends Dialect {
 
   getFunctionInfo(_functionName: string): FunctionInfo | undefined {
     return undefined;
+  }
+
+  timeDiff(
+    lType: TimeType,
+    lVal: string,
+    rType: TimeType,
+    rVal: string,
+    units: string
+  ): string {
+    const diffUnits = units.toUpperCase();
+
+    if (lType != "timestamp") {
+      lVal = `((${lVal})::timestamp)`;
+    }
+    if (rType != "timestamp") {
+      rVal = `((${rVal})::timestamp)`;
+    }
+    return `TRUNC(EXTRACT(${diffUnits} FROM ${rVal} - ${lVal}))`;
   }
 }
