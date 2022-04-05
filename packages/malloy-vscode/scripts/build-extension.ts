@@ -98,6 +98,9 @@ export async function doBuild(target?: Target): Promise<void> {
   // the only option is to put a readme file at the root of the package :(
   fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
 
+  // same story as README, but this time it's CHANGELOG
+  fs.copyFileSync(path.join("..", "..", "CHANGELOG.md"), "CHANGELOG.md");
+
   if (target) {
     fs.copyFileSync(
       path.join(
