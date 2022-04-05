@@ -29,6 +29,14 @@ const castMap: Record<string, string> = {
   string: "varchar",
 };
 
+const inSeconds: Record<string, number> = {
+  SECOND: 1,
+  MINUTE: 60,
+  HOUR: 3600,
+  DAY: 86400,
+  WEEK: 604800,
+};
+
 export class PostgresDialect extends Dialect {
   name = "postgres";
   defaultNumberType = "DOUBLE PRECISION";
@@ -293,12 +301,26 @@ export class PostgresDialect extends Dialect {
   ): string {
     const diffUnits = units.toUpperCase();
 
-    if (lType != "timestamp") {
-      lVal = `((${lVal})::timestamp)`;
+    if (inSeconds[diffUnits]) {
+      lVal = `EXTRACT(EPOCH FROM ${lVal})`;
+      rVal = `EXTRACT(EPOCH FROM ${rVal})`;
+      const duration = `(${rVal} - ${lVal})`;
+      return diffUnits == "SECOND"
+        ? duration
+        : `TRUNC(${duration}/${inSeconds[diffUnits]})`;
     }
-    if (rType != "timestamp") {
-      rVal = `((${rVal})::timestamp)`;
+    const yearDiff = `TRUNC(EXTRACT(YEAR FROM ${rVal}) - EXTRACT(YEAR FROM ${lVal}))`;
+    if (diffUnits == "YEAR") {
+      return yearDiff;
     }
-    return `TRUNC(EXTRACT(${diffUnits} FROM ${rVal} - ${lVal}))`;
+    if (diffUnits == "MONTH") {
+      const monthDiff = `TRUNC(EXTRACT(MONTH FROM ${rVal}) - EXTRACT(MONTH FROM ${lVal}))`;
+      return `${yearDiff} * 12 + ${monthDiff}`;
+    }
+    if (diffUnits == "QUARTER") {
+      const qDiff = `TRUNC(EXTRACT(QUARTER FROM ${rVal}) - EXTRACT(QUARTER FROM ${lVal}))`;
+      return `${yearDiff} * 4 + ${qDiff}`;
+    }
+    throw new Error(`Unknown or unhandleddddstgres time unit: ${units}`);
   }
 }

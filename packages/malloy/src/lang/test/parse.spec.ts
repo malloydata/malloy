@@ -35,7 +35,7 @@ import {
   markSource,
   MarkedSource,
 } from "./test-translator";
-import { isEqual, padEnd } from "lodash";
+import { isEqual } from "lodash";
 import { inspect } from "util";
 
 const inspectCompile = false;
