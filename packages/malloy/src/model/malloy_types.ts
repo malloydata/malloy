@@ -231,7 +231,7 @@ export type Expr = Fragment[];
 export interface Expression {
   e?: Expr;
   aggregate?: boolean;
-  source?: string;
+  code?: string;
 }
 
 interface JustExpression {
@@ -730,6 +730,13 @@ export function isValueDate(
   field: FieldDef
 ): value is { value: string } | null {
   return field.type === "date";
+}
+
+export interface SearchIndexResult {
+  fieldName: string;
+  fieldValue: string;
+  fieldType: string;
+  weight: number;
 }
 
 // clang-format on

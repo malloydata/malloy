@@ -40,6 +40,7 @@ import {
   SQLBlock,
   DocumentReference,
   DocumentPosition as ModelDocumentPosition,
+  SearchIndexResult,
 } from "./model";
 import {
   LookupConnection,
@@ -1984,6 +1985,25 @@ export class ModelMaterializer extends FluentState<Model> {
       });
       return queryModel.preparedQuery;
     });
+  }
+
+  public async search(
+    sourceName: string,
+    searchTerm: string
+  ): Promise<SearchIndexResult[] | undefined> {
+    const model = await this.materialize();
+    const queryModel = new QueryModel(model._modelDef);
+    const schema = model.getExploreByName(sourceName).structDef;
+    if (schema.structRelationship.type !== "basetable") {
+      throw new Error(
+        "Expected schema's structRelationship type to be 'basetable'."
+      );
+    }
+    const connectionName = schema.structRelationship.connectionName;
+    const connection = await this.runtime.connections.lookupConnection(
+      connectionName
+    );
+    return await queryModel.searchIndex(connection, sourceName, searchTerm);
   }
 
   /**

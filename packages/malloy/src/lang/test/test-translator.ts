@@ -212,7 +212,7 @@ export class TestTranslator extends MalloyTranslator {
             numberType: "integer",
             aggregate: true,
             e: ["COUNT()"],
-            source: "count()",
+            code: "count()",
           },
           {
             type: "turtle",

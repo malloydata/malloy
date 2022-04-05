@@ -181,15 +181,16 @@ export class MalloyToAST
     return el;
   }
 
-  protected getFilterElement(cx: parse.FieldExprContext): ast.FilterElement {
-    const expr = this.getFieldExpr(cx);
+  protected getSourceCode(cx: ParserRuleContext): string {
     const from = cx.start.startIndex;
     const lastToken = cx.stop || cx.start;
     const sourceRange = new StreamInterval(from, lastToken.stopIndex);
-    const fel = new ast.FilterElement(
-      expr,
-      this.parse.sourceStream.getText(sourceRange)
-    );
+    return this.parse.sourceStream.getText(sourceRange);
+  }
+
+  protected getFilterElement(cx: parse.FieldExprContext): ast.FilterElement {
+    const expr = this.getFieldExpr(cx);
+    const fel = new ast.FilterElement(expr, this.getSourceCode(cx));
     return this.astAt(fel, cx);
   }
 
@@ -409,7 +410,11 @@ export class MalloyToAST
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
-    const def = new ast.FieldDeclaration(valExpr, fieldName, defCx.text);
+    const def = new ast.FieldDeclaration(
+      valExpr,
+      fieldName,
+      this.getSourceCode(defCx)
+    );
     return this.astAt(def, pcx);
   }
 

@@ -36,6 +36,7 @@ import {
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
+import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -95,7 +96,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection implements Connection {
+export class BigQueryConnection implements Connection, PersistSQLResults {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -183,6 +184,10 @@ export class BigQueryConnection implements Connection {
 
   public isPool(): this is PooledConnection {
     return false;
+  }
+
+  public canPersist(): this is PersistSQLResults {
+    return true;
   }
 
   private async _runSQL(
