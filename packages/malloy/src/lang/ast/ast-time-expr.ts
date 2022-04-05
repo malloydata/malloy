@@ -226,8 +226,10 @@ export class GranularLiteral extends ExpressionDef {
 
     const tsm = DateTime.fromFormat(s, fMinute);
     if (tsm.isValid) {
-      const nextMinute = tsm.plus({ minute: 1 }).toFormat(fMinute);
-      const tsLit = new GranularLiteral(s, nextMinute, "minute");
+      // working around a weird bigquery bug ...
+      const thisMin = s + ":00";
+      const nextMinute = tsm.plus({ minute: 1 }).toFormat(fMinute) + ":00";
+      const tsLit = new GranularLiteral(thisMin, nextMinute, "minute");
       tsLit.timeType = "timestamp";
       return tsLit;
     }
