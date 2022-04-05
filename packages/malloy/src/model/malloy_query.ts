@@ -54,6 +54,8 @@ import {
   isPhysical,
   isJoinOn,
   isQuerySegment,
+  isTimeDiffFragment,
+  TimeDiffFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -63,16 +65,6 @@ import { ResultStructMetadataDef, SearchIndexResult } from ".";
 import { Connection } from "..";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
-
-// function extendStructDef(
-//   structDef: StructDef,
-//   extendSource: FieldDef[]
-// ): StructDef {
-//   return {
-//     ...structDef,
-//     fields: [...structDef.fields, ...extendSource],
-//   };
-// }
 
 // quote a string for SQL use.  Perhaps should be in dialect.
 function generateSQLStringLiteral(sourceString: string): string {
@@ -447,6 +439,20 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateTimeDiff(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: TimeDiffFragment
+  ): string {
+    return context.dialect.timeDiff(
+      expr.left.type,
+      this.generateExpressionFromExpr(resultSet, context, expr.left.value),
+      expr.right.type,
+      this.generateExpressionFromExpr(resultSet, context, expr.right.value),
+      expr.units
+    );
+  }
+
   generateExpressionFromExpr(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -498,6 +504,8 @@ class QueryField extends QueryNode {
             `Internal Error: Partial application value referenced but not provided`
           );
         }
+      } else if (isTimeDiffFragment(expr)) {
+        s += this.generateTimeDiff(resultSet, context, expr);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(

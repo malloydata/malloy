@@ -779,10 +779,10 @@ describe("expressions", () => {
       }
     });
 
-    describe("timestamp extraction", () => {
+    describe("timestamp difference", () => {
       for (const unit of timeframes) {
         // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(ats)`));
+        test(`timestamp extract ${unit}`, exprOK(`${unit}(@2021 to ats)`));
       }
     });
   });

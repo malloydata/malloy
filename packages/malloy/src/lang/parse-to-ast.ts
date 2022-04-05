@@ -982,27 +982,24 @@ export class MalloyToAST
 
   visitExprFunc(pcx: parse.ExprFuncContext): ast.ExprFunc {
     const argsCx = pcx.argumentList();
-    let fn: string | undefined;
+    const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
     const idCx = pcx.id();
+    const dCx = pcx.timeframe();
+    let fn: string;
     if (idCx) {
       fn = this.getIdText(idCx);
-    }
-
-    const dCx = pcx.timeframe();
-    if (dCx) {
+    } else if (dCx) {
       fn = dCx.text;
-    }
-
-    if (fn === undefined) {
+    } else {
       this.contextError(pcx, "Funciton name error");
       fn = "FUNCTION_NAME_ERROR";
     }
 
-    if (argsCx) {
-      return new ast.ExprFunc(fn, this.allFieldExpressions(argsCx.fieldExpr()));
+    if (ast.ExprTimeExtract.isExtractor(fn)) {
+      return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return new ast.ExprFunc(fn, []);
+    return this.astAt(new ast.ExprFunc(fn, args), pcx);
   }
 
   visitExprDuration(pcx: parse.ExprDurationContext): ast.ExprDuration {

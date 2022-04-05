@@ -64,6 +64,23 @@ expression | meaning | result
 `minute(expr)` | minute of hour 0-59 | 55
 `second(expr)` | second of minute 0-59 | 5
 
+## Interval extraction
+
+To measure the difference between two times, pass a range expression to
+one of these extraction functions:
+
+expression | meaning
+---- | ----
+`seconds(t1 to t2)` | Number of seconds from t1 until t2
+`minutes(t1 to t2)` | ... minutes ...
+`hours(t1 to t2)` | ... hours ...
+`days(t1 to t2)` | ... days ...
+`weeks(t1 to t2)` | ... weeks ...
+`months(t1 to t2)` | ... months ...
+`quarters(t1 to t2)` | ... quarters ...
+`years(t1 to t2)` | ... years ...
+
+These will return a negative number if t1 is later than t2.
 
 ## Literals
 
