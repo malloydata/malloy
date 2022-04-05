@@ -236,18 +236,5 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       const result = await goCalc("year(@2000 to @2042)");
       expect(calc(result)).toBe(42);
     });
-
-    /**
-     two timestamps ...
-      year
-      quarter
-      month
-      week
-      day
-      hour
-      second
-      two dates ...
-      one mismatch
-    */
   });
 });
