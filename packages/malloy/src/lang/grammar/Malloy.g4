@@ -292,8 +292,17 @@ topStatement
   : TOP INTEGER_LITERAL bySpec?
   ;
 
+indexElement
+  : fieldPath (DOT STAR)?
+  | STAR
+  ;
+
+indexFields
+  : indexElement ( COMMA? indexElement )*
+  ;
+
 indexStatement
-  : INDEX fieldNameList (BY fieldName)?
+  : INDEX indexFields (BY fieldName)?
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
@@ -377,12 +386,7 @@ argumentList
   ;
 
 fieldNameList
-  : fieldOrStar (COMMA? fieldOrStar)* COMMA?
-  ;
-
-fieldOrStar
-  : STAR
-  | fieldName
+  : fieldName (COMMA? fieldName)*
   ;
 
 fieldCollection
