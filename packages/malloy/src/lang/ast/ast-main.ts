@@ -1171,12 +1171,6 @@ export class FieldReferences extends ListOf<FieldReferenceElement> {
     super("fieldReferenceList", members);
   }
 }
-export function isFieldReferenceElement(
-  me: MalloyElement
-): me is FieldReferenceElement {
-  return me instanceof FieldReference || me instanceof WildcardFieldReference;
-}
-
 export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
