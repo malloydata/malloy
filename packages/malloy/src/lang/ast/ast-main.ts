@@ -1164,20 +1164,20 @@ export class FieldReference extends ListOf<FieldName> {
   }
 }
 
-export type FieldListReference = FieldReference | WildcardFieldReference;
+export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
-export class FieldReferences extends ListOf<FieldListReference> {
-  constructor(members: FieldListReference[]) {
+export class FieldReferences extends ListOf<FieldReferenceElement> {
+  constructor(members: FieldReferenceElement[]) {
     super("fieldReferenceList", members);
   }
 }
-export function isFieldListReference(
+export function isFieldReferenceElement(
   me: MalloyElement
-): me is FieldListReference {
+): me is FieldReferenceElement {
   return me instanceof FieldReference || me instanceof WildcardFieldReference;
 }
 
-export type FieldCollectionMember = FieldListReference | FieldDeclaration;
+export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {
