@@ -141,21 +141,19 @@ The following queries show six ways of calculating the average number of seats.
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
 query: flights -> {
-  aggregate: [
+  aggregate:
     aircraft_models_avg_seats is aircraft.aircraft_models.seats.avg()
     aircraft_avg_models_seats is aircraft.avg(aircraft.aircraft_models.seats)
     avg_aircraft_models_seats is avg(aircraft.aircraft_models.seats)
-  ]
 }
 ```
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
 query: aircraft -> {
-  aggregate: [
+  aggregate:
     models_avg_seats is aircraft_models.seats.avg()
     avg_models_seats is avg(aircraft_models.seats)
-  ]
 }
 ```
 
@@ -190,10 +188,9 @@ Aggregating "on a field," e.g. `aircraft_models.seats.avg()` is exactly equivale
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
 query: aircraft -> {
-  aggregate: [
+  aggregate:
     avg_on_source is aircraft_models.avg(aircraft_models.seats)
     avg_on_field is aircraft_models.seats.avg()
-  ]
 }
 ```
 
@@ -281,10 +278,9 @@ In SQL, a query containing a join first computes a composite table, then perform
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
 query: order_items->{
-  aggregate: [
+  aggregate:
     symmetric_avg is users.age.avg()
     asymmetric_avg is avg(users.age)
-  ]
 }
 ```
 

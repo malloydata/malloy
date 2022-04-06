@@ -12,7 +12,7 @@
  */
 
 import { DataColumn, Field } from "@malloydata/malloy";
-import { AtomicFieldType } from "@malloydata/malloy/src/malloy";
+import { AtomicFieldType } from "@malloydata/malloy";
 import {
   BarChartRenderOptions,
   ChartSize,

@@ -1,9 +1,9 @@
 --! styles ga_sessions.styles.json
 
 source:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801'){
-  dimension: start_time is timestamp_seconds(visitStartTime)::timestamp
+  dimension: start_time is timestamp_seconds(visitStartTime)
 
-  measure: [
+  measure:
     user_count is count(distinct fullVisitorId)
     session_count is count()
     total_visits is totals.visits.sum()
@@ -13,7 +13,6 @@ source:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_ses
     total_productRevenue is hits.product.productRevenue.sum()
     hits_count is hits.count()
     sold_count is hits.count() { where: hits.product.productQuantity > 0 }
-  ]
 
   query: by_source is {
     where: trafficSource.source != '(direct)'
@@ -73,7 +72,7 @@ source:ga_sessions is table('bigquery-public-data.google_analytics_sample.ga_ses
 }
 
 query: sessions_dashboard is ga_sessions -> {
-  nest: [
+  nest:
     by_region
     by_device
     by_source
@@ -82,5 +81,4 @@ query: sessions_dashboard is ga_sessions -> {
       aggregate: total_productRevenue
       aggregate: sold_count
     }
-  ]
 }

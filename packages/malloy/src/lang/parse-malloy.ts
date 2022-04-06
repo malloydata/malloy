@@ -11,13 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { URL } from "url";
 import {
   ANTLRErrorListener,
   Token,
   CharStreams,
   CommonTokenStream,
   ParserRuleContext,
+  CodePointCharStream,
 } from "antlr4ts";
 import type { ParseTree } from "antlr4ts/tree";
 import {
@@ -189,7 +189,8 @@ interface TranslationStep {
 
 export interface MalloyParseRoot {
   root: ParseTree;
-  tokens: CommonTokenStream;
+  tokenStream: CommonTokenStream;
+  sourceStream: CodePointCharStream;
   subTranslator: MalloyTranslation;
   malloyVersion: string;
 }
@@ -316,7 +317,8 @@ class ParseStep implements TranslationStep {
 
     return {
       root: parseFunc.call(malloyParser) as ParseTree,
-      tokens: tokenStream,
+      tokenStream: tokenStream,
+      sourceStream: inputStream,
       // TODO put the real version here
       malloyVersion: "?.?.?-????",
       subTranslator: that,
@@ -338,7 +340,7 @@ class ImportsAndTablesStep implements TranslationStep {
       this.alreadyLooked = true;
       const parseRefs = findReferences(
         that,
-        parseReq.parse.tokens,
+        parseReq.parse.tokenStream,
         parseReq.parse.root
       );
 
@@ -489,6 +491,14 @@ class ASTStep implements TranslationStep {
       }
     }
 
+    // Now make sure that every child also has all sql blocks resolved
+    for (const child of that.childTranslators.values()) {
+      const kidNeeds = child.astStep.step(child);
+      if (isNeedResponse(kidNeeds)) {
+        return kidNeeds;
+      }
+    }
+
     // TODO report errors from here!
     const missingSqlStructs = sqlZone.getUndefinedBlocks();
     if (missingSqlStructs) {
@@ -523,7 +533,7 @@ class MetadataStep implements TranslationStep {
         try {
           symbols = walkForDocumentSymbols(
             that,
-            tryParse.parse.tokens,
+            tryParse.parse.tokenStream,
             tryParse.parse.root
           );
         } catch {
@@ -532,7 +542,7 @@ class MetadataStep implements TranslationStep {
         let walkHighlights: DocumentHighlight[];
         try {
           walkHighlights = walkForDocumentHighlights(
-            tryParse.parse.tokens,
+            tryParse.parse.tokenStream,
             tryParse.parse.root
           );
         } catch {
@@ -541,7 +551,7 @@ class MetadataStep implements TranslationStep {
         this.response = {
           symbols,
           highlights: sortHighlights([
-            ...passForHighlights(tryParse.parse.tokens),
+            ...passForHighlights(tryParse.parse.tokenStream),
             ...walkHighlights,
           ]),
           final: true,
@@ -567,7 +577,7 @@ class CompletionsStep implements TranslationStep {
       if (position !== undefined) {
         try {
           completions = walkForDocumentCompletions(
-            tryParse.parse.tokens,
+            tryParse.parse.tokenStream,
             tryParse.parse.root,
             position
           );
@@ -750,24 +760,37 @@ export abstract class MalloyTranslation {
   }
 
   getChildExports(importURL: string): NamedStructDefs {
+    const exports: NamedStructDefs = {};
     const childURL = new URL(importURL, this.sourceURL).toString();
     const child = this.childTranslators.get(childURL);
     if (child) {
-      child.translate();
-      const exports: NamedStructDefs = {};
-      for (const fromChild of child.modelDef.exports) {
-        const modelEntry = child.modelDef.contents[fromChild];
-        if (modelEntry.type === "struct") {
-          exports[fromChild] = modelEntry;
+      const did = child.translate();
+      if (!did.translated) {
+        this.root.logger.log({
+          message: `INTERNAL ERROR: Load failure on import of ${importURL}`,
+        });
+      } else {
+        for (const fromChild of child.modelDef.exports) {
+          const modelEntry = child.modelDef.contents[fromChild];
+          if (modelEntry.type === "struct") {
+            exports[fromChild] = modelEntry;
+          }
         }
       }
-      return exports;
     }
-    return {};
+    return exports;
   }
 
+  private finalAnswer?: TranslateResponse;
   translate(extendingModel?: ModelDef): TranslateResponse {
-    return this.translateStep.step(this, extendingModel);
+    if (this.finalAnswer) {
+      return this.finalAnswer;
+    }
+    const attempt = this.translateStep.step(this, extendingModel);
+    if (attempt.final) {
+      this.finalAnswer = attempt;
+    }
+    return attempt;
   }
 
   metadata(): MetadataResponse {

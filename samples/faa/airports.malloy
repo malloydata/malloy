@@ -27,10 +27,9 @@ source: airports is table('malloy-data.faa.airports') {
 
   query: by_facility_type is {
     group_by: fac_type
-    aggregate: [
+    aggregate:
       airport_count
       avg_elevation is elevation.avg()
-    ]
   }
 
   query: by_state_and_county is {
@@ -51,10 +50,9 @@ source: airports is table('malloy-data.faa.airports') {
 
   query: airports_by_region_dashboard is by_region {
     where: faa_region != null
-    nest: [
+    nest:
       by_state_shape_map is by_state {}
       by_facility_type
       major_airports
-    ]
   }
 }

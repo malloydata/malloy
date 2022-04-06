@@ -56,17 +56,18 @@ importURL
   ;
 
 topLevelQueryDefs
-  : topLevelQueryDef
-  | OBRACK (topLevelQueryDef COMMA?)* CBRACK
+  : topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
   : queryName IS query
   ;
 
+refineOperator: PLUS ;
+
 query
   : explore ARROW pipelineFromName                  # exploreArrowQuery
-  | ARROW queryName queryProperties? pipeElement*   # arrowQuery
+  | ARROW queryName (refineOperator? queryProperties)? pipeElement*   # arrowQuery
   ;
 
 pipelineFromName
@@ -75,7 +76,7 @@ pipelineFromName
 
 firstSegment
   : queryProperties
-  | exploreQueryName queryProperties?
+  | exploreQueryName (refineOperator? queryProperties)?
   ;
 
 pipeElement
@@ -99,8 +100,7 @@ exploreQueryName : id;
 queryName : id;
 
 exploreDefinitionList
-  : OBRACK (exploreDefinition COMMA?)* CBRACK   # defineManyExplores
-  | exploreDefinition                           # defineOneExplore
+  : exploreDefinition (COMMA? exploreDefinition)* COMMA?
   ;
 
 exploreDefinition
@@ -108,7 +108,7 @@ exploreDefinition
   ;
 
 explore
-  : exploreSource exploreProperties?
+  : exploreSource (refineOperator? exploreProperties)?
   ;
 
 exploreSource
@@ -129,9 +129,8 @@ exploreProperties
 exploreStatement
   : DIMENSION dimensionDefList         # defExploreDimension
   | MEASURE measureDefList             # defExploreMeasure
-  | JOIN_ONE joinList                  # defJoinOne
-  | JOIN_MANY joinList                 # defJoinMany
-  | JOIN_CROSS joinList                # defJoinCross
+  | declareStatement                   # defDeclare_stub
+  | joinStatement                      # defJoin_stub
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
@@ -140,8 +139,7 @@ exploreStatement
   ;
 
 renameList
-  : OBRACK (exploreRenameDef COMMA?)* CBRACK
-  | exploreRenameDef
+  : exploreRenameDef (COMMA? exploreRenameDef)* COMMA?
   ;
 
 exploreRenameDef
@@ -149,13 +147,11 @@ exploreRenameDef
   ;
 
 dimensionDefList
-  : OBRACK (dimensionDef COMMA?)* CBRACK
-  | dimensionDef
+  : dimensionDef (COMMA? dimensionDef)* COMMA?
   ;
 
 measureDefList
-  : OBRACK (measureDef COMMA?)* CBRACK
-  | measureDef
+  : measureDef (COMMA? measureDef)* COMMA?
   ;
 
 fieldDef
@@ -167,13 +163,22 @@ joinNameDef: id;
 
 measureDef: fieldDef;
 
+declareStatement
+  : DECLARE fieldDef (COMMA? fieldDef)* COMMA?
+  ;
+
+joinStatement
+  : JOIN_ONE joinList                  # defJoinOne
+  | JOIN_MANY joinList                 # defJoinMany
+  | JOIN_CROSS joinList                # defJoinCross
+  ;
+
 joinList
-  : OBRACK (joinDef COMMA?)* CBRACK
-  | joinDef
+  : joinDef (COMMA? joinDef)* COMMA?
   ;
 
 joinDef
-  : joinNameDef (IS explore)? WITH fieldName        # joinWith
+  : joinNameDef (IS explore)? WITH fieldExpr        # joinWith
   | joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
   ;
 
@@ -190,8 +195,7 @@ filteredBy
   ;
 
 filterClauseList
-  : fieldExpr
-  | OBRACK fieldExprList CBRACK
+  : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 whereStatement
@@ -203,8 +207,7 @@ havingStatement
   ;
 
 subQueryDefList
-  : OBRACK (exploreQueryDef COMMA?)* CBRACK
-  | exploreQueryDef
+  : exploreQueryDef (COMMA? exploreQueryDef)* COMMA?
   ;
 
 exploreQueryNameDef: id;
@@ -215,6 +218,8 @@ exploreQueryDef
 
 queryStatement
   : groupByStatement
+  | declareStatement
+  | joinStatement
   | projectStatement
   | indexStatement
   | aggregateStatement
@@ -231,8 +236,7 @@ groupByStatement
   ;
 
 queryFieldList
-  : OBRACK (queryFieldEntry COMMA?)* CBRACK
-  | queryFieldEntry
+  : queryFieldEntry (COMMA? queryFieldEntry)* COMMA?
   ;
 
 dimensionDef: fieldDef;
@@ -240,7 +244,6 @@ dimensionDef: fieldDef;
 queryFieldEntry
   : fieldPath      # queryFieldRef
   | dimensionDef   # queryFieldDef
-  // | fieldExpr      # queryFieldNameless
   ;
 
 nestStatement
@@ -248,12 +251,11 @@ nestStatement
   ;
 
 nestedQueryList
-  : nestEntry
-  | OBRACK (nestEntry COMMA?)* CBRACK
+  : nestEntry (COMMA? nestEntry)* COMMA?
   ;
 
 nestEntry
-  : queryName                       # nestExisting
+  : queryName (refineOperator? queryProperties)?      # nestExisting
   | queryName IS pipelineFromName   # nestDef
   ;
 
@@ -270,8 +272,7 @@ orderByStatement
   ;
 
 ordering
-  : orderBySpec
-  | OBRACK orderBySpec (COMMA orderBySpec)* COMMA? CBRACK
+  : orderBySpec (COMMA? orderBySpec)* COMMA?
   ;
 
 orderBySpec
@@ -354,7 +355,7 @@ fieldExpr
       aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
-  | (id | timeframe) OPAREN ( fieldExprList? ) CPAREN      # exprFunc
+  | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
   ;
 
@@ -371,13 +372,12 @@ pick
   : PICK (pickValue=fieldExpr)? WHEN pickWhen=partialAllowedFieldExpr
   ;
 
-fieldExprList
+argumentList
   : fieldExpr (COMMA fieldExpr)* COMMA?
   ;
 
 fieldNameList
-  : fieldOrStar
-  | OBRACK fieldOrStar ( COMMA fieldOrStar)* COMMA? CBRACK
+  : fieldOrStar (COMMA? fieldOrStar)* COMMA?
   ;
 
 fieldOrStar
@@ -386,8 +386,7 @@ fieldOrStar
   ;
 
 fieldCollection
-  : collectionMember
-  | OBRACK (collectionMember COMMA?)* COMMA? CBRACK
+  : collectionMember (COMMA? collectionMember)* COMMA?
   ;
 
 collectionMember
@@ -450,6 +449,7 @@ fragment SPACE_CHAR: [ \u000B\t\r\n];
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
+DECLARE: D E C L A R E  ':' ;
 DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
 EXCEPT: E X C E P T SPACE_CHAR* ':';
 EXPLORE: E X P L O R E SPACE_CHAR* ':';

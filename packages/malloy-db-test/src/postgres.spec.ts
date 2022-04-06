@@ -36,7 +36,7 @@ describe("postgres tests", () => {
         ;;
 
         query: from_sql(times)->{
-          group_by: [
+          group_by:
             t_date,
             t_date_month is t_date.month,
             t_date_year is t_date.year,
@@ -54,7 +54,6 @@ describe("postgres tests", () => {
             // t_timestamp_no_tz_second is t_timestamp_no_tz.second,
             // t_timestamp_no_tz_month is t_timestamp_no_tz.month,
             // t_timestamp_no_tz_year is t_timestamp_no_tz.year,
-          ]
         }
         `
       )

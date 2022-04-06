@@ -37,7 +37,7 @@ import { HTMLTableRenderer } from "./table";
 import { HTMLTextRenderer } from "./text";
 import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
-import { AtomicFieldType } from "@malloydata/malloy/src/malloy";
+import { AtomicFieldType } from "@malloydata/malloy";
 import { createErrorElement } from "./utils";
 
 export class HTMLView {

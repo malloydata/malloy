@@ -40,6 +40,7 @@ import {
   SQLBlock,
   DocumentReference,
   DocumentPosition as ModelDocumentPosition,
+  SearchIndexResult,
 } from "./model";
 import {
   LookupConnection,
@@ -158,10 +159,9 @@ export class Malloy {
     model?: Model;
   }): Promise<Model> {
     const translator = parse._translator;
-    translator.translate(model?._modelDef);
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const result = translator.translate();
+      const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.translated) {
           return new Model(
@@ -1011,7 +1011,6 @@ export enum SourceRelationship {
   /**
    * The `Explore` is joined to its source
    */
-  ForeignKey = "foreign_key",
   Cross = "cross",
   One = "one",
   Many = "many",
@@ -1199,8 +1198,6 @@ export class Explore extends Entity {
         return SourceRelationship.One;
       case "cross":
         return SourceRelationship.Cross;
-      case "foreignKey":
-        return SourceRelationship.ForeignKey;
       case "inline":
         return SourceRelationship.Inline;
       case "nested":
@@ -1542,7 +1539,6 @@ export class ExploreField extends Explore {
   public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
       case "one":
-      case "foreignKey":
         return JoinRelationship.OneToMany;
       case "many":
       case "cross":
@@ -1989,6 +1985,25 @@ export class ModelMaterializer extends FluentState<Model> {
       });
       return queryModel.preparedQuery;
     });
+  }
+
+  public async search(
+    sourceName: string,
+    searchTerm: string
+  ): Promise<SearchIndexResult[] | undefined> {
+    const model = await this.materialize();
+    const queryModel = new QueryModel(model._modelDef);
+    const schema = model.getExploreByName(sourceName).structDef;
+    if (schema.structRelationship.type !== "basetable") {
+      throw new Error(
+        "Expected schema's structRelationship type to be 'basetable'."
+      );
+    }
+    const connectionName = schema.structRelationship.connectionName;
+    const connection = await this.runtime.connections.lookupConnection(
+      connectionName
+    );
+    return await queryModel.searchIndex(connection, sourceName, searchTerm);
   }
 
   /**

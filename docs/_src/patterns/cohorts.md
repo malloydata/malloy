@@ -26,11 +26,10 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
     aggregate: total_population is `number`.sum()
   }
 } -> {
-  project: [
+  project:
     main_query.state
     main_query.total_population
     state_as_percent_of_population is main_query.total_population / total_population * 100.0
-  ]
   order_by: state_as_percent_of_population desc
 }
 ```
@@ -48,11 +47,10 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
     aggregate: total_population is `number`.sum()
   }
 } -> {
-  project: [
+  project:
     main_query.decade
     main_query.total_population
     decade_as_percent_of_population is main_query.total_population / total_population * 100.0
-  ]
   order_by: decade_as_percent_of_population desc
 }
 ```
@@ -74,11 +72,10 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
     aggregate: total_population is `number`.sum()
   }
 } -> {
-  project: [
+  project:
     main_query.name
     main_query.total_population
     births_per_100k is FLOOR(main_query.total_population / total_population * 100000.0)
-  ]
   order_by: births_per_100k desc
 }
 ```

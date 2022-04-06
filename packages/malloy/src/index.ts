@@ -21,7 +21,7 @@ export type {
   StructDef,
   NamedStructDefs,
   MalloyQueryData,
-  AtomicFieldType,
+  AtomicFieldType as AtomicFieldTypeInner,
   QueryData,
   FieldTypeDef,
   // Needed for drills in render
@@ -38,6 +38,7 @@ export type { LogMessage, TranslateResponse } from "./lang";
 export {
   Malloy,
   Runtime,
+  AtomicFieldType,
   ConnectionRuntime,
   SingleConnectionRuntime,
   EmptyURLReader,

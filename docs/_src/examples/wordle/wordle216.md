@@ -21,10 +21,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -35,10 +34,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word
@@ -89,11 +87,10 @@ query: wordle -> find_words {
 ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'C' and word ~ r'R',
     word ~ r'[^C]R...',
     word !~ r'[SLATEONY]'
-  ]
 }
 ```
 
@@ -103,10 +100,9 @@ Just two words left and at this point it's really a matter of luck--we can take 
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "/inline/w2.malloy", "showAs":"html"}
 query: wordle -> {
   group_by: letters.letter
-  aggregate: [
+  aggregate:
     word_count
     use_count is letters.count()
-  ]
 }
 ```
 
@@ -121,7 +117,7 @@ It doesn't really feel like we can give ourselves this one with equal scores on 
 [⬅️ Previous Puzzle](wordle215.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle217.md)
 
 
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 source: words is table('malloy-data.malloytest.words') {
@@ -144,10 +140,9 @@ query: words_and_position is from(words -> five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -157,10 +152,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word

@@ -6,7 +6,7 @@ This is the malloy model used for the Analysis example.  It should be used as an
 source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   -- dimensions
-  dimension: [
+  dimension:
     gross_margin is 100 * (state_bottle_retail - state_bottle_cost) / nullif(state_bottle_retail, 0)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
 
@@ -25,16 +25,14 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       pick 'jumbo (over 1000ml)' when > 1001
       pick 'liter-ish' when >= 750
       else 'small or mini (under 750ml)'
-  ]
 
   -- measures
-  measure: [
+  measure:
     total_sale_dollars is sale_dollars.sum()
     item_count is count(distinct item_number)
     total_bottles is bottles_sold.sum()
     line_item_count is count()
     avg_price_per_100ml is price_per_100ml.avg()
-  ]
 
   -- turtles
   query: by_month is {
@@ -45,56 +43,49 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   query: top_sellers_by_revenue is {
     top: 5
-    group_by: [
+    group_by:
       vendor_name
       item_description
       total_sale_dollars
-    ]
-    aggregate: [
+    aggregate:
       total_bottles
       avg_price_per_100ml
-    ]
   }
 
   query: most_expensive_products is {
     top: 10
     order_by: avg_price_per_100ml desc
-    group_by: [
+    group_by:
       vendor_name
       item_description
-    ]
-    aggregate: [
+    aggregate:
       total_sale_dollars
       total_bottles
       avg_price_per_100ml
-    ]
   }
 
   query: by_vendor_bar_chart is {
     top: 10
     group_by: vendor_name
-    aggregate: [
+    aggregate:
       total_sale_dollars
       total_bottles
-    ]
   }
 
   query: by_class is {
     top: 10
     group_by: category_class
-    aggregate: [
+    aggregate:
       total_sale_dollars
       item_count
-    ]
   }
 
   query: by_category is {
     top: 10
     group_by: category_name
-    aggregate: [
+    aggregate:
       total_sale_dollars
       item_count
-    ]
   }
 
   query: by_sku is {
@@ -105,10 +96,9 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 
   query: vendor_dashboard is {
     group_by: vendor_count is count(distinct vendor_number)
-    aggregate: [
+    aggregate:
       total_sale_dollars
       total_bottles
-    ]
     nest: by_month
     nest: by_class
     nest: by_vendor_bar_chart

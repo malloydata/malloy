@@ -37,11 +37,10 @@ Still feels a bit early for double letters, so we're running with 'DOILY'
  ```malloy
 --! {"isRunnable": true,  "isPaginationEnabled": false, "pageSize": 100, "size":"small","source": "wordle/wordlebot.malloy", "showAs":"html"}
 query: wordle -> find_words {
-  where: [
+  where:
     word ~ r'O',
     word ~ r'.[^O].L.',
     word !~ r'[SAUCEDIY]'
-  ]
 }
 ```
 
@@ -64,7 +63,7 @@ Our luck on these tie-breakers really hasn't been so great, but all in all anoth
 [⬅️ Previous Puzzle](wordle218.md)   |   [↩️ All Solved Puzzles](wordle5.md)
 
 
-### Code For Wordlbot:
+### Code For Wordlebot:
 
 ```malloy
 // Make a table of 5 letter words
@@ -88,10 +87,9 @@ query: words_and_position is from(words->five_letter_words) {
   group_by: word
   nest: letters is {
     order_by: 2
-    group_by: [
+    group_by:
       letter is substr(word, numbers.num, 1)
       position is numbers.num
-    ]
   }
 }
 
@@ -101,10 +99,9 @@ source: wordle is from(-> words_and_position) {
   measure: word_count is count()
 
   query: find_words is {
-    group_by: [
+    group_by:
       letters.letter
       letters.position
-    ]
     aggregate: word_count
     nest: words_list is {
       group_by: word

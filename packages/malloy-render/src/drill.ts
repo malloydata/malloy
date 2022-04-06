@@ -44,7 +44,7 @@ function getTableFilters(table: DataArray): FilterItem[] {
   const filters = [];
   for (const f of table.field.filters || []) {
     if (!f.aggregate) {
-      filters.push({ key: f.source, value: undefined });
+      filters.push({ key: f.code, value: undefined });
     }
   }
   return filters;
@@ -126,7 +126,7 @@ export function getDrillQuery(data: DataArrayOrRecord): string {
   const { formattedFilters, source } = getDrillFilters(data);
   let ret = `query: ${source?.name || '"unable to compute source"'} `;
   if (formattedFilters.length) {
-    ret += `{ \n  where: [\n    ${formattedFilters.join(",\n    ")}\n  ]\n}\n`;
+    ret += `{ \n  where: \n    ${formattedFilters.join(",\n    ")}\n  \n}\n`;
   }
   return ret + "-> ";
 }

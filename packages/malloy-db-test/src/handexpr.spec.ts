@@ -17,12 +17,24 @@ import { fStringEq, fStringLike } from "./test_utils";
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
+import { StructRelationship } from "@malloydata/malloy/src/model";
 
 const runtimes = new RuntimeList(["bigquery"]);
 
 afterAll(async () => {
   await runtimes.closeAll();
 });
+
+function withJoin(leftKey: string, rightKey: string): StructRelationship {
+  return {
+    type: "one",
+    onExpression: [
+      { type: "field", path: `${leftKey}` },
+      "=",
+      { type: "field", path: `${rightKey}` },
+    ],
+  };
+}
 
 async function validateCompilation(
   databaseName: string,
@@ -109,7 +121,7 @@ export const modelHandBase: StructDef = {
           filterList: [
             {
               aggregate: false,
-              source: "manufacturer='BOEING'",
+              code: "manufacturer='BOEING'",
               expression: [
                 {
                   type: "field",
@@ -210,10 +222,10 @@ export const aircraftHandStructDef: StructDef = {
     ...aircraftHandBase.fields,
     {
       ...modelHandBase,
-      structRelationship: {
-        type: "foreignKey",
-        foreignKey: "aircraft_model_code",
-      },
+      structRelationship: withJoin(
+        "aircraft_model_code",
+        "aircraft_models.aircraft_model_code"
+      ),
     },
   ],
 };
@@ -428,14 +440,13 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
     .loadQuery(
       `
           query: aircraft->{
-            aggregate: [
+            aggregate:
               aircraft_models.total_seats,
               total_seats2 is sum(aircraft_models.seats),
               total_seats3 is aircraft_models.sum(aircraft_models.seats),
               aircraft_models.boeing_seats,
               boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer: 'BOEING'},
               boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer: ~'B%'}
-            ]
           }
         `
     )
@@ -470,10 +481,9 @@ it(`hand: expression fixups. - ${databaseName}`, async () => {
     .loadQuery(
       `
             query: aircraft->{
-              aggregate: [
+              aggregate:
                 aircraft_models.total_seats,
                 aircraft_models.boeing_seats
-              ]
             }
           `
     )
@@ -566,7 +576,7 @@ export const modelB: StructDef = {
   filterList: [
     {
       expression: [{ type: "field", path: "manufacturer" }, " LIKE 'B%'"],
-      source: "manufacturer ~ 'B%'",
+      code: "manufacturer ~ 'B%'",
     },
   ],
 };

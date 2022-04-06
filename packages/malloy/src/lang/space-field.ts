@@ -12,7 +12,7 @@
  */
 
 import * as model from "../model/malloy_types";
-import { FieldSpace, StructSpace, NewFieldSpace } from "./field-space";
+import { FieldSpace, DynamicSpace, StaticSpace } from "./field-space";
 import {
   FieldValueType,
   FieldDeclaration,
@@ -79,7 +79,7 @@ export abstract class SpaceField extends SpaceEntry {
     return ref;
   }
 
-  queryFieldDef(): model.QueryFieldDef | undefined {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
     return undefined;
   }
 
@@ -123,7 +123,7 @@ export class WildSpaceField extends SpaceField {
     throw new Error("should never ask a wild field for its type");
   }
 
-  queryFieldDef(): model.QueryFieldDef {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
     return this.wildText;
   }
 }
@@ -136,7 +136,7 @@ export class StructSpaceField extends SpaceField {
 
   get fieldSpace(): FieldSpace {
     if (!this.space) {
-      this.space = new StructSpace(this.sourceDef);
+      this.space = new StaticSpace(this.sourceDef);
     }
     return this.space;
   }
@@ -175,7 +175,7 @@ export abstract class QueryField extends SpaceField {
     super();
   }
 
-  queryFieldDef(): model.QueryFieldDef | undefined {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
     return this.fieldDef();
   }
 
@@ -285,7 +285,7 @@ export class FANSPaceField extends SpaceField {
     return undefined;
   }
 
-  queryFieldDef(): model.QueryFieldDef {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
     // TODO if this reference is to a field which does not exist
     // it needs to be an error SOMEWHERE
     const n: model.FilteredAliasedName = { name: this.ref.refString };
@@ -304,26 +304,34 @@ export class FANSPaceField extends SpaceField {
   }
 }
 
+export class ReferenceField extends SpaceField {
+  constructor(readonly fieldRef: FieldReference) {
+    super();
+  }
+
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined {
+    // Lookup string and generate error if it isn't defined.
+    const check = this.fieldRef.getField(fs);
+    if (check.error) {
+      this.fieldRef.log(check.error);
+    }
+    return this.fieldRef.refString;
+  }
+
+  type(): FieldType {
+    return { type: "unknown" };
+  }
+}
+
 export class ExpressionFieldFromAst extends SpaceField {
   fieldName: string;
+  defType?: FieldType;
   constructor(
-    readonly space: NewFieldSpace,
+    readonly space: DynamicSpace,
     readonly exprDef: FieldDeclaration
   ) {
     super();
     this.fieldName = exprDef.defineName;
-    // left over from anonymous expression days
-    // we may not know the type of an expression as we add it to the list,
-    //
-    // TODO smart logic about naming this field based on the expression
-    // const defName = exprDef.defineName;
-    // if (defName) {
-    //   this.fieldName = defName;
-    // }
-    // else {
-    //   const fieldProvided = exprDef.expr.defaultFieldName();
-    //   this.fieldName = fieldProvided || space.nextAnonymousField();
-    // }
   }
 
   get name(): string {
@@ -331,14 +339,21 @@ export class ExpressionFieldFromAst extends SpaceField {
   }
 
   fieldDef(): model.FieldDef {
-    return this.exprDef.fieldDef(this.space, this.name);
+    const def = this.exprDef.fieldDef(this.space, this.name);
+    this.defType = this.fieldTypeFromFieldDef(def);
+    return def;
   }
 
-  queryFieldDef(): model.QueryFieldDef {
-    return this.exprDef.queryFieldDef(this.space, this.name);
+  getQueryFieldDef(queryInputFS: FieldSpace): model.QueryFieldDef {
+    const def = this.exprDef.queryFieldDef(queryInputFS, this.name);
+    this.defType = this.fieldTypeFromFieldDef(def);
+    return def;
   }
 
   type(): FieldType {
+    if (this.defType) {
+      return this.defType;
+    }
     return this.fieldTypeFromFieldDef(this.fieldDef());
   }
 }

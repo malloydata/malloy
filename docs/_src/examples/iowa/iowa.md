@@ -23,21 +23,20 @@ The table below shows all columns in the data set and their most common or range
 query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> {
   nest: string_columns is {
     order_by: cardinality asc
-    where: field_type = 'string'
-    group_by: column_name is field_name
-    aggregate: cardinality is count(distinct field_value)
+    where: fieldType = 'string'
+    group_by: column_name is fieldName
+    aggregate: cardinality is count(distinct fieldValue)
     nest: values_list_detail is {
       top: 20
-      group_by: field_value
+      group_by: fieldValue
       aggregate: rows_matched is weight.sum()
     }
   }
   nest: other_columns is {
-    where: field_type != 'string'
-    group_by: [
-      column_name is field_name
-      ranges_of_values is field_value
-    ]
+    where: fieldType != 'string'
+    group_by:
+      column_name is fieldName
+      ranges_of_values is fieldValue
   }
 }
 ```

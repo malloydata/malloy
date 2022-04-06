@@ -6,8 +6,8 @@ Start by defining a source based on a query.
 
 ```malloy
 source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_sessions_20170801') {
-  dimension: start_time is timestamp_seconds(visitStartTime)::timestamp
-  measure: [
+  dimension: start_time is timestamp_seconds(visitStartTime)
+  measure:
     user_count is count(distinct fullVisitorId)
     session_count is count()
     total_visits is totals.visits.sum()
@@ -15,7 +15,6 @@ source: ga_sesions is table('bigquery-public-data.google_analytics_sample.ga_ses
     total_page_views is totals.pageviews.sum()
     total_productRevenue is hits.product.productRevenue.sum()
     sold_count is hits.count() { where: hits.product.productQuantity > 0 }
-  ]
 }
 ```
 
@@ -49,14 +48,13 @@ We can then add a few named queries to the model to easily access or reference e
 ```malloy
 --! {"isRunnable": true, "source": "ga_sessions/ga_sessions.malloy", "isPaginationEnabled": true, "size":"large", "queryName": "sessions_dashboard"}
 query: sessions_dashboard is ga_sessions -> {
-  nest: [
+  nest:
     by_region
     by_device
     by_source
     by_category is {
       group_by: category is hits.product.v2ProductCategory
-      aggregate: [ total_productRevenue, sold_count ]
+      aggregate: total_productRevenue, sold_count
     }
-  ]
 }
 ```

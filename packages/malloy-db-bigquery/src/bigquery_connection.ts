@@ -36,6 +36,7 @@ import {
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
+import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -95,7 +96,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection implements Connection {
+export class BigQueryConnection implements Connection, PersistSQLResults {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -105,10 +106,6 @@ export class BigQueryConnection implements Connection {
   private temporaryTables = new Map<string, string>();
   private defaultProject;
 
-  private resultCache = new Map<
-    string,
-    { data: MalloyQueryData; schema: bigquery.ITableFieldSchema }
-  >();
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -189,6 +186,10 @@ export class BigQueryConnection implements Connection {
     return false;
   }
 
+  public canPersist(): this is PersistSQLResults {
+    return true;
+  }
+
   private async _runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
@@ -196,17 +197,6 @@ export class BigQueryConnection implements Connection {
   ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
-    const hash = crypto
-      .createHash("md5")
-      .update(sqlCommand)
-      .update(String(pageSize))
-      .update(String(rowIndex))
-      .digest("hex");
-
-    const cached = this.resultCache.get(hash);
-    if (cached !== undefined) {
-      return cached;
-    }
 
     try {
       const queryResultsOptions = {
@@ -232,7 +222,6 @@ export class BigQueryConnection implements Connection {
       const data = { rows: jobResult[0], totalRows };
       const schema = jobResult[2]?.schema;
 
-      this.resultCache.set(hash, { data, schema });
       return { data, schema };
     } catch (e) {
       throw maybeRewriteError(e);

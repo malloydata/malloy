@@ -18,13 +18,23 @@ import {
   DialectExpr,
   DialectFieldList,
   ExtractDateTimeframe,
+  FunctionInfo,
   isDateTimeframe,
   TimestampTimeframe,
+  TimeType,
 } from "./dialect";
 
 const castMap: Record<string, string> = {
   number: "double precision",
   string: "varchar",
+};
+
+const inSeconds: Record<string, number> = {
+  SECOND: 1,
+  MINUTE: 60,
+  HOUR: 3600,
+  DAY: 86400,
+  WEEK: 604800,
 };
 
 export class PostgresDialect extends Dialect {
@@ -34,6 +44,7 @@ export class PostgresDialect extends Dialect {
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
+  functionInfo: Record<string, FunctionInfo> = {};
 
   quoteTableName(tableName: string): string {
     return `${tableName}`;
@@ -275,5 +286,41 @@ export class PostgresDialect extends Dialect {
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
+  }
+
+  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
+    return undefined;
+  }
+
+  timeDiff(
+    lType: TimeType,
+    lVal: string,
+    rType: TimeType,
+    rVal: string,
+    units: string
+  ): string {
+    const diffUnits = units.toUpperCase();
+
+    if (inSeconds[diffUnits]) {
+      lVal = `EXTRACT(EPOCH FROM ${lVal})`;
+      rVal = `EXTRACT(EPOCH FROM ${rVal})`;
+      const duration = `(${rVal} - ${lVal})`;
+      return diffUnits == "SECOND"
+        ? duration
+        : `TRUNC(${duration}/${inSeconds[diffUnits]})`;
+    }
+    const yearDiff = `TRUNC(EXTRACT(YEAR FROM ${rVal}) - EXTRACT(YEAR FROM ${lVal}))`;
+    if (diffUnits == "YEAR") {
+      return yearDiff;
+    }
+    if (diffUnits == "MONTH") {
+      const monthDiff = `TRUNC(EXTRACT(MONTH FROM ${rVal}) - EXTRACT(MONTH FROM ${lVal}))`;
+      return `${yearDiff} * 12 + ${monthDiff}`;
+    }
+    if (diffUnits == "QUARTER") {
+      const qDiff = `TRUNC(EXTRACT(QUARTER FROM ${rVal}) - EXTRACT(QUARTER FROM ${lVal}))`;
+      return `${yearDiff} * 4 + ${qDiff}`;
+    }
+    throw new Error(`Unknown or unhandleddddstgres time unit: ${units}`);
   }
 }

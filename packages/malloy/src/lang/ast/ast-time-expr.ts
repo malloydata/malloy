@@ -226,8 +226,10 @@ export class GranularLiteral extends ExpressionDef {
 
     const tsm = DateTime.fromFormat(s, fMinute);
     if (tsm.isValid) {
-      const nextMinute = tsm.plus({ minute: 1 }).toFormat(fMinute);
-      const tsLit = new GranularLiteral(s, nextMinute, "minute");
+      // working around a weird bigquery bug ...
+      const thisMin = s + ":00";
+      const nextMinute = tsm.plus({ minute: 1 }).toFormat(fMinute) + ":00";
+      const tsLit = new GranularLiteral(thisMin, nextMinute, "minute");
       tsLit.timeType = "timestamp";
       return tsLit;
     }
@@ -553,59 +555,95 @@ export class ForRange extends ExpressionDef {
   }
 }
 
+export class ExprTimeExtract extends ExpressionDef {
+  elementType = "timeExtract";
+  static extractorMap: Record<string, string> = {
+    DAY_OF_WEEK: "DAYOFWEEK",
+    DAY_OF_YEAR: "DAYOFYEAR",
+    DAY: "DAY",
+    DAYS: "DAY",
+    WEEK: "WEEK",
+    WEEKS: "WEEK",
+    MONTH: "MONTH",
+    MONTHS: "MONTH",
+    QUARTER: "QUARTER",
+    QUARTERS: "QUARTER",
+    YEAR: "YEAR",
+    YEARS: "YEAR",
+    HOUR: "HOUR",
+    HOURS: "HOUR",
+    MINUTE: "MINUTE",
+    MINUTES: "MINUTE",
+    SECOND: "SECOND",
+    SECONDS: "SECOND",
+  };
+  static isExtractor(funcName: string): boolean {
+    return ExprTimeExtract.extractorMap[funcName.toUpperCase()] != undefined;
+  }
+
+  constructor(readonly name: string, readonly args: ExpressionDef[]) {
+    super({ args });
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const extractTo = ExprTimeExtract.extractorMap[this.name.toUpperCase()];
+    if (extractTo) {
+      if (this.args.length !== 1) {
+        this.log(`Extraction function ${this.name} requires one argument`);
+        return errorFor(`{this.name} arg count`);
+      }
+      const from = this.args[0];
+      if (from instanceof Range) {
+        const first = from.first.getExpression(fs);
+        const last = from.last.getExpression(fs);
+        if (!isTimeType(first.dataType)) {
+          from.first.log(`Can't extract ${this.name} from '${first.dataType}'`);
+          return errorFor(`${this.name} bad type ${first.dataType}`);
+        }
+        if (!isTimeType(last.dataType)) {
+          from.last.log(`Cannot extract ${this.name} from '${last.dataType}'`);
+          return errorFor(`${this.name} bad type ${last.dataType}`);
+        }
+        return {
+          dataType: "number",
+          aggregate: first.aggregate || last.aggregate,
+          value: [
+            {
+              type: "timeDiff",
+              units: extractTo,
+              left: { type: first.dataType, value: first.value },
+              right: { type: last.dataType, value: last.value },
+            },
+          ],
+        };
+      } else {
+        const argV = from.getExpression(fs);
+        if (isTimeType(argV.dataType)) {
+          return {
+            dataType: "number",
+            aggregate: argV.aggregate,
+            value: compressExpr([
+              `EXTRACT(${extractTo} FROM `,
+              ...argV.value,
+              ")",
+            ]),
+          };
+        }
+        this.log(`${this.name}(date or timestamp) not '${argV.dataType}'`);
+        return errorFor(`${this.name} bad type ${argV.dataType}`);
+      }
+    }
+    throw this.internalError(`Illegal extraction unit '${this.name}'`);
+  }
+}
+
 export class ExprFunc extends ExpressionDef {
   elementType = "function call()";
   constructor(readonly name: string, readonly args: ExpressionDef[]) {
     super({ args });
   }
 
-  private hackyDisgustingTimeExtractionFunction(
-    fs: FieldSpace
-  ): ExprValue | undefined {
-    const extractorMap: Record<string, string> = {
-      DAY_OF_WEEK: "DAYOFWEEK",
-      DAY: "DAY",
-      DAY_OF_YEAR: "DAYOFYEAR",
-      WEEK: "WEEK",
-      MONTH: "MONTH",
-      QUARTER: "QUARTER",
-      YEAR: "YEAR",
-      HOUR: "HOUR",
-      HOURS: "HOUR",
-      MINUTE: "MINUTE",
-      MINUTES: "MINUTE",
-      SECOND: "SECOND",
-      SECONDS: "SECOND",
-    };
-    const extractTo = extractorMap[this.name.toUpperCase()];
-    if (extractTo) {
-      if (this.args.length !== 1) {
-        this.log(`Function ${this.name} requires one argument`);
-        return errorFor(`{this.name} arg count`);
-      }
-      const argV = this.args[0].getExpression(fs);
-      if (isTimeType(argV.dataType)) {
-        return {
-          dataType: "number",
-          aggregate: argV.aggregate,
-          value: compressExpr([
-            `EXTRACT(${extractTo} FROM `,
-            ...argV.value,
-            ")",
-          ]),
-        };
-      }
-      this.log(`${this.name}(date or timestamp) not '${argV.dataType}'`);
-      return errorFor(`${this.name} bad type ${argV.dataType}`);
-    }
-    return undefined;
-  }
-
   getExpression(fs: FieldSpace): ExprValue {
-    const throwUpInMyMouth = this.hackyDisgustingTimeExtractionFunction(fs);
-    if (throwUpInMyMouth) {
-      return throwUpInMyMouth;
-    }
     let anyAggregate = false;
     let collectType: FieldValueType | undefined;
     const funcCall: Fragment[] = [`${this.name}(`];
@@ -623,10 +661,10 @@ export class ExprFunc extends ExpressionDef {
     }
     funcCall.push(")");
 
-    // TODO hack alert, type of function computation is just temporary
-    // https://github.com/looker/malloy/issues/195
+    const funcInfo = fs.getDialect().getFunctionInfo(this.name);
+    const dataType = funcInfo?.returnType ?? collectType ?? "number";
     return {
-      dataType: collectType ?? "number",
+      dataType,
       aggregate: anyAggregate,
       value: compressExpr(funcCall),
     };

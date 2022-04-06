@@ -11,21 +11,21 @@
  * GNU General Public License for more details.
  */
 
-import * as crypto from "crypto";
 import {
   StructDef,
   MalloyQueryData,
   NamedStructDefs,
-  AtomicFieldType,
+  AtomicFieldTypeInner,
   QueryData,
   PooledConnection,
   parseTableURL,
   SQLBlock,
   Connection,
 } from "@malloydata/malloy";
+import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool } from "pg";
 
-const postgresToMalloyTypes: { [key: string]: AtomicFieldType } = {
+const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
   name: "string",
   text: "string",
@@ -76,7 +76,6 @@ const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
 export class PostgresConnection implements Connection {
-  private resultCache = new Map<string, MalloyQueryData>();
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -122,6 +121,10 @@ export class PostgresConnection implements Connection {
   }
 
   public isPool(): this is PooledConnection {
+    return false;
+  }
+
+  public canPersist(): this is PersistSQLResults {
     return false;
   }
 
@@ -326,25 +329,13 @@ export class PostgresConnection implements Connection {
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
-    const hash = crypto
-      .createHash("md5")
-      .update(sqlCommand)
-      .update(String(rowLimit))
-      .update(String(rowIndex))
-      .digest("hex");
-    let result;
-    if ((result = this.resultCache.get(hash)) !== undefined) {
-      return result;
-    }
-    result = await this.runPostgresQuery(
+
+    return await this.runPostgresQuery(
       sqlCommand,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
-
-    this.resultCache.set(hash, result);
-    return result;
   }
 }
 

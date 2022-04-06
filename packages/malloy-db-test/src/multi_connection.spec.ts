@@ -104,13 +104,11 @@ it(`postgres raw query`, async () => {
     .loadQuery(
       `
       query: table('postgres:malloytest.airports')->{
-        group_by: [
+        group_by:
           version is version()
-        ]
-        aggregate: [
+        aggregate:
           code_count is count(distinct code)
           airport_count is count()
-        ]
       }
     `
     )

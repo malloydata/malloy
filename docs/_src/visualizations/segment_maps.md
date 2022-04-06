@@ -21,12 +21,11 @@ source: flights is table('malloy-data.faa.flights') {
   measure: flight_count is count()
 
   query: routes_map is {
-    group_by: [
+    group_by:
       origin.latitude
       origin.longitude
       latitude2 is destination.latitude
       longitude2 is destination.longitude
-    ]
     aggregate: flight_count
   }
 }
@@ -68,11 +67,10 @@ query: flights { where: dep_time = @2003-02 and origin.code = 'ORD' } -> {
 query: flights -> {
   group_by: carrier
   aggregate: flight_count
-  nest: [
+  nest:
     ord_segment_map is routes_map { where: origin.code: 'ORD' }
     sfo_segment_map is routes_map { where: origin.code: 'SFO' }
     jfk_segment_map is routes_map { where: origin.code: 'JFK' }
-  ]
 }
 
 ```

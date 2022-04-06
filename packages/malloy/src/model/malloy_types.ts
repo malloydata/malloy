@@ -200,6 +200,22 @@ export function isApplyFragment(f: Fragment): f is ApplyFragment {
   return (f as ApplyFragment)?.type === "apply";
 }
 
+export interface RangeValue {
+  type: "date" | "timestamp";
+  value: Expr;
+}
+
+export function isTimeDiffFragment(f: Fragment): f is TimeDiffFragment {
+  return (f as TimeDiffFragment)?.type === "timeDiff";
+}
+
+export interface TimeDiffFragment {
+  type: "timeDiff";
+  units: string;
+  left: RangeValue;
+  right: RangeValue;
+}
+
 export type Fragment =
   | string
   | ApplyFragment
@@ -207,14 +223,15 @@ export type Fragment =
   | FieldFragment
   | ParameterFragment
   | FilterFragment
-  | AggregateFragment;
+  | AggregateFragment
+  | TimeDiffFragment;
 
 export type Expr = Fragment[];
 
 export interface Expression {
   e?: Expr;
   aggregate?: boolean;
-  source?: string;
+  code?: string;
 }
 
 interface JustExpression {
@@ -409,24 +426,24 @@ export interface Query extends Pipeline, Filtered, HasLocation {
 
 export type NamedQuery = Query & NamedObject;
 
-export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
+export type PipeSegment = QuerySegment | IndexSegment;
 
 export interface ReduceSegment extends QuerySegment {
   type: "reduce";
 }
 export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
-  return (pe as ReduceSegment).type === "reduce";
+  return pe.type === "reduce";
 }
 
 export interface ProjectSegment extends QuerySegment {
   type: "project";
 }
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
-  return (pe as ProjectSegment).type === "project";
+  return pe.type === "project";
 }
 
 export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
-  return pe.type === "project" || pe.type === "reduce";
+  return isProjectSegment(pe) || isReduceSegment(pe);
 }
 
 export interface IndexSegment extends Filtered {
@@ -442,6 +459,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 export interface QuerySegment extends Filtered {
   type: "reduce" | "project";
   fields: QueryFieldDef[];
+  extendSource?: FieldDef[];
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
@@ -457,11 +475,6 @@ export type JoinRelationship =
   | "many_to_one"
   | "many_to_many";
 
-export interface JoinForeignKey {
-  type: "foreignKey";
-  foreignKey: FieldRef;
-}
-
 export interface JoinOn {
   type: "one" | "many" | "cross";
   onExpression?: Expr;
@@ -470,16 +483,9 @@ export interface JoinOn {
 export function isJoinOn(sr: StructRelationship): sr is JoinOn {
   return ["one", "many", "cross"].includes(sr.type);
 }
-export function isAnyJoin(
-  sr: StructRelationship
-): sr is JoinOn | JoinForeignKey {
-  return isJoinOn(sr) || sr.type == "foreignKey";
-}
-
 /** types of joins. */
 export type StructRelationship =
   | { type: "basetable"; connectionName: string }
-  | JoinForeignKey
   | JoinOn
   | { type: "inline" }
   | { type: "nested"; field: FieldRef };
@@ -583,7 +589,7 @@ export type PrimaryKeyRef = string;
 /** filters */
 export interface FilterExpression {
   expression: Expr;
-  source: string;
+  code: string;
   aggregate?: boolean;
 }
 
@@ -724,6 +730,13 @@ export function isValueDate(
   field: FieldDef
 ): value is { value: string } | null {
   return field.type === "date";
+}
+
+export interface SearchIndexResult {
+  fieldName: string;
+  fieldValue: string;
+  fieldType: string;
+  weight: number;
 }
 
 // clang-format on

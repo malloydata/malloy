@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { inspect } from "util";
 import {
   StructDef,
@@ -33,21 +32,109 @@ export function pretty(thing: any): string {
   return inspect(thing, { breakLength: 72, depth: Infinity });
 }
 
-export const aTableDef: StructDef = {
-  type: "struct",
-  name: "aTable",
-  dialect: "standardsql",
-  structSource: { type: "table" },
-  structRelationship: { type: "basetable", connectionName: "test" },
-  fields: [
-    { type: "string", name: "astr" },
-    { type: "number", name: "af", numberType: "float" },
-    { type: "number", name: "ai", numberType: "integer" },
-    { type: "date", name: "ad" },
-    { type: "boolean", name: "abool" },
-    { type: "timestamp", name: "ats" },
-  ],
+const mockSchema: Record<string, StructDef> = {
+  aTable: {
+    type: "struct",
+    name: "aTable",
+    dialect: "standardsql",
+    structSource: { type: "table" },
+    structRelationship: { type: "basetable", connectionName: "test" },
+    fields: [
+      { type: "string", name: "astr" },
+      { type: "number", name: "af", numberType: "float" },
+      { type: "number", name: "ai", numberType: "integer" },
+      { type: "date", name: "ad" },
+      { type: "boolean", name: "abool" },
+      { type: "timestamp", name: "ats" },
+    ],
+  },
+  "malloytest.carriers": {
+    type: "struct",
+    name: "malloytest.carriers",
+    dialect: "standardsql",
+    structSource: {
+      type: "table",
+      tablePath: "malloytest.carriers",
+    },
+    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    fields: [
+      { name: "code", type: "string" },
+      { name: "name", type: "string" },
+      { name: "nickname", type: "string" },
+    ],
+    as: "carriers",
+  },
+  "malloytest.flights": {
+    type: "struct",
+    name: "malloytest.flights",
+    dialect: "standardsql",
+    structSource: {
+      type: "table",
+      tablePath: "malloytest.flights",
+    },
+    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    fields: [
+      { name: "carrier", type: "string" },
+      { name: "origin", type: "string" },
+      { name: "destination", type: "string" },
+      { name: "flight_num", type: "string" },
+      { name: "flight_time", type: "number", numberType: "integer" },
+      { name: "tail_num", type: "string" },
+      { name: "dep_time", type: "timestamp" },
+      { name: "arr_time", type: "timestamp" },
+      { name: "dep_delay", type: "number", numberType: "integer" },
+      { name: "arr_delay", type: "number", numberType: "integer" },
+      { name: "taxi_out", type: "number", numberType: "integer" },
+      { name: "taxi_in", type: "number", numberType: "integer" },
+      { name: "distance", type: "number", numberType: "integer" },
+      { name: "cancelled", type: "string" },
+      { name: "diverted", type: "string" },
+      { name: "id2", type: "number", numberType: "integer" },
+    ],
+    as: "flights",
+  },
+  "malloytest.airports": {
+    type: "struct",
+    name: "malloytest.airports",
+    dialect: "standardsql",
+    structSource: {
+      type: "table",
+      tablePath: "malloytest.airports",
+    },
+    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    fields: [
+      { name: "id", type: "number", numberType: "integer" },
+      { name: "code", type: "string" },
+      { name: "site_number", type: "string" },
+      { name: "fac_type", type: "string" },
+      { name: "fac_use", type: "string" },
+      { name: "faa_region", type: "string" },
+      { name: "faa_dist", type: "string" },
+      { name: "city", type: "string" },
+      { name: "county", type: "string" },
+      { name: "state", type: "string" },
+      { name: "full_name", type: "string" },
+      { name: "own_type", type: "string" },
+      { name: "longitude", type: "number", numberType: "float" },
+      { name: "latitude", type: "number", numberType: "float" },
+      { name: "elevation", type: "number", numberType: "integer" },
+      { name: "aero_cht", type: "string" },
+      { name: "cbd_dist", type: "number", numberType: "integer" },
+      { name: "cbd_dir", type: "string" },
+      { name: "act_date", type: "string" },
+      { name: "cert", type: "string" },
+      { name: "fed_agree", type: "string" },
+      { name: "cust_intl", type: "string" },
+      { name: "c_ldg_rts", type: "string" },
+      { name: "joint_use", type: "string" },
+      { name: "mil_rts", type: "string" },
+      { name: "cntl_twr", type: "string" },
+      { name: "major", type: "string" },
+    ],
+    as: "airports",
+  },
 };
+export const aTableDef = mockSchema.aTable;
 
 /**
  * When translating partial trees, there will not be a document node
@@ -92,7 +179,7 @@ export class TestTranslator extends MalloyTranslator {
    *   explore: ab is a {
    *     join_one: b with astr
    *     measure: acount is count()
-   *     query: aturtle is { group_bY: astr; aggregate: acount }
+   *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
    */
   internalModel: ModelDef = {
@@ -110,7 +197,14 @@ export class TestTranslator extends MalloyTranslator {
           {
             ...aTableDef,
             as: "b",
-            structRelationship: { type: "foreignKey", foreignKey: "astr" },
+            structRelationship: {
+              type: "one",
+              onExpression: [
+                { type: "field", path: "astr" },
+                "=",
+                { type: "field", path: "b.astr" },
+              ],
+            },
           },
           {
             type: "number",
@@ -118,7 +212,7 @@ export class TestTranslator extends MalloyTranslator {
             numberType: "integer",
             aggregate: true,
             e: ["COUNT()"],
-            source: "count()",
+            code: "count()",
           },
           {
             type: "turtle",
@@ -139,7 +233,9 @@ export class TestTranslator extends MalloyTranslator {
     super(testURI);
     this.grammarRule = rootRule;
     this.importZone.define("internal://test/root", source);
-    this.schemaZone.define("aTable", aTableDef);
+    for (const tableName in mockSchema) {
+      this.schemaZone.define(tableName, mockSchema[tableName]);
+    }
   }
 
   translate(): TranslateResponse {
@@ -227,11 +323,13 @@ export function getField(
   return result;
 }
 
-export function getQueryField(structDef: StructDef, name: string) {
+// TODO "as" is almost always a code smell ...
+export function getQueryField(structDef: StructDef, name: string): TurtleDef {
   return getField(structDef, name) as TurtleDef;
 }
 
-export function getJoinField(structDef: StructDef, name: string) {
+// TODO "as" is almost always a code smell ...
+export function getJoinField(structDef: StructDef, name: string): StructDef {
   return getField(structDef, name) as StructDef;
 }
 

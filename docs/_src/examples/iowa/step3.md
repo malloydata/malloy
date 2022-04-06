@@ -15,7 +15,7 @@ query: iowa -> {
   aggregate: distinct_number_of_category_names is count(distinct category_name)
   nest: sizes is {
     group_by: category_name
-    aggregate: [ item_count, line_item_count ]
+    aggregate: item_count, line_item_count
   }
 }
 ```
@@ -107,7 +107,7 @@ Look at the data through the new mapping.
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "small"}
 query: iowa -> {
   group_by: bottle_size
-  aggregate: [ total_sale_dollars, line_item_count, item_count ]
+  aggregate: total_sale_dollars, line_item_count, item_count
   order_by: bottle_size
 }
 ```

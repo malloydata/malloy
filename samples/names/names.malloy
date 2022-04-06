@@ -1,12 +1,11 @@
 --! styles names.styles.json
 
 query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_current') -> {
-  group_by: [
+  group_by:
     decade is floor(`year` / 10) * 10,
     state,
     baby_gender is gender: pick 'Male' when = 'M' else 'Female',
     gender
-  ]
   aggregate: cohort_population is `number`.sum()
   nest: by_name is { group_by: name; aggregate: population is `number`.sum() }
 }
@@ -14,11 +13,10 @@ query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_current') ->
 source: names is from(-> namesQuery) {
   dimension: name is concat(by_name.name, '') // !?BUG !?
 
-  measure: [
+  measure:
     births_per_100k is floor(by_name.population.sum() / cohort_population.sum() * 100000),
     total_cohort_population is cohort_population.sum(),
     total_population is by_name.population.sum()
-  ]
   dimension: name is concat(by_name.name, '') // bug
 
   query: state_map is { group_by: state; aggregate: births_per_100k }
@@ -33,11 +31,11 @@ source: names is from(-> namesQuery) {
     top: 15
     group_by: name
     aggregate: total_population
-    nest: [ state_map, decade_graph ]
+    nest: state_map, decade_graph
   }
 
   query: location_iconic_names is {
-    group_by: [ name, baby_gender ]
+    group_by: name, baby_gender
     aggregate: births_per_100k
     nest: by_state is { group_by: state; aggregate: births_per_100k }
   } -> {
@@ -54,7 +52,7 @@ source: names is from(-> namesQuery) {
   }
 
   query: time_iconic_names is {
-    group_by: [ name, baby_gender ]
+    group_by: name, baby_gender
     aggregate: births_per_100k
     nest: by_decade is {
       group_by: decade

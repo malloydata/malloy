@@ -25,7 +25,7 @@ source: flights is table('malloy-data.faa.flights') {
 query: flights -> {
   where: dep_time = @2003-01
   group_by: carrier
-  aggregate: [
+  aggregate:
     // number of flights
     flight_count is count()
     // number of planes
@@ -38,6 +38,5 @@ query: flights -> {
     seats_on_all_planes is aircraft.sum(aircraft.aircraft_models.seats)
     // average number of seats on each model by model
     average_seats_per_model is aircraft.aircraft_models.seats.avg()
-  ]
 }
 ```

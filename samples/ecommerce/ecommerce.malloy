@@ -14,10 +14,9 @@ source: ii is table('malloy-data.ecomm.inventory_items'){
 
   join_one: product with product_id
 
-  measure: [
+  measure:
     item_count is count(distinct id)
     total_cost is sum(cost)
-  ]
 }
 
 source: user_order_facts is from(
@@ -30,17 +29,15 @@ source: user_order_facts is from(
 source: order_items_base is table('malloy-data.ecomm.order_items'){
   primary_key: id
 
-  join_one: [
+  join_one:
     users with user_id
     ii with inventory_item_id
     user_order_facts with user_id
-  ]
 
-  measure: [
+  measure:
     order_count is count(distinct order_id)
     item_count is count()
     total_sales is sale_price.sum()
-  ]
 }
 
 source: brand_synergy is from(
@@ -54,20 +51,18 @@ source: brand_synergy is from(
     project: brand1 is brand1.brand
     project: brand2 is brand2.brand
   } -> {
-    group_by: [
+    group_by:
       brand1
       brand2
-    ]
     aggregate: occurances is count()
   } -> {
     group_by: brand is brand1
     nest: synergies is {
       top: 5
       order_by: occurances
-      group_by: [
+      group_by:
         brand is brand2
         occurances
-      ]
     }
   }
 )
@@ -80,10 +75,9 @@ source: order_items is order_items_base {
     top: 5
     order_by: total_sales
     group_by: ii.product.brand
-    aggregate: [
+    aggregate:
       total_sales
       ii.product.product_count
-    ]
   }
 
   query: top_products is {
@@ -120,28 +114,24 @@ source: order_items is order_items_base {
   }
 
   query: order_by_category_and_day is {
-    group_by: [
+    group_by:
       created_month is created_at.month
       ii.product.category
-    ]
     aggregate: order_count
   }
 
   query: brand_dashboard is {
     top: 10
-    group_by: [
+    group_by:
       ii.product.brand
-    ]
-    aggregate: [
+    aggregate:
       total_sales
       order_count
       item_count
       ii.product.product_count
-    ]
-    nest: [
+    nest:
       top_products
       by_month
-    ]
     // nest: synergistic_brands is {
     //   group_by: brand_synergy.synergies.brand
     //   aggregate: occurances is brand_synergy.synergies.occurances.sum()
