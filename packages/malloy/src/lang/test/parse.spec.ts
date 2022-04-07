@@ -580,6 +580,7 @@ describe("qops", () => {
   );
   test("index single", modelOK("query:a->{index: astr}"));
   test("index path", modelOK("query:ab->{index: ab.astr}"));
+  test("index unique on path", modelOK("query:ab->{index: b.astr, ab.astr}"));
   test("index join.*", modelOK("query:ab->{index: ab.*}"));
   test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
