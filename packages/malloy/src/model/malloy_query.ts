@@ -2559,6 +2559,8 @@ class QueryQueryProject extends QueryQuery {}
 
 class QueryQueryIndex extends QueryQuery {
   fieldDef: TurtleDef;
+  fanPrefixes: string[] = [];
+
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
@@ -2566,6 +2568,21 @@ class QueryQueryIndex extends QueryQuery {
   ) {
     super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
+    this.findFanPrefexes(parent);
+  }
+
+  // we want to generate a different query for each
+  //  nested structure so we don't do a crazy cross product.
+  findFanPrefexes(qs: QueryStruct) {
+    for (const [_name, f] of qs.nameMap) {
+      if (
+        f instanceof QueryStruct &&
+        (f.fieldDef.structRelationship.type === "many" ||
+          f.fieldDef.structRelationship.type === "nested")
+      ) {
+        this.fanPrefixes.push(f.getFullOutputName());
+      }
+    }
   }
 
   // get a field ref and expand it.

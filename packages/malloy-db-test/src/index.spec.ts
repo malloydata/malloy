@@ -48,4 +48,26 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(result[0].weight).toBe(26);
     }
   });
+
+  it(`fanned data index  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadModel(
+        `
+        source: movies is table('malloy-303216.imdb.movies') {
+        }
+    `
+      )
+      .search("movies", "Tom");
+    // if (result !== undefined) {
+    //   console.log(result);
+    // } else {
+    //   console.log("no result");
+    // }
+    expect(result).toBeDefined();
+    if (result !== undefined) {
+      expect(result[0].fieldName).toBe("county");
+      expect(result[0].fieldValue).toBe("SANTA ROSA");
+      expect(result[0].weight).toBe(26);
+    }
+  });
 });
