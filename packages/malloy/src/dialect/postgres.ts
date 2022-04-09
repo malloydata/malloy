@@ -188,7 +188,7 @@ export class PostgresDialect extends Dialect {
 
   sqlUnnestPipelineHead(isSingleton: boolean): string {
     if (isSingleton) {
-      return "(SELECT $1)";
+      return "UNNEST(ARRAY((SELECT $1)))";
     } else {
       return "JSONB_ARRAY_ELEMENTS($1)";
     }

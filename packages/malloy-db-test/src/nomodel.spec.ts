@@ -293,7 +293,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
   });
 
