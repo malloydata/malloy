@@ -119,7 +119,7 @@ export abstract class Dialect {
     isNested: boolean
   ): string;
 
-  abstract sqlUnnestPipelineHead(): string;
+  abstract sqlUnnestPipelineHead(isSingleton: boolean): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
