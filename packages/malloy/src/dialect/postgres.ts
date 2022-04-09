@@ -186,8 +186,12 @@ export class PostgresDialect extends Dialect {
     }
   }
 
-  sqlUnnestPipelineHead(): string {
-    return "JSONB_ARRAY_ELEMENTS($1)";
+  sqlUnnestPipelineHead(isSingleton: boolean): string {
+    if (isSingleton) {
+      return "(SELECT $1)";
+    } else {
+      return "JSONB_ARRAY_ELEMENTS($1)";
+    }
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

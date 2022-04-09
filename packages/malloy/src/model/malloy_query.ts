@@ -2481,6 +2481,7 @@ class QueryQuery extends QueryField {
 
   generateTurtlePipelineSQL(fi: FieldInstanceResult, stageWriter: StageWriter) {
     let structDef = this.getResultStructDef(fi, false);
+    const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
     if (hasPipeline) {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
@@ -2490,7 +2491,9 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
+      structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
+        repeatedResultType === "inline_all_numbers"
+      );
       structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
