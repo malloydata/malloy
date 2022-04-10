@@ -2694,7 +2694,7 @@ class QueryQueryIndex extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
-    s += "GROUP BY 1,2,3,4\nORDER BY 5 DESC\n";
+    s += "GROUP BY 1,2,3,4\n";
 
     // limit
     if (this.firstSegment.limit) {
@@ -3454,7 +3454,8 @@ export class QueryModel {
           searchValue + "%"
         )}) THEN 1 ELSE 0 END DESC, weight DESC
         LIMIT 1000
-      `
+      `,
+      { rowLimit: 1000 }
     );
     return result.rows as unknown as SearchIndexResult[];
   }
