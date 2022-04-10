@@ -3438,13 +3438,23 @@ export class QueryModel {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
     const result = await connection.runSQL(
-      `SELECT fieldName, fieldValue, fieldType, weight \n` +
-        `FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\` \n` +
-        `WHERE lower(fieldName || '|' || fieldValue) LIKE lower(${generateSQLStringLiteral(
+      `SELECT
+          fieldName,
+          fieldValue,
+          fieldType,
+          weight,
+          CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
+            searchValue + "%"
+          )}) THEN 1 ELSE 0 END as match_first
+        FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
+        WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
-        )})\n ` +
-        `ORDER BY 4 DESC\n` +
-        `LIMIT 1000\n`
+        )})
+        ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
+          searchValue + "%"
+        )}) THEN 1 ELSE 0 END DESC, weight DESC
+        LIMIT 1000
+      `
     );
     return result.rows as unknown as SearchIndexResult[];
   }
