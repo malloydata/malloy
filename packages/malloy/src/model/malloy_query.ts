@@ -54,8 +54,7 @@ import {
   isPhysical,
   isJoinOn,
   isQuerySegment,
-  isTimeDiffFragment,
-  TimeDiffFragment,
+  DialectFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -439,18 +438,13 @@ class QueryField extends QueryNode {
     }
   }
 
-  generateTimeDiff(
+  generateDialect(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: TimeDiffFragment
+    expr: DialectFragment
   ): string {
-    return context.dialect.timeDiff(
-      expr.left.type,
-      this.generateExpressionFromExpr(resultSet, context, expr.left.value),
-      expr.right.type,
-      this.generateExpressionFromExpr(resultSet, context, expr.right.value),
-      expr.units
-    );
+    const fromDialect = context.dialect.dialectExpr(expr);
+    return this.generateExpressionFromExpr(resultSet, context, fromDialect);
   }
 
   generateExpressionFromExpr(
@@ -504,8 +498,8 @@ class QueryField extends QueryNode {
             `Internal Error: Partial application value referenced but not provided`
           );
         }
-      } else if (isTimeDiffFragment(expr)) {
-        s += this.generateTimeDiff(resultSet, context, expr);
+      } else if (expr.type == "dialect") {
+        s += this.generateDialect(resultSet, context, expr);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(
@@ -517,6 +511,10 @@ class QueryField extends QueryNode {
       }
     }
     return s;
+  }
+
+  generateSubExpression(resultSet: FieldInstanceResult, e: Expr): string {
+    return this.generateExpressionFromExpr(resultSet, this.parent, e);
   }
 
   generateExpression(resultSet: FieldInstanceResult): string {
@@ -604,13 +602,6 @@ class QueryFieldStruct extends QueryAtomicField {
   }
 }
 
-const timeframeBQMap = {
-  hour_of_day: "HOUR",
-  day_of_month: "DAY",
-  day_of_year: "DAYOFYEAR",
-  month_of_year: "MONTH",
-};
-
 class QueryFieldDate extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldDateDef;
@@ -618,28 +609,14 @@ class QueryFieldDate extends QueryAtomicField {
       return super.generateExpression(resultSet);
     } else {
       const exprString = super.generateExpression(resultSet);
-      let exprArray: string[] = [exprString];
-      switch (fd.timeframe) {
-        case "date":
-          break;
-        case "year":
-        case "month":
-        case "week":
-          exprArray = this.parent.dialect.sqlDateTrunc(
-            exprString,
-            fd.timeframe
-          ) as string[];
-          break;
-        case "day_of_month":
-        case "day_of_year":
-          exprArray = [
-            `EXTRACT(${timeframeBQMap[fd.timeframe]} FROM ${exprString})`,
-          ];
-          break;
-        default:
-          exprArray = [`DATE_TRUNC(${exprString}, ${fd.timeframe})`];
-      }
-      return exprArray.join("");
+      const truncated = this.parent.dialect.sqlTrunc(
+        {
+          value: [exprString],
+          valueType: "date",
+        },
+        fd.timeframe
+      );
+      return super.generateSubExpression(resultSet, truncated);
     }
   }
 
@@ -661,42 +638,14 @@ class QueryFieldTimestamp extends QueryAtomicField {
       return super.generateExpression(resultSet);
     } else {
       const exprString = super.generateExpression(resultSet);
-      let exprArray: string[] = [exprString];
-      switch (fd.timeframe) {
-        case "year":
-        case "month":
-        case "week":
-        case "date":
-          exprArray = this.parent.dialect.sqlTimestampTrunc(
-            exprString,
-            fd.timeframe,
-            "UTC"
-          ) as string[];
-          break;
-        case "day_of_month":
-        case "day_of_year":
-        case "hour_of_day":
-        case "month_of_year":
-          exprArray = [
-            `EXTRACT(${
-              timeframeBQMap[fd.timeframe]
-            } FROM ${exprString} AT TIME ZONE 'UTC')`,
-          ];
-          break;
-        // case "date":
-        //   e = `DATE(${e},'UTC')`;
-        //   break;
-        case "hour":
-        case "minute":
-        case "second":
-          exprArray = this.parent.dialect.sqlTimestampTrunc(
-            exprString,
-            fd.timeframe,
-            "UTC"
-          ) as string[];
-          break;
-      }
-      return exprArray.join("");
+      const truncated = this.parent.dialect.sqlTrunc(
+        {
+          value: [exprString],
+          valueType: "timestamp",
+        },
+        fd.timeframe
+      );
+      return super.generateSubExpression(resultSet, truncated);
     }
   }
 
@@ -1801,24 +1750,10 @@ class QueryQuery extends QueryField {
                   break;
                 case "second":
                 case "minute":
-                case "date":
                 case "hour":
                   fields.push({
                     name,
                     type: "timestamp",
-                    timeframe,
-                    resultMetadata,
-                    location,
-                  });
-                  break;
-                case "hour_of_day":
-                case "day_of_month":
-                case "day_of_year":
-                case "month_of_year":
-                  fields.push({
-                    name,
-                    type: "number",
-                    numberType: "integer",
                     timeframe,
                     resultMetadata,
                     location,

@@ -15,16 +15,15 @@ import { DateTime } from "luxon";
 import {
   Expr,
   Fragment,
-  isTimeTimeframe,
-  TimeTimeframe,
+  isTimestampUnit,
+  TimestampUnit,
+  ExtractUnit,
+  isExtractUnit,
+  isDateUnit,
+  TimeFieldType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
-import {
-  dateOffset,
-  timestampOffset,
-  resolution,
-  toTimestampV,
-} from "./time-utils";
+import { timeOffset, resolution } from "./time-utils";
 import {
   ExpressionDef,
   BinaryBoolean,
@@ -37,7 +36,6 @@ import {
   granularity,
   FT,
   isTimeType,
-  TimeType,
   compressExpr,
   FieldValueType,
   MalloyElement,
@@ -46,14 +44,14 @@ import {
 
 export class Timeframe extends MalloyElement {
   elementType = "timeframe";
-  readonly text: TimeTimeframe;
+  readonly text: TimestampUnit;
   constructor(timeframeName: string) {
     super();
     let tf = timeframeName.toLowerCase();
     if (tf.endsWith("s")) {
       tf = tf.slice(0, -1);
     }
-    this.text = isTimeTimeframe(tf) ? tf : "second";
+    this.text = isTimestampUnit(tf) ? tf : "second";
   }
 }
 
@@ -66,7 +64,7 @@ export class Timeframe extends MalloyElement {
  */
 abstract class GranularTime extends ExpressionDef {
   elementType = "granularAbstract";
-  constructor(readonly units: TimeTimeframe) {
+  constructor(readonly units: TimestampUnit) {
     super();
   }
 
@@ -101,13 +99,7 @@ abstract class GranularTime extends ExpressionDef {
     }
     const begin = new ExprTime("timestamp", beginAt.value, beginAt.aggregate);
     const timeframe = this.units;
-    const endAt = timestampOffset(
-      fs.getDialect(),
-      beginAt.value,
-      "+",
-      ["1"],
-      timeframe
-    );
+    const endAt = timeOffset("timestamp", beginAt.value, "+", ["1"], timeframe);
     const end = new ExprTime("timestamp", endAt, beginAt.aggregate);
     const range = new Range(begin, end);
     return range.apply(fs, op, expr);
@@ -118,7 +110,7 @@ abstract class GranularTime extends ExpressionDef {
     op: string,
     expr: ExpressionDef
   ): ExprValue {
-    if (["year", "quarter", "month", "week", "day"].includes(this.units)) {
+    if (isDateUnit(this.units)) {
       let beginAt = this.getExpression(fs);
       if (beginAt.dataType !== "date") {
         beginAt = {
@@ -130,13 +122,7 @@ abstract class GranularTime extends ExpressionDef {
         };
       }
       const begin = new ExprTime("date", beginAt.value, beginAt.aggregate);
-      const endAt = dateOffset(
-        fs.getDialect(),
-        beginAt.value,
-        "+",
-        ["1"],
-        this.units
-      );
+      const endAt = timeOffset("date", beginAt.value, "+", ["1"], this.units);
       const end = new ExprTime("date", endAt, beginAt.aggregate);
       const range = new Range(begin, end);
       return range.apply(fs, op, expr);
@@ -151,7 +137,7 @@ export class ExprGranularTime extends GranularTime {
   legalChildTypes = [FT.timestampT, FT.dateT];
   constructor(
     readonly expr: ExpressionDef,
-    units: TimeTimeframe,
+    units: TimestampUnit,
     readonly truncate: boolean
   ) {
     super(units);
@@ -169,21 +155,18 @@ export class ExprGranularTime extends GranularTime {
         value: exprVal.value,
       };
       if (this.truncate) {
-        if (exprVal.dataType === "date") {
-          tsVal.value = compressExpr(
-            fs.getDialect().sqlDateTrunc(exprVal.value, timeframe) as Expr
-          );
-        } else {
-          tsVal.value = compressExpr(
-            fs
-              .getDialect()
-              .sqlTimestampTrunc(exprVal.value, timeframe, "UTC") as Expr
-          );
-        }
+        tsVal.value = [
+          {
+            type: "dialect",
+            function: "trunc",
+            expr: { value: exprVal.value, valueType: exprVal.dataType },
+            units: timeframe,
+          },
+        ];
       }
       return tsVal;
     }
-    this.log(`Cannot do time truncaiton on type '${exprVal.dataType}'`);
+    this.log(`Cannot do time truncation on type '${exprVal.dataType}'`);
     return errorFor(`granularity typecheck`);
   }
 }
@@ -194,12 +177,12 @@ export class ExprGranularTime extends GranularTime {
  */
 export class GranularLiteral extends ExpressionDef {
   elementType = "timeLiteral";
-  timeType?: TimeType;
+  timeType?: TimeFieldType;
 
   constructor(
     readonly moment: string,
     readonly until: string,
-    readonly units: TimeTimeframe
+    readonly units: TimestampUnit
   ) {
     super();
   }
@@ -301,7 +284,7 @@ export class GranularLiteral extends ExpressionDef {
     const lhs = left.getExpression(fs);
 
     if (isTimeType(lhs.dataType)) {
-      let rangeType: TimeType = "timestamp";
+      let rangeType: TimeFieldType = "timestamp";
       if (lhs.dataType === "date" && !this.timeType) {
         rangeType = "date";
       }
@@ -345,7 +328,7 @@ export class ExprNow extends ExprTime {
 export class ExprDuration extends ExpressionDef {
   elementType = "duration";
   legalChildTypes = [FT.timestampT, FT.dateT];
-  constructor(readonly n: ExpressionDef, readonly timeframe: TimeTimeframe) {
+  constructor(readonly n: ExpressionDef, readonly timeframe: TimestampUnit) {
     super({ n });
   }
 
@@ -365,8 +348,8 @@ export class ExprDuration extends ExpressionDef {
         }
       }
       if (lhs.dataType === "timestamp") {
-        const result = timestampOffset(
-          fs.getDialect(),
+        const result = timeOffset(
+          "timestamp",
           lhs.value,
           op,
           num.value,
@@ -384,13 +367,7 @@ export class ExprDuration extends ExpressionDef {
         dataType: "date",
         aggregate: lhs.aggregate || num.aggregate,
         timeframe: resultGranularity,
-        value: dateOffset(
-          fs.getDialect(),
-          lhs.value,
-          op,
-          num.value,
-          this.timeframe
-        ),
+        value: timeOffset("date", lhs.value, op, num.value, this.timeframe),
       };
     }
     return super.apply(fs, op, left);
@@ -495,8 +472,7 @@ export class ForRange extends ExpressionDef {
     }
     const units = this.timeframe.text;
 
-    // ok this is complicated so it is commented to remind myself ...
-    // First, if the duration resolution is smaller than date, we have
+    // If the duration resolution is smaller than date, we have
     // to do the computaion with timestamps.
     const durationRes = resolution(units);
     let rangeType = durationRes;
@@ -510,13 +486,7 @@ export class ForRange extends ExpressionDef {
     // everything is dates, do date math
     if (checkV.dataType === "date" && rangeType === "date") {
       const rangeStart = this.from;
-      const rangeEndV = dateOffset(
-        fs.getDialect(),
-        checkV.value,
-        "+",
-        nV.value,
-        units
-      );
+      const rangeEndV = timeOffset("date", checkV.value, "+", nV.value, units);
       const rangeEnd = new ExprTime("date", rangeEndV);
       return new Range(rangeStart, rangeEnd).apply(fs, op, expr);
     }
@@ -527,7 +497,7 @@ export class ForRange extends ExpressionDef {
     if (checkV.dataType === "date") {
       applyTo = new ExprTime(
         "timestamp",
-        toTimestampV(fs.getDialect(), checkV).value,
+        fs.getDialect().sqlTimestampCast(checkV.value),
         checkV.aggregate
       );
     }
@@ -539,7 +509,7 @@ export class ForRange extends ExpressionDef {
       rangeStart = rangeStart.thisValueToTimestamp(startV, fs.getDialect());
       from = rangeStart.getExpression(fs).value;
     }
-    const to = timestampOffset(fs.getDialect(), from, "+", nV.value, units);
+    const to = timeOffset("timestamp", from, "+", nV.value, units);
     const rangeEnd = new ExprTime("timestamp", to, startV.aggregate);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
@@ -557,39 +527,36 @@ export class ForRange extends ExpressionDef {
 
 export class ExprTimeExtract extends ExpressionDef {
   elementType = "timeExtract";
-  static extractorMap: Record<string, string> = {
-    DAY_OF_WEEK: "DAYOFWEEK",
-    DAY_OF_YEAR: "DAYOFYEAR",
-    DAY: "DAY",
-    DAYS: "DAY",
-    WEEK: "WEEK",
-    WEEKS: "WEEK",
-    MONTH: "MONTH",
-    MONTHS: "MONTH",
-    QUARTER: "QUARTER",
-    QUARTERS: "QUARTER",
-    YEAR: "YEAR",
-    YEARS: "YEAR",
-    HOUR: "HOUR",
-    HOURS: "HOUR",
-    MINUTE: "MINUTE",
-    MINUTES: "MINUTE",
-    SECOND: "SECOND",
-    SECONDS: "SECOND",
+  static pluralMap: Record<string, ExtractUnit> = {
+    years: "year",
+    quarters: "quarter",
+    months: "month",
+    weeks: "week",
+    days: "day",
+    hours: "hour",
+    minutes: "minute",
+    seconds: "second",
   };
-  static isExtractor(funcName: string): boolean {
-    return ExprTimeExtract.extractorMap[funcName.toUpperCase()] != undefined;
+
+  static extractor(funcName: string): ExtractUnit | undefined {
+    const mappedName = ExprTimeExtract.pluralMap[funcName];
+    if (mappedName) {
+      return mappedName;
+    }
+    if (isExtractUnit(funcName)) {
+      return funcName;
+    }
   }
 
-  constructor(readonly name: string, readonly args: ExpressionDef[]) {
+  constructor(readonly extractText: string, readonly args: ExpressionDef[]) {
     super({ args });
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const extractTo = ExprTimeExtract.extractorMap[this.name.toUpperCase()];
+    const extractTo = ExprTimeExtract.extractor(this.extractText);
     if (extractTo) {
       if (this.args.length !== 1) {
-        this.log(`Extraction function ${this.name} requires one argument`);
+        this.log(`Extraction function ${extractTo} requires one argument`);
         return errorFor(`{this.name} arg count`);
       }
       const from = this.args[0];
@@ -597,22 +564,27 @@ export class ExprTimeExtract extends ExpressionDef {
         const first = from.first.getExpression(fs);
         const last = from.last.getExpression(fs);
         if (!isTimeType(first.dataType)) {
-          from.first.log(`Can't extract ${this.name} from '${first.dataType}'`);
-          return errorFor(`${this.name} bad type ${first.dataType}`);
+          from.first.log(`Can't extract ${extractTo} from '${first.dataType}'`);
+          return errorFor(`${extractTo} bad type ${first.dataType}`);
         }
         if (!isTimeType(last.dataType)) {
-          from.last.log(`Cannot extract ${this.name} from '${last.dataType}'`);
-          return errorFor(`${this.name} bad type ${last.dataType}`);
+          from.last.log(`Cannot extract ${extractTo} from '${last.dataType}'`);
+          return errorFor(`${extractTo} bad type ${last.dataType}`);
+        }
+        if (!isTimestampUnit(extractTo)) {
+          this.log(`Cannot extract ${extractTo} from a range`);
+          return errorFor(`${extractTo} bad extraction`);
         }
         return {
           dataType: "number",
           aggregate: first.aggregate || last.aggregate,
           value: [
             {
-              type: "timeDiff",
+              type: "dialect",
+              function: "timeDiff",
               units: extractTo,
-              left: { type: first.dataType, value: first.value },
-              right: { type: last.dataType, value: last.value },
+              left: { valueType: first.dataType, value: first.value },
+              right: { valueType: last.dataType, value: last.value },
             },
           ],
         };
@@ -622,18 +594,23 @@ export class ExprTimeExtract extends ExpressionDef {
           return {
             dataType: "number",
             aggregate: argV.aggregate,
-            value: compressExpr([
-              `EXTRACT(${extractTo} FROM `,
-              ...argV.value,
-              ")",
-            ]),
+            value: [
+              {
+                type: "dialect",
+                function: "extract",
+                expr: { value: argV.value, valueType: argV.dataType },
+                units: extractTo,
+              },
+            ],
           };
         }
-        this.log(`${this.name}(date or timestamp) not '${argV.dataType}'`);
-        return errorFor(`${this.name} bad type ${argV.dataType}`);
+        this.log(
+          `${this.extractText}() requires time type, not '${argV.dataType}'`
+        );
+        return errorFor(`${this.extractText} bad type ${argV.dataType}`);
       }
     }
-    throw this.internalError(`Illegal extraction unit '${this.name}'`);
+    throw this.internalError(`Illegal extraction unit '${this.extractText}'`);
   }
 }
 
@@ -664,7 +641,7 @@ export class ExprFunc extends ExpressionDef {
     const funcInfo = fs.getDialect().getFunctionInfo(this.name);
     const dataType = funcInfo?.returnType ?? collectType ?? "number";
     return {
-      dataType,
+      dataType: dataType,
       aggregate: anyAggregate,
       value: compressExpr(funcCall),
     };

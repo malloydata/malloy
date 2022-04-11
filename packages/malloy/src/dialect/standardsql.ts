@@ -12,23 +12,26 @@
  */
 
 import { indent } from "../model/utils";
-import {
-  DateTimeframe,
-  Dialect,
-  DialectExpr,
-  DialectFieldList,
-  ExtractDateTimeframe,
-  FunctionInfo,
-  TimestampTimeframe,
-  TimeType,
-} from "./dialect";
-
-const timeTruncMap: { [key: string]: string } = {
-  date: "day",
-};
+import { TimestampUnit, ExtractUnit, Expr, mkExpr, TimeValue } from "../model";
+import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {
   number: "float64",
+};
+
+// These are the units that "TIMESTAMP_ADD" accepts
+const timestampAddUnits = [
+  "microsecond",
+  "millisecond",
+  "second",
+  "minute",
+  "hour",
+  "day",
+];
+
+const extractMap: Record<string, string> = {
+  day_of_week: "dayofweek",
+  day_of_year: "dayofyear",
 };
 
 export class StandardSQLDialect extends Dialect {
@@ -274,98 +277,56 @@ ${indent(sql)}
       : identifier;
   }
 
-  static mapTimeframe(timeframe: TimestampTimeframe): string {
-    const t = timeTruncMap[timeframe];
-    return (t || timeframe).toUpperCase();
-  }
-
-  sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr {
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    return [`DATE_TRUNC(`, expr, `, ${units})`];
-  }
-
-  // sqlTimestampTrunc(
-  //   expr: unknown,
-  //   timeframe: TimestampTimeframe,
-  //   timezone: string
-  // ): DialectExpr {
-  //   const units = StandardSQLDialect.mapTimeframe(timeframe);
-  //   if (isDateTimeframe(timeframe)) {
-  //     return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
-  //   } else {
-  //     return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
-  //   }
-  // }
-
-  sqlTimestampTrunc(
-    expr: unknown,
-    timeframe: TimestampTimeframe,
-    _timezone: string
-  ): DialectExpr {
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
-  }
-
-  sqlExtractDateTimeframe(
-    expr: unknown,
-    timeframe: ExtractDateTimeframe
-  ): DialectExpr {
-    return [`EXTRACT(${timeframe} FROM `, expr, ")"];
-  }
-
-  sqlDateCast(expr: unknown): DialectExpr {
-    return ["DATE(", expr, ")"];
-  }
-
-  sqlTimestampCast(expr: unknown): DialectExpr {
-    return ["TIMESTAMP(", expr, ")"];
-  }
-
-  sqlDateAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    const add = op === "+" ? "_ADD" : "_SUB";
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    return [`DATE${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
-  }
-
-  sqlTimestampAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    const useDatetime = ["week", "month", "quarter", "year"].includes(
-      timeframe
-    );
-    const add = op === "+" ? "_ADD" : "_SUB";
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    if (useDatetime) {
-      return [
-        `TIMESTAMP(DATETIME${add}(DATETIME(`,
-        expr,
-        `),INTERVAL `,
-        n,
-        ` ${units}))`,
-      ];
+  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+    if (sqlTime.valueType == "date") {
+      return mkExpr`DATE_TRUNC(${sqlTime.value}, ${units})`;
     }
-    // const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", expr, ")"] : expr;
-    return [`TIMESTAMP${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
+    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value}, ${units})`;
+  }
+
+  sqlExtract(expr: TimeValue, units: ExtractUnit): Expr {
+    const extractTo = extractMap[units] || units;
+    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value})`;
+  }
+
+  sqlDateCast(expr: Expr): Expr {
+    return mkExpr`DATE(${expr})`;
+  }
+
+  sqlTimestampCast(expr: Expr): Expr {
+    return mkExpr`TIMESTAMP(${expr})`;
+  }
+
+  sqlAlterTime(
+    op: "+" | "-",
+    expr: TimeValue,
+    n: Expr,
+    timeframe: TimestampUnit
+  ): Expr {
+    let theTime = expr.value;
+    let computeType: string = expr.valueType;
+    if (timestampAddUnits.includes(timeframe)) {
+      // The units must be done in timestamp, no matter the input type
+      computeType = "timestamp";
+      if (expr.valueType != "timestamp") {
+        theTime = mkExpr`TIMESTAMP(${theTime})`;
+      }
+    } else if (expr.valueType == "timestamp") {
+      theTime = mkExpr`DATETIME(${theTime})`;
+      computeType = "datetime";
+    }
+    const funcName = computeType.toUpperCase() + op === "+" ? "_ADD" : "_SUB";
+    const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
+    return computeType == "datetime" ? mkExpr`TIMESTAMP(${newTime})` : newTime;
   }
 
   ignoreInProject(fieldName: string): boolean {
     return fieldName === "_PARTITIONTIME";
   }
 
-  sqlCast(expr: unknown, castTo: string, safe: boolean): DialectExpr {
-    return [
-      `${safe ? "SAFE_" : ""}CAST(`,
-      expr,
-      ` AS ${castMap[castTo] || castTo})`,
-    ];
+  sqlCast(expr: Expr, castTo: string, safe: boolean): Expr {
+    const dstType = castMap[castTo] || castTo;
+    return mkExpr`${safe ? "SAFE_CAST" : "CAST"}(${expr}  AS ${dstType})`;
   }
 
   sqlLiteralTime(
@@ -382,32 +343,27 @@ ${indent(sql)}
     }
   }
 
-  timeDiff(
-    lType: TimeType,
-    lVal: string,
-    rType: TimeType,
-    rVal: string,
-    units: string
-  ): string {
+  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+    let lVal = from.value;
+    let rVal = to.value;
     let diffUsing = "TIMESTAMP_DIFF";
-    const diffUnits = units.toUpperCase();
 
-    if (diffUnits == "SECOND" || diffUnits == "MINUTE" || diffUnits == "HOUR") {
-      if (lType != "timestamp") {
-        lVal = `TIMESTAMP(${lVal})`;
+    if (units == "second" || units == "minute" || units == "hour") {
+      if (from.valueType != "timestamp") {
+        lVal = mkExpr`TIMESTAMP(${lVal})`;
       }
-      if (rType != "timestamp") {
-        rVal = `TIMESTAMP(${rVal})`;
+      if (to.valueType != "timestamp") {
+        rVal = mkExpr`TIMESTAMP(${rVal})`;
       }
     } else {
       diffUsing = "DATE_DIFF";
-      if (lType != "date") {
-        lVal = `DATE(${lVal})`;
+      if (from.valueType != "date") {
+        lVal = mkExpr`DATE(${lVal})`;
       }
-      if (rType != "date") {
-        rVal = `DATE(${rVal})`;
+      if (to.valueType != "date") {
+        rVal = mkExpr`DATE(${rVal})`;
       }
     }
-    return `${diffUsing}(${rVal}, ${lVal}, ${diffUnits})`;
+    return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
   }
 }

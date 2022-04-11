@@ -25,7 +25,7 @@ import {
   isAtomicFieldType,
   isConditionParameter,
   StructDef,
-  Expr,
+  TimeFieldType,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
@@ -39,7 +39,6 @@ import {
   FT,
   isGranularResult,
   compressExpr,
-  TimeType,
   ExprCompare,
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
@@ -114,7 +113,7 @@ export abstract class ExpressionDef extends MalloyElement {
     if (selfValue.dataType === "timestamp") {
       return this;
     }
-    const tsSelf = compressExpr(d.sqlTimestampCast(selfValue.value) as Expr);
+    const tsSelf = d.sqlCast(selfValue.value, "timestamp", false);
     return new ExprTime("timestamp", tsSelf, selfValue.aggregate);
   }
 }
@@ -315,7 +314,7 @@ export class ExprTime extends ExpressionDef {
   elementType = "timestampOrDate";
   readonly translationValue: ExprValue;
   constructor(
-    timeType: TimeType,
+    timeType: TimeFieldType,
     value: Fragment[] | string,
     aggregate = false
   ) {
@@ -854,11 +853,10 @@ export class ExprCast extends ExpressionDef {
       this.castType === "number"
         ? fs.getDialect().defaultNumberType
         : this.castType;
-    let castValue = fs
-      .getDialect()
-      .sqlCast(expr.value, castTo, this.safe) as Expr;
+    let castValue = fs.getDialect().sqlCast(expr.value, castTo, this.safe);
+
     if (castTo === "timestamp" && expr.dataType === "date") {
-      castValue = fs.getDialect().sqlTimestampCast(expr.value) as Expr;
+      castValue = fs.getDialect().sqlTimestampCast(expr.value);
     }
     if (castTo === "date" && expr.dataType === "timestamp") {
       // Give date cast timestamps a granularity
@@ -866,7 +864,7 @@ export class ExprCast extends ExpressionDef {
         dataType: "date",
         aggregate: expr.aggregate,
         timeframe: "day",
-        value: compressExpr(fs.getDialect().sqlDateCast(expr.value) as Expr),
+        value: compressExpr(fs.getDialect().sqlDateCast(expr.value)),
       };
     }
     return {

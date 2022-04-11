@@ -36,7 +36,7 @@ export class HTMLDateRenderer implements Renderer {
 
     const timeframe =
       data.field.timeframe ||
-      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Date);
+      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Day);
 
     const timestring = timeToString(data.value, timeframe);
 

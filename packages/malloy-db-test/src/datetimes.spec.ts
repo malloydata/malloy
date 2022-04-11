@@ -41,7 +41,7 @@ const basicTypes: Record<DialectNames, string> = {
   postgres: `
     SELECT
       DATE('2021-02-24') as t_date,
-      '2021-02-24 03:05:06':: timestamp with time zone as t_timestamp
+      '2021-02-24 03:05:06'::timestamp with time zone as t_timestamp
   `,
 };
 
@@ -67,7 +67,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
   }
 
-  function checkEqual(result: Result, log = false) {
+  function checkEqual(result: Result) {
     let wantEq = result.data.path(0, "calc").value;
     if (wantEq != "=") {
       wantEq = wantEq + "\nSQL: " + result.sql;
@@ -75,84 +75,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     return wantEq;
   }
 
-  it(`sql_block no explore- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      sql: basicTypes is || ${basicTypes[databaseName]} ;;
-
-      query: from_sql(basicTypes) -> {
-        project:
-          t_date
-          t_timestamp
-      }
-      `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, "t_date").value).toEqual(new Date("2021-02-24"));
-    expect(result.data.path(0, "t_timestamp").value).toEqual(
-      new Date("2021-02-24T03:05:06.000Z")
-    );
+  test(`date in sql_block no explore- ${databaseName}`, async () => {
+    const result = await sqlEq("t_date", "@2021-02-24");
+    expect(checkEqual(result)).toBe("=");
   });
 
-  it(`dates and timestamps - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      sql: basicTypes is || ${basicTypes[databaseName]} ;;
-
-      query: from_sql(basicTypes) -> {
-        aggregate:
-          d1 is count() { where: t_date: @2021-02-24} = 1
-          d2 is count() { where: t_date: @2021-02-23 for 2 days} = 1
-          // d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
-
-
-
-          t1 is count() { where: t_timestamp: @2021-02-24} = 1
-          // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
-          t3 is count() { where: t_timestamp: @2021-02-23 00:00:00 for 2 days} = 1
-      }
-      `
-      )
-      .run();
-    // console.log(result.sql);
-
-    result.resultExplore.allFields.forEach((field) => {
-      expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
-        `true ${field.name}`
-      );
-    });
-  });
-
-  it(`Run Test Here - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      sql: basicTypes is || ${basicTypes[databaseName]} ;;
-
-      query: from_sql(basicTypes) -> {
-        aggregate:
-          works is count() = 1
-
-          // this is actually not working quite right, needs to be a date comparison, not a
-          //  time comparison or an error...
-          // d3 is count() { where: t_date: @2021-02-23 00:00 for 2 days} = 1
-
-          // the end of the range is a date which can't be casted to a timezone.
-          // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
-      }
-      `
-      )
-      .run();
-    // console.log(result.sql);
-
-    result.resultExplore.allFields.forEach((field) => {
-      expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
-        `true ${field.name}`
-      );
-    });
+  test(`timestamp in sql_block no explore- ${databaseName}`, async () => {
+    const result = await sqlEq("t_timestamp", "@2021-02-24 03:05:06");
+    expect(checkEqual(result)).toBe("=");
   });
 
   describe("time operations", () => {
@@ -237,7 +167,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
       test("months", async () => {
         const result = await sqlEq("months(@2000-01-01 to @2003-07-01)", "42");
-        expect(checkEqual(result, true)).toBe("=");
+        expect(checkEqual(result)).toBe("=");
       });
       test("years", async () => {
         const result = await sqlEq("year(@2000 to @2042)", "42");
@@ -273,8 +203,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
 
-      test.skip(`trunc week - ${databaseName}`, async () => {
-        const result = await sqlEq("t_timestamp.week", "@2021-02-21");
+      test(`trunc week - ${databaseName}`, async () => {
+        const result = await sqlEq("t_timestamp.week", "@2021-02-21 00:00:00");
         expect(checkEqual(result)).toBe("=");
       });
 
@@ -283,13 +213,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
 
-      test.skip(`trunc quarter - ${databaseName}`, async () => {
-        const result = await sqlEq("t_timestamp.quarter", "@2021-01-01");
+      test(`trunc quarter - ${databaseName}`, async () => {
+        const result = await sqlEq(
+          "t_timestamp.quarter",
+          "@2021-01-01 00:00:00"
+        );
         expect(checkEqual(result)).toBe("=");
       });
 
-      test.skip(`trunc year - ${databaseName}`, async () => {
-        const result = await sqlEq("t_timestamp.year", "@2021");
+      test(`trunc year - ${databaseName}`, async () => {
+        const result = await sqlEq("t_timestamp.year", "@2021-01-01 00:00:00");
         expect(checkEqual(result)).toBe("=");
       });
     });
@@ -312,11 +245,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         const result = await sqlEq("day(t_timestamp)", "24");
         expect(checkEqual(result)).toBe("=");
       });
-      test.skip(`extract day_of_week - ${databaseName}`, async () => {
+      test(`extract day_of_week - ${databaseName}`, async () => {
         const result = await sqlEq("day_of_week(t_timestamp)", "4");
         expect(checkEqual(result)).toBe("=");
       });
-      test.skip(`extract day_of_year - ${databaseName}`, async () => {
+      test(`extract day_of_year - ${databaseName}`, async () => {
         const result = await sqlEq("day_of_year(t_timestamp)", "55");
         expect(checkEqual(result)).toBe("=");
       });
@@ -344,7 +277,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
 
-      test.skip(`date trunc week - ${databaseName}`, async () => {
+      test(`date trunc week - ${databaseName}`, async () => {
         const result = await sqlEq("t_date.week", "@2021-02-21");
         expect(checkEqual(result)).toBe("=");
       });
@@ -370,11 +303,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         const result = await sqlEq("day(t_date)", "24");
         expect(checkEqual(result)).toBe("=");
       });
-      test.skip(`date extract day_of_week - ${databaseName}`, async () => {
+      test(`date extract day_of_week - ${databaseName}`, async () => {
         const result = await sqlEq("day_of_week(t_date)", "4");
         expect(checkEqual(result)).toBe("=");
       });
-      test.skip(`date extract day_of_year - ${databaseName}`, async () => {
+      test(`date extract day_of_year - ${databaseName}`, async () => {
         const result = await sqlEq("day_of_year(t_date)", "55");
         expect(checkEqual(result)).toBe("=");
       });

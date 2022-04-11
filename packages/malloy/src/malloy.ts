@@ -1346,7 +1346,7 @@ export class AtomicField extends Entity {
 }
 
 export enum DateTimeframe {
-  Date = "date",
+  Day = "day",
   Week = "week",
   Month = "month",
   Quarter = "quarter",
@@ -1354,7 +1354,7 @@ export enum DateTimeframe {
 }
 
 export enum TimestampTimeframe {
-  Date = "date",
+  Day = "day",
   Week = "week",
   Month = "month",
   Quarter = "quarter",
@@ -1381,7 +1381,7 @@ export class DateField extends AtomicField {
     }
     switch (this.fieldDateDef.timeframe) {
       case "day":
-        return DateTimeframe.Date;
+        return DateTimeframe.Day;
       case "week":
         return DateTimeframe.Week;
       case "month":
@@ -1410,8 +1410,8 @@ export class TimestampField extends AtomicField {
       return undefined;
     }
     switch (this.fieldTimestampDef.timeframe) {
-      case "date":
-        return TimestampTimeframe.Date;
+      case "day":
+        return TimestampTimeframe.Day;
       case "week":
         return TimestampTimeframe.Week;
       case "month":
