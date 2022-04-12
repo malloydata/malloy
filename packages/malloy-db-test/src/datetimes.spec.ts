@@ -333,4 +333,34 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
     });
   });
+  describe(`delta - ${databaseName}`, () => {
+    test(`timestamp delta second - ${databaseName}`, async () => {
+      const result = await sqlEq(
+        "t_timestamp + 10 seconds",
+        "@2021-02-24 03:05:16"
+      );
+      expect(checkEqual(result)).toBe("=");
+    });
+    test(`timestamp delta negative second - ${databaseName}`, async () => {
+      const result = await sqlEq(
+        "t_timestamp - 6 seconds",
+        "@2021-02-24 03:05:00"
+      );
+      expect(checkEqual(result)).toBe("=");
+    });
+    test(`timestamp minute - ${databaseName}`, async () => {
+      const result = await sqlEq(
+        "t_timestamp + 10 minutes",
+        "@2021-02-24 03:15:06"
+      );
+      expect(checkEqual(result)).toBe("=");
+    });
+    test(`timestamp delta hours - ${databaseName}`, async () => {
+      const result = await sqlEq(
+        "t_timestamp + 10 hours",
+        "@2021-02-24 13:05:06"
+      );
+      expect(checkEqual(result)).toBe("=");
+    });
+  });
 });

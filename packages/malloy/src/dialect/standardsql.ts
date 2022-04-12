@@ -315,7 +315,7 @@ ${indent(sql)}
       theTime = mkExpr`DATETIME(${theTime})`;
       computeType = "datetime";
     }
-    const funcName = computeType.toUpperCase() + op === "+" ? "_ADD" : "_SUB";
+    const funcName = computeType.toUpperCase() + (op == "+" ? "_ADD" : "_SUB");
     const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
     return computeType == "datetime" ? mkExpr`TIMESTAMP(${newTime})` : newTime;
   }
