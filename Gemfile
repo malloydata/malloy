@@ -39,5 +39,5 @@ end
 # Performance-booster for watching directories on Windows
 gem "wdm", "~> 0.1.1", :platforms => [:mingw, :x64_mingw, :mswin]
 
-gem 'eventmachine', git: 'git@github.com:eventmachine/eventmachine', ref: '88be06efc88f98f59a9efa632dd87aa7977c8713'
+gem 'eventmachine', git: 'https://github.com/eventmachine/eventmachine.git', ref: '88be06efc88f98f59a9efa632dd87aa7977c8713'
 gem "webrick", "~> 1.7"
