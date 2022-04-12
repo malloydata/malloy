@@ -33,6 +33,16 @@ const pgExtractionMap: Record<string, string> = {
   day_of_year: "doy",
 };
 
+const pgMakeIntervalMap: Record<string, string> = {
+  year: "years",
+  month: "months",
+  week: "weeks",
+  day: "days",
+  hour: "hours",
+  minute: "mins",
+  second: "secs",
+};
+
 const inSeconds: Record<string, number> = {
   second: 1,
   minute: 60,
@@ -257,7 +267,12 @@ export class PostgresDialect extends Dialect {
     n: Expr,
     timeframe: DateUnit
   ): Expr {
-    return mkExpr`((${expr.value})${op}${n}*INTERVAL '1 ${timeframe}')`;
+    if (timeframe == "quarter") {
+      timeframe = "month";
+      n = mkExpr`${n}*3`;
+    }
+    const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    return mkExpr`((${expr.value})${op}${interval})`;
   }
 
   sqlCast(expr: Expr, castTo: string, _safe: boolean): Expr {
