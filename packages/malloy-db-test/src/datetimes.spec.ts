@@ -109,7 +109,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
       test("TIMESTAMP to DATE", async () => {
-        const result = await sqlEq("month(@2000-01-01 to (@1999)::date)", "-12");
+        const result = await sqlEq(
+          "month(@2000-01-01 to (@1999)::date)",
+          "-12"
+        );
         expect(checkEqual(result)).toBe("=");
       });
       test("seconds", async () => {
@@ -157,7 +160,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
       test("quarters", async () => {
-        const result = await sqlEq("quarters(@2001-01-01 to @2011-09-30)", "42");
+        const result = await sqlEq(
+          "quarters(@2001-01-01 to @2011-09-30)",
+          "42"
+        );
         expect(checkEqual(result)).toBe("=");
       });
       test("months", async () => {
@@ -173,12 +179,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     describe(`timestamp truncation - ${databaseName}`, () => {
       // 2021-02-24 03:05:06
       test(`trunc second - ${databaseName}`, async () => {
-        const result = await sqlEq("t_timestamp.second", "@2021-02-24 03:05:06");
+        const result = await sqlEq(
+          "t_timestamp.second",
+          "@2021-02-24 03:05:06"
+        );
         expect(checkEqual(result)).toBe("=");
       });
 
       test(`trunc minute - ${databaseName}`, async () => {
-        const result = await sqlEq("t_timestamp.minute", "@2021-02-24 03:05:00");
+        const result = await sqlEq(
+          "t_timestamp.minute",
+          "@2021-02-24 03:05:00"
+        );
         expect(checkEqual(result)).toBe("=");
       });
 
@@ -203,7 +215,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
 
       test(`trunc quarter - ${databaseName}`, async () => {
-        const result = await sqlEq("t_timestamp.quarter", "@2021-01-01 00:00:00");
+        const result = await sqlEq(
+          "t_timestamp.quarter",
+          "@2021-01-01 00:00:00"
+        );
         expect(checkEqual(result)).toBe("=");
       });
 
