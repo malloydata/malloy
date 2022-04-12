@@ -5,3 +5,4 @@ node_modules
 *.vsix
 third_party_notices.txt
 README.md
+CHANGELOG.md

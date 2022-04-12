@@ -493,19 +493,10 @@ export class MalloyToAST
     return this.astAt(node, pcx);
   }
 
-  visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldListReference {
-    if (pcx.STAR()) {
-      return this.astAt(new ast.WildcardFieldReference(undefined, "*"), pcx);
-    }
-    const fcx = pcx.fieldName();
-    if (fcx) {
-      return this.astAt(new ast.FieldReference([this.getFieldName(fcx)]), fcx);
-    }
-    throw this.internalError(pcx, "mis-parsed field name reference");
-  }
-
   visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldReferences {
-    const members = pcx.fieldOrStar().map((cx) => this.visitFieldOrStar(cx));
+    const members = pcx
+      .fieldName()
+      .map((cx) => new ast.FieldReference([this.getFieldName(cx)]));
     return new ast.FieldReferences(members);
   }
 
@@ -592,15 +583,31 @@ export class MalloyToAST
     return this.astAt(new ast.ProjectStatement(fields), pcx);
   }
 
-  visitWildMember(pcx: parse.WildMemberContext): ast.FieldListReference {
+  visitWildMember(pcx: parse.WildMemberContext): ast.FieldReferenceElement {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? "*" : "**";
     const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
     return new ast.WildcardFieldReference(join, stars);
   }
 
+  visitIndexFields(pcx: parse.IndexFieldsContext): ast.FieldReferences {
+    const refList = pcx.indexElement().map((el) => {
+      const hasStar = el.STAR() != undefined;
+      const pathCx = el.fieldPath();
+      if (!pathCx) {
+        return new ast.WildcardFieldReference(undefined, "*");
+      }
+      const path = this.visitFieldPath(pathCx);
+      if (!hasStar) {
+        return this.astAt(path, pcx);
+      }
+      return this.astAt(new ast.WildcardFieldReference(path, "*"), pcx);
+    });
+    return new ast.FieldReferences(refList);
+  }
+
   visitIndexStatement(pcx: parse.IndexStatementContext): ast.Index {
-    const fields = this.visitFieldNameList(pcx.fieldNameList());
+    const fields = this.visitIndexFields(pcx.indexFields());
     const indexStmt = new ast.Index(fields);
     const weightCx = pcx.fieldName();
     if (weightCx) {
@@ -982,27 +989,24 @@ export class MalloyToAST
 
   visitExprFunc(pcx: parse.ExprFuncContext): ast.ExprFunc {
     const argsCx = pcx.argumentList();
-    let fn: string | undefined;
+    const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
     const idCx = pcx.id();
+    const dCx = pcx.timeframe();
+    let fn: string;
     if (idCx) {
       fn = this.getIdText(idCx);
-    }
-
-    const dCx = pcx.timeframe();
-    if (dCx) {
+    } else if (dCx) {
       fn = dCx.text;
-    }
-
-    if (fn === undefined) {
+    } else {
       this.contextError(pcx, "Funciton name error");
       fn = "FUNCTION_NAME_ERROR";
     }
 
-    if (argsCx) {
-      return new ast.ExprFunc(fn, this.allFieldExpressions(argsCx.fieldExpr()));
+    if (ast.ExprTimeExtract.isExtractor(fn)) {
+      return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return new ast.ExprFunc(fn, []);
+    return this.astAt(new ast.ExprFunc(fn, args), pcx);
   }
 
   visitExprDuration(pcx: parse.ExprDurationContext): ast.ExprDuration {

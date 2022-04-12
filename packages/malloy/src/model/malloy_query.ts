@@ -54,6 +54,8 @@ import {
   isPhysical,
   isJoinOn,
   isQuerySegment,
+  isTimeDiffFragment,
+  TimeDiffFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -63,16 +65,6 @@ import { ResultStructMetadataDef, SearchIndexResult } from ".";
 import { Connection } from "..";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
-
-// function extendStructDef(
-//   structDef: StructDef,
-//   extendSource: FieldDef[]
-// ): StructDef {
-//   return {
-//     ...structDef,
-//     fields: [...structDef.fields, ...extendSource],
-//   };
-// }
 
 // quote a string for SQL use.  Perhaps should be in dialect.
 function generateSQLStringLiteral(sourceString: string): string {
@@ -447,6 +439,20 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateTimeDiff(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: TimeDiffFragment
+  ): string {
+    return context.dialect.timeDiff(
+      expr.left.type,
+      this.generateExpressionFromExpr(resultSet, context, expr.left.value),
+      expr.right.type,
+      this.generateExpressionFromExpr(resultSet, context, expr.right.value),
+      expr.units
+    );
+  }
+
   generateExpressionFromExpr(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -498,6 +504,8 @@ class QueryField extends QueryNode {
             `Internal Error: Partial application value referenced but not provided`
           );
         }
+      } else if (isTimeDiffFragment(expr)) {
+        s += this.generateTimeDiff(resultSet, context, expr);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(
@@ -2473,6 +2481,7 @@ class QueryQuery extends QueryField {
 
   generateTurtlePipelineSQL(fi: FieldInstanceResult, stageWriter: StageWriter) {
     let structDef = this.getResultStructDef(fi, false);
+    const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
     if (hasPipeline) {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
@@ -2482,7 +2491,9 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
+      structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
+        repeatedResultType === "inline_all_numbers"
+      );
       structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
@@ -2700,7 +2711,7 @@ class QueryQueryIndex extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
-    s += "GROUP BY 1,2,3,4\nORDER BY 5 DESC\n";
+    s += "GROUP BY 1,2,3,4\n";
 
     // limit
     if (this.firstSegment.limit) {
@@ -3444,13 +3455,24 @@ export class QueryModel {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
     const result = await connection.runSQL(
-      `SELECT fieldName, fieldValue, fieldType, weight \n` +
-        `FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\` \n` +
-        `WHERE lower(fieldName || '|' || fieldValue) LIKE lower(${generateSQLStringLiteral(
+      `SELECT
+          fieldName,
+          fieldValue,
+          fieldType,
+          weight,
+          CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
+            searchValue + "%"
+          )}) THEN 1 ELSE 0 END as match_first
+        FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
+        WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
-        )})\n ` +
-        `ORDER BY 4 DESC\n` +
-        `LIMIT 1000\n`
+        )})
+        ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
+          searchValue + "%"
+        )}) THEN 1 ELSE 0 END DESC, weight DESC
+        LIMIT 1000
+      `,
+      { rowLimit: 1000 }
     );
     return result.rows as unknown as SearchIndexResult[];
   }

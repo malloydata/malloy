@@ -717,7 +717,12 @@ export class NamedSource extends Mallobj {
 
     const ret = this.modelStruct();
     if (!ret) {
-      return ErrorFactory.structDef;
+      const noSql = {
+        ...ErrorFactory.structDef,
+        name: "_reference_undefined_" + this.refName,
+        dialect: "MISSING_reference_undefined_" + this.refName,
+      };
+      return noSql;
     }
     const declared = { ...ret.parameters } || {};
 
@@ -1159,20 +1164,14 @@ export class FieldReference extends ListOf<FieldName> {
   }
 }
 
-export type FieldListReference = FieldReference | WildcardFieldReference;
+export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
-export class FieldReferences extends ListOf<FieldListReference> {
-  constructor(members: FieldListReference[]) {
+export class FieldReferences extends ListOf<FieldReferenceElement> {
+  constructor(members: FieldReferenceElement[]) {
     super("fieldReferenceList", members);
   }
 }
-export function isFieldListReference(
-  me: MalloyElement
-): me is FieldListReference {
-  return me instanceof FieldReference || me instanceof WildcardFieldReference;
-}
-
-export type FieldCollectionMember = FieldListReference | FieldDeclaration;
+export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {

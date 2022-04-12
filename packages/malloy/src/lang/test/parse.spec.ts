@@ -579,6 +579,9 @@ describe("qops", () => {
     `)
   );
   test("index single", modelOK("query:a->{index: astr}"));
+  test("index path", modelOK("query:ab->{index: ab.astr}"));
+  test("index unique on path", modelOK("query:ab->{index: b.astr, ab.astr}"));
+  test("index join.*", modelOK("query:ab->{index: ab.*}"));
   test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
   test("index by", modelOK("query:a->{index: * by ai}"));
@@ -779,10 +782,10 @@ describe("expressions", () => {
       }
     });
 
-    describe("timestamp extraction", () => {
+    describe("timestamp difference", () => {
       for (const unit of timeframes) {
         // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(ats)`));
+        test(`timestamp extract ${unit}`, exprOK(`${unit}(@2021 to ats)`));
       }
     });
   });
