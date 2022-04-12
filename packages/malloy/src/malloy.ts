@@ -80,6 +80,29 @@ export class Malloy {
     Malloy._log = log;
   }
 
+  public static async search({
+    model,
+    connections,
+    sourceName,
+    searchTerm,
+  }: {
+    model: Model;
+    connections: LookupConnection<Connection>;
+    sourceName: string;
+    searchTerm: string;
+  }): Promise<SearchIndexResult[] | undefined> {
+    const queryModel = new QueryModel(model._modelDef);
+    const schema = model.getExploreByName(sourceName).structDef;
+    if (schema.structRelationship.type !== "basetable") {
+      throw new Error(
+        "Expected schema's structRelationship type to be 'basetable'."
+      );
+    }
+    const connectionName = schema.structRelationship.connectionName;
+    const connection = await connections.lookupConnection(connectionName);
+    return await queryModel.searchIndex(connection, sourceName, searchTerm);
+  }
+
   private static _parse(source: string, url?: URL): Parse {
     if (url === undefined) {
       url = URL.fromString("internal://internal.malloy");
@@ -1991,19 +2014,12 @@ export class ModelMaterializer extends FluentState<Model> {
     sourceName: string,
     searchTerm: string
   ): Promise<SearchIndexResult[] | undefined> {
-    const model = await this.materialize();
-    const queryModel = new QueryModel(model._modelDef);
-    const schema = model.getExploreByName(sourceName).structDef;
-    if (schema.structRelationship.type !== "basetable") {
-      throw new Error(
-        "Expected schema's structRelationship type to be 'basetable'."
-      );
-    }
-    const connectionName = schema.structRelationship.connectionName;
-    const connection = await this.runtime.connections.lookupConnection(
-      connectionName
-    );
-    return await queryModel.searchIndex(connection, sourceName, searchTerm);
+    return Malloy.search({
+      model: await this.materialize(),
+      connections: this.runtime.connections,
+      sourceName,
+      searchTerm,
+    });
   }
 
   /**
