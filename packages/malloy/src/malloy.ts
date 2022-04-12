@@ -53,31 +53,45 @@ import {
   Connection,
 } from "./runtime_types";
 
-export interface Loggable {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  debug: (message?: any, ...optionalParams: any[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  info: (message?: any, ...optionalParams: any[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  warn: (message?: any, ...optionalParams: any[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  error: (message?: any, ...optionalParams: any[]) => void;
+export class Log {
+  public readonly errors: LogMessage[] = [];
+  public readonly warnings: LogMessage[] = [];
+  public readonly infos: LogMessage[] = [];
+  public readonly debugs: LogMessage[] = [];
+
+  error(message: LogMessage): void {
+    this.errors.push(message);
+  }
+
+  info(message: LogMessage): void {
+    this.infos.push(message);
+  }
+
+  debug(message: LogMessage): void {
+    this.debugs.push(message);
+  }
+
+  warning(message: LogMessage): void {
+    this.warnings.push(message);
+  }
+
+  logs(messages: LogMessage[]): void {
+    messages.forEach((message) => {
+      if (message.severity === "error" || message.severity === undefined) {
+        this.error(message);
+      } else if (message.severity === "debug") {
+        this.debug(message);
+      } else {
+        this.warning(message);
+      }
+    });
+  }
 }
 
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
     return "0.0.1";
-  }
-
-  private static _log: Loggable;
-
-  public static get log(): Loggable {
-    return Malloy._log || console;
-  }
-
-  public static setLogger(log: Loggable): void {
-    Malloy._log = log;
   }
 
   public static async search({
@@ -175,17 +189,21 @@ export class Malloy {
     connections,
     parse,
     model,
+    log,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
+    log?: Log;
   }): Promise<Model> {
     const translator = parse._translator;
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
+        const logMessages = result.errors || [];
+        log?.logs(logMessages);
         if (result.translated) {
           return new Model(
             result.translated.modelDef,
@@ -195,11 +213,10 @@ export class Malloy {
               translator.referenceAt(position)
           );
         } else {
-          const errors = result.errors || [];
           const errText = translator.prettyErrors();
           throw new MalloyError(
             `Error(s) compiling model:\n${errText}`,
-            errors
+            logMessages
           );
         }
       } else {
@@ -1658,7 +1675,10 @@ export class Runtime {
    * @returns A `ModelMaterializer` capable of materializing the requested model,
    * or loading further related objects.
    */
-  public loadModel(source: ModelURL | ModelString): ModelMaterializer {
+  public loadModel(
+    source: ModelURL | ModelString,
+    log?: Log
+  ): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
       const parse =
         source instanceof URL
@@ -1673,6 +1693,7 @@ export class Runtime {
         urlReader: this.urlReader,
         connections: this.connections,
         parse,
+        log,
       });
     });
   }
@@ -1694,8 +1715,11 @@ export class Runtime {
    * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQuery(query: QueryURL | QueryString): QueryMaterializer {
-    return this.loadModel(query).loadFinalQuery();
+  public loadQuery(
+    query: QueryURL | QueryString,
+    log?: Log
+  ): QueryMaterializer {
+    return this.loadModel(query, log).loadFinalQuery();
   }
 
   /**
@@ -1709,9 +1733,10 @@ export class Runtime {
    */
   public loadQueryByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    log?: Log
   ): QueryMaterializer {
-    return this.loadModel(model).loadQueryByIndex(index);
+    return this.loadModel(model, log).loadQueryByIndex(index);
   }
 
   /**
@@ -1725,9 +1750,10 @@ export class Runtime {
    */
   public loadQueryByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    log?: Log
   ): QueryMaterializer {
-    return this.loadModel(model).loadQueryByName(name);
+    return this.loadModel(model, log).loadQueryByName(name);
   }
 
   /**
@@ -1741,9 +1767,10 @@ export class Runtime {
    */
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    log?: Log
   ): SQLBlockMaterializer {
-    return this.loadModel(model).loadSQLBlockByName(name);
+    return this.loadModel(model, log).loadSQLBlockByName(name);
   }
 
   /**
@@ -1757,9 +1784,10 @@ export class Runtime {
    */
   public loadSQLBlockByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    log?: Log
   ): SQLBlockMaterializer {
-    return this.loadModel(model).loadSQLBlockByIndex(index);
+    return this.loadModel(model, log).loadSQLBlockByIndex(index);
   }
 
   // TODO maybe use overloads for the alternative parameters
@@ -1769,8 +1797,8 @@ export class Runtime {
    * @param source The URL or contents of a Malloy model document to compile.
    * @returns A promise of a compiled `Model`.
    */
-  public getModel(source: ModelURL | ModelString): Promise<Model> {
-    return this.loadModel(source).getModel();
+  public getModel(source: ModelURL | ModelString, log?: Log): Promise<Model> {
+    return this.loadModel(source, log).getModel();
   }
 
   /**
@@ -1779,8 +1807,11 @@ export class Runtime {
    * @param query The URL or contents of a Malloy query document to compile.
    * @returns A promise of a compiled `PreparedQuery`.
    */
-  public getQuery(query: QueryURL | QueryString): Promise<PreparedQuery> {
-    return this.loadQuery(query).getPreparedQuery();
+  public getQuery(
+    query: QueryURL | QueryString,
+    log?: Log
+  ): Promise<PreparedQuery> {
+    return this.loadQuery(query, log).getPreparedQuery();
   }
 
   /**
@@ -1793,9 +1824,10 @@ export class Runtime {
    */
   public getQueryByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    log?: Log
   ): Promise<PreparedQuery> {
-    return this.loadQueryByIndex(model, index).getPreparedQuery();
+    return this.loadQueryByIndex(model, index, log).getPreparedQuery();
   }
 
   /**
@@ -1808,9 +1840,10 @@ export class Runtime {
    */
   public getQueryByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    log?: Log
   ): Promise<PreparedQuery> {
-    return this.loadQueryByName(model, name).getPreparedQuery();
+    return this.loadQueryByName(model, name, log).getPreparedQuery();
   }
 
   /**
@@ -1823,9 +1856,10 @@ export class Runtime {
    */
   public getSQLBlockByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    log?: Log
   ): Promise<SQLBlock> {
-    return this.loadSQLBlockByName(model, name).getSQLBlock();
+    return this.loadSQLBlockByName(model, name, log).getSQLBlock();
   }
 
   /**
@@ -1838,9 +1872,10 @@ export class Runtime {
    */
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    log?: Log
   ): Promise<SQLBlock> {
-    return this.loadSQLBlockByIndex(model, index).getSQLBlock();
+    return this.loadSQLBlockByIndex(model, index, log).getSQLBlock();
   }
 }
 
@@ -1986,7 +2021,10 @@ export class ModelMaterializer extends FluentState<Model> {
    * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
+  public loadQuery(
+    query: QueryString | QueryURL,
+    log?: Log
+  ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
@@ -2005,6 +2043,7 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
+        log,
       });
       return queryModel.preparedQuery;
     });

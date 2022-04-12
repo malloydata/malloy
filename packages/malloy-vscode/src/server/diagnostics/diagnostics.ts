@@ -16,7 +16,7 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { LogMessage, MalloyError } from "@malloydata/malloy";
+import { Log, LogMessage, MalloyError } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { translateWithCache } from "../translate_cache";
 
@@ -30,13 +30,11 @@ export async function getMalloyDiagnostics(
   document: TextDocument
 ): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
-  let errors: LogMessage[] = [];
+  const log = new Log();
   try {
-    await translateWithCache(document, documents);
+    await translateWithCache(document, documents, log);
   } catch (error) {
-    if (error instanceof MalloyError) {
-      errors = error.log;
-    } else {
+    if (!(error instanceof MalloyError)) {
       // TODO this kind of error should cease to exist. All errors should have source info.
       diagnostics.push({
         severity: DiagnosticSeverity.Error,
@@ -47,20 +45,25 @@ export async function getMalloyDiagnostics(
     }
   }
 
-  for (const err of errors) {
-    const sev =
-      err.severity === "warn"
-        ? DiagnosticSeverity.Warning
-        : err.severity === "debug"
-        ? DiagnosticSeverity.Information
-        : DiagnosticSeverity.Error;
-
-    diagnostics.push({
-      severity: sev,
-      range: err.at?.range || DEFAULT_RANGE,
-      message: err.message,
+  function mapMessage(message: LogMessage, severity: DiagnosticSeverity) {
+    return {
+      severity,
+      range: message.at?.range || DEFAULT_RANGE,
+      message: message.message,
       source: "malloy",
-    });
+    };
+  }
+
+  for (const error of log.errors) {
+    diagnostics.push(mapMessage(error, DiagnosticSeverity.Error));
+  }
+
+  for (const warning of log.warnings) {
+    diagnostics.push(mapMessage(warning, DiagnosticSeverity.Warning));
+  }
+
+  for (const info of log.infos) {
+    diagnostics.push(mapMessage(info, DiagnosticSeverity.Information));
   }
 
   return diagnostics;

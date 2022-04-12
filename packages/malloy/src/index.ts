@@ -52,6 +52,7 @@ export {
   Result,
   parseTableURL,
   QueryMaterializer,
+  Log,
 } from "./malloy";
 export type {
   Explore,
@@ -87,4 +88,3 @@ export type {
   TestableConnection,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
-export type { Loggable } from "./malloy";
