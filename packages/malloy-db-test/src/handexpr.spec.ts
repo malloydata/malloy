@@ -55,11 +55,11 @@ async function validateCompilation(
   return true;
 }
 
-function compileHandQueryToSQL(
+async function compileHandQueryToSQL(
   model: malloy.ModelMaterializer,
   queryDef: Query
 ): Promise<string> {
-  return model._loadQueryFromQueryDef(queryDef).getSQL();
+  return (await model._loadQueryFromQueryDef(queryDef).getSQL()).unwrap();
 }
 
 export const modelHandBase: StructDef = {
@@ -283,46 +283,53 @@ it(`hand query hand model - ${databaseName}`, async () => {
 });
 
 it(`hand turtle - ${databaseName}`, async () => {
-  const result = await handModel
-    ._loadQueryFromQueryDef({
-      structRef: "aircraft",
-      pipeHead: { name: "hand_turtle" },
-      pipeline: [],
-    })
-    .run();
+  const result = (
+    await handModel
+      ._loadQueryFromQueryDef({
+        structRef: "aircraft",
+        pipeHead: { name: "hand_turtle" },
+        pipeline: [],
+      })
+      .run()
+  ).unwrap();
   expect(result.data.value[0].aircraft_count).toBe(3599);
 });
 
 it(`hand turtle malloy - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
     query: aircraft->hand_turtle
 `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.value[0].aircraft_count).toBe(3599);
 });
 
 it(`default sort order - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
       query: aircraft->{
         group_by: state
         aggregate: aircraft_count
         limit: 10
       }
     `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.value[0].aircraft_count).toBe(367);
 });
 
 it(`default sort order by dir - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
       query: aircraft->{
         group_by: state
         aggregate: aircraft_count
@@ -330,8 +337,9 @@ it(`default sort order by dir - ${databaseName}`, async () => {
         limit:10
       }
     `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.value[0].aircraft_count).toBe(1);
 });
 
@@ -388,57 +396,60 @@ it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
 });
 
 it(`hand: turtle is pipeline - ${databaseName}`, async () => {
-  const result = await handModel
-    ._loadQueryFromQueryDef({
-      structRef: "aircraft",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: [
-            "aircraft_count",
-            {
-              type: "turtle",
-              name: "pipe",
-              pipeline: [
-                {
-                  type: "reduce",
-                  fields: ["state", "county", "aircraft_count"],
-                },
-                {
-                  type: "reduce",
-                  filterList: [fStringLike("county", "2%")],
-                  fields: [
-                    "state",
-                    {
-                      name: "total_aircraft",
-                      type: "number",
-                      e: [
-                        {
-                          type: "aggregate",
-                          function: "sum",
-                          e: [{ type: "field", path: "aircraft_count" }],
-                        },
-                      ],
-                      aggregate: true,
-                      numberType: "float",
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    })
-    .run();
+  const result = (
+    await handModel
+      ._loadQueryFromQueryDef({
+        structRef: "aircraft",
+        pipeline: [
+          {
+            type: "reduce",
+            fields: [
+              "aircraft_count",
+              {
+                type: "turtle",
+                name: "pipe",
+                pipeline: [
+                  {
+                    type: "reduce",
+                    fields: ["state", "county", "aircraft_count"],
+                  },
+                  {
+                    type: "reduce",
+                    filterList: [fStringLike("county", "2%")],
+                    fields: [
+                      "state",
+                      {
+                        name: "total_aircraft",
+                        type: "number",
+                        e: [
+                          {
+                            type: "aggregate",
+                            function: "sum",
+                            e: [{ type: "field", path: "aircraft_count" }],
+                          },
+                        ],
+                        aggregate: true,
+                        numberType: "float",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      .run()
+  ).unwrap();
   expect(result.data.path(0, "pipe", 0, "total_aircraft").value).toBe(61);
 });
 
 // Hand model basic calculations for sum, filtered sum, without a join.
 it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
           query: aircraft->{
             aggregate:
               aircraft_models.total_seats,
@@ -449,8 +460,9 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
               boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer: ~'B%'}
           }
         `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   // console.log(result.sql);
   expect(result.data.value[0].total_seats).toBe(18294);
   expect(result.data.value[0].total_seats2).toBe(31209);
@@ -461,15 +473,17 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
 });
 
 it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
         query: aircraft->{
           aggregate: total_seats3 is aircraft_models.sum(aircraft_models.seats)
         }
           `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   // console.log(result.sql);
   expect(result.data.value[0].total_seats3).toBe(18294);
 });
@@ -477,67 +491,77 @@ it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
 // WORKs: (hand coded model):
 // Model based version of sums.
 it(`hand: expression fixups. - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
             query: aircraft->{
               aggregate:
                 aircraft_models.total_seats,
                 aircraft_models.boeing_seats
             }
           `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.value[0].total_seats).toBe(18294);
   expect(result.data.value[0].boeing_seats).toBe(6244);
 });
 
 it(`model: filtered measures - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
             query: aircraft->{
               aggregate: boeing_seats is aircraft_models.total_seats {? aircraft_models.manufacturer:'BOEING'}
             }
           `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.value[0].boeing_seats).toBe(6244);
 });
 
 // does the filter force a join?
 it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
-  const result = await handModel
-    .loadQuery(
-      `
+  const result = (
+    await handModel
+      .loadQuery(
+        `
             query: aircraft->{
               aggregate: boeing_aircraft is count() {?aircraft_models.manufacturer:'BOEING'}
             }
           `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.value[0].boeing_aircraft).toBe(69);
 });
 
 // Works: Generate query using named alias.
 it(`hand: filtered measures - ${databaseName}`, async () => {
-  const result = await handModel
-    ._loadQueryFromQueryDef({
-      structRef: "aircraft",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: [
-            {
-              name: "aircraft_models.total_seats",
-              as: "boeing_seats",
-              filterList: [fStringEq("aircraft_models.manufacturer", "BOEING")],
-            },
-          ],
-        },
-      ],
-    })
-    .run();
+  const result = (
+    await handModel
+      ._loadQueryFromQueryDef({
+        structRef: "aircraft",
+        pipeline: [
+          {
+            type: "reduce",
+            fields: [
+              {
+                name: "aircraft_models.total_seats",
+                as: "boeing_seats",
+                filterList: [
+                  fStringEq("aircraft_models.manufacturer", "BOEING"),
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      .run()
+  ).unwrap();
   // console.log(result.sql);
   expect(result.data.value[0].boeing_seats).toBe(6244);
 });
@@ -623,23 +647,25 @@ it(`hand join ON - ${databaseName}`, async () => {
       ],
     })
     .getSQL();
-  await validateCompilation(databaseName, sql);
+  await validateCompilation(databaseName, sql.unwrap());
   // console.log(result.sql);
   // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
 it(`hand join symmetric agg - ${databaseName}`, async () => {
-  const result = await handJoinModel
-    ._loadQueryFromQueryDef({
-      structRef: "model_aircraft",
-      pipeline: [
-        {
-          type: "reduce",
-          fields: ["total_seats", "aircraft.aircraft_count"],
-        },
-      ],
-    })
-    .run();
+  const result = (
+    await handJoinModel
+      ._loadQueryFromQueryDef({
+        structRef: "model_aircraft",
+        pipeline: [
+          {
+            type: "reduce",
+            fields: ["total_seats", "aircraft.aircraft_count"],
+          },
+        ],
+      })
+      .run()
+  ).unwrap();
   // await bqCompile(databaseName, result.sql);
   // console.log(result.data.value);
   expect(result.data.value[0].total_seats).toBe(452415);

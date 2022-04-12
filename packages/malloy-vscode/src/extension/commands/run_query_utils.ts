@@ -219,95 +219,102 @@ export function runMalloyQuery(
       const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
 
       return (async () => {
-        try {
-          malloyLog.appendLine("");
-          const allBegin = performance.now();
-          const compileBegin = allBegin;
+        malloyLog.appendLine("");
+        const allBegin = performance.now();
+        const compileBegin = allBegin;
 
-          current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Compiling,
-          });
-          progress.report({ increment: 20, message: "Compiling" });
+        current.messages.postMessage({
+          type: QueryMessageType.QueryStatus,
+          status: QueryRunStatus.Compiling,
+        });
+        progress.report({ increment: 20, message: "Compiling" });
 
-          let runnable;
-          let styles: DataStyles = {};
-          const queryFileURL = URL.fromString(
-            "file://" + query.file.uri.fsPath
-          );
-          if (query.type === "string") {
-            runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
-          } else if (query.type === "named") {
-            runnable = runtime.loadQueryByName(queryFileURL, query.name);
-          } else if (query.type === "file") {
-            if (query.index === -1) {
-              runnable = runtime.loadQuery(queryFileURL);
-            } else {
-              runnable = runtime.loadQueryByIndex(queryFileURL, query.index);
-            }
-          } else if (query.type === "named_sql") {
-            runnable = runtime.loadSQLBlockByName(queryFileURL, query.name);
-          } else if (query.type === "unnamed_sql") {
-            runnable = runtime.loadSQLBlockByIndex(queryFileURL, query.index);
+        let runnable;
+        let styles: DataStyles = {};
+        const queryFileURL = URL.fromString("file://" + query.file.uri.fsPath);
+        if (query.type === "string") {
+          runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
+        } else if (query.type === "named") {
+          runnable = runtime.loadQueryByName(queryFileURL, query.name);
+        } else if (query.type === "file") {
+          if (query.index === -1) {
+            runnable = runtime.loadQuery(queryFileURL);
           } else {
-            throw new Error("Internal Error: Unexpected query type");
+            runnable = runtime.loadQueryByIndex(queryFileURL, query.index);
           }
+        } else if (query.type === "named_sql") {
+          runnable = runtime.loadSQLBlockByName(queryFileURL, query.name);
+        } else if (query.type === "unnamed_sql") {
+          runnable = runtime.loadSQLBlockByIndex(queryFileURL, query.index);
+        } else {
+          throw new Error("Internal Error: Unexpected query type");
+        }
 
-          // Set the row limit to the limit provided in the final stage of the query, if present
-          const rowLimit =
-            runnable instanceof QueryMaterializer
-              ? (await runnable.getPreparedResult()).resultExplore.limit
-              : undefined;
+        // Set the row limit to the limit provided in the final stage of the query, if present
+        const rowLimit =
+          runnable instanceof QueryMaterializer
+            ? (await runnable.getPreparedResult()).result?.resultExplore.limit
+            : undefined;
 
-          try {
-            const sql = await runnable.getSQL();
-            styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
+        try {
+          const sqlResponse = await runnable.getSQL();
+          if (sqlResponse.isSuccess()) {
+            const sql = sqlResponse.result;
 
             if (canceled) return;
             malloyLog.appendLine(sql);
-          } catch (error) {
-            current.messages.postMessage({
-              type: QueryMessageType.QueryStatus,
-              status: QueryRunStatus.Error,
-              error: error.message || "Something went wrong",
-            });
-            return;
           }
-
-          const compileEnd = performance.now();
-          logTime("Compile", compileBegin, compileEnd);
-
-          const runBegin = compileEnd;
-
-          current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Running,
-          });
-          progress.report({ increment: 40, message: "Running" });
-          const queryResult = await runnable.run({ rowLimit });
-          if (canceled) return;
-
-          const runEnd = performance.now();
-          logTime("Run", runBegin, runEnd);
-
-          current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Done,
-            result: queryResult.toJSON(),
-            styles,
-          });
-          current.result = queryResult;
-          progress.report({ increment: 100, message: "Rendering" });
-
-          const allEnd = performance.now();
-          logTime("Total", allBegin, allEnd);
         } catch (error) {
           current.messages.postMessage({
             type: QueryMessageType.QueryStatus,
             status: QueryRunStatus.Error,
-            error: error.message,
+            error: error.message || "Something went wrong",
           });
+          return;
         }
+
+        styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
+
+        const compileEnd = performance.now();
+        logTime("Compile", compileBegin, compileEnd);
+
+        const runBegin = compileEnd;
+
+        current.messages.postMessage({
+          type: QueryMessageType.QueryStatus,
+          status: QueryRunStatus.Running,
+        });
+        progress.report({ increment: 40, message: "Running" });
+        const queryResult = await runnable.run({ rowLimit });
+        if (canceled) return;
+
+        const runEnd = performance.now();
+        logTime("Run", runBegin, runEnd);
+
+        if (queryResult.isError()) {
+          current.messages.postMessage({
+            type: QueryMessageType.QueryStatus,
+            status: QueryRunStatus.Error,
+            error:
+              queryResult.logs.find(
+                (m) => m.severity === "error" || m.severity === undefined
+              )?.message || "Error",
+          });
+
+          return;
+        }
+
+        current.messages.postMessage({
+          type: QueryMessageType.QueryStatus,
+          status: QueryRunStatus.Done,
+          result: queryResult.result.toJSON(),
+          styles,
+        });
+        current.result = queryResult.result;
+        progress.report({ increment: 100, message: "Rendering" });
+
+        const allEnd = performance.now();
+        logTime("Total", allBegin, allEnd);
       })();
     }
   );

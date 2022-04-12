@@ -21,16 +21,19 @@ export async function getMalloyDefinitionReference(
   position: Position
 ): Promise<Location[]> {
   try {
-    const model = await translateWithCache(document, documents);
-    const reference = model.getReference(position);
-    const location = reference?.definition.location;
-    if (location) {
-      return [
-        {
-          uri: location.url,
-          range: location.range,
-        },
-      ];
+    const response = await translateWithCache(document, documents);
+    if (response.isSuccess()) {
+      const model = response.result;
+      const reference = model.getReference(position);
+      const location = reference?.definition.location;
+      if (location) {
+        return [
+          {
+            uri: location.url,
+            range: location.range,
+          },
+        ];
+      }
     }
     return [];
   } catch {

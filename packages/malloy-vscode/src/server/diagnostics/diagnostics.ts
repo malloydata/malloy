@@ -16,7 +16,7 @@ import {
   DiagnosticSeverity,
   TextDocuments,
 } from "vscode-languageserver/node";
-import { Log, LogMessage, MalloyError } from "@malloydata/malloy";
+import { MalloyError } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { translateWithCache } from "../translate_cache";
 
@@ -30,9 +30,22 @@ export async function getMalloyDiagnostics(
   document: TextDocument
 ): Promise<Diagnostic[]> {
   const diagnostics: Diagnostic[] = [];
-  const log = new Log();
   try {
-    await translateWithCache(document, documents, log);
+    const response = await translateWithCache(document, documents);
+    for (const message of response.logs) {
+      const severity =
+        message.severity === "warn"
+          ? DiagnosticSeverity.Warning
+          : message.severity === "debug"
+          ? DiagnosticSeverity.Information
+          : DiagnosticSeverity.Error;
+      diagnostics.push({
+        severity,
+        range: message.at?.range || DEFAULT_RANGE,
+        message: message.message,
+        source: "malloy",
+      });
+    }
   } catch (error) {
     if (!(error instanceof MalloyError)) {
       // TODO this kind of error should cease to exist. All errors should have source info.
@@ -43,27 +56,6 @@ export async function getMalloyDiagnostics(
         source: "malloy",
       });
     }
-  }
-
-  function mapMessage(message: LogMessage, severity: DiagnosticSeverity) {
-    return {
-      severity,
-      range: message.at?.range || DEFAULT_RANGE,
-      message: message.message,
-      source: "malloy",
-    };
-  }
-
-  for (const error of log.errors) {
-    diagnostics.push(mapMessage(error, DiagnosticSeverity.Error));
-  }
-
-  for (const warning of log.warnings) {
-    diagnostics.push(mapMessage(warning, DiagnosticSeverity.Warning));
-  }
-
-  for (const info of log.infos) {
-    diagnostics.push(mapMessage(info, DiagnosticSeverity.Information));
   }
 
   return diagnostics;

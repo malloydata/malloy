@@ -57,24 +57,27 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
 
 expressionModels.forEach((orderByModel, databaseName) => {
   it(`boolean type - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
+    const result = (
+      await orderByModel
+        .loadQuery(
+          `
         query: models-> {
           group_by: big is seats >=20
           aggregate: model_count is count()
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.row(0).cell("big").value).toBe(false);
     expect(result.data.row(0).cell("model_count").value).toBe(58451);
   });
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
+    const result = (
+      await orderByModel
+        .loadQuery(
+          `
         query: models->{
           group_by:
             manufacturer,
@@ -85,16 +88,18 @@ expressionModels.forEach((orderByModel, databaseName) => {
           aggregate: model_count is model_count.sum()
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.row(0).cell("big").value).toBe(false);
     expect(result.data.row(0).cell("model_count").value).toBe(58500);
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
+    const result = (
+      await orderByModel
+        .loadQuery(
+          `
         query: models->{
           aggregate: j_names is model_count {where: manufacturer ~ 'J%'}
         }
@@ -102,30 +107,34 @@ expressionModels.forEach((orderByModel, databaseName) => {
           group_by: j_names
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.row(0).cell("j_names").value).toBe(1358);
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    const sql = (
+      await orderByModel
+        .loadQuery(
+          `
       query: models->{
         aggregate: fetch is count()
       }->{
         group_by: fetch
       }
       `
-      )
-      .getSQL();
+        )
+        .getSQL()
+    ).unwrap();
     await validateCompilation(databaseName, sql);
   });
 
   it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    const sql = (
+      await orderByModel
+        .loadQuery(
+          `
       query: models->{
         nest: withx is {
           group_by: select is UPPER(manufacturer)
@@ -137,15 +146,17 @@ expressionModels.forEach((orderByModel, databaseName) => {
           fetch is withx.fetch
       }
       `
-      )
-      .getSQL();
+        )
+        .getSQL()
+    ).unwrap();
     await validateCompilation(databaseName, sql);
   });
 
   it.skip("reserved words in structure definitions", async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    const sql = (
+      await orderByModel
+        .loadQuery(
+          `
       query: models->{
         nest: withx is {
           group_by: is select is UPPER(manufacturer)
@@ -156,29 +167,33 @@ expressionModels.forEach((orderByModel, databaseName) => {
         project: fetch is with.fetch
       }
       `
-      )
-      .getSQL();
+        )
+        .getSQL()
+    ).unwrap();
     await validateCompilation(databaseName, sql);
   });
 
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    const sql = (
+      await orderByModel
+        .loadQuery(
+          `
       query: models->{
         aggregate: model_count is count(){? manufacturer: ~'A%' }
       }
       `
-      )
-      .getSQL();
+        )
+        .getSQL()
+    ).unwrap();
     await validateCompilation(databaseName, sql);
   });
 
   // I'm not sure I have the syntax right here...
   it(`modeled having simple - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
+    const result = (
+      await orderByModel
+        .loadQuery(
+          `
         explore: popular_names is from(models->{
           where: model_count > 100
           group_by: manufacturer
@@ -190,15 +205,17 @@ expressionModels.forEach((orderByModel, databaseName) => {
           project: manufacturer, model_count
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.row(0).cell("model_count").value).toBe(102);
   });
 
   it(`modeled having complex - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
+    const result = (
+      await orderByModel
+        .loadQuery(
+          `
         explore: popular_names is from(models->{
           where: model_count > 100
           group_by: manufacturer
@@ -215,15 +232,17 @@ expressionModels.forEach((orderByModel, databaseName) => {
          project: manufacturer, model_count
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.row(0).cell("model_count").value).toBe(102);
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    const sql = (
+      await orderByModel
+        .loadQuery(
+          `
     explore: a is table('malloytest.aircraft'){
       primary_key: tail_num
       measure: aircraft_count is count(*)
@@ -242,8 +261,9 @@ expressionModels.forEach((orderByModel, databaseName) => {
     }
     query: f->foo
   `
-      )
-      .getSQL();
+        )
+        .getSQL()
+    ).unwrap();
     await validateCompilation(databaseName, sql);
   });
 });

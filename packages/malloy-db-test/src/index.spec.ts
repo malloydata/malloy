@@ -28,14 +28,16 @@ afterAll(async () => {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`basic index  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadModel(
-        `
+    const result = (
+      await runtime
+        .loadModel(
+          `
         source: airports is table('malloytest.airports') {
         }
     `
-      )
-      .search("airports", "SANTA");
+        )
+        .search("airports", "SANTA")
+    ).unwrap();
     // if (result !== undefined) {
     //   console.log(result);
     // } else {

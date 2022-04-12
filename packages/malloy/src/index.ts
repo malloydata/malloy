@@ -44,7 +44,6 @@ export {
   EmptyURLReader,
   InMemoryURLReader,
   FixedConnectionMap,
-  MalloyError,
   JoinRelationship,
   SourceRelationship,
   DateTimeframe,
@@ -52,7 +51,6 @@ export {
   Result,
   parseTableURL,
   QueryMaterializer,
-  Log,
 } from "./malloy";
 export type {
   Explore,
@@ -88,3 +86,5 @@ export type {
   TestableConnection,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
+export { MalloyError } from "./response";
+export type { Response } from "./response";

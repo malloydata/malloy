@@ -12,12 +12,15 @@
  */
 
 import { TextDocuments } from "vscode-languageserver/node";
-import { Log, Model, Runtime, URL } from "@malloydata/malloy";
+import { Response, Model, Runtime, URL } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import { CONNECTION_MANAGER } from "./connections";
 
-const TRANSLATE_CACHE = new Map<string, { model: Model; version: number }>();
+const TRANSLATE_CACHE = new Map<
+  string,
+  { model: Response<Model>; version: number }
+>();
 
 async function getDocumentText(
   documents: TextDocuments<TextDocument>,
@@ -34,9 +37,8 @@ async function getDocumentText(
 
 export async function translateWithCache(
   document: TextDocument,
-  documents: TextDocuments<TextDocument>,
-  log?: Log
-): Promise<Model> {
+  documents: TextDocuments<TextDocument>
+): Promise<Response<Model>> {
   const currentVersion = document.version;
   const uri = document.uri.toString();
 
@@ -50,7 +52,7 @@ export async function translateWithCache(
   };
   const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
 
-  const model = await runtime.getModel(new URL(uri), log);
+  const model = await runtime.getModel(new URL(uri));
   TRANSLATE_CACHE.set(uri, { version: currentVersion, model });
   return model;
 }

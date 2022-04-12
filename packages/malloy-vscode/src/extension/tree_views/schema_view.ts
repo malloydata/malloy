@@ -119,7 +119,9 @@ async function getStructs(
     const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
     const model = await runtime.getModel(uri);
 
-    return Object.values(model.explores).sort(exploresByName);
+    if (model.isSuccess()) {
+      return Object.values(model.result.explores).sort(exploresByName);
+    }
   } catch (error) {
     return undefined;
   }

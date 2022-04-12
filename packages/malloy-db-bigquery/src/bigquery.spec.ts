@@ -49,7 +49,7 @@ describe("db:BigQuery", () => {
       )
       .loadQuery("query: carriers -> { aggregate: carrier_count }")
       .getSQL();
-    const res = await bq.runSQL(sql);
+    const res = await bq.runSQL(sql.unwrap());
     expect(res.rows[0]["carrier_count"]).toBe(21);
   });
 
@@ -60,7 +60,7 @@ describe("db:BigQuery", () => {
       )
       .loadQuery("query: carriers -> { group_by: name }")
       .getSQL();
-    const res = await bq.downloadMalloyQuery(sql);
+    const res = await bq.downloadMalloyQuery(sql.unwrap());
 
     return new Promise((resolve) => {
       let count = 0;

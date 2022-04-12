@@ -26,9 +26,10 @@ afterAll(async () => {
 
 describe("postgres tests", () => {
   it(`raw date tests`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    const result = (
+      await runtime
+        .loadQuery(
+          `
         sql: times is ||
           select '2020-03-02'::date as t_date,
           '2020-03-02 12:35:56'::timestamp without time zone as t_timestamp_no_tz,
@@ -56,8 +57,9 @@ describe("postgres tests", () => {
             // t_timestamp_no_tz_year is t_timestamp_no_tz.year,
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // console.log(result.sql);
     // console.log(result.data.toObject());
     expect(result.data.path(0, "t_date").value).toEqual(new Date("2020-03-02"));
@@ -112,17 +114,19 @@ describe("postgres tests", () => {
   });
 
   it(`sql_block`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    const result = (
+      await runtime
+        .loadQuery(
+          `
       sql: one is ||
         SELECT 1 as n
        ;;
 
       query: from_sql(one) -> { project: n }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.value[0].n).toBe(1);
   });
 });

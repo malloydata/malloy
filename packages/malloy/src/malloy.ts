@@ -16,7 +16,6 @@ import {
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
   DocumentCompletion as DocumentCompletionDefinition,
-  LogMessage,
   MalloyTranslator,
 } from "./lang";
 import {
@@ -52,41 +51,7 @@ import {
   URLReader,
   Connection,
 } from "./runtime_types";
-
-export class Log {
-  public readonly errors: LogMessage[] = [];
-  public readonly warnings: LogMessage[] = [];
-  public readonly infos: LogMessage[] = [];
-  public readonly debugs: LogMessage[] = [];
-
-  error(message: LogMessage): void {
-    this.errors.push(message);
-  }
-
-  info(message: LogMessage): void {
-    this.infos.push(message);
-  }
-
-  debug(message: LogMessage): void {
-    this.debugs.push(message);
-  }
-
-  warning(message: LogMessage): void {
-    this.warnings.push(message);
-  }
-
-  logs(messages: LogMessage[]): void {
-    messages.forEach((message) => {
-      if (message.severity === "error" || message.severity === undefined) {
-        this.error(message);
-      } else if (message.severity === "debug") {
-        this.debug(message);
-      } else {
-        this.warning(message);
-      }
-    });
-  }
-}
+import { Response, SuccessResponse, ErrorResponse } from "./response";
 
 export class Malloy {
   // TODO load from file built during release
@@ -189,35 +154,29 @@ export class Malloy {
     connections,
     parse,
     model,
-    log,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-    log?: Log;
-  }): Promise<Model> {
+  }): Promise<Response<Model>> {
     const translator = parse._translator;
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
-        const logMessages = result.errors || [];
-        log?.logs(logMessages);
+        const logs = result.errors || [];
         if (result.translated) {
-          return new Model(
+          const model = new Model(
             result.translated.modelDef,
             result.translated.queryList,
             result.translated.sqlBlocks,
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position)
           );
+          return new SuccessResponse(model, logs);
         } else {
-          const errText = translator.prettyErrors();
-          throw new MalloyError(
-            `Error(s) compiling model:\n${errText}`,
-            logMessages
-          );
+          return new ErrorResponse(logs);
         }
       } else {
         // Parse incomplete because some external information is required,
@@ -428,21 +387,6 @@ export class Malloy {
         "Internal error: sqlBlock or preparedResult must be provided."
       );
     }
-  }
-}
-
-/**
- * A Malloy error, which may contain log messages produced during compilation.
- */
-export class MalloyError extends Error {
-  /**
-   * An array of log messages produced during compilation.
-   */
-  public readonly log: LogMessage[];
-
-  constructor(message: string, log: LogMessage[] = []) {
-    super(message);
-    this.log = log;
   }
 }
 
@@ -1675,10 +1619,7 @@ export class Runtime {
    * @returns A `ModelMaterializer` capable of materializing the requested model,
    * or loading further related objects.
    */
-  public loadModel(
-    source: ModelURL | ModelString,
-    log?: Log
-  ): ModelMaterializer {
+  public loadModel(source: ModelURL | ModelString): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
       const parse =
         source instanceof URL
@@ -1693,7 +1634,6 @@ export class Runtime {
         urlReader: this.urlReader,
         connections: this.connections,
         parse,
-        log,
       });
     });
   }
@@ -1704,7 +1644,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async function materialize() {
-      return new Model(modelDef, [], []);
+      return new SuccessResponse(new Model(modelDef, [], []), []);
     });
   }
 
@@ -1715,11 +1655,8 @@ export class Runtime {
    * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQuery(
-    query: QueryURL | QueryString,
-    log?: Log
-  ): QueryMaterializer {
-    return this.loadModel(query, log).loadFinalQuery();
+  public loadQuery(query: QueryURL | QueryString): QueryMaterializer {
+    return this.loadModel(query).loadFinalQuery();
   }
 
   /**
@@ -1733,10 +1670,9 @@ export class Runtime {
    */
   public loadQueryByIndex(
     model: ModelURL | ModelString,
-    index: number,
-    log?: Log
+    index: number
   ): QueryMaterializer {
-    return this.loadModel(model, log).loadQueryByIndex(index);
+    return this.loadModel(model).loadQueryByIndex(index);
   }
 
   /**
@@ -1750,10 +1686,9 @@ export class Runtime {
    */
   public loadQueryByName(
     model: ModelURL | ModelString,
-    name: string,
-    log?: Log
+    name: string
   ): QueryMaterializer {
-    return this.loadModel(model, log).loadQueryByName(name);
+    return this.loadModel(model).loadQueryByName(name);
   }
 
   /**
@@ -1767,10 +1702,9 @@ export class Runtime {
    */
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
-    name: string,
-    log?: Log
+    name: string
   ): SQLBlockMaterializer {
-    return this.loadModel(model, log).loadSQLBlockByName(name);
+    return this.loadModel(model).loadSQLBlockByName(name);
   }
 
   /**
@@ -1784,10 +1718,9 @@ export class Runtime {
    */
   public loadSQLBlockByIndex(
     model: ModelURL | ModelString,
-    index: number,
-    log?: Log
+    index: number
   ): SQLBlockMaterializer {
-    return this.loadModel(model, log).loadSQLBlockByIndex(index);
+    return this.loadModel(model).loadSQLBlockByIndex(index);
   }
 
   // TODO maybe use overloads for the alternative parameters
@@ -1797,8 +1730,8 @@ export class Runtime {
    * @param source The URL or contents of a Malloy model document to compile.
    * @returns A promise of a compiled `Model`.
    */
-  public getModel(source: ModelURL | ModelString, log?: Log): Promise<Model> {
-    return this.loadModel(source, log).getModel();
+  public getModel(source: ModelURL | ModelString): Promise<Response<Model>> {
+    return this.loadModel(source).getModel();
   }
 
   /**
@@ -1808,10 +1741,9 @@ export class Runtime {
    * @returns A promise of a compiled `PreparedQuery`.
    */
   public getQuery(
-    query: QueryURL | QueryString,
-    log?: Log
-  ): Promise<PreparedQuery> {
-    return this.loadQuery(query, log).getPreparedQuery();
+    query: QueryURL | QueryString
+  ): Promise<Response<PreparedQuery>> {
+    return this.loadQuery(query).getPreparedQuery();
   }
 
   /**
@@ -1824,10 +1756,9 @@ export class Runtime {
    */
   public getQueryByIndex(
     model: ModelURL | ModelString,
-    index: number,
-    log?: Log
-  ): Promise<PreparedQuery> {
-    return this.loadQueryByIndex(model, index, log).getPreparedQuery();
+    index: number
+  ): Promise<Response<PreparedQuery>> {
+    return this.loadQueryByIndex(model, index).getPreparedQuery();
   }
 
   /**
@@ -1840,10 +1771,9 @@ export class Runtime {
    */
   public getQueryByName(
     model: ModelURL | ModelString,
-    name: string,
-    log?: Log
-  ): Promise<PreparedQuery> {
-    return this.loadQueryByName(model, name, log).getPreparedQuery();
+    name: string
+  ): Promise<Response<PreparedQuery>> {
+    return this.loadQueryByName(model, name).getPreparedQuery();
   }
 
   /**
@@ -1856,10 +1786,9 @@ export class Runtime {
    */
   public getSQLBlockByName(
     model: ModelURL | ModelString,
-    name: string,
-    log?: Log
-  ): Promise<SQLBlock> {
-    return this.loadSQLBlockByName(model, name, log).getSQLBlock();
+    name: string
+  ): Promise<Response<SQLBlock>> {
+    return this.loadSQLBlockByName(model, name).getSQLBlock();
   }
 
   /**
@@ -1872,10 +1801,9 @@ export class Runtime {
    */
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
-    index: number,
-    log?: Log
-  ): Promise<SQLBlock> {
-    return this.loadSQLBlockByIndex(model, index, log).getSQLBlock();
+    index: number
+  ): Promise<Response<SQLBlock>> {
+    return this.loadSQLBlockByIndex(model, index).getSQLBlock();
   }
 }
 
@@ -1925,48 +1853,60 @@ export class SingleConnectionRuntime<
 
 class FluentState<T> {
   protected runtime: Runtime;
-  private readonly _materialize: () => Promise<T>;
-  private materialized: Promise<T> | undefined;
+  private readonly _materialize: () => Promise<Response<T>>;
+  private materialized: Promise<Response<T>> | undefined;
 
-  constructor(runtime: Runtime, materialize: () => Promise<T>) {
+  constructor(runtime: Runtime, materialize: () => Promise<Response<T>>) {
     this.runtime = runtime;
     this._materialize = materialize;
   }
 
-  protected materialize(): Promise<T> {
+  protected materialize(): Promise<Response<T>> {
     if (this.materialized === undefined) {
       return this.rematerialize();
     }
     return this.materialized;
   }
 
-  protected rematerialize(): Promise<T> {
+  protected rematerialize(): Promise<Response<T>> {
     this.materialized = this._materialize();
     return this.materialized;
   }
 
   protected makeQueryMaterializer(
-    materialize: () => Promise<PreparedQuery>
+    materialize: () => Promise<Response<PreparedQuery>>
   ): QueryMaterializer {
     return new QueryMaterializer(this.runtime, materialize);
   }
 
   protected makeExploreMaterializer(
-    materialize: () => Promise<Explore>
+    materialize: () => Promise<Response<Explore>>
   ): ExploreMaterializer {
     return new ExploreMaterializer(this.runtime, materialize);
   }
 
   protected makePreparedResultMaterializer(
-    materialize: () => Promise<PreparedResult>
+    materialize: () => Promise<Response<PreparedResult>>
   ): PreparedResultMaterializer {
     return new PreparedResultMaterializer(this.runtime, materialize);
   }
 
   protected makeSQLBlockMaterializer(
-    materialize: () => Promise<SQLBlock>
+    materialize: () => Promise<Response<SQLBlock>>
   ): SQLBlockMaterializer {
     return new SQLBlockMaterializer(this.runtime, materialize);
+  }
+
+  protected async map<O>(
+    map: (result: T) => O | Promise<O>
+  ): Promise<Response<O>> {
+    return (await this.materialize()).mapAsync(map);
+  }
+
+  protected async flatMap<O>(
+    map: (result: T) => Response<O> | Promise<Response<O>>
+  ): Promise<Response<O>> {
+    return (await this.materialize()).flatMapAsync(map);
   }
 }
 
@@ -1984,7 +1924,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadFinalQuery(): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).preparedQuery;
+      return this.map((model) => model.preparedQuery);
     });
   }
 
@@ -1997,7 +1937,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQueryByIndex(index: number): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getPreparedQueryByIndex(index);
+      return this.map((model) => model.getPreparedQueryByIndex(index));
     });
   }
 
@@ -2010,7 +1950,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQueryByName(name: string): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getPreparedQueryByName(name);
+      return this.map((model) => model.getPreparedQueryByName(name));
     });
   }
 
@@ -2021,10 +1961,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQuery(
-    query: QueryString | QueryURL,
-    log?: Log
-  ): QueryMaterializer {
+  public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
@@ -2037,28 +1974,33 @@ export class ModelMaterializer extends FluentState<Model> {
           : Malloy.parse({
               source: query,
             });
-      const model = await this.getModel();
-      const queryModel = await Malloy.compile({
-        urlReader,
-        connections,
-        parse,
-        model,
-        log,
+
+      return this.flatMap(async (model) => {
+        return (
+          await Malloy.compile({
+            urlReader,
+            connections,
+            parse,
+            model,
+          })
+        ).map((queryModel) => queryModel.preparedQuery);
       });
-      return queryModel.preparedQuery;
     });
   }
 
   public async search(
     sourceName: string,
     searchTerm: string
-  ): Promise<SearchIndexResult[] | undefined> {
-    return Malloy.search({
-      model: await this.materialize(),
-      connections: this.runtime.connections,
-      sourceName,
-      searchTerm,
-    });
+  ): Promise<Response<SearchIndexResult[] | undefined>> {
+    return this.map(
+      async (model) =>
+        await Malloy.search({
+          model,
+          connections: this.runtime.connections,
+          sourceName,
+          searchTerm,
+        })
+    );
   }
 
   /**
@@ -2070,7 +2012,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadSQLBlockByName(name: string): SQLBlockMaterializer {
     return this.makeSQLBlockMaterializer(async () => {
-      return (await this.materialize()).getSQLBlockByName(name);
+      return this.map((model) => model.getSQLBlockByName(name));
     });
   }
 
@@ -2085,7 +2027,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadSQLBlockByIndex(index: number): SQLBlockMaterializer {
     return this.makeSQLBlockMaterializer(async () => {
-      return (await this.materialize()).getSQLBlockByIndex(index);
+      return this.map((model) => model.getSQLBlockByIndex(index));
     });
   }
 
@@ -2094,7 +2036,7 @@ export class ModelMaterializer extends FluentState<Model> {
    *
    * @returns A promise to a prepared query.
    */
-  public getFinalQuery(): Promise<PreparedQuery> {
+  public getFinalQuery(): Promise<Response<PreparedQuery>> {
     return this.loadFinalQuery().getPreparedQuery();
   }
 
@@ -2104,7 +2046,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param index The index of the query contained within this loaded `Model`.
    * @returns A promise to a prepared query.
    */
-  public getQueryByIndex(index: number): Promise<PreparedQuery> {
+  public getQueryByIndex(index: number): Promise<Response<PreparedQuery>> {
     return this.loadQueryByIndex(index).getPreparedQuery();
   }
 
@@ -2114,7 +2056,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param name The name of the query contained within this loaded `Model`.
    * @returns A promise to a prepared query.
    */
-  public getQueryByName(name: string): Promise<PreparedQuery> {
+  public getQueryByName(name: string): Promise<Response<PreparedQuery>> {
     return this.loadQueryByName(name).getPreparedQuery();
   }
 
@@ -2124,7 +2066,9 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param query The URL or contents of a query document to compile.
    * @returns A promise to a prepared query.
    */
-  public getQuery(query: QueryString | QueryURL): Promise<PreparedQuery> {
+  public getQuery(
+    query: QueryString | QueryURL
+  ): Promise<Response<PreparedQuery>> {
     return this.loadQuery(query).getPreparedQuery();
   }
 
@@ -2134,7 +2078,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param name The name of the SQL Block to load.
    * @returns A promise of a `SQLBlock`.
    */
-  public getSQLBlockByName(name: string): Promise<SQLBlock> {
+  public getSQLBlockByName(name: string): Promise<Response<SQLBlock>> {
     return this.loadSQLBlockByName(name).getSQLBlock();
   }
 
@@ -2146,7 +2090,7 @@ export class ModelMaterializer extends FluentState<Model> {
    *
    * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
    */
-  public getSQLBlockByIndex(index: number): Promise<SQLBlock> {
+  public getSQLBlockByIndex(index: number): Promise<Response<SQLBlock>> {
     return this.loadSQLBlockByIndex(index).getSQLBlock();
   }
 
@@ -2156,8 +2100,7 @@ export class ModelMaterializer extends FluentState<Model> {
   //      be used in tests.
   public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      const model = await this.materialize();
-      return new PreparedQuery(query, model._modelDef);
+      return this.map((model) => new PreparedQuery(query, model._modelDef));
     });
   }
 
@@ -2170,7 +2113,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadExploreByName(name: string): ExploreMaterializer {
     return this.makeExploreMaterializer(async () => {
-      return (await this.materialize()).getExploreByName(name);
+      return this.map((model) => model.getExploreByName(name));
     });
   }
 
@@ -2180,7 +2123,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param query The name of an explore within this loaded `Model`.
    * @returns A promise to an explore.
    */
-  public getExploreByName(name: string): Promise<Explore> {
+  public getExploreByName(name: string): Promise<Response<Explore>> {
     return this.loadExploreByName(name).getExplore();
   }
 
@@ -2189,7 +2132,7 @@ export class ModelMaterializer extends FluentState<Model> {
    *
    * @returns A promise to the compiled model that is loaded.
    */
-  public getModel(): Promise<Model> {
+  public getModel(): Promise<Response<Model>> {
     return this.materialize();
   }
 }
@@ -2205,10 +2148,11 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns The query results from running this loaded query.
    */
-  async run(options?: { rowLimit?: number }): Promise<Result> {
+  async run(options?: { rowLimit?: number }): Promise<Response<Result>> {
     const connections = this.runtime.connections;
-    const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ connections, preparedResult, options });
+    return (await this.getPreparedResult()).mapAsync((preparedResult) =>
+      Malloy.run({ connections, preparedResult, options })
+    );
   }
 
   /**
@@ -2219,7 +2163,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    */
   public loadPreparedResult(): PreparedResultMaterializer {
     return this.makePreparedResultMaterializer(async () => {
-      return (await this.materialize()).preparedResult;
+      return this.map((query) => query.preparedResult);
     });
   }
 
@@ -2228,7 +2172,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns A promise of the prepared result of this loaded query.
    */
-  public getPreparedResult(): Promise<PreparedResult> {
+  public getPreparedResult(): Promise<Response<PreparedResult>> {
     return this.loadPreparedResult().getPreparedResult();
   }
 
@@ -2237,8 +2181,10 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns A promise of the SQL string.
    */
-  public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).sql;
+  public async getSQL(): Promise<Response<string>> {
+    return (await this.getPreparedResult()).map(
+      (preparedResult) => preparedResult.sql
+    );
   }
 
   /**
@@ -2246,7 +2192,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns A promise of the `PreparedQuery`.
    */
-  public getPreparedQuery(): Promise<PreparedQuery> {
+  public getPreparedQuery(): Promise<Response<PreparedQuery>> {
     return this.materialize();
   }
 }
@@ -2262,10 +2208,11 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    *
    * @returns A promise to the query result data.
    */
-  async run(options?: { rowLimit?: number }): Promise<Result> {
-    const preparedResult = await this.getPreparedResult();
-    const connections = this.runtime.connections;
-    return Malloy.run({ connections, preparedResult, options });
+  async run(options?: { rowLimit?: number }): Promise<Response<Result>> {
+    return this.map((preparedResult) => {
+      const connections = this.runtime.connections;
+      return Malloy.run({ connections, preparedResult, options });
+    });
   }
 
   /**
@@ -2273,7 +2220,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    *
    * @returns A promise of a prepared result.
    */
-  public getPreparedResult(): Promise<PreparedResult> {
+  public getPreparedResult(): Promise<Response<PreparedResult>> {
     return this.materialize();
   }
 
@@ -2282,8 +2229,8 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    *
    * @returns A promise to the SQL string.
    */
-  public async getSQL(): Promise<string> {
-    return (await this.getPreparedResult()).sql;
+  public async getSQL(): Promise<Response<string>> {
+    return this.map((preparedResult) => preparedResult.sql);
   }
 }
 
@@ -2298,13 +2245,16 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    *
    * @returns A promise to the query result data.
    */
-  async run(options?: { rowLimit?: number }): Promise<Result> {
-    const sqlBlock = await this.getSQLBlock();
-    const connections = this.runtime.connections;
-    return Malloy.run({
-      connections,
-      sqlBlock,
-      options,
+  async run(options?: { rowLimit?: number }): Promise<Response<Result>> {
+    return await (
+      await this.getSQLBlock()
+    ).mapAsync(async (sqlBlock) => {
+      const connections = this.runtime.connections;
+      return await Malloy.run({
+        connections,
+        sqlBlock,
+        options,
+      });
     });
   }
 
@@ -2313,7 +2263,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    *
    * @returns A promise of a SQL block.
    */
-  public getSQLBlock(): Promise<SQLBlock> {
+  public getSQLBlock(): Promise<Response<SQLBlock>> {
     return this.materialize();
   }
 
@@ -2322,9 +2272,8 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    *
    * @returns A promise to the SQL string.
    */
-  public async getSQL(): Promise<string> {
-    const sqlBlock = await this.getSQLBlock();
-    return sqlBlock.select;
+  public async getSQL(): Promise<Response<string>> {
+    return this.map((sqlBlock) => sqlBlock.select);
   }
 }
 
@@ -2343,7 +2292,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    */
   public loadQueryByName(name: string): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
-      return (await this.materialize()).getQueryByName(name);
+      return this.map((explore) => explore.getQueryByName(name));
     });
   }
 
@@ -2353,7 +2302,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    * @param name The name of the query to materialize.
    * @returns A promise to the requested prepared query.
    */
-  public getQueryByName(name: string): Promise<PreparedQuery> {
+  public getQueryByName(name: string): Promise<Response<PreparedQuery>> {
     return this.loadQueryByName(name).getPreparedQuery();
   }
 
@@ -2362,7 +2311,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    *
    * @returns A promise to the compiled `Explore`.
    */
-  public getExplore(): Promise<Explore> {
+  public getExplore(): Promise<Response<Explore>> {
     return this.materialize();
   }
 }

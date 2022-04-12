@@ -59,50 +59,57 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
 const expressionModel = runtime.loadModel(expressionModelText);
 
 it(`default query`, async () => {
-  const result = await expressionModel
-    .loadQuery(
-      `
+  const result = (
+    await expressionModel
+      .loadQuery(
+        `
       query: default_aircraft-> {
         aggregate: aircraft_count
       }
     `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   // console.log(result.sql);
   expect(result.data.path(0, "aircraft_count").value).toBe(3599);
 });
 
 it(`bigquery query`, async () => {
-  const result = await expressionModel
-    .loadQuery(
-      `
+  const result = (
+    await expressionModel
+      .loadQuery(
+        `
       query: bigquery_state_facts-> {
         aggregate: state_count
       }
     `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   // console.log(result.sql);
   expect(result.data.path(0, "state_count").value).toBe(53);
 });
 
 it(`postgres query`, async () => {
-  const result = await expressionModel
-    .loadQuery(
-      `
+  const result = (
+    await expressionModel
+      .loadQuery(
+        `
       query: postgres_aircraft-> {
         aggregate: aircraft_count
       }
     `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.path(0, "aircraft_count").value).toBe(3603);
 });
 
 it(`postgres raw query`, async () => {
-  const result = await runtime
-    .loadQuery(
-      `
+  const result = (
+    await runtime
+      .loadQuery(
+        `
       query: table('postgres:malloytest.airports')->{
         group_by:
           version is version()
@@ -111,8 +118,9 @@ it(`postgres raw query`, async () => {
           airport_count is count()
       }
     `
-    )
-    .run();
+      )
+      .run()
+  ).unwrap();
   expect(result.data.path(0, "airport_count").value).toBe(19793);
   expect(result.data.path(0, "version").value).toMatch(/Postgre/);
   expect(result.data.path(0, "code_count").value).toBe(19793);

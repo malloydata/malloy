@@ -47,9 +47,10 @@ const basicTypes: Record<DialectNames, string> = {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   async function sqlEq(expr: string, result: string) {
-    return await runtime
-      .loadQuery(
-        `
+    return (
+      await runtime
+        .loadQuery(
+          `
           sql: basicTypes is || ${basicTypes[databaseName]} ;;
           query:
             from_sql(basicTypes) {
@@ -63,8 +64,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
                 else concat('${expr} != ${result}. Got: ', got::string)
             }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
   }
 
   function checkEqual(result: Result, log = false) {
@@ -76,9 +78,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   }
 
   it(`sql_block no explore- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    const result = (
+      await runtime
+        .loadQuery(
+          `
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
@@ -87,8 +90,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           t_timestamp
       }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // console.log(result.sql);
     expect(result.data.path(0, "t_date").value).toEqual(new Date("2021-02-24"));
     expect(result.data.path(0, "t_timestamp").value).toEqual(
@@ -97,9 +101,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`dates and timestamps - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    const result = (
+      await runtime
+        .loadQuery(
+          `
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
@@ -115,10 +120,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           t3 is count() { where: t_timestamp: @2021-02-23 00:00:00 for 2 days} = 1
       }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // console.log(result.sql);
-
     result.resultExplore.allFields.forEach((field) => {
       expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
         `true ${field.name}`
@@ -127,9 +132,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`Run Test Here - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    const result = (
+      await runtime
+        .loadQuery(
+          `
       sql: basicTypes is || ${basicTypes[databaseName]} ;;
 
       query: from_sql(basicTypes) -> {
@@ -144,8 +150,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           // t2 is count() { where: t_timestamp: @2021-02-23 for 2 days} = 1
       }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // console.log(result.sql);
 
     result.resultExplore.allFields.forEach((field) => {

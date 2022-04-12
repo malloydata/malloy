@@ -55,9 +55,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
 expressionModels.forEach((expressionModel, databaseName) => {
   // basic calculations for sum, filtered sum, without a join.
   it(`basic calculations - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft_models->{
           aggregate:
             total_seats,
@@ -71,8 +72,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
             -- percent_boeing_floor2 is FLOOR(boeing_seats / total_seats * 100)
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "total_seats").value).toBe(452415);
     expect(result.data.path(0, "total_seats2").value).toBe(452415);
     expect(result.data.path(0, "boeing_seats").value).toBe(252771);
@@ -89,69 +91,78 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
   // Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
   it(`Floor() -or any function bustage with aggregates - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft_models->{
           aggregate:
             percent_boeing_floor
             percent_boeing_floor2 is FLOOR(boeing_seats / total_seats * 100)
         }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "percent_boeing_floor").value).toBe(55);
     expect(result.data.path(0, "percent_boeing_floor2").value).toBe(55);
   });
 
   // Model based version of sums.
   it(`model: expression fixups. - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
             query: aircraft->{
               aggregate:
                 aircraft_models.total_seats
                 aircraft_models.boeing_seats
             }
           `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "total_seats").value).toBe(18294);
     expect(result.data.path(0, "boeing_seats").value).toBe(6244);
   });
 
   // turtle expressions
   it(`model: turtle - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
           query: aircraft->by_manufacturer
           `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
 
   // filtered turtle expressions
   it(`model: filtered turtle - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
           query: aircraft->{
             nest: b is by_manufacturer{? aircraft_models.manufacturer:~'B%'}
           }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "b", 0, "manufacturer").value).toBe("BEECH");
   });
 
   // having.
   it(`model: simple having - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
           query: aircraft->{
             having: aircraft_count >90
             group_by: state
@@ -159,15 +170,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
             order_by: 2
           }
           `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "aircraft_count").value).toBe(91);
   });
 
   it(`model: turtle having2 - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
       -- hacking a null test for now
       query: aircraft->{
         top: 10
@@ -183,15 +196,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
         }
       }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "by_state", 0, "state").value).toBe("VA");
   });
 
   it(`model: turtle having on main - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
       query: aircraft->{
         order_by: 2 asc
         having: aircraft_count: >500
@@ -211,8 +226,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
         }
       }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "by_state", 0, "by_city", 0, "city").value).toBe(
       "ALBUQUERQUE"
     );
@@ -220,9 +236,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   // bigquery doesn't like to partition by floats,
   it(`model: having float group by partition - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
       query: aircraft_models->{
         order_by: 1
         having: seats_bucketed > 0, aircraft_model_count > 400
@@ -234,15 +251,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
         }
       }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "aircraft_model_count").value).toBe(448);
   });
 
   it(`model: aggregate functions distinct min max - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft_models->{
           aggregate:
             distinct_seats is count(distinct seats),
@@ -257,8 +276,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
             boeing_max_model is max(model) {? manufacturer: 'BOEING'},
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "distinct_seats").value).toBe(187);
     expect(result.data.path(0, "boeing_distinct_seats").value).toBe(85);
     expect(result.data.path(0, "min_seats").value).toBe(0);
@@ -274,9 +294,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
   (databaseName === "postgres" ? it.skip : it)(
     `model: dates named - ${databaseName}`,
     async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `
+      const result = (
+        await expressionModel
+          .loadQuery(
+            `
         query: table('malloytest.alltypes')->{
           group_by:
             t_date,
@@ -292,8 +313,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
         }
 
         `
-        )
-        .run();
+          )
+          .run()
+      ).unwrap();
       expect(result.data.path(0, "t_date").value).toEqual(
         new Date("2020-03-02")
       );
@@ -339,15 +361,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   it(`named query metadata undefined - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft->{
           aggregate: aircraft_count is count()
         }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // TODO The result explore should really be unnamed. This test currently
     //      inspects inner information because we have no way to have unnamed
     //       explores today.
@@ -356,46 +380,53 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   it(`named query metadata named - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft->by_manufacturer
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.resultExplore.name).toBe("by_manufacturer");
   });
 
   it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft->by_manufacturer->{ aggregate: c is count()}
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // TODO Same as above -- this test should check the explore name
     // expect(result.getResultExplore().name).toBe(undefined);
     expect(result._queryResult.queryName).toBe(undefined);
   });
 
   it(`filtered explores basic - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         explore: b is aircraft{ where: aircraft_models.manufacturer: ~'B%' }
 
         query: b->{aggregate: m_count is count(distinct aircraft_models.manufacturer) }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "m_count").value).toBe(63);
   });
 
   it(`query with aliasname used twice - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft->{
           group_by: first is substring(city,1,1)
           aggregate: aircraft_count is count()
@@ -413,15 +444,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
             aircraft_count
         }
       `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "first_three").value).toBe("SAN");
   });
 
   it.skip("join foreign_key reverse", async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
   explore: a is table('malloytest.aircraft') {
     primary_key: tail_num
     measure: aircraft_count is count()
@@ -436,15 +469,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
     }
   } -> some_measure
     `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "first_three").value).toBe("SAN");
   });
 
   it(`joined filtered explores - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
     explore: a_models is table('malloytest.aircraft_models'){
       where: manufacturer: ~'B%'
       primary_key: aircraft_model_code
@@ -462,16 +497,18 @@ expressionModels.forEach((expressionModel, databaseName) => {
         aircraft_count
     }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "model_count").value).toBe(244);
     expect(result.data.path(0, "aircraft_count").value).toBe(3599);
   });
 
   it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
     explore: bo_models is
       from(
           table('malloytest.aircraft_models') {? manufacturer: ~ 'BO%' }
@@ -503,31 +540,35 @@ expressionModels.forEach((expressionModel, databaseName) => {
       -- aggregate: b_models.bo_models.bo_count
     }
         `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "model_count").value).toBe(60461);
     expect(result.data.path(0, "b_count").value).toBe(355);
   });
 
   it(`group by explore - simple group by - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft->{
           group_by: aircraft_models
           aggregate: aircraft_count
         }
     `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "aircraft_count").value).toBe(58);
     expect(result.data.path(0, "aircraft_models_id").value).toBe("7102802");
   });
 
   it(`group by explore - pipeline - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
         query: aircraft->{
           group_by: aircraft_models
           aggregate: aircraft_count
@@ -536,16 +577,18 @@ expressionModels.forEach((expressionModel, databaseName) => {
           aggregate: aircraft_count is aircraft_count.sum()
         }
     `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     expect(result.data.path(0, "aircraft_count").value).toBe(1048);
     expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
 
   it(`group by explore - pipeline 2 levels - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const result = (
+      await expressionModel
+        .loadQuery(
+          `
       explore: f is table('malloytest.flights'){
         join_one: a is table('malloytest.aircraft') {
           join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state
@@ -560,8 +603,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
         aggregate: flight_count is flight_count.sum()
       }
     `
-      )
-      .run();
+        )
+        .run()
+    ).unwrap();
     // console.log(result.data.toObject());
     expect(result.data.path(0, "flight_count").value).toBe(199726);
     expect(result.data.path(0, "popular_name").value).toBe("Isabella");

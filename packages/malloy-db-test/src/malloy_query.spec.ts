@@ -27,19 +27,19 @@ if (runtime === undefined) {
 }
 const bq = runtimeList.bqConnection;
 
-function compileQueryFromQueryDef(
+async function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
   query: Query
 ) {
-  return model._loadQueryFromQueryDef(query).getSQL();
+  return (await model._loadQueryFromQueryDef(query).getSQL()).unwrap();
 }
 
 async function compileQuery(model: malloy.ModelMaterializer, query: string) {
-  return await model.loadQuery(query).getSQL();
+  return await (await model.loadQuery(query).getSQL()).unwrap();
 }
 
 async function runQuery(model: malloy.ModelMaterializer, query: string) {
-  return await model.loadQuery(query).run();
+  return (await model.loadQuery(query).run()).unwrap();
 }
 
 async function bqCompile(sql: string): Promise<boolean> {
@@ -603,51 +603,58 @@ describe("expression tests", () => {
   });
 
   it("table_base_on_query", async () => {
-    const result = await faa
-      ._loadQueryFromQueryDef({
-        structRef: "medicare_state_facts",
-        pipeline: [
-          {
-            type: "reduce",
-            fields: ["provider_state", "num_providers"],
-            orderBy: [{ dir: "desc", field: 2 }],
-          },
-        ],
-      })
-      .run();
+    const result = (
+      await faa
+        ._loadQueryFromQueryDef({
+          structRef: "medicare_state_facts",
+          pipeline: [
+            {
+              type: "reduce",
+              fields: ["provider_state", "num_providers"],
+              orderBy: [{ dir: "desc", field: 2 }],
+            },
+          ],
+        })
+        .run()
+    ).unwrap();
     expect(result.data.value[0].num_providers).toBe(296);
   });
 
   // const faa2: TestDeclaration[] = [
 
   it("table_base_on_query2", async () => {
-    const result = await faa
-      ._loadQueryFromQueryDef({
-        structRef: {
-          type: "struct",
-          name: "malloy-data.malloytest.bq_medicare_test",
-          dialect: "standardsql",
-          as: "mtest",
-          structRelationship: { type: "basetable", connectionName: "bigquery" },
-          structSource: { type: "table" },
-          fields: [
-            {
-              type: "number",
-              name: "c",
-              aggregate: true,
-              e: [{ type: "aggregate", function: "count", e: [] }],
+    const result = (
+      await faa
+        ._loadQueryFromQueryDef({
+          structRef: {
+            type: "struct",
+            name: "malloy-data.malloytest.bq_medicare_test",
+            dialect: "standardsql",
+            as: "mtest",
+            structRelationship: {
+              type: "basetable",
+              connectionName: "bigquery",
             },
-            {
-              type: "turtle",
-              name: "get_count",
-              pipeline: [{ type: "reduce", fields: ["c"] }],
-            },
-          ],
-        },
-        pipeHead: { name: "get_count" },
-        pipeline: [],
-      })
-      .run();
+            structSource: { type: "table" },
+            fields: [
+              {
+                type: "number",
+                name: "c",
+                aggregate: true,
+                e: [{ type: "aggregate", function: "count", e: [] }],
+              },
+              {
+                type: "turtle",
+                name: "get_count",
+                pipeline: [{ type: "reduce", fields: ["c"] }],
+              },
+            ],
+          },
+          pipeHead: { name: "get_count" },
+          pipeline: [],
+        })
+        .run()
+    ).unwrap();
     expect(result.data.value[0].c).toBe(202656);
   });
 });

@@ -9,11 +9,13 @@ it.skip("accessors are not too expensive", async () => {
 
   expect(runtime).toBeDefined();
   if (runtime) {
-    const result = await runtime
-      .loadQuery(
-        "explore 'malloy-data.faa.flights' | reduce inner is (reduce top 1000000 distance id2)"
-      )
-      .run();
+    const result = (
+      await runtime
+        .loadQuery(
+          "explore 'malloy-data.faa.flights' | reduce inner is (reduce top 1000000 distance id2)"
+        )
+        .run()
+    ).unwrap();
     let noAccessorTime;
     let withAccessorTime;
     {
