@@ -249,6 +249,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         const result = await sqlEq("day_of_week(t_timestamp)", "4");
         expect(checkEqual(result)).toBe("=");
       });
+      test(`first week day is one  - ${databaseName}`, async () => {
+        const result = await sqlEq("day_of_week(t_timestamp.week)", "1");
+        expect(checkEqual(result)).toBe("=");
+      });
       test(`extract day_of_year - ${databaseName}`, async () => {
         const result = await sqlEq("day_of_year(t_timestamp)", "55");
         expect(checkEqual(result)).toBe("=");
