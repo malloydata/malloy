@@ -441,10 +441,15 @@ class QueryField extends QueryNode {
   generateDialect(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: DialectFragment
+    expr: DialectFragment,
+    state: GenerateState
   ): string {
-    const fromDialect = context.dialect.dialectExpr(expr);
-    return this.generateExpressionFromExpr(resultSet, context, fromDialect);
+    return this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      context.dialect.dialectExpr(expr),
+      state
+    );
   }
 
   generateExpressionFromExpr(
@@ -499,7 +504,7 @@ class QueryField extends QueryNode {
           );
         }
       } else if (expr.type == "dialect") {
-        s += this.generateDialect(resultSet, context, expr);
+        s += this.generateDialect(resultSet, context, expr, state);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(
@@ -513,26 +518,28 @@ class QueryField extends QueryNode {
     return s;
   }
 
-  generateSubExpression(resultSet: FieldInstanceResult, e: Expr): string {
-    return this.generateExpressionFromExpr(resultSet, this.parent, e);
+  getExpr(): Expr {
+    if (hasExpression(this.fieldDef)) {
+      return this.fieldDef.e;
+    }
+    return [
+      this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        this.fieldDef.name,
+        this.fieldDef.type,
+        this.parent.fieldDef.structSource.type === "nested" ||
+          this.parent.fieldDef.structSource.type === "inline" ||
+          (this.parent.fieldDef.structSource.type === "sql" &&
+            this.parent.fieldDef.structSource.method === "nested")
+      ),
+    ];
   }
 
   generateExpression(resultSet: FieldInstanceResult): string {
-    if (hasExpression(this.fieldDef)) {
-      return this.generateExpressionFromExpr(
-        resultSet,
-        this.parent,
-        this.fieldDef.e
-      );
-    }
-    return this.parent.dialect.sqlFieldReference(
-      this.parent.getIdentifier(),
-      this.fieldDef.name,
-      this.fieldDef.type,
-      this.parent.fieldDef.structSource.type === "nested" ||
-        this.parent.fieldDef.structSource.type === "inline" ||
-        (this.parent.fieldDef.structSource.type === "sql" &&
-          this.parent.fieldDef.structSource.method === "nested")
+    return this.generateExpressionFromExpr(
+      resultSet,
+      this.parent,
+      this.getExpr()
     );
   }
 }
@@ -606,17 +613,13 @@ class QueryFieldDate extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldDateDef;
     if (!fd.timeframe) {
-      return super.generateExpression(resultSet);
+      return this.generateExpression(resultSet);
     } else {
-      const exprString = super.generateExpression(resultSet);
       const truncated = this.parent.dialect.sqlTrunc(
-        {
-          value: [exprString],
-          valueType: "date",
-        },
+        { value: this.getExpr(), valueType: "date" },
         fd.timeframe
       );
-      return super.generateSubExpression(resultSet, truncated);
+      return this.generateExpressionFromExpr(resultSet, this.parent, truncated);
     }
   }
 
@@ -634,18 +637,14 @@ class QueryFieldDate extends QueryAtomicField {
 class QueryFieldTimestamp extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldTimestampDef;
-    if (fd.e || !fd.timeframe) {
-      return super.generateExpression(resultSet);
+    if (!fd.timeframe) {
+      return this.generateExpression(resultSet);
     } else {
-      const exprString = super.generateExpression(resultSet);
       const truncated = this.parent.dialect.sqlTrunc(
-        {
-          value: [exprString],
-          valueType: "timestamp",
-        },
+        { value: this.getExpr(), valueType: "timestamp" },
         fd.timeframe
       );
-      return super.generateSubExpression(resultSet, truncated);
+      return this.generateExpressionFromExpr(resultSet, this.parent, truncated);
     }
   }
 
