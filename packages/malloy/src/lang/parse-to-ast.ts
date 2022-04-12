@@ -20,6 +20,7 @@ import * as ast from "./ast";
 import { MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
 import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
+import { LogSeverity } from "./parse-log";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -50,20 +51,29 @@ export class MalloyToAST
   /**
    * Log an error message relative to an AST node
    */
-  protected astError(el: ast.MalloyElement, str: string): void {
-    this.msgLog.log({ message: str, at: el.location });
+  protected astError(
+    el: ast.MalloyElement,
+    str: string,
+    sev: LogSeverity = "error"
+  ): void {
+    this.msgLog.log({ message: str, at: el.location, severity: sev });
   }
 
   /**
    * Log an error message relative to a parse node
    */
-  protected contextError(cx: ParserRuleContext, msg: string): void {
+  protected contextError(
+    cx: ParserRuleContext,
+    msg: string,
+    sev: LogSeverity = "error"
+  ): void {
     this.msgLog.log({
       message: msg,
       at: {
         url: this.parse.subTranslator.sourceURL,
         range: this.parse.subTranslator.rangeFromContext(cx),
       },
+      severity: sev,
     });
   }
 
@@ -937,6 +947,9 @@ export class MalloyToAST
   }
 
   visitExprApply(pcx: parse.ExprApplyContext): ast.Apply {
+    if (pcx.COLON()) {
+      this.contextError(pcx, "':' for apply is deprecated, use '?'", "warn");
+    }
     return new ast.Apply(
       this.getFieldExpr(pcx.fieldExpr()),
       this.getFieldExpr(pcx.partialAllowedFieldExpr())
