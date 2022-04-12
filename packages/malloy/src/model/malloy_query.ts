@@ -613,7 +613,7 @@ class QueryFieldDate extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldDateDef;
     if (!fd.timeframe) {
-      return this.generateExpression(resultSet);
+      return super.generateExpression(resultSet);
     } else {
       const truncated = this.parent.dialect.sqlTrunc(
         { value: this.getExpr(), valueType: "date" },
@@ -638,7 +638,7 @@ class QueryFieldTimestamp extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldTimestampDef;
     if (!fd.timeframe) {
-      return this.generateExpression(resultSet);
+      return super.generateExpression(resultSet);
     } else {
       const truncated = this.parent.dialect.sqlTrunc(
         { value: this.getExpr(), valueType: "timestamp" },
