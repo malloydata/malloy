@@ -362,38 +362,31 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       );
       expect(checkEqual(result)).toBe("=");
     });
-    test(`timestamp delta hours - ${databaseName}`, async () => {
-      const result = await sqlEq(
-        "t_timestamp + 10 hours",
-        "@2021-02-24 13:05:06"
-      );
-      expect(checkEqual(result)).toBe("=");
-    });
     test(`timestamp delta week - ${databaseName}`, async () => {
       const result = await sqlEq(
-        "t_timestamp - 2 weeks",
-        "@2021-02-10 13:05:06"
+        "(t_timestamp - 2 weeks)::date",
+        "@2021-02-10"
       );
       expect(checkEqual(result)).toBe("=");
     });
     test(`timestamp delta month - ${databaseName}`, async () => {
       const result = await sqlEq(
-        "t_timestamp + 9 months",
-        "@2021-11-24 13:05:06"
+        "(t_timestamp + 9 months)::date",
+        "@2021-11-24"
       );
       expect(checkEqual(result)).toBe("=");
     });
     test(`timestamp delta quarter - ${databaseName}`, async () => {
       const result = await sqlEq(
-        "t_timestamp + 2 quarters",
-        "@2021-08-24 13:05:06"
+        "(t_timestamp + 2 quarters)::date",
+        "@2021-08-24"
       );
       expect(checkEqual(result)).toBe("=");
     });
     test(`timestamp delta year - ${databaseName}`, async () => {
       const result = await sqlEq(
-        "t_timestamp + 10 years",
-        "@2031-08-24 13:05:06"
+        "(t_timestamp + 10 years)::date",
+        "@2031-02-24"
       );
       expect(checkEqual(result)).toBe("=");
     });
