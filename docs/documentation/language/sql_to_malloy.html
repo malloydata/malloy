@@ -47,7 +47,7 @@ footer: /generated/footers/language/sql_to_malloy.html
           SQL to Malloy
         </a>
       </h2>
-    <p>This document is intended to serve as a reference for those</p>
+    <p>This document is intended to serve as a reference for those who already know SQL and may find it helpful to map Malloy concepts and syntax to SQL.</p>
 
       <h3>
         <a id="components-of-a-query" class="header-link anchor" href="#components-of-a-query">
@@ -85,7 +85,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">on</span><span style="color: #000000"> </span><span style="color: #001080">users</span><span style="color: #000000">.</span><span style="color: #001080">id</span><span style="color: #000000"> = </span><span style="color: #001080">order_items</span><span style="color: #000000">.</span><span style="color: #001080">user_id</span></span></code></pre></td>
 
-<td><strong>JOIN</strong> <a href="https://looker-open-source.github.io/malloy/documentation/language/join.html">Join Documentation</a> - example is the simplest case of a foreign key join; documentation covers more join types and relationships. Example below</td>
+<td><strong>JOIN</strong> <a href="https://looker-open-source.github.io/malloy/documentation/language/join.html">Join Documentation</a> - example is the simplest case of a foreign key join; documentation covers more join types and relationships. <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#more-complex-example">Example</a></td>
 </tr>
 
 <tr>
@@ -107,7 +107,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 <tr>
 <td><pre><code>ORDER BY flight_count, avg_elevation</code></pre></td>
 
-<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000">, </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">elevation</span></span></code></pre></td>
+<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000">, </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">elevation</span><span style="color: #000000">)</span></span></code></pre></td>
 
 <td><strong>ORDER BY</strong>. By default, <code>ORDER BY</code> is generated following <a href="https://looker-open-source.github.io/malloy/documentation/language/order_by.html">implicit rules</a>; this can be overridden.</td>
 </tr>
@@ -123,7 +123,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 <tr>
 <td><pre> <code>LIMIT 100</code> <code>TOP 100</code> </pre></td>
 
-<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">100</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">100</span></span></code> `</pre></td>
+<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">100</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">100</span></span></code></pre></td>
 
 <td><strong>LIMIT / TOP</strong>: Both are accepted.</td>
 </tr>
@@ -141,7 +141,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> || ... ;;</span></span></code> --OR-- <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(...)</span></span></code> </pre></td>
 
-<td><strong>Subqueries</strong> can be achieved through <a href="https://looker-open-source.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries">Pipelines</a>, <a href="https://looker-open-source.github.io/malloy/documentation/language/source.html#sources-from-queries">Sources from queries</a>, and/or <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>. Example below</td>
+<td><strong>Subqueries</strong> can be achieved through <a href="https://looker-open-source.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries">Pipelines</a>, <a href="https://looker-open-source.github.io/malloy/documentation/language/source.html#sources-from-queries">Sources from queries</a>, and/or <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>. <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#subqueries-ctes-">Example</a></td>
 </tr>
 </tbody></table>
 
@@ -174,7 +174,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size_n</span><span style="color: #000000">:</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;S&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> &lt; </span><span style="color: #098658">3</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;M&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> &lt;</span><span style="color: #098658">5</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">else</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;L&#39;</span></span></code> </pre></td>
 
-<td>Pick is Malloy’s improvement of SQL’s CASE statement. <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#pick-expressions">Doc</a>. Example</td>
+<td>Pick is Malloy’s improvement of SQL’s <code>CASE</code> statement. <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#pick-expressions">Doc</a>. <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#more-complex-example">Example</a></td>
 </tr>
 
 <tr>
@@ -227,7 +227,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 </tr>
 
 <tr>
-<td><pre> <code>DATE_DIFF(DATE(CURRENT_TIMESTAMP()),</code> <code>DATE(created_at), DAY),</code> <code>TIMESTAMP_DIFF(TIMESTAMP(shipped_at), created_at, HOUR)</code></pre></td>
+<td><pre> <code>DATE_DIFF(DATE(CURRENT_TIMESTAMP()),DATE(created_at), DAY),</code> <code>TIMESTAMP_DIFF(TIMESTAMP(shipped_at), created_at, HOUR)</code></pre></td>
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">days</span><span style="color: #000000">(</span><span style="color: #001080">created_at</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">now</span><span style="color: #000000">)</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">hours</span><span style="color: #000000">(</span><span style="color: #001080">created_at</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">shipped_at</span><span style="color: #000000">)</span></span></code> </pre></td>
 
@@ -260,15 +260,15 @@ footer: /generated/footers/language/sql_to_malloy.html
 </tr>
 </thead>
 <tbody><tr>
-<td><pre><code> FIRST_VALUE(product_brand) OVER (PARTITION BY user_id ORDER BY created_at ASC) </code></pre></td>
+<td><pre><code>FIRST_VALUE(product_brand) OVER (PARTITION BY user_id ORDER BY created_at ASC) </code></pre></td>
 
-<td><strong>Window Functions</strong>: For now, reach out for advice on achieving what you need (much is possible with nesting, pipelines, or <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>). See example in “Subqueries” section.</td>
+<td><strong>Window Functions</strong>: For now, reach out for advice on achieving what you need (much is possible with nesting, pipelines, or <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>). <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#subqueries-ctes-">Example</a>.</td>
 
 <td></td>
 </tr>
 
 <tr>
-<td>NA</td>
+<td><em>NA</em></td>
 
 <td>Querying arrays as nested objects</td>
 
@@ -276,7 +276,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 </tr>
 
 <tr>
-<td><pre> <code>SELECT</code> <code> id</code> <code>, ( SELECT COUNT(*)</code> <code>    FROM orders o</code> <code>    WHERE o.id <= orders.id</code> <code>    AND o.user_id = orders.user_id</code> <code>) as sequence_number</code> <code>FROM orders …</code></td>
+<td><pre> <code>SELECT</code> <code> id</code> <code>  , ( SELECT COUNT(*)</code> <code>    FROM orders o</code> <code>    WHERE o.id <= orders.id</code> <code>    AND o.user_id = orders.user_id</code> <code>  ) as sequence_number</code> <code>FROM orders …</code></td>
 
 <td><strong>Correlated Subqueries</strong>: coming soon; note that functionality will be dependent on the database dialect.</td>
 
@@ -289,7 +289,7 @@ footer: /generated/footers/language/sql_to_malloy.html
           Full Query Examples
         </a>
       </h3>
-    <p><em>If you’re looking for specific functions, scroll on down to the table below the full query examples.</em></p>
+    <p>Many of the above concepts are best understood in the context of complete queries.</p>
 
       <h4>
         <a id="the-basics" class="header-link anchor" href="#the-basics">

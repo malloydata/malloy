@@ -3057,7 +3057,7 @@ window.SEARCH_SEGMENTS = [
       "SQL to Malloy"
     ],
     "paragraphs": [
-      "This document is intended to serve as a reference for those"
+      "This document is intended to serve as a reference for those who already know SQL and may find it helpful to map Malloy concepts and syntax to SQL."
     ],
     "path": "/language/sql_to_malloy.md"
   },
@@ -3099,7 +3099,9 @@ window.SEARCH_SEGMENTS = [
       "SQL to Malloy",
       "Full Query Examples"
     ],
-    "paragraphs": [],
+    "paragraphs": [
+      "Many of the above concepts are best understood in the context of complete queries."
+    ],
     "path": "/language/sql_to_malloy.md"
   },
   {
@@ -3138,7 +3140,6 @@ window.SEARCH_SEGMENTS = [
       "Many SQL functions supported by the database can simply be used unchanged in Malloy. In certain cases we have implemented what we feel are improvements and simplifications of certain SQL functions. This is intended to serve as a quick reference, more complete documentation can be found <a href=\"https://looker-open-source.github.io/malloy/documentation/language/expressions.html\">here</a>.",
       "The <a href=\"https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-expressions\">Time Expressions</a> reference contains substantially more detail and examples.",
       "Feature requests are tracked using <a href=\"https://github.com/looker-open-source/malloy/issues\">Issues on Github</a>.",
-      "<em>If you’re looking for specific functions, scroll on down to the table below the full query examples.</em>",
       "One can also define a <a href=\"https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html\">SQL block</a> to be used as a source in Malloy."
     ],
     "path": "/language/sql_to_malloy.md"
