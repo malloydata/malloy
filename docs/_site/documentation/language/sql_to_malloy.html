@@ -810,7 +810,7 @@
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> -&gt; {</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">customer_category</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">lifetime_orders</span><span style="color: #000000">:</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">customer_category</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">user_facts</span><span style="color: #000000">.</span><span style="color: #001080">lifetime_orders</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;One-Time&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> = </span><span style="color: #098658">1</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">else</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;Repeat&#39;</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">:</span></span>
@@ -842,7 +842,29 @@
 <span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> -&gt; {</span></span>
 <span class="line"><span style="color: #000000"> </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">order_facts</span><span style="color: #000000">.</span><span style="color: #001080">user_order_sequence_number</span></span>
 <span class="line"><span style="color: #000000"> </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">order_count</span></span>
-<span class="line"><span style="color: #000000">}</span></span></pre></div>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>The above Malloy code will produce this SQL:</p>
+<pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">   order_facts_0.user_order_sequence_number </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_order_sequence_number,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #0000FF">distinct</span><span style="color: #000000"> order_items.order_id) </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">   id</span></span>
+<span class="line"><span style="color: #000000">   , order_id</span></span>
+<span class="line"><span style="color: #000000">   , created_at</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.order_items</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> </span><span style="color: #0000FF">status</span><span style="color: #000000"> </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #A31515">&#39;Cancelled&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;Returned&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_items</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">   order_id</span></span>
+<span class="line"><span style="color: #000000">   , </span><span style="color: #795E26">user_id</span></span>
+<span class="line"><span style="color: #000000">   , </span><span style="color: #795E26">ROW_NUMBER</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">(</span><span style="color: #0000FF">PARTITION</span><span style="color: #000000"> </span><span style="color: #0000FF">BY</span><span style="color: #000000"> </span><span style="color: #795E26">user_id</span><span style="color: #000000"> </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> created_at) </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_order_sequence_number</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.order_items</span></span>
+<span class="line"><span style="color: #000000">) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> order_facts_0</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> order_items.order_id=order_facts_0.order_id</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></div>
           </div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>

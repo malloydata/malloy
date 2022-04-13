@@ -3136,6 +3136,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "How much of our sales come from repeat customers vs loyal, repeat customers? Written in SQL:",
+      "The above Malloy code will produce this SQL:",
       "In Malloy, the user_facts CTE becomes a source of its own, defined from a query using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #795E26\">from</span><span style=\"color: #000000\">()</span></span></code>. Any aggregates in this query (for now, just lifetime_orders) become dimensions of that source.",
       "Many SQL functions supported by the database can simply be used unchanged in Malloy. In certain cases we have implemented what we feel are improvements and simplifications of certain SQL functions. This is intended to serve as a quick reference, more complete documentation can be found <a href=\"https://looker-open-source.github.io/malloy/documentation/language/expressions.html\">here</a>.",
       "The <a href=\"https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-expressions\">Time Expressions</a> reference contains substantially more detail and examples.",
