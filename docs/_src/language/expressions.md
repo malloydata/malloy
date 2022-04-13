@@ -294,25 +294,25 @@ Values can be used directly with the alternation operators, in which case the op
 <!-- * `weight: > 100 & < 1000` -->
 <!-- * `kind: pick 'other' when null` -->
 
-The apply operator `?` "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.
+The apply operator `:` "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.
 
-Applying a value to a condition is like filling in the condition with the given value. For example, `height? > 5 & < 10` is equivalent to `height > 5 and height < 10`.
+Applying a value to a condition is like filling in the condition with the given value. For example, `height: > 5 & < 10` is equivalent to `height > 5 and height < 10`.
 
 Applying a value to another value applies a default comparison on the two values:
 
 | Left | Right | Example| Meaning |
 |------|-------|--------|---------|
-| `number` | `number` | `size ? 10` | `size = 10` |
-| `string` | `string` | `state ? 'CA'` | `state = 'CA'` |
-| `string` | regular expression | `name ? r'Z$'` | `name ~ r'Z$'` |
-| `boolean` | `boolean` | `is_cool ? true` | `is_cool = true` |
-| `number` | numeric range | `x ? 10 to 20` | `x >= 10 and x < 20` |
-| `date` or `timestamp` | `date` or `timestamp` | `time ? @2003` | `time` is during 2003 |
+| `number` | `number` | `size : 10` | `size = 10` |
+| `string` | `string` | `state : 'CA'` | `state = 'CA'` |
+| `string` | regular expression | `name : r'Z$'` | `name ~ r'Z$'` |
+| `boolean` | `boolean` | `is_cool : true` | `is_cool = true` |
+| `number` | numeric range | `x : 10 to 20` | `x >= 10 and x < 20` |
+| `date` or `timestamp` | `date` or `timestamp` | `time : @2003` | `time` is during 2003 |
 
 Values can be applied to [pick expressions](#pick-expressions) to make them more succinct.
 
 ```malloy
-size ?
+size:
   pick 'small' when < 10
   pick 'medium' when < 20
   else 'large'
