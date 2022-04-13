@@ -44,7 +44,7 @@ The `avg` function may be used to compute the average of all records of a partic
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy"}
 query: aircraft -> {
-  aggregate: average_seats is sum(aircraft_models.seats)
+  aggregate: average_seats is avg(aircraft_models.seats)
 }
 ```
 
