@@ -2570,6 +2570,8 @@ class QueryQueryProject extends QueryQuery {}
 
 class QueryQueryIndex extends QueryQuery {
   fieldDef: TurtleDef;
+  fanPrefixes: string[] = [];
+
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
@@ -2577,6 +2579,21 @@ class QueryQueryIndex extends QueryQuery {
   ) {
     super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
+    this.findFanPrefexes(parent);
+  }
+
+  // we want to generate a different query for each
+  //  nested structure so we don't do a crazy cross product.
+  findFanPrefexes(qs: QueryStruct) {
+    for (const [_name, f] of qs.nameMap) {
+      if (
+        f instanceof QueryStruct &&
+        (f.fieldDef.structRelationship.type === "many" ||
+          f.fieldDef.structRelationship.type === "nested")
+      ) {
+        this.fanPrefixes.push(f.getFullOutputName());
+      }
+    }
   }
 
   // get a field ref and expand it.
@@ -3409,7 +3426,9 @@ export class QueryModel {
   async searchIndex(
     connection: Connection,
     explore: string,
-    searchValue: string
+    searchValue: string,
+    limit = 1000,
+    searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     if (!connection.canPersist()) {
       return undefined;
@@ -3449,11 +3468,15 @@ export class QueryModel {
         FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
         WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
-        )})
+        )}) ${
+        searchField !== undefined
+          ? " AND fieldName = '" + searchField + "' \n"
+          : ""
+      }
         ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
           searchValue + "%"
         )}) THEN 1 ELSE 0 END DESC, weight DESC
-        LIMIT 1000
+        LIMIT ${limit}
       `,
       { rowLimit: 1000 }
     );
