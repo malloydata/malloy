@@ -297,17 +297,17 @@ footer: /generated/footers/language/sql_to_malloy.html
         </a>
       </h4>
     <p>We’ll start with a relatively simple SQL query:</p>
-<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">SELECT
-  TIMESTAMP_TRUNC(created_at, DAY) as order_date,
-  SUM(sale_price) as total_sale_price,
-  COUNT(DISTINCT order_id) as order_count
-FROM `malloy-data.ecomm.order_items`
-WHERE created_at&gt;=TIMESTAMP(&#39;2021-01-01&#39;, &#39;UTC&#39;)
-  AND created_at&lt;TIMESTAMP(&#39;2021-04-01&#39;, &#39;UTC&#39;)
-  AND status NOT IN (&#39;Returned&#39;,&#39;Cancelled&#39;)
-GROUP BY 1
-ORDER BY 1 ASC
-</span></span></pre><p>In Malloy, this is expressed:</p>
+<pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  TIMESTAMP_TRUNC(created_at, </span><span style="color: #795E26">DAY</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_date,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">SUM</span><span style="color: #000000">(sale_price) </span><span style="color: #0000FF">as</span><span style="color: #000000"> total_sale_price,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> order_id) </span><span style="color: #0000FF">as</span><span style="color: #000000"> order_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.order_items`</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> created_at&gt;=</span><span style="color: #0000FF">TIMESTAMP</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;2021-01-01&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;UTC&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> created_at&lt;</span><span style="color: #0000FF">TIMESTAMP</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;2021-04-01&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;UTC&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">AND</span><span style="color: #000000"> </span><span style="color: #0000FF">status</span><span style="color: #000000"> </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #A31515">&#39;Returned&#39;</span><span style="color: #000000">,</span><span style="color: #A31515">&#39;Cancelled&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">ASC</span></span>
+<span class="line"></span></pre><p>In Malloy, this is expressed:</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.order_items&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000"> </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">created_at</span><span style="color: #000000"> = </span><span style="color: #098658">@2021-Q1</span><span style="color: #000000">, </span><span style="color: #001080">status</span><span style="color: #000000"> != </span><span style="color: #A31515">&#39;Cancelled&#39;</span><span style="color: #000000"> &amp; </span><span style="color: #A31515">&#39;Returned&#39;</span></span>
 <span class="line"><span style="color: #000000"> </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">order_date</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">created_at</span><span style="color: #000000">.</span><span style="color: #0000FF">day</span></span>
@@ -321,24 +321,24 @@ ORDER BY 1 ASC
           More Complex Example
         </a>
       </h4>
-    <pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">SELECT
- CASE
-   WHEN (100.0*(ii.product_retail_price-ii.cost)) / (NULLIF(ii.product_retail_price,0)) &gt;=55 THEN &#39;High (over 55%)&#39;
-   WHEN (100.0*(ii.product_retail_price-ii.cost)) / (NULLIF(ii.product_retail_price,0))&gt;=45 THEN &#39;Medium (45% to 55%)&#39;
-   ELSE &#39;Low (up to 45%)&#39; END AS gross_margin_pct_tier,
- SUM(ii.product_retail_price) AS total_retail_price,
- AVG((ii.product_retail_price-ii.cost)) AS avg_gross_margin
-FROM `malloy-data.ecomm.inventory_items` AS ii
-LEFT JOIN `malloy-data.ecomm.order_items` AS oi
- ON ii.id=oi.inventory_item_id
-LEFT JOIN `malloy-data.ecomm.users` AS u
- ON oi.user_id = u.id
-WHERE
- oi.status NOT IN (&#39;Returned&#39;,&#39;Cancelled&#39;)
- AND (u.country=&#39;USA&#39;)
-GROUP BY 1
-ORDER BY 3 ASC
-</span></span></pre><p>In Malloy, this can be expressed in a query:</p>
+    <pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">CASE</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (</span><span style="color: #098658">100</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">*(ii.product_retail_price-ii.cost)) / (</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(ii.product_retail_price,</span><span style="color: #098658">0</span><span style="color: #000000">)) &gt;=</span><span style="color: #098658">55</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;High (over 55%)&#39;</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (</span><span style="color: #098658">100</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000">*(ii.product_retail_price-ii.cost)) / (</span><span style="color: #795E26">NULLIF</span><span style="color: #000000">(ii.product_retail_price,</span><span style="color: #098658">0</span><span style="color: #000000">))&gt;=</span><span style="color: #098658">45</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;Medium (45% to 55%)&#39;</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #0000FF">ELSE</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;Low (up to 45%)&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> gross_margin_pct_tier,</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #795E26">SUM</span><span style="color: #000000">(ii.product_retail_price) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> total_retail_price,</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #795E26">AVG</span><span style="color: #000000">((ii.product_retail_price-ii.cost)) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> avg_gross_margin</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.inventory_items`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> ii</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.order_items`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> oi</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">ON</span><span style="color: #000000"> ii.id=oi.inventory_item_id</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.users`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> u</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">ON</span><span style="color: #000000"> oi.user_id = u.id</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span></span>
+<span class="line"><span style="color: #000000"> oi.status </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #A31515">&#39;Returned&#39;</span><span style="color: #000000">,</span><span style="color: #A31515">&#39;Cancelled&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">AND</span><span style="color: #000000"> (u.country=</span><span style="color: #A31515">&#39;USA&#39;</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">ASC</span></span>
+<span class="line"></span></pre><p>In Malloy, this can be expressed in a query:</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">inventory_items</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.inventory_items&#39;</span><span style="color: #000000">){</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.order_items&#39;</span><span style="color: #000000">) </span><span style="color: #AF00DB">on</span><span style="color: #000000"> </span><span style="color: #001080">id</span><span style="color: #000000"> = </span><span style="color: #001080">order_items</span><span style="color: #000000">.</span><span style="color: #001080">inventory_item_id</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.users&#39;</span><span style="color: #000000">) </span><span style="color: #AF00DB">on</span><span style="color: #000000"> </span><span style="color: #001080">order_items</span><span style="color: #000000">.</span><span style="color: #001080">user_id</span><span style="color: #000000"> = </span><span style="color: #001080">users</span><span style="color: #000000">.</span><span style="color: #001080">id</span></span>
@@ -392,24 +392,24 @@ ORDER BY 3 ASC
         </a>
       </h4>
     <p>How much of our sales come from repeat customers vs loyal, repeat customers? Written in SQL:</p>
-<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">WITH user_facts AS (
- SELECT
-   user_id as user_id,
-   COUNT( 1) as lifetime_orders
- FROM `malloy-data.ecomm.order_items`
- GROUP BY 1
- ORDER BY 2 desc
-)
-SELECT
-  CASE WHEN user_facts.lifetime_orders=1 THEN &#39;One-Time&#39; ELSE &#39;Repeat&#39; END AS customer_category,
-  SUM(order_items.sale_price) AS total_sale_price,
-  COUNT(DISTINCT order_items.order_id) AS order_count
-FROM `malloy-data.ecomm.order_items` AS order_items
-LEFT JOIN user_facts
- ON order_items.user_id = user_facts.user_id
-GROUP BY 1
-ORDER BY 2 desc
-</span></span></pre><p>In Malloy, the user_facts CTE becomes a source of its own, defined from a query using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">from</span><span style="color: #000000">()</span></span></code>. Any aggregates in this query (for now, just lifetime_orders) become dimensions of that source.</p>
+<pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> user_facts </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">user_id</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #795E26">user_id</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> lifetime_orders</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.order_items`</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> user_facts.lifetime_orders=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;One-Time&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">ELSE</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;Repeat&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> customer_category,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">SUM</span><span style="color: #000000">(order_items.sale_price) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> total_sale_price,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #795E26">COUNT</span><span style="color: #000000">(</span><span style="color: #0000FF">DISTINCT</span><span style="color: #000000"> order_items.order_id) </span><span style="color: #0000FF">AS</span><span style="color: #000000"> order_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.ecomm.order_items`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> order_items</span></span>
+<span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> user_facts</span></span>
+<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">ON</span><span style="color: #000000"> order_items.user_id = user_facts.user_id</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre><p>In Malloy, the user_facts CTE becomes a source of its own, defined from a query using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">from</span><span style="color: #000000">()</span></span></code>. Any aggregates in this query (for now, just lifetime_orders) become dimensions of that source.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.ecomm.order_items&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">user_id</span></span>
