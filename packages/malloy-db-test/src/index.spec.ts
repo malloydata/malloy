@@ -48,8 +48,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(result.length).toBe(10);
     }
 
-    result = await model.search("airports", "SANTA", 100, "city");
+    result = await model.search("airports", "SANTA A", 100, "city");
     if (result !== undefined) {
+      console.log(result);
       expect(result[0].fieldName).toBe("city");
       expect(result[0].fieldValue).toBe("SANTA ANA");
     }
