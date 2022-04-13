@@ -304,7 +304,7 @@ Applying a value to another value applies a default comparison on the two values
 |------|-------|--------|---------|
 | `number` | `number` | `size: 10` | `size = 10` |
 | `string` | `string` | `state: 'CA'` | `state = 'CA'` |
-| `string` | regular expression | `name : r'Z$'` | `name ~ r'Z$'` |
+| `string` | regular expression | `name: r'Z$'` | `name ~ r'Z$'` |
 | `boolean` | `boolean` | `is_cool: true` | `is_cool = true` |
 | `number` | numeric range | `x: 10 to 20` | `x >= 10 and x < 20` |
 | `date` or `timestamp` | `date` or `timestamp` | `time: @2003` | `time` is during 2003 |
