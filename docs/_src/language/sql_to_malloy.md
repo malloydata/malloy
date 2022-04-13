@@ -238,7 +238,7 @@ source: order_items is table('malloy-data.ecomm.order_items'){
 }
 
 query: order_items -> {
-  group_by: customer_category is lifetime_orders:
+  group_by: customer_category is user_facts.lifetime_orders:
     pick 'One-Time' when = 1
     else 'Repeat'
   aggregate:
@@ -276,4 +276,29 @@ query: order_items -> {
  group_by: order_facts.user_order_sequence_number
  aggregate: order_count
 }
+```
+
+The above Malloy code will produce this SQL:
+```sql
+SELECT
+   order_facts_0.user_order_sequence_number as user_order_sequence_number,
+   count(distinct order_items.order_id) as order_count
+FROM (
+ SELECT
+   id
+   , order_id
+   , created_at
+ FROM malloy-data.ecomm.order_items
+ WHERE status NOT IN ('Cancelled', 'Returned')
+) as order_items
+LEFT JOIN (
+ SELECT
+   order_id
+   , user_id
+   , ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY created_at) as user_order_sequence_number
+ FROM malloy-data.ecomm.order_items
+) AS order_facts_0
+  ON order_items.order_id=order_facts_0.order_id
+GROUP BY 1
+ORDER BY 2 desc
 ```
