@@ -3426,7 +3426,9 @@ export class QueryModel {
   async searchIndex(
     connection: Connection,
     explore: string,
-    searchValue: string
+    searchValue: string,
+    limit = 1000,
+    searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     if (!connection.canPersist()) {
       return undefined;
@@ -3466,11 +3468,15 @@ export class QueryModel {
         FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
         WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
-        )})
+        )}) ${
+        searchField !== undefined
+          ? " AND fieldName = '" + searchField + "' \n"
+          : ""
+      }
         ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
           searchValue + "%"
         )}) THEN 1 ELSE 0 END DESC, weight DESC
-        LIMIT 1000
+        LIMIT ${limit}
       `,
       { rowLimit: 1000 }
     );

@@ -739,4 +739,10 @@ export interface SearchIndexResult {
   weight: number;
 }
 
+export interface SearchValueMapResult {
+  fieldName: string;
+  cardinality: number;
+  values: { fieldValue: string; weight: number }[];
+}
+
 // clang-format on

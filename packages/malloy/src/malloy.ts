@@ -41,6 +41,7 @@ import {
   DocumentReference,
   DocumentPosition as ModelDocumentPosition,
   SearchIndexResult,
+  SearchValueMapResult,
 } from "./model";
 import {
   LookupConnection,
@@ -1182,6 +1183,10 @@ export class Explore extends Entity {
     return field;
   }
 
+  public getFieldByNameIfExists(fieldName: string): Field | undefined {
+    return this.fieldMap.get(fieldName);
+  }
+
   public get primaryKey(): string | undefined {
     return this.structDef.primaryKey;
   }
@@ -1989,7 +1994,9 @@ export class ModelMaterializer extends FluentState<Model> {
 
   public async search(
     sourceName: string,
-    searchTerm: string
+    searchTerm: string,
+    limit = 1000,
+    searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     const model = await this.materialize();
     const queryModel = new QueryModel(model._modelDef);
@@ -2003,7 +2010,49 @@ export class ModelMaterializer extends FluentState<Model> {
     const connection = await this.runtime.connections.lookupConnection(
       connectionName
     );
-    return await queryModel.searchIndex(connection, sourceName, searchTerm);
+    return await queryModel.searchIndex(
+      connection,
+      sourceName,
+      searchTerm,
+      limit,
+      searchField
+    );
+  }
+
+  public async searchValueMap(
+    sourceName: string,
+    limit = 10
+  ): Promise<SearchValueMapResult[] | undefined> {
+    const model = await this.materialize();
+    const schema = model.getExploreByName(sourceName);
+    if (schema.structDef.structRelationship.type !== "basetable") {
+      throw new Error(
+        "Expected schema's structRelationship type to be 'basetable'."
+      );
+    }
+    let indexQuery = "{index: *}";
+
+    if (schema.getFieldByNameIfExists("search_index")) {
+      indexQuery = "search_index";
+    }
+
+    const searchMapMalloy = `
+      query: ${sourceName}
+        -> ${indexQuery}
+        -> {
+          where: fieldType = 'string'
+          group_by: fieldName
+          aggregate: cardinality is count(distinct fieldValue)
+          nest: values is {
+            project: fieldValue, weight
+            order_by: weight desc
+            limit: ${limit}
+          }
+          limit: 1000
+        }
+    `;
+    const result = await this.loadQuery(searchMapMalloy).run();
+    return result._queryResult.result as unknown as SearchValueMapResult[];
   }
 
   /**
