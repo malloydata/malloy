@@ -95,7 +95,7 @@ Feature requests are tracked using [Issues on Github](https://github.com/looker-
 
 ### Full Query Examples
 
-_If you’re looking for specific functions, scroll on down to the table below the full query examples._
+Many of the above concepts are best understood in the context of complete queries.
 
 #### The Basics
 We’ll start with a relatively simple SQL query:
