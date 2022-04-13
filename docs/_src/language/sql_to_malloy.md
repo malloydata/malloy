@@ -99,7 +99,7 @@ Many of the above concepts are best understood in the context of complete querie
 
 #### The Basics
 We’ll start with a relatively simple SQL query:
-```SQL
+```sql
 SELECT
   TIMESTAMP_TRUNC(created_at, DAY) as order_date,
   SUM(sale_price) as total_sale_price,
@@ -125,7 +125,7 @@ query: table('malloy-data.ecomm.order_items') -> {
 ```
 
 #### More Complex Example
-```SQL
+```sql
 SELECT
  CASE
    WHEN (100.0*(ii.product_retail_price-ii.cost)) / (NULLIF(ii.product_retail_price,0)) >=55 THEN 'High (over 55%)'
@@ -204,7 +204,7 @@ query: inventory_items -> {
 #### Subqueries / CTEs:
 How much of our sales come from repeat customers vs loyal, repeat customers? Written in SQL:
 
-```SQL
+```sql
 WITH user_facts AS (
  SELECT
    user_id as user_id,
