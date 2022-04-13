@@ -2481,6 +2481,7 @@ class QueryQuery extends QueryField {
 
   generateTurtlePipelineSQL(fi: FieldInstanceResult, stageWriter: StageWriter) {
     let structDef = this.getResultStructDef(fi, false);
+    const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
     if (hasPipeline) {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
@@ -2490,7 +2491,9 @@ class QueryQuery extends QueryField {
         name: "starthere",
         pipeline,
       };
-      structDef.name = this.parent.dialect.sqlUnnestPipelineHead();
+      structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
+        repeatedResultType === "inline_all_numbers"
+      );
       structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
@@ -2567,6 +2570,8 @@ class QueryQueryProject extends QueryQuery {}
 
 class QueryQueryIndex extends QueryQuery {
   fieldDef: TurtleDef;
+  fanPrefixes: string[] = [];
+
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
@@ -2574,6 +2579,21 @@ class QueryQueryIndex extends QueryQuery {
   ) {
     super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
+    this.findFanPrefexes(parent);
+  }
+
+  // we want to generate a different query for each
+  //  nested structure so we don't do a crazy cross product.
+  findFanPrefexes(qs: QueryStruct) {
+    for (const [_name, f] of qs.nameMap) {
+      if (
+        f instanceof QueryStruct &&
+        (f.fieldDef.structRelationship.type === "many" ||
+          f.fieldDef.structRelationship.type === "nested")
+      ) {
+        this.fanPrefixes.push(f.getFullOutputName());
+      }
+    }
   }
 
   // get a field ref and expand it.
@@ -2691,7 +2711,7 @@ class QueryQueryIndex extends QueryQuery {
 
     s += this.generateSQLFilters(this.rootResult, "where").sql("where");
 
-    s += "GROUP BY 1,2,3,4\nORDER BY 5 DESC\n";
+    s += "GROUP BY 1,2,3,4\n";
 
     // limit
     if (this.firstSegment.limit) {
@@ -3406,7 +3426,9 @@ export class QueryModel {
   async searchIndex(
     connection: Connection,
     explore: string,
-    searchValue: string
+    searchValue: string,
+    limit = 1000,
+    searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     if (!connection.canPersist()) {
       return undefined;
@@ -3435,13 +3457,28 @@ export class QueryModel {
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
     const result = await connection.runSQL(
-      `SELECT fieldName, fieldValue, fieldType, weight \n` +
-        `FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\` \n` +
-        `WHERE lower(fieldName || '|' || fieldValue) LIKE lower(${generateSQLStringLiteral(
+      `SELECT
+          fieldName,
+          fieldValue,
+          fieldType,
+          weight,
+          CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
+            searchValue + "%"
+          )}) THEN 1 ELSE 0 END as match_first
+        FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
+        WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
-        )})\n ` +
-        `ORDER BY 4 DESC\n` +
-        `LIMIT 1000\n`
+        )}) ${
+        searchField !== undefined
+          ? " AND fieldName = '" + searchField + "' \n"
+          : ""
+      }
+        ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
+          searchValue + "%"
+        )}) THEN 1 ELSE 0 END DESC, weight DESC
+        LIMIT ${limit}
+      `,
+      { rowLimit: 1000 }
     );
     return result.rows as unknown as SearchIndexResult[];
   }

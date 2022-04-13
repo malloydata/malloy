@@ -137,8 +137,12 @@ export class StandardSQLDialect extends Dialect {
     return `${alias}.${fieldName}`;
   }
 
-  sqlUnnestPipelineHead(): string {
-    return "UNNEST(__param)";
+  sqlUnnestPipelineHead(isSingleton: boolean): string {
+    let p = "__param";
+    if (isSingleton) {
+      p = `[${p}]`;
+    }
+    return `UNNEST(${p})`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {

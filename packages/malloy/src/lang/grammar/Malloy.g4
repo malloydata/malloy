@@ -292,8 +292,17 @@ topStatement
   : TOP INTEGER_LITERAL bySpec?
   ;
 
+indexElement
+  : fieldPath (DOT STAR)?
+  | STAR
+  ;
+
+indexFields
+  : indexElement ( COMMA? indexElement )*
+  ;
+
 indexStatement
-  : INDEX fieldNameList (BY fieldName)?
+  : INDEX indexFields (BY fieldName)?
   ;
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
@@ -346,7 +355,7 @@ fieldExpr
   | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
   | fieldExpr (AMPER | BAR) partialAllowedFieldExpr        # exprLogicalTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
-  | fieldExpr COLON partialAllowedFieldExpr                # exprApply
+  | fieldExpr (COLON | QMARK) partialAllowedFieldExpr      # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr (AND | OR) fieldExpr                         # exprLogical
   | CAST OPAREN fieldExpr AS malloyType CPAREN             # exprCast
@@ -377,12 +386,7 @@ argumentList
   ;
 
 fieldNameList
-  : fieldOrStar (COMMA? fieldOrStar)* COMMA?
-  ;
-
-fieldOrStar
-  : STAR
-  | fieldName
+  : fieldName (COMMA? fieldName)*
   ;
 
 fieldCollection
