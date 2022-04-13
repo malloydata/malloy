@@ -40,7 +40,7 @@ LIMIT <limit>
 ```
 
 ## SQL to Malloy
-This document is intended to serve as a reference for those
+This document is intended to serve as a reference for those who already know SQL and may find it helpful to map Malloy concepts and syntax to SQL.
 
 ### Components of a Query
 
