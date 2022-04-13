@@ -73,10 +73,9 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">word</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">letters</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #098658">2</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #001080">letter</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">substr</span><span style="color: #000000">(</span><span style="color: #001080">word</span><span style="color: #000000">, </span><span style="color: #001080">numbers</span><span style="color: #000000">.</span><span style="color: #001080">num</span><span style="color: #000000">, </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #001080">position</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">numbers</span><span style="color: #000000">.</span><span style="color: #001080">num</span></span>
-<span class="line"><span style="color: #000000">    ]</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>

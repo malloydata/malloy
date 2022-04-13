@@ -190,6 +190,71 @@ would be a range covering the entire year which contains <code class="language-m
 </tbody></table>
 
       <h2>
+        <a id="interval-extraction" class="header-link anchor" href="#interval-extraction">
+          Interval extraction
+        </a>
+      </h2>
+    <p>To measure the difference between two times, pass a range expression to
+one of these extraction functions:</p>
+<table>
+<thead>
+<tr>
+<th>expression</th>
+
+<th>meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">seconds</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>Number of seconds from t1 until t2</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">minutes</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... minutes ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">hours</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... hours ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">days</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... days ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">weeks</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... weeks ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">months</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... months ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">quarters</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... quarters ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">years</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... years ...</td>
+</tr>
+</tbody></table>
+<p>These will return a negative number if t1 is later than t2.</p>
+
+      <h2>
         <a id="literals" class="header-link anchor" href="#literals">
           Literals
         </a>

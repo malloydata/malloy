@@ -182,7 +182,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
 <span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count__1</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">ON</span><span style="color: #000000"> origin_0.code=flights.origin</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> origin_0.county </span><span style="color: #0000FF">IS</span><span style="color: #000000"> </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">NULL</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">3</span></span>
@@ -262,10 +262,9 @@ typecast to work around the errors in typing.</p>
       </h2>
     <!-- * `avg(age) : [state: 'CA']` --><!-- * `flight_count : [origin.county != null]` --><p>Aggregate expressions may be filtered, using the <a href="filters.html">usual filter syntax</a>.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">distance_2003</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">distance</span><span style="color: #000000">) { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">dep_time</span><span style="color: #000000">: </span><span style="color: #098658">@2003</span><span style="color: #000000"> }</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">ca_flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() { </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">state</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> }</span></span>
-<span class="line"><span style="color: #000000">  ]</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
@@ -297,7 +296,7 @@ typecast to work around the errors in typing.</p>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> flights.origin = origin_0.code</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">ON</span><span style="color: #000000"> origin_0.code=flights.origin</span></span>
 <span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
 <span class="line"></span></pre></pre>
       </div>
@@ -529,6 +528,71 @@ would be a range covering the entire year which contains <code class="language-m
 <td>5</td>
 </tr>
 </tbody></table>
+
+      <h3>
+        <a id="interval-extraction" class="header-link anchor" href="#interval-extraction">
+          Interval extraction
+        </a>
+      </h3>
+    <p>To measure the difference between two times, pass a range expression to
+one of the below extraction functions. This is Malloy's take on SQL's <code>DATE_DIFF()</code> and <code>TIMESTAMP_DIFF()</code> :</p>
+<table>
+<thead>
+<tr>
+<th>expression</th>
+
+<th>meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">seconds</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>Number of seconds from t1 until t2</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">minutes</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... minutes ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">hours</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... hours ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">days</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... days ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">weeks</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... weeks ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">months</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... months ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">quarters</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... quarters ...</td>
+</tr>
+
+<tr>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">years</span><span style="color: #000000">(</span><span style="color: #001080">t1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">t2</span><span style="color: #000000">)</span></span></code></td>
+
+<td>... years ...</td>
+</tr>
+</tbody></table>
+<p>These will return a negative number if t1 is later than t2.</p>
 
       <h3>
         <a id="time-literals" class="header-link anchor" href="#time-literals">

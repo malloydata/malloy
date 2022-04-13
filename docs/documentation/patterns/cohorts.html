@@ -29,11 +29,10 @@ Texas makes up 18% of the total population of Billies.</p>
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">} -&gt; {</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">state</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">state_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span><span style="color: #000000"> / </span><span style="color: #001080">total_population</span><span style="color: #000000"> * </span><span style="color: #098658">100.0</span></span>
-<span class="line"><span style="color: #000000">  ]</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">state_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -205,11 +204,10 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">} -&gt; {</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">decade</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">decade_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span><span style="color: #000000"> / </span><span style="color: #001080">total_population</span><span style="color: #000000"> * </span><span style="color: #098658">100.0</span></span>
-<span class="line"><span style="color: #000000">  ]</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">decade_as_percent_of_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">
@@ -344,11 +342,10 @@ to measure a little differently.  Instead of looking at a percentage, let's look
 <span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">total_population</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">`number`</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">} -&gt; {</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">: [</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">project</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">name</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">births_per_100k</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">FLOOR</span><span style="color: #000000">(</span><span style="color: #001080">main_query</span><span style="color: #000000">.</span><span style="color: #001080">total_population</span><span style="color: #000000"> / </span><span style="color: #001080">total_population</span><span style="color: #000000"> * </span><span style="color: #098658">100000.0</span><span style="color: #000000">)</span></span>
-<span class="line"><span style="color: #000000">  ]</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">births_per_100k</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
     <div class="result-controls-bar">

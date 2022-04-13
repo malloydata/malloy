@@ -10,8 +10,7 @@ footer: /generated/footers/language/query.html
           Queries
         </a>
       </h1>
-    <p>The basic syntax for a query in Malloy consists of a source
-and a "pipeline" of one or more <em>stages</em> separated by <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">-&gt;</span></span></code>. The shape of the data defined in the original source is transformed by each stage.</p>
+    <p>The basic syntax for a query in Malloy consists of a source and a "pipeline" of one or more <em>stages</em> separated by <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">-&gt;</span></span></code>. The shape of the data defined in the original source is transformed by each stage.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre>
       <h2>
         <a id="sources" class="header-link anchor" href="#sources">
@@ -20,17 +19,89 @@ and a "pipeline" of one or more <em>stages</em> separated by <code class="langua
       </h2>
     <p>The source of a query can be a table, a <a href="source.html">source</a>, or a <a href="statement.html#queries">named query</a>.</p>
 <p><strong>A query against a table</strong></p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><p><strong>A query against a source</strong></p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>37,561,525</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">37561525</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p><strong>A query against a source</strong></p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">)</span></span>
 <span class="line"></span>
-<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><p><strong>A query starting from another query</strong></p>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() }</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">flight_​count</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>37,561,525</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">37561525</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p><strong>A query starting from another query</strong></p>
+<p>The leading <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">-&gt;</span></span></code> is used when the source is a query:</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: -&gt; </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000"> }</span></span></pre><p>When a query is defined as part of a source or nested inside
-another query stage, the source is implicit.</p>
+<span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: -&gt; </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> -&gt; { </span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">; </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000"> }</span></span></pre><p><strong>Implicit Sources</strong>
+When a query is defined as part of a source or nested inside another query stage, the source is implicit.</p>
+<p>Defined as part of a source:</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">){</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights_by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>Nested inside another query stage:</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;malloy-data.faa.flights&#39;</span><span style="color: #000000">) -&gt; {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">dep_year</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">dep_time</span><span style="color: #000000">.</span><span style="color: #0000FF">year</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">nest</span><span style="color: #000000">: </span><span style="color: #001080">by_carrier</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
@@ -43,15 +114,26 @@ another query stage, the source is implicit.</p>
           Pipelines
         </a>
       </h2>
-    <p>A pipeline transforms the shape of a source, and is made up of a series of stages.</p>
-<p>A typical stage is has either <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">group_by</span></span></code>/<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">aggregate</span></span></code> or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">project</span></span></code>, or <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">index</span></span></code> transformation consisting of a set of fields, and optionally filters and ordering/limiting specification.</p>
+    <p>A each stage of a pipeline performs transformation on the the source or a previous stage.</p>
+<p>A stage can do one of:</p>
+<ul>
+<li><p>a Reduction: a query containing <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">group_by</span></span></code>/<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">aggregate</span></span></code> which includes aggregation and/or a group_by to reduce the grain of the data being transformed</p>
+</li>
+<li><p>a Projection: select fields without reducing using <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">project</span></span></code>.</p>
+</li></ul>
+<p>Example of a Reduction:</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000">      </span><span style="color: #008000">// Filters</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">2</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span><span style="color: #000000"> </span><span style="color: #008000">// Ordering/limiting</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">distance</span><span style="color: #000000"> &gt; </span><span style="color: #098658">1000</span><span style="color: #000000">        </span><span style="color: #008000">// Filtering</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">top</span><span style="color: #000000">: </span><span style="color: #098658">2</span><span style="color: #000000">                        </span><span style="color: #008000">// Limiting</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span><span style="color: #000000">   </span><span style="color: #008000">// Ordering</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">carrier</span><span style="color: #000000">             </span><span style="color: #008000">// Reducing</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
-<span class="line"><span style="color: #000000">}</span></span></pre><p>A reference to a <a href="nesting.html">named query</a> (which defines its own pipeline) can be the first stage in a pipeline.</p>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>Example of a Projection:</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">project</span><span style="color: #000000">: *</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #AF00DB">limit</span><span style="color: #000000">: </span><span style="color: #098658">20</span></span>
+<span class="line"><span style="color: #000000">  }</span></span></pre><p>Note that the operations in a stage are not order-sensitive like SQL; they can be arranged</p>
+<p>A reference to a <a href="nesting.html">named query</a> (which defines its own pipeline) can be the first stage in a pipeline.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">flights</span><span style="color: #000000"> -&gt; </span><span style="color: #001080">by_carrier</span></span></pre>
       <h3>
         <a id="fields" class="header-link anchor" href="#fields">
