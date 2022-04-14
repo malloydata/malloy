@@ -8,7 +8,7 @@ Are they on time?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> airport_dashboard { where: origin.code: 'SJC' }
+query: flights -> airport_dashboard { where: origin.code ? 'SJC' }
 ```
 
 
@@ -20,7 +20,7 @@ flying there long?  Increasing or decreasing year by year?  Any seasonality?
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> carrier_dashboard { where: carriers.nickname : 'Jetblue' }
+query: flights -> carrier_dashboard { where: carriers.nickname  ? 'Jetblue' }
 ```
 
 
@@ -69,7 +69,7 @@ query: sessionize is {
 
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights { where: carrier:'WN', dep_time: @2002-03-03 } -> sessionize
+query: flights { where: carrier ?'WN', dep_time ? @2002-03-03 } -> sessionize
 ```
 
 ## The Malloy Model
@@ -195,7 +195,7 @@ source: flights is table('malloy-data.faa.flights') {
     group_by: destination.name
   }
 
-  // query flights { where: origin.code: 'SJC' } -> airport_dashboard
+  // query flights { where: origin.code ? 'SJC' } -> airport_dashboard
   query: airport_dashboard is {
     top: 10
     group_by: code is destination_code
@@ -213,7 +213,7 @@ source: flights is table('malloy-data.faa.flights') {
   }
 
 
-  // query: southwest_flights is carrier_dashboard { where: carriers.nickname : 'Southwest' }
+  // query: southwest_flights is carrier_dashboard { where: carriers.nickname  ? 'Southwest' }
   query: carrier_dashboard is {
     aggregate: destination_count is destination.airport_count
     aggregate: flight_count
@@ -246,7 +246,7 @@ source: flights is table('malloy-data.faa.flights') {
   }
 
   // query that you might run for to build a flight search interface
-  // query flights { where: origin.code: 'SJC', destination.code: 'LAX' | 'BUR', dep_time: @2004-01-01 } -> kayak
+  // query flights { where: origin.code: 'SJC', destination.code ? 'LAX' | 'BUR', dep_time ? @2004-01-01 } -> kayak
   query: kayak is {
     nest: carriers is {
       group_by: carriers.nickname

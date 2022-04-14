@@ -28,7 +28,7 @@ When filtering a query's source, the filter applies to the whole query.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size":"large"}
-query: flights { where: distance > 1000 } -> { aggregate: flight_count }
+query: flights { where: distance > 1000 } -> { aggregate ? flight_count }
 ```
 
 ### Filtering in a Query Stage
@@ -41,7 +41,7 @@ query: flights -> {
   group_by: carrier
   aggregate: flight_count
 } -> {
-  where: carrier: 'UA' | 'AA'
+  where: carrier ? 'UA' | 'AA'
   project: carrier, flight_count
 }
 ```

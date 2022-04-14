@@ -40,7 +40,7 @@ query: flights { where: origin = 'SFO' } -> by_carrier
 ### Adding a limit on the Query
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true, "source": "/inline/e.malloy"}
-query: flights { where: origin = 'SFO' } -> by_carrier { limit: 2 }
+query: flights { where: origin = 'SFO' } -> by_carrier { limit ? 2 }
 ```
 
 ### Putting it all together

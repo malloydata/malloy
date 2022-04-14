@@ -500,12 +500,12 @@ describe("expression tests", () => {
       faa,
       `
       query: table('malloytest.airports')->{
-        where: faa_region: ~'A%'
+        where: faa_region ? ~'A%'
         order_by: 1
         group_by: faa_region
         aggregate: airport_count is COUNT(*)
         nest: state is {
-          where: state:'CA'|'NY'
+          where: state ?'CA'|'NY'
           group_by: state
           nest: code is {
             where: major='Y'
@@ -678,7 +678,7 @@ explore: airports is table('malloy-data.malloytest.airports'){
   }
 }
 
-query: ca_airports is airports->by_fac_type{? state: 'CA' | 'NY'}
+query: ca_airports is airports->by_fac_type{? state ? 'CA' | 'NY'}
 `;
 
 describe("airport_tests", () => {
@@ -920,7 +920,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo\\'' } }
+      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -941,7 +941,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo\\\\\\'' }}
+      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -964,7 +964,7 @@ describe("sql injection tests", () => {
       await runQuery(
         model,
         `
-        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state: 'foo \\\\' THEN 0 else 1 END) as test--'
+        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo \\\\' THEN 0 else 1 END) as test--'
         }}      `
       );
     } catch (e) {

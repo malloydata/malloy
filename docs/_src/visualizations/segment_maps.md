@@ -68,9 +68,9 @@ query: flights -> {
   group_by: carrier
   aggregate: flight_count
   nest:
-    ord_segment_map is routes_map { where: origin.code: 'ORD' }
-    sfo_segment_map is routes_map { where: origin.code: 'SFO' }
-    jfk_segment_map is routes_map { where: origin.code: 'JFK' }
+    ord_segment_map is routes_map { where: origin.code ? 'ORD' }
+    sfo_segment_map is routes_map { where: origin.code ? 'SFO' }
+    jfk_segment_map is routes_map { where: origin.code ? 'JFK' }
 }
 
 ```

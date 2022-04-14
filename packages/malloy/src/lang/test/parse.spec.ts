@@ -330,7 +330,7 @@ describe("model statements", () => {
       modelOK(`
         query: ab
           -> { group_by: astr; aggregate: acount }
-          -> { top: 5; where: astr ~ 'a%' group_by: astr }
+          -> { top: 5; where: astr ~ 'a%' group_by ? astr }
       `)
     );
     test(
@@ -842,7 +842,7 @@ describe("expressions", () => {
     test(
       "applied",
       exprOK(`
-        astr:
+        astr ?
           pick 'the answer' when = '42'
           pick 'the questionable answer' when = '54'
           else 'random'
@@ -857,7 +857,7 @@ describe("expressions", () => {
     test(
       "tiering",
       exprOK(`
-      ai:
+      ai ?
         pick 1 when < 10
         pick 10 when < 100
         pick 100 when < 1000
@@ -867,7 +867,7 @@ describe("expressions", () => {
     test(
       "transforming",
       exprOK(`
-        ai:
+        ai ?
           pick 'small' when < 10
           pick 'medium' when < 100
           else 'large'

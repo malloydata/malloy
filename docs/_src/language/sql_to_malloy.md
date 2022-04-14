@@ -66,7 +66,7 @@ Many SQL functions supported by the database can simply be used unchanged in Mal
 |---|---|---|
 | <pre><code>SUM(), AVG(), MAX(), MIN(), COUNT(), etc </code></prE> | <pre> `sum(), avg(), max(), min(), count(), etc...` </pre> | Basic SQL aggregations are supported verbatim, but it’s worth learning about Malloy’s additional [aggregate locality](https://looker-open-source.github.io/malloy/documentation/language/aggregates.html#aggregate-locality) / [symmetric aggregate](https://help.looker.com/hc/en-us/articles/360023722974-A-Simple-Explanation-of-Symmetric-Aggregates-or-Why-On-Earth-Does-My-SQL-Look-Like-That-) handling. |
 | <pre> <code>CASE</code> <code>  WHEN size_n < 3 THEN 'S'</code> <code>  WHEN size_n <5 THEN 'M'</code> <code>ELSE 'L' END</code> </pre> | <pre> `size_n:` `  pick 'S' when < 3` `  pick 'M' when <5` `  else 'L' ` </pre> | [Pick](https://looker-open-source.github.io/malloy/documentation/language/expressions.html#pick-expressions) is Malloy’s improvement of SQL’s <code>CASE</code> statement. This example also introduces the `:` [Apply](https://looker-open-source.github.io/malloy/documentation/language/expressions.html#application) operator, which  "applies" a value to another value, condition, or computation. This is most often used with [partial](https://looker-open-source.github.io/malloy/documentation/language/expressions.html#partial-comparison) comparisons or [alternations](https://looker-open-source.github.io/malloy/documentation/language/expressions.html#alternation). |
-| <pre> <code>COUNT(CASE WHEN status = 'Returned' THEN 1 END),</code> <code>AVG(CASE WHEN brand = 'Levi\'s' THEN price END)</code> </pre> | <pre> `count() {where: status = 'Returned'}` `avg_price {where: brand = 'Levi\'s'}` </pre> | Aggregates may be filtered using filter expressions. [Doc](https://looker-open-source.github.io/malloy/documentation/language/expressions.html#filtered-expressions) |
+| <pre> <code>COUNT(CASE WHEN status = 'Returned' THEN 1 END),</code> <code>AVG(CASE WHEN brand = 'Levi\'s' THEN price END)</code> </pre> | <pre> `count() {where: status = 'Returned'}` `avg_price {where ? brand = 'Levi\'s'}` </pre> | Aggregates may be filtered using filter expressions. [Doc](https ?//looker-open-source.github.io/malloy/documentation/language/expressions.html#filtered-expressions) |
 | <pre> <code>CAST(distance AS string),</code> <code>distance::string</code> </pre> | <pre>`distance::string`</pre> | [Safe Type Cast](https://looker-open-source.github.io/malloy/documentation/language/expressions.html#safe-type-cast). Also worth reviewing [Types](https://looker-open-source.github.io/malloy/documentation/language/types.html) doc. |
 
 
@@ -156,7 +156,7 @@ declare:					–- declare reusable metrics for use in query
   gross_margin is (product_retail_price - cost)
   gross_margin_pct is 100.0 * gross_margin / nullif(product_retail_price,0)
 group_by:
-  gross_margin_pct_tier is gross_margin_pct:
+  gross_margin_pct_tier is gross_margin_pct ?
     pick 'High (over 55%)' when >=55
     pick 'Medium (45% to 55%)' when >=45
     else 'Low (up to 45%)'
@@ -184,7 +184,7 @@ source: inventory_items is table('malloy-data.ecomm.inventory_items'){
  dimension:
    gross_margin is (product_retail_price - cost)
    gross_margin_pct is 100.0* gross_margin / nullif(product_retail_price,0)
-   gross_margin_pct_tier is gross_margin_pct:
+   gross_margin_pct_tier is gross_margin_pct ?
      pick 'High (over 55%)' when >=55
      pick 'Medium (45% to 55%)' when >=45
      else 'Low (up to 45%)'
@@ -238,7 +238,7 @@ source: order_items is table('malloy-data.ecomm.order_items'){
 }
 
 query: order_items -> {
-  group_by: customer_category is user_facts.lifetime_orders:
+  group_by: customer_category is user_facts.lifetime_orders ?
     pick 'One-Time' when = 1
     else 'Repeat'
   aggregate:

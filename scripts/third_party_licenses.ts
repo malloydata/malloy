@@ -71,7 +71,7 @@ const sourceMirrorLicenses = [
 ];
 
 // packages that don't provide license files in standard places
-const licenseFoundElsewhere: { [id: string]: string } = {
+const licenseFoundElsewhere: { [id ? string] ? string } = {
   "agent-base":
     "https://github.com/TooTallNate/node-agent-base/blob/master/README.md",
   crypt: "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",

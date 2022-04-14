@@ -85,8 +85,8 @@ query: jessie_over_time is names -> {
   }
 }
 
-query: alabama_iconic_names_by_decade is names -> time_iconic_names { where: state: 'AL' }
+query: alabama_iconic_names_by_decade is names -> time_iconic_names { where: state ? 'AL' }
 
-query: newyork_iconic_names_by_decade is names -> time_iconic_names { where: state: 'NY' }
+query: newyork_iconic_names_by_decade is names -> time_iconic_names { where: state ? 'NY' }
 
 query: old_iconic_names_by_state is names -> location_iconic_names { where: decade <= 1940 }

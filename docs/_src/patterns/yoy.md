@@ -37,7 +37,7 @@ query: flights->{
     flights_in_2002 is flight_count { where: dep_time = @2002 }
     flights_in_2003 is flight_count { where: dep_time = @2003 }
     percent_change is round(
-      (flight_count { where: dep_time = @2003 } - flight_count { where: dep_time = @2002 })
+      (flight_count { where: dep_time = @2003 } - flight_count { where ? dep_time = @2002 })
         / nullif(flight_count { where: dep_time = @2003 }, 0) * 100,
       1
     )
@@ -64,11 +64,11 @@ query: order_items -> {
   top: 10
   group_by: inventory_items.product_category
   aggregate:
-    last_year is order_item_count { where: created_at: now.year - 1 year }
-    prior_year is order_item_count { where: created_at: now.year - 2 years }
+    last_year is order_item_count { where: created_at ? now.year - 1 year }
+    prior_year is order_item_count { where: created_at ? now.year - 2 years }
     percent_change is round(
-      (order_item_count { where: created_at: now.year - 1 year } - order_item_count { where: created_at: now.year - 2 years })
-        / nullif(order_item_count { where: created_at : now.year - 2 years }, 0) * 100,
+      (order_item_count { where: created_at: now.year - 1 year } - order_item_count { where ? created_at ? now.year - 2 years })
+        / nullif(order_item_count { where: created_at  ? now.year - 2 years }, 0) * 100,
       1
     )
 }
@@ -93,8 +93,8 @@ source: order_items is table('malloy-data.ecomm.order_items') {
 query: order_items{
   measure:
     // these caclulations can be used in multipe parts of the query
-    last_year is order_item_count { where: created_at: now.year - 1 year }
-    prior_year is order_item_count { where: created_at: now.year - 2 years }
+    last_year is order_item_count { where: created_at ? now.year - 1 year }
+    prior_year is order_item_count { where: created_at ? now.year - 2 years }
 } -> {
   top: 10
   group_by: inventory_items.product_category

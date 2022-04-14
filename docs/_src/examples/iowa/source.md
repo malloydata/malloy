@@ -21,7 +21,7 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       pick 'SCHNAPPS' when ~ r'SCHNAP'
       else 'OTHER'
 
-    bottle_size is bottle_volume_ml:
+    bottle_size is bottle_volume_ml ?
       pick 'jumbo (over 1000ml)' when > 1001
       pick 'liter-ish' when >= 750
       else 'small or mini (under 750ml)'

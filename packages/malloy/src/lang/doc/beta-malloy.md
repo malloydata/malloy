@@ -114,9 +114,9 @@ A query is either a grouping/aggregating gesture, which would look like this ...
 
 A `group by` or a `project` have a list of references, or new dimensions.  An `aggregate` has a list of measures or new measure definitions. The alpha-malloy `reduce` query is a query which starts with `group by:` and a `project` query starts with `project:` but both are just queries.
 
-## Filters are `where:` and `having:`
+## Filters are `where:` and `having ?`
 
-The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
+The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where ?` and a `having ?`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
     explore: flights_21st_century is flights {
       where: dep_time >= @2001
@@ -189,21 +189,21 @@ I think `index:` is a property of an explore ... maybe?
 
 ## { where: ... shorthand }
 
-Because filtering is ubiquitous, there is a shorthand for filtering. We expect authors of models to use `where:` and `having:` for clarity, but for people writing queries there is a shorthand which is as terse as the alpha-malloy `: [ FILTER1, FILTER2 ]` but which feels like a natural shortcut based on existing syntax in beta-malloy ...
+Because filtering is ubiquitous, there is a shorthand for filtering. We expect authors of models to use `where:` and `having ?` for clarity, but for people writing queries there is a shorthand which is as terse as the alpha-malloy ` ? [ FILTER1, FILTER2 ]` but which feels like a natural shortcut based on existing syntax in beta-malloy ...
 
     -- long form
     flights {
-        where: dep_time: @2003
+        where: dep_time ? @2003
     }->by_carrier
 
     -- one line version
-    flights { where: dep_time: @2003 }->by_carrier
+    flights { where: dep_time ? @2003 }->by_carrier
 
     -- short form
-    flights {? dep_time: @2003}->by_carrier
+    flights {? dep_time ? @2003}->by_carrier
 
     -- filtered measures
-    measure: pct_in_ca is (count() {? state: 'CA'}) / count()
+    measure: pct_in_ca is (count() {? state ? 'CA'}) / count()
 
 ## What about turtles ...
 

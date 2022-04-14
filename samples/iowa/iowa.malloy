@@ -7,7 +7,7 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
     gross_margin is 100 * (state_bottle_retail - state_bottle_cost) / nullif(state_bottle_retail, 0)
     price_per_100ml is state_bottle_retail / nullif(bottle_volume_ml, 0) * 100
 
-    category_class is category_name:
+    category_class is category_name ?
       pick 'WHISKIES' when ~ r'(WHISK|SCOTCH|BOURBON|RYE)'
       pick 'VODKAS' when ~ r'VODKA'
       pick 'RUMS' when ~ r'RUM'
@@ -18,7 +18,7 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       pick 'SCHNAPPS' when ~ r'SCHNAP'
       else 'OTHER'
 
-    bottle_size is bottle_volume_ml:
+    bottle_size is bottle_volume_ml ?
       pick 'jumbo (over 1000ml)' when > 1001
       pick 'liter-ish' when >= 750
       else 'small or mini (under 750ml)'
@@ -115,17 +115,17 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
 }
 
 query: vodka_dashboard is iowa->vendor_dashboard {
-  where: category_class: 'VODKAS'
+  where: category_class ? 'VODKAS'
 }
 
 query: tequila_dashboard is iowa->vendor_dashboard {
-  where: category_class: 'TEQUILAS'
+  where: category_class ? 'TEQUILAS'
 }
 
 query: luxco_dashboard is iowa->vendor_dashboard {
-  where: vendor_name: ~ r'Luxco'
+  where: vendor_name ? ~ r'Luxco'
 }
 
 query: jim_beam_dashboard is iowa->vendor_dashboard {
-  where: vendor_name: ~ r'Jim Beam'
+  where: vendor_name ? ~ r'Jim Beam'
 }

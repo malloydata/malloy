@@ -118,7 +118,7 @@ The basic types of Malloy expressions are `string`, `number`, `boolean`, `date`,
 
 ## Modeling and Reuse
 
-One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create a *source* object named `airports` and add a `dimension:` calculation for `county_and_state` and `measure:` calculation for `airport_count`.  Dimensions can be used in `group_by:`, `project:` and `where:`.  Measures can be used in `aggregate:` and `having:`.
+One of the main benefits of Malloy is the ability to save common calculations into a data model.  In the example below, we create a *source* object named `airports` and add a `dimension:` calculation for `county_and_state` and `measure:` calculation for `airport_count`.  Dimensions can be used in `group_by:`, `project:` and `where:`.  Measures can be used in `aggregate ?` and `having ?`.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
@@ -190,12 +190,12 @@ the data for that operation alone. (More on this later, in the section on `nest:
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "isPaginationEnabled": true}
 query: table('malloy-data.faa.airports') -> {
-  where: state: 'AL' | 'KY'
+  where: state ? 'AL' | 'KY'
   top: 5
   group_by: state
   aggregate:
-    airports  is count() { where: fac_type: 'AIRPORT' }
-    heliports is count() { where: fac_type: 'HELIPORT' }
+    airports  is count() { where: fac_type ? 'AIRPORT' }
+    heliports is count() { where: fac_type ? 'HELIPORT' }
     total     is count()
 }
 ```
@@ -246,7 +246,7 @@ shows the number of flights in 2003.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
-query: table('malloy-data.faa.flights') { where: dep_time: @2003 } -> {
+query: table('malloy-data.faa.flights') { where: dep_time ? @2003 } -> {
   aggregate: flight_count is count()
 }
 ```
@@ -297,7 +297,7 @@ Two kinds of time ranges are given special syntax: the range between two times a
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto"}
-query: table('malloy-data.faa.flights') { where: dep_time: @2003 to @2005 } -> {
+query: table('malloy-data.faa.flights') { where: dep_time ? @2003 to @2005 } -> {
   aggregate: flight_count is count()
 }
 ```
@@ -442,7 +442,7 @@ source: flights is table('malloy-data.faa.flights') {
   join_one: aircraft on tail_num = aircraft.tail_num
 }
 query: flights->{
-  where: dep_time: @2003-01
+  where: dep_time ? @2003-01
   group_by: aircraft.aircraft_models.manufacturer
   aggregate:
     flight_count is count()

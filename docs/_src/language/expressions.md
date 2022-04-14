@@ -107,8 +107,8 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
 query: flights -> {
   aggregate:
-    distance_2003 is sum(distance) { where: dep_time: @2003 }
-    ca_flights is count() { where: origin.state: 'CA' }
+    distance_2003 is sum(distance) { where: dep_time ? @2003 }
+    ca_flights is count() { where: origin.state ? 'CA' }
 }
 ```
 
@@ -139,7 +139,7 @@ else 'large'
 Pick expressions are also compatible with the [apply operator](#apply-operator) and partial comparisons.
 
 ```malloy
-size:
+size ?
   pick 'small' when < 10
   pick 'medium' when < 20
   else 'large'
@@ -150,7 +150,7 @@ shipped" statuses, and because there is no `else`, leaves the other
 status values alone.
 
 ```malloy
-shipping_status:
+shipping_status ?
   pick 'shipped' when 'will call' | 'shipped'
   pick 'ignore' when 'bad1' | 'bad2' | 'testing'
 ```
@@ -160,7 +160,7 @@ by and all other values are compressed into `null`. A `pick` clause with no valu
 picks an applied value when the condition is met.
 
 ```malloy
-status:
+status ?
   pick when 'good' | 'ok' | 'fine' // leave these alone
   else null                        // ignore the rest
 ```
@@ -312,7 +312,7 @@ Applying a value to another value applies a default comparison on the two values
 Values can be applied to [pick expressions](#pick-expressions) to make them more succinct.
 
 ```malloy
-size:
+size ?
   pick 'small' when < 10
   pick 'medium' when < 20
   else 'large'
