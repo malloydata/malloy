@@ -34,6 +34,7 @@ import {
 import { QueryField } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 import { inspect } from "util";
+import { castTo } from "./time-utils";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -738,18 +739,9 @@ export class NamedSource extends Mallobj {
             pExpr.log(`Cannot override constant parameter ${pName}`);
           } else {
             const pVal = pExpr.constantValue();
-            let value: model.Expr | null = pVal.value;
+            let value = pVal.value;
             if (pVal.dataType !== decl.type) {
-              if (decl.type === "timestamp" && pVal.dataType === "date") {
-                // @mtoy-googly-moogly : I've stubbed for now as we don't do parameters yet
-                //  not sure how to get to a dialect from here.
-                // value = toTimestampV(getDialect(this.dialect), pVal).value;
-              } else {
-                pExpr.log(
-                  `Type mismatch for parameter '${pName}', expected '${decl.type}'`
-                );
-                value = null;
-              }
+              value = castTo(decl.type, pVal.value, true);
             }
             decl.value = value;
           }

@@ -135,12 +135,10 @@ export interface ExprResult extends FragType {
   value: Fragment[];
 }
 
-export function isTimeType(s: string): s is TimeFieldType {
-  return s === "date" || s === "timestamp";
-}
 export interface GranularResult extends ExprResult {
   dataType: TimeFieldType;
   timeframe: TimestampUnit;
+  alsoTimestamp?: true;
 }
 export function isGranularResult(v: ExprValue): v is GranularResult {
   if (v.dataType !== "date" && v.dataType !== "timestamp") {

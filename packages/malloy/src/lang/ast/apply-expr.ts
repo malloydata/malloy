@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Expr } from "../../model/malloy_types";
+import { isTimeFieldType, Expr } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import {
   ExprDuration,
@@ -20,13 +20,12 @@ import {
   FieldValueType,
   isComparison,
   isGranularResult,
-  isTimeType,
-  compressExpr,
   TypeMistmatch,
   errorFor,
   isEquality,
   Equality,
   compose,
+  castTimestampToDate,
 } from "./index";
 
 /**
@@ -118,14 +117,14 @@ function timeCompare(
   op: string,
   rhs: ExprValue
 ): Expr | undefined {
-  if (isTimeType(lhs.dataType) && isTimeType(rhs.dataType)) {
+  if (isTimeFieldType(lhs.dataType) && isTimeFieldType(rhs.dataType)) {
     if (lhs.dataType !== rhs.dataType) {
       let lval = lhs.value;
       let rval = rhs.value;
       if (lhs.dataType === "timestamp") {
-        lval = compressExpr(["DATE(", ...lhs.value, ")"]);
+        lval = castTimestampToDate(lval);
       } else {
-        rval = compressExpr(["DATE(", ...rhs.value, ")"]);
+        rval = castTimestampToDate(rval);
       }
       return compose(lval, op, rval);
     }
@@ -240,7 +239,7 @@ function delta(
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
 
-  if (isTimeType(lhs.dataType)) {
+  if (isTimeFieldType(lhs.dataType)) {
     let duration: ExpressionDef = right;
     if (rhs.dataType !== "duration") {
       if (isGranularResult(lhs)) {

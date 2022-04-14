@@ -23,6 +23,7 @@ import {
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
+  isTimeFieldType,
   isConditionParameter,
   StructDef,
   TimeFieldType,
@@ -45,6 +46,7 @@ import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
 import { FieldReference } from "./ast-main";
+import { castTo } from "./time-utils";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -107,14 +109,6 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     return applyBinary(fs, left, op, this);
-  }
-
-  thisValueToTimestamp(selfValue: ExprValue, d: Dialect): ExpressionDef {
-    if (selfValue.dataType === "timestamp") {
-      return this;
-    }
-    const tsSelf = d.sqlCast(selfValue.value, "timestamp", false);
-    return new ExprTime("timestamp", tsSelf, selfValue.aggregate);
   }
 }
 
@@ -329,6 +323,24 @@ export class ExprTime extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return this.translationValue;
+  }
+
+  static fromValue(timeType: TimeFieldType, expr: ExprValue): ExprTime {
+    let value = expr.value;
+    if (timeType != expr.dataType) {
+      const toTs: Fragment = {
+        type: "dialect",
+        function: "cast",
+        safe: false,
+        dstType: timeType,
+        expr: expr.value,
+      };
+      if (isTimeFieldType(expr.dataType)) {
+        toTs.srcType = expr.dataType;
+      }
+      value = compressExpr([toTs]);
+    }
+    return new ExprTime(timeType, value, expr.aggregate);
   }
 }
 
@@ -849,28 +861,10 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    const castTo =
-      this.castType === "number"
-        ? fs.getDialect().defaultNumberType
-        : this.castType;
-    let castValue = fs.getDialect().sqlCast(expr.value, castTo, this.safe);
-
-    if (castTo === "timestamp" && expr.dataType === "date") {
-      castValue = fs.getDialect().sqlTimestampCast(expr.value);
-    }
-    if (castTo === "date" && expr.dataType === "timestamp") {
-      // Give date cast timestamps a granularity
-      return {
-        dataType: "date",
-        aggregate: expr.aggregate,
-        timeframe: "day",
-        value: compressExpr(fs.getDialect().sqlDateCast(expr.value)),
-      };
-    }
     return {
-      ...expr,
       dataType: this.castType,
-      value: compressExpr(castValue),
+      aggregate: expr.aggregate,
+      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
     };
   }
 }

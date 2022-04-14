@@ -11,7 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { TimestampUnit, Expr, TimeFieldType } from "../../model/malloy_types";
+import {
+  TimestampUnit,
+  Expr,
+  TimeFieldType,
+  TypecastFragment,
+  AtomicFieldType,
+} from "../../model/malloy_types";
 
 export function timeOffset(
   timeType: TimeFieldType,
@@ -30,6 +36,45 @@ export function timeOffset(
       units: timeframe,
     },
   ];
+}
+
+export function castTo(
+  castType: AtomicFieldType,
+  from: Expr,
+  safe = false
+): Expr {
+  const cast: TypecastFragment = {
+    type: "dialect",
+    function: "cast",
+    dstType: castType,
+    expr: from,
+    safe,
+  };
+  return [cast];
+}
+
+export function castTimestampToDate(from: Expr, safe = false): Expr {
+  const cast: TypecastFragment = {
+    type: "dialect",
+    function: "cast",
+    dstType: "date",
+    srcType: "timestamp",
+    expr: from,
+    safe,
+  };
+  return [cast];
+}
+
+export function castDateToTimestamp(from: Expr, safe = false): Expr {
+  const cast: TypecastFragment = {
+    type: "dialect",
+    function: "cast",
+    dstType: "timestamp",
+    srcType: "date",
+    expr: from,
+    safe,
+  };
+  return [cast];
 }
 
 export function resolution(timeframe: string): TimeFieldType {

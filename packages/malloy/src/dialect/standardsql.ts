@@ -12,7 +12,15 @@
  */
 
 import { indent } from "../model/utils";
-import { TimestampUnit, ExtractUnit, Expr, mkExpr, TimeValue } from "../model";
+import {
+  TimestampUnit,
+  ExtractUnit,
+  Expr,
+  isTimeFieldType,
+  mkExpr,
+  TimeValue,
+  TypecastFragment,
+} from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {
@@ -289,14 +297,6 @@ ${indent(sql)}
     return mkExpr`EXTRACT(${extractTo} FROM ${expr.value})`;
   }
 
-  sqlDateCast(expr: Expr): Expr {
-    return mkExpr`DATE(${expr})`;
-  }
-
-  sqlTimestampCast(expr: Expr): Expr {
-    return mkExpr`TIMESTAMP(${expr})`;
-  }
-
   sqlAlterTime(
     op: "+" | "-",
     expr: TimeValue,
@@ -324,9 +324,20 @@ ${indent(sql)}
     return fieldName === "_PARTITIONTIME";
   }
 
-  sqlCast(expr: Expr, castTo: string, safe: boolean): Expr {
-    const dstType = castMap[castTo] || castTo;
-    return mkExpr`${safe ? "SAFE_CAST" : "CAST"}(${expr}  AS ${dstType})`;
+  sqlCast(cast: TypecastFragment): Expr {
+    if (cast.srcType !== cast.dstType) {
+      const dstType = castMap[cast.dstType] || cast.dstType;
+      // This just makes the code look a little prettier ...
+      if (!cast.safe && cast.srcType && isTimeFieldType(cast.srcType)) {
+        if (dstType == "date") {
+          return mkExpr`DATE(${cast.expr})`;
+        }
+        return mkExpr`TIMESTAMP(${cast.expr})`;
+      }
+      const castFunc = cast.safe ? "SAFE_CAST" : "CAST";
+      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+    }
+    return cast.expr;
   }
 
   sqlLiteralTime(

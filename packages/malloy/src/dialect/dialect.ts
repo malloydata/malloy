@@ -16,10 +16,10 @@ import {
   TimeFieldType,
   TimestampUnit,
   ExtractUnit,
-  Expr,
   DialectFragment,
   TimeValue,
 } from "..";
+import { Expr, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -121,10 +121,6 @@ export abstract class Dialect {
     units: TimestampUnit
   ): Expr;
 
-  abstract sqlDateCast(expr: Expr): Expr;
-
-  abstract sqlTimestampCast(expr: Expr): Expr;
-
   abstract sqlAlterTime(
     op: "+" | "-",
     expr: TimeValue,
@@ -138,7 +134,7 @@ export abstract class Dialect {
     return false;
   }
 
-  abstract sqlCast(expr: Expr, castTo: string, _safe: boolean): Expr;
+  abstract sqlCast(cast: TypecastFragment): Expr;
 
   abstract sqlLiteralTime(
     timeString: string,
@@ -161,7 +157,7 @@ export abstract class Dialect {
       case "extract":
         return this.sqlExtract(df.expr, df.units);
       case "cast":
-        return this.sqlCast(df.expr, df.dstType, df.safe);
+        return this.sqlCast(df);
     }
   }
 }

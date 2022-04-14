@@ -237,6 +237,7 @@ export interface TypecastFragment extends DialectFragmentBase {
   safe: boolean;
   expr: Expr;
   dstType: AtomicFieldType;
+  srcType?: AtomicFieldType;
 }
 
 export type DialectFragment =
@@ -316,6 +317,9 @@ export function hasExpression(f: FieldDef): f is HasExpression {
 }
 
 export type TimeFieldType = "date" | "timestamp";
+export function isTimeFieldType(s: string): s is TimeFieldType {
+  return s == "date" || s == "timestamp";
+}
 export type AtomicFieldType = "string" | "number" | TimeFieldType | "boolean";
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return ["string", "number", "date", "timestamp", "boolean"].includes(s);

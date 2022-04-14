@@ -20,6 +20,7 @@ import {
   Expr,
   TimeValue,
   mkExpr,
+  TypecastFragment,
 } from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
@@ -253,14 +254,6 @@ export class PostgresDialect extends Dialect {
     return units == "day_of_week" ? mkExpr`(${extracted}+1)` : extracted;
   }
 
-  sqlDateCast(expr: Expr): Expr {
-    return mkExpr`(${expr}::date)`;
-  }
-
-  sqlTimestampCast(expr: Expr): Expr {
-    return mkExpr`(${expr}::timestamp)`;
-  }
-
   sqlAlterTime(
     op: "+" | "-",
     expr: TimeValue,
@@ -275,8 +268,12 @@ export class PostgresDialect extends Dialect {
     return mkExpr`((${expr.value})${op}${interval})`;
   }
 
-  sqlCast(expr: Expr, castTo: string, _safe: boolean): Expr {
-    return mkExpr`(${expr})::${castMap[castTo] || castTo}`;
+  sqlCast(cast: TypecastFragment): Expr {
+    if (cast.dstType !== cast.srcType) {
+      const castTo = castMap[cast.dstType] || cast.dstType;
+      return mkExpr`cast(${cast.expr} as ${castTo})`;
+    }
+    return cast.expr;
   }
 
   sqlLiteralTime(
