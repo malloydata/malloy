@@ -947,9 +947,9 @@ export class MalloyToAST
   }
 
   visitExprApply(pcx: parse.ExprApplyContext): ast.Apply {
-    if (pcx.COLON()) {
-      this.contextError(pcx, "':' for apply is deprecated, use '?'", "warn");
-    }
+    // if (pcx.COLON()) {
+    //   this.contextError(pcx, "':' for apply is deprecated, use '?'", "warn");
+    // }
     return new ast.Apply(
       this.getFieldExpr(pcx.fieldExpr()),
       this.getFieldExpr(pcx.partialAllowedFieldExpr())

@@ -355,7 +355,8 @@ fieldExpr
   | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
   | fieldExpr (AMPER | BAR) partialAllowedFieldExpr        # exprLogicalTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
-  | fieldExpr (COLON | QMARK) partialAllowedFieldExpr      # exprApply
+  // | fieldExpr (COLON | QMARK) partialAllowedFieldExpr      # exprApply
+  | fieldExpr QMARK partialAllowedFieldExpr      # exprApply
   | NOT fieldExpr                                          # exprNot
   | fieldExpr (AND | OR) fieldExpr                         # exprLogical
   | CAST OPAREN fieldExpr AS malloyType CPAREN             # exprCast
