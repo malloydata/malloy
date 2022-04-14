@@ -177,7 +177,7 @@ Ranges between a start and end time can be constructed with the `to` operator, e
 
 Time ranges can also be constructed with a start time and duration using the `for` operator, e.g. `@2003 for 6 years` or `now for 20 minutes`.
 
-A time value can be compared to a range. If the time is within the range it will be `=`, before the range it will be `<`, and after the range it will be `>`. If you [apply](#apply-operator) a time to a range, (for example, `event_time: @2003 to @2004`) that will also check if the value is within the range.
+A time value can be compared to a range. If the time is within the range it will be `=`, before the range it will be `<`, and after the range it will be `>`. If you [apply](#apply-operator) a time to a range, (for example, `event_time ? @2003 to @2004`) that will also check if the value is within the range.
 
 ### Time Truncation
 
@@ -202,7 +202,7 @@ at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example `time.year`
 would be a range covering the entire year which contains `time`.
 
-This is extremely useful with the [apply operator](#apply-operator), `:`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `one_time: other_time.year`.
+This is extremely useful with the [apply operator](#apply-operator), `?`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `one_time ? other_time.year`.
 
 ### Time Extraction
 
@@ -290,24 +290,24 @@ The _conjunction alternation_ operator `&` represents the logical conjunction of
 Values can be used directly with the alternation operators, in which case the operator is assumed to be `=`. For example, `'CA' | 'NY'` is equivalent to `= 'CA' | = 'NY'`.
 ### Application
 
-<!-- * `state: 'CA'` -->
-<!-- * `weight: > 100 & < 1000` -->
-<!-- * `kind: pick 'other' when null` -->
+<!-- * `state ? 'CA'` -->
+<!-- * `weight ? > 100 & < 1000` -->
+<!-- * `kind ? pick 'other' when null` -->
 
-The apply operator `:` "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.
+The apply operator `?` "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.
 
-Applying a value to a condition is like filling in the condition with the given value. For example, `height: > 5 & < 10` is equivalent to `height > 5 and height < 10`.
+Applying a value to a condition is like filling in the condition with the given value. For example, `height ? > 5 & < 10` is equivalent to `height > 5 and height < 10`.
 
 Applying a value to another value applies a default comparison on the two values:
 
 | Left | Right | Example| Meaning |
 |------|-------|--------|---------|
-| `number` | `number` | `size: 10` | `size = 10` |
-| `string` | `string` | `state: 'CA'` | `state = 'CA'` |
-| `string` | regular expression | `name: r'Z$'` | `name ~ r'Z$'` |
-| `boolean` | `boolean` | `is_cool: true` | `is_cool = true` |
-| `number` | numeric range | `x: 10 to 20` | `x >= 10 and x < 20` |
-| `date` or `timestamp` | `date` or `timestamp` | `time: @2003` | `time` is during 2003 |
+| `number` | `number` | `size ? 10` | `size = 10` |
+| `string` | `string` | `state ? 'CA'` | `state = 'CA'` |
+| `string` | regular expression | `name ? r'Z$'` | `name ~ r'Z$'` |
+| `boolean` | `boolean` | `is_cool ? true` | `is_cool = true` |
+| `number` | numeric range | `x ? 10 to 20` | `x >= 10 and x < 20` |
+| `date` or `timestamp` | `date` or `timestamp` | `time ? @2003` | `time` is during 2003 |
 
 Values can be applied to [pick expressions](#pick-expressions) to make them more succinct.
 
