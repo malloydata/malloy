@@ -67,7 +67,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
   }
 
-  function checkEqual(result: Result, log = false) {
+  function checkEqual(result: Result) {
     let wantEq = result.data.path(0, "calc").value;
     if (wantEq != "=") {
       wantEq = wantEq + "\nSQL: " + result.sql;
@@ -112,12 +112,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
           t1 is count() { where: t_timestamp ? @2021-02-24} = 1
           // t2 is count() { where: t_timestamp ? @2021-02-23 for 2 days} = 1
-          t3 is count() { where: t_timestamp: @2021-02-23 00 ?00 ?00 for 2 days} = 1
+          t3 is count() { where: t_timestamp ? @2021-02-23 00:00:00 for 2 days} = 1
       }
       `
       )
       .run();
-    // console.log(result.sql);
 
     result.resultExplore.allFields.forEach((field) => {
       expect(`${result.data.path(0, field.name).value} ${field.name}`).toBe(
@@ -237,7 +236,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
       test("months", async () => {
         const result = await sqlEq("months(@2000-01-01 to @2003-07-01)", "42");
-        expect(checkEqual(result, true)).toBe("=");
+        expect(checkEqual(result)).toBe("=");
       });
       test("years", async () => {
         const result = await sqlEq("year(@2000 to @2042)", "42");
