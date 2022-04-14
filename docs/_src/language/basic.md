@@ -194,8 +194,8 @@ query: table('malloy-data.faa.airports') -> {
   top: 5
   group_by: state
   aggregate:
-    airports  is count() { where: fac_type ? 'AIRPORT' }
-    heliports is count() { where: fac_type ? 'HELIPORT' }
+    airports  is count() { where: fac_type = 'AIRPORT' }
+    heliports is count() { where: fac_type = 'HELIPORT' }
     total     is count()
 }
 ```

@@ -3,6 +3,31 @@ _Breaking changes indicated with *_
 
 We will use this space to highlight major and/or breaking changes to Malloy.
 
+
+## ?.?.?
+
+### The apply operator is now ? and not :
+
+In the transition from filters being with an array like syntax ...
+
+```
+sourceName :[ fieldName: value1|value2 ]
+```
+
+The use of `:` as the apply operator became a readability problem ...
+
+```
+sourceName { where: fieldName: value1|value2 }
+```
+
+As of this release, use of the `:` as an apply operator will generate a warning,
+and in a near future release it will be a compiler error. The correct
+syntax for apply is now the `?` operator. As in
+
+```
+sourceName { where: fieldName ? value1|value2 }
+```
+
 ## 0.0.9
 
 ### Deprecation of brackets for lists of items
