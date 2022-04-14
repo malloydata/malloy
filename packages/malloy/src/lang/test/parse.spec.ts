@@ -330,7 +330,7 @@ describe("model statements", () => {
       modelOK(`
         query: ab
           -> { group_by: astr; aggregate: acount }
-          -> { top: 5; where: astr ~ 'a%' group_by ? astr }
+          -> { top: 5; where: astr ~ 'a%' group_by: astr }
       `)
     );
     test(
@@ -807,7 +807,7 @@ describe("expressions", () => {
     test("less than", exprOK("42 < 7"));
     test("match", exprOK("'forty-two' ~ 'fifty-four'"));
     test("not match", exprOK("'forty-two' !~ 'fifty-four'"));
-    test("apply", exprOK("'forty-two' : 'fifty-four'"));
+    test("apply", exprOK("'forty-two' ? 'fifty-four'"));
     test("not", exprOK("not true"));
     test("and", exprOK("true and false"));
     test("or", exprOK("true or false"));
@@ -851,7 +851,7 @@ describe("expressions", () => {
     test(
       "filtering",
       exprOK(`
-        astr: pick 'missing value' when NULL
+        astr ? pick 'missing value' when NULL
     `)
     );
     test(
@@ -877,7 +877,7 @@ describe("expressions", () => {
     test(
       "when single values",
       exprOK(`
-        ai :
+        ai ?
           pick 'one' when 1
           else 'a lot'
       `)
