@@ -425,5 +425,44 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
     });
+    describe(`granular range checks - ${databaseName}`, () => {
+      for (const checkType of ["date", "timestamp", "literal"]) {
+        for (const valueType of ["date", "timestamp", "literal"]) {
+          for (const castType of ["date", "timestasmp"]) {
+            test.todo(`granular ${checkType} ? ${valueType}.${castType}`);
+          }
+          for (const endType of ["date", "timestasmp", "literal"]) {
+            test.todo(`granular ${checkType} ? ${valueType} to ${endType}`);
+          }
+        }
+      }
+      /*
+
+      i do not even know what this means this morning, and so now
+      coffee is required ...
+
+
+      tv = (date| timestamp | literal)
+      tst = date | timestamp
+      tv ? tv.tst           3 * 3 * 2 = 18
+      tv ? tv to tv         3 * 3 * 3 = 27
+                                      + --
+                                        45
+
+      write tests for each of these cases ....
+
+      vt  rt  gt  use
+      dt  dt  dt  dateRange
+      dt  dt  ts  == or timeStampRange
+      dt  ts  dt  timestampRange
+      dt  ts  ts  timeStampRange
+
+      ts  ts  ts  timestampRange
+      ts  ts  dt  timestampRange
+      ts  dt  ts  timestampRange
+      ts  dt  dt  either
+
+    */
+    });
   });
 });
