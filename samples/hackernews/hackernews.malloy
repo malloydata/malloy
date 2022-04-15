@@ -21,7 +21,7 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
       '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$'
     )
 
-    score_class is ifnull(score, 0):
+    score_class is ifnull(score, 0) ?
       pick 'blah' when < 5
       pick 'hmmm' when < 10
       pick 'oooh' when < 100

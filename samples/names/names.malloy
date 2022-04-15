@@ -4,7 +4,7 @@ query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_current') ->
   group_by:
     decade is floor(`year` / 10) * 10,
     state,
-    baby_gender is gender: pick 'Male' when = 'M' else 'Female',
+    baby_gender is gender ? pick 'Male' when = 'M' else 'Female',
     gender
   aggregate: cohort_population is `number`.sum()
   nest: by_name is { group_by: name; aggregate: population is `number`.sum() }

@@ -237,9 +237,9 @@ query: sessionize_delta_southwest is
 query: kayak_query_sj_to_la is
   flights -> kayak {
     where:
-      origin.code: 'SJC',
-      destination.code: 'LAX' | 'BUR',
-      dep_time: @2004-01-01
+      origin.code ? 'SJC',
+      destination.code ? 'LAX' | 'BUR',
+      dep_time ? @2004-01-01
   }
 
 query: southwest_dashboard is flights -> carrier_dashboard {
