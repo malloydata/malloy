@@ -2051,7 +2051,9 @@ export class ModelMaterializer extends FluentState<Model> {
           limit: 1000
         }
     `;
-    const result = await this.loadQuery(searchMapMalloy).run();
+    const result = await this.loadQuery(searchMapMalloy).run({
+      rowLimit: 1000,
+    });
     return result._queryResult.result as unknown as SearchValueMapResult[];
   }
 
