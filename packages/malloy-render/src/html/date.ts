@@ -23,15 +23,15 @@ export class HTMLDateRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
   async render(data: DataColumn): Promise<HTMLElement> {
+    if (data.isNull()) {
+      return createNullElement(this.document);
+    }
+
     if (!data.isDate() && !data.isTimestamp()) {
       return createErrorElement(
         this.document,
         "Invalid field for date renderer"
       );
-    }
-
-    if (data.isNull()) {
-      return createNullElement(this.document);
     }
 
     const timeframe =
