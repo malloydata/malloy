@@ -23,7 +23,7 @@ query: horror_combo is movies + {
   join_one: x is from( movie_filters->horror) with tconst
   where: x.tconst != null
 
-  // where: tconst exists in people + { where ? } -> tconst
+  // where: tconst exists in people + { where: } -> tconst
 }
 -> {
   group_by: genre_combo is concat('Horror + ', genres.value)
