@@ -186,9 +186,9 @@ export function errorFor(reason: string): ExprValue {
  * If the passed expresion is not a single term, wrap it in parens
  * @param f expression fragment
  */
-function term(f: Fragment[]): Fragment[] {
+function composeTerm(f: Fragment[]): Fragment[] {
   if (f.length > 1) {
-    return ["(", ...f, ")"];
+    return wrapInParens(f);
   }
   if (f.length === 0) {
     // Trying to compose a binary expresion with an entity that has no value
@@ -197,6 +197,10 @@ function term(f: Fragment[]): Fragment[] {
     return ["__MISSING_VALUE__"];
   }
   return f;
+}
+
+function wrapInParens(f: Fragment[]): Fragment[] {
+  return ["(", ...f, ")"];
 }
 
 export function compressExpr(expr: Expr): Expr {
@@ -225,18 +229,21 @@ export function compressExpr(expr: Expr): Expr {
  * @param left
  * @param op
  * @param right
+ * @param needsParens
  * @returns Fragment list of the composed expression
  */
 export function compose(
   left: Fragment[],
   op: string,
-  right: Fragment[]
+  right: Fragment[],
+  needsParens?: true
 ): Fragment[] {
   const opAlpha = op.match(/^[A-Za-z]/);
   const leftSpace = left.length === 1 && opAlpha ? " " : "";
   const rightSpace = right.length === 1 && opAlpha ? " " : "";
   const newOp = leftSpace + op + rightSpace;
-  return [...term(left), newOp, ...term(right)];
+  const composed = [...composeTerm(left), newOp, ...composeTerm(right)];
+  return needsParens ? wrapInParens(composed) : composed;
 }
 
 export function dateOffset(

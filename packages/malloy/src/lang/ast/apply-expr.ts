@@ -223,7 +223,8 @@ function numeric(
     return {
       dataType: "number",
       aggregate: anyAggregate,
-      value: compose(lhs.value, op, rhs.value),
+      // set needsParens to true for mathematical order of operations
+      value: compose(lhs.value, op, rhs.value, true),
     };
   }
 
