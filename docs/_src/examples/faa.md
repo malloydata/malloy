@@ -33,9 +33,9 @@ to render a Kayak page in a singe query.
 --! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
 query: flights -> kayak {
   where:
-    origin.code : 'SJC',
-    destination.code : 'LAX'|'BUR',
-    dep_time : @2004-01-01
+    origin.code = 'SJC',
+    destination.code = 'LAX'|'BUR',
+    dep_time = @2004-01-01
 }
 ```
 
@@ -246,7 +246,7 @@ source: flights is table('malloy-data.faa.flights') {
   }
 
   // query that you might run for to build a flight search interface
-  // query flights { where: origin.code: 'SJC', destination.code ? 'LAX' | 'BUR', dep_time ? @2004-01-01 } -> kayak
+  // query flights { where: origin.code = 'SJC', destination.code = 'LAX' | 'BUR', dep_time ? @2004-01-01 } -> kayak
   query: kayak is {
     nest: carriers is {
       group_by: carriers.nickname

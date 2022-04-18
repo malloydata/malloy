@@ -38,7 +38,7 @@ query: table('malloy-data.ecomm.order_items') {
   join_one: users is table('malloy-data.ecomm.users') on user_id = users.id
 } -> {
   where:
-    created_at: @2020,
+    created_at ? @2020,
     status != 'Cancelled' & != 'Returned'
   group_by: users.state
   aggregate: total_sales is sale_price.sum()
@@ -104,7 +104,7 @@ Note that queries can be filtered at any level. A filter on a source applies to 
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
 query: order_items {
   where:
-    users.state: 'California' | 'New York' | 'Texas',
+    users.state = 'California' | 'New York' | 'Texas',
     status: != 'Cancelled' & != 'Processing'
 } -> {
   group_by: users.state

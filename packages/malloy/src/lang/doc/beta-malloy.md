@@ -116,7 +116,7 @@ A `group by` or a `project` have a list of references, or new dimensions.  An `a
 
 ## Filters are `where:` and `having ?`
 
-The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where ?` and a `having ?`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
+The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
     explore: flights_21st_century is flights {
       where: dep_time >= @2001
