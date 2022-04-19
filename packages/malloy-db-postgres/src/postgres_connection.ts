@@ -318,9 +318,12 @@ export class PostgresConnection implements Connection {
       throw new Error("Default schema not supported Yet in Postgres");
     }
     const infoQuery = `
-      SELECT column_name, data_type FROM information_schema.columns
-      WHERE table_name = '${table}'
-        AND table_schema = '${schema}'
+      SELECT column_name, c.data_type, e.data_type as element_type
+      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
+        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
+          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
+        WHERE table_name = '${table}'
+          AND table_schema = '${schema}'
     `;
 
     await this.schemaFromQuery(infoQuery, structDef);
