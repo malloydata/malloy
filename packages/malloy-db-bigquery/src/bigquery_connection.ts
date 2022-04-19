@@ -448,7 +448,21 @@ export class BigQueryConnection implements Connection, PersistSQLResults {
       const type = field.type as string;
       const name = field.name as string;
 
-      if (["STRUCT", "RECORD"].includes(type)) {
+      // check for an array
+      if (field.mode === "REPEATED" && !["STRUCT", "RECORD"].includes(type)) {
+        const malloyType = this.bqToMalloyTypes[type];
+        if (malloyType) {
+          const innerStructDef: StructDef = {
+            type: "struct",
+            name,
+            dialect: this.dialectName,
+            structSource: { type: "nested" },
+            structRelationship: { type: "nested", field: name, isArray: true },
+            fields: [{ ...malloyType, name: "value" } as FieldTypeDef],
+          };
+          structDef.fields.push(innerStructDef);
+        }
+      } else if (["STRUCT", "RECORD"].includes(type)) {
         const innerStructDef: StructDef = {
           type: "struct",
           name,
@@ -457,7 +471,7 @@ export class BigQueryConnection implements Connection, PersistSQLResults {
             field.mode === "REPEATED" ? { type: "nested" } : { type: "inline" },
           structRelationship:
             field.mode === "REPEATED"
-              ? { type: "nested", field: name }
+              ? { type: "nested", field: name, isArray: false }
               : { type: "inline" },
           fields: [],
         };

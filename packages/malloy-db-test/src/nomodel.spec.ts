@@ -23,6 +23,16 @@ const runtimes = new RuntimeList([
   "postgres", //
 ]);
 
+const splitFunction: Record<string, string> = {
+  bigquery: "split",
+  postgres: "string_to_array",
+};
+
+const rootDbPath: Record<string, string> = {
+  bigquery: "malloy-data.",
+  postgres: "",
+};
+
 afterAll(async () => {
   await runtimes.closeAll();
 });
@@ -400,5 +410,57 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.data.value[0].d).toBe(3);
+  });
+
+  it(`array unnest - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        sql: atitle is ||
+          SELECT
+            city,
+            ${splitFunction[databaseName]}(city,' ') as words
+          FROM ${rootDbPath[databaseName]}malloytest.aircraft
+        ;;
+
+        source: title is from_sql(atitle){}
+
+        query: title ->  {
+          group_by: words.value
+          aggregate: c is count()
+        }
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(145);
+  });
+
+  // make sure we can count the total number of elements when fanning out.
+  it(`array unnest x 2 - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        sql: atitle is ||
+          SELECT
+            city,
+            ${splitFunction[databaseName]}(city,' ') as words,
+            ${splitFunction[databaseName]}(city,'A') as abreak
+          FROM ${rootDbPath[databaseName]}malloytest.aircraft
+        ;;
+
+        source: title is from_sql(atitle){}
+
+        query: title ->  {
+          aggregate:
+            b is count()
+            c is words.count()
+            a is abreak.count()
+        }
+      `
+      )
+      .run();
+    expect(result.data.value[0].b).toBe(3599);
+    expect(result.data.value[0].c).toBe(4586);
+    expect(result.data.value[0].a).toBe(8963);
   });
 });
