@@ -415,7 +415,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words
-          FROM malloytest.airports
+          FROM malloytest.aircraft
         ;;
 
         source: title is from_sql(atitle){}
@@ -427,7 +427,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(518);
+    expect(result.data.value[0].c).toBe(145);
   });
 
   // make sure we can count the total number of elements when fanning out.
@@ -440,7 +440,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             city,
             ${splitFunction[databaseName]}(city,' ') as words,
             ${splitFunction[databaseName]}(city,'A') as abreak
-          FROM malloytest.airports
+          FROM malloytest.aircraft
         ;;
 
         source: title is from_sql(atitle){}
@@ -454,8 +454,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].b).toBe(19793);
-    expect(result.data.value[0].c).toBe(24645);
-    expect(result.data.value[0].a).toBe(45491);
+    expect(result.data.value[0].b).toBe(3599);
+    expect(result.data.value[0].c).toBe(4586);
+    expect(result.data.value[0].a).toBe(8963);
   });
 });
