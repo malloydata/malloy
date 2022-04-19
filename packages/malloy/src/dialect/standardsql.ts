@@ -106,9 +106,16 @@ export class StandardSQLDialect extends Dialect {
     source: string,
     alias: string,
     fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    needDistinctKey: boolean,
+    isArray: boolean
   ): string {
-    if (needDistinctKey) {
+    if (isArray) {
+      if (needDistinctKey) {
+        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, value FROM UNNEST(${source}) value))) as ${alias}`;
+      } else {
+        return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
+      }
+    } else if (needDistinctKey) {
       return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
       return `LEFT JOIN UNNEST(${source}) as ${alias}`;

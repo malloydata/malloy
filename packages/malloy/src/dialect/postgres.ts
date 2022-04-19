@@ -143,9 +143,16 @@ export class PostgresDialect extends Dialect {
     source: string,
     alias: string,
     fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    needDistinctKey: boolean,
+    isArray: boolean
   ): string {
-    if (needDistinctKey) {
+    if (isArray) {
+      if (needDistinctKey) {
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text, 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+      } else {
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+      }
+    } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
       return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
