@@ -412,6 +412,25 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].d).toBe(3);
   });
 
+  it(`substitution precidence- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 5 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      query: from_sql(one) -> {
+        declare: c is b + 4
+        project: x is a * c
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].x).toBe(30);
+  });
+
   it(`array unnest - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(

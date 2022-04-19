@@ -253,12 +253,16 @@ class QueryField extends QueryNode {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
     if (hasExpression(field.fieldDef)) {
-      return this.generateExpressionFromExpr(
+      let ret = this.generateExpressionFromExpr(
         resultSet,
         field.parent,
         field.fieldDef.e,
         state
       );
+      if (!ret.match(/^\(.*\)$/)) {
+        ret = `(${ret})`;
+      }
+      return ret;
     } else {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
