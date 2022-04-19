@@ -428,7 +428,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
     expect(result.data.value[0].x).toBe(30);
   });
 
