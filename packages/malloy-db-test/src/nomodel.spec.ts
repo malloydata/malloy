@@ -28,6 +28,11 @@ const splitFunction: Record<string, string> = {
   postgres: "string_to_array",
 };
 
+const rootDbPath: Record<string, string> = {
+  bigquery: "malloy-data.",
+  postgres: "",
+};
+
 afterAll(async () => {
   await runtimes.closeAll();
 });
@@ -415,7 +420,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words
-          FROM malloytest.aircraft
+          FROM ${rootDbPath[databaseName]}malloytest.aircraft
         ;;
 
         source: title is from_sql(atitle){}
@@ -440,7 +445,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             city,
             ${splitFunction[databaseName]}(city,' ') as words,
             ${splitFunction[databaseName]}(city,'A') as abreak
-          FROM malloytest.aircraft
+          FROM ${rootDbPath[databaseName]}malloytest.aircraft
         ;;
 
         source: title is from_sql(atitle){}
