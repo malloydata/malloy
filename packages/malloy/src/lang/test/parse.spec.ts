@@ -954,14 +954,16 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
-  test("query reference to undefined explore", () => {
-    expect(markSource`query: ${"x"}->{ group_by: y }`).compileToFailWith(
+  test("query from undefined source", () => {
+    expect(markSource`query: ${"x"}->{ project: y }`).compileToFailWith(
       "Undefined source 'x'"
     );
   });
-  test("query with expression reference to undefined explore", () => {
+  test("query with expression from undefined source", () => {
+    // Regression check: Once upon a time this died with an exception even
+    // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
-      markSource`query: x is ${"x"}->{ project: xv is join.val / table_val }`
+      markSource`query: ${"x"}->{ project: y is z / 2 }`
     ).compileToFailWith("Undefined source 'x'");
   });
   test("join reference before definition", () => {
