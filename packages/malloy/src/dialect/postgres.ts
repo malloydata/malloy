@@ -189,7 +189,7 @@ export class PostgresDialect extends Dialect {
       }
       return ret;
     } else {
-      return `${alias}.${fieldName}`;
+      return `${alias}."${fieldName}"`;
     }
   }
 
@@ -220,7 +220,7 @@ export class PostgresDialect extends Dialect {
   }
   // TODO
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return identifier;
+    return `"${identifier}"`;
   }
 
   // The simple way to do this is to add a comment on the table
