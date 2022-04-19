@@ -44,8 +44,8 @@ export class ErrorFactory {
   static get structDef(): model.StructDef {
     const ret: model.StructDef = {
       type: "struct",
-      name: "//undefined_error_structdef",
-      dialect: "//undefined_errror_dialect",
+      name: "~malformed~",
+      dialect: "~malformed~",
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
@@ -57,7 +57,8 @@ export class ErrorFactory {
   }
 
   static isErrorStructdef(s: model.StructDef): boolean {
-    return s.name === this.structDef.name;
+    const sd = this.structDef;
+    return s.name.includes(sd.name);
   }
 
   static get query(): model.Query {
@@ -717,12 +718,11 @@ export class NamedSource extends Mallobj {
 
     const ret = this.modelStruct();
     if (!ret) {
-      const noSql = {
-        ...ErrorFactory.structDef,
-        name: "_reference_undefined_" + this.refName,
-        dialect: "MISSING_reference_undefined_" + this.refName,
-      };
-      return noSql;
+      const notFound = ErrorFactory.structDef;
+      const err = `${this.refName}-undefined`;
+      notFound.name = notFound.name + err;
+      notFound.dialect = notFound.dialect + err;
+      return notFound;
     }
     const declared = { ...ret.parameters } || {};
 
@@ -1894,6 +1894,15 @@ export class FullQuery extends TurtleHeadedPipe {
       : this.explore.structDef();
     let pipeFs = new DynamicSpace(structDef);
 
+    if (ErrorFactory.isErrorStructdef(structDef)) {
+      return {
+        outputStruct: structDef,
+        query: {
+          structRef: structRef,
+          pipeline: [],
+        },
+      };
+    }
     if (this.turtleName) {
       const { error } = this.turtleName.getField(pipeFs);
       if (error) this.log(error);

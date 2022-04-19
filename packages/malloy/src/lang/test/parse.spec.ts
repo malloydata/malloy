@@ -959,6 +959,11 @@ describe("error handling", () => {
       "Undefined source 'x'"
     );
   });
+  test("query with expression reference to undefined explore", () => {
+    expect(
+      markSource`query: x is ${"x"}->{ project: xv is join.val / table_val }`
+    ).compileToFailWith("Undefined source 'x'");
+  });
   test("join reference before definition", () => {
     expect(
       markSource`
