@@ -645,7 +645,7 @@ query: airport_facts -> flights_by_origin
 
 ### Named Queries from SQL Blocks ([SQL Block Documentation](language/sql_block.html))
 
-### Case statement improved with  `pick` ([Expression Documentation](language/expression.html))
+### Case statement improved with  `pick` ([Expression Documentation](language/expressions.html#pick-expressions))
 
 ### Group by on Joined Subtrees
 
