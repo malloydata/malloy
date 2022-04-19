@@ -252,12 +252,16 @@ class QueryField extends QueryNode {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
     if (hasExpression(field.fieldDef)) {
-      return this.generateExpressionFromExpr(
+      let ret = this.generateExpressionFromExpr(
         resultSet,
         field.parent,
         field.fieldDef.e,
         state
       );
+      if (!ret.match(/^\(.*\)$/)) {
+        ret = `(${ret})`;
+      }
+      return ret;
     } else {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
@@ -665,7 +669,13 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
       return pk.generateExpression(resultSet);
     } else {
-      return this.parent.getIdentifier() + "." + "__distinct_key";
+      // return this.parent.getIdentifier() + "." + "__distinct_key";
+      return this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        "__distinct_key",
+        "string",
+        this.parent.fieldDef.structRelationship.type === "nested"
+      );
     }
   }
 
@@ -1698,7 +1708,11 @@ class QueryQuery extends QueryField {
         const resultType =
           fi.getRepeatedResultType() === "nested" ? "nested" : "inline";
         structDef.name = name;
-        structDef.structRelationship = { field: name, type: resultType };
+        structDef.structRelationship = {
+          field: name,
+          type: resultType,
+          isArray: false,
+        };
         structDef.structSource = { type: resultType };
         structDef.resultMetadata = resultMetadata;
         fields.push(structDef);
@@ -1873,7 +1887,8 @@ class QueryQuery extends QueryField {
         fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),
-        ji.makeUniqueKey
+        ji.makeUniqueKey,
+        structRelationship.isArray
       )}\n`;
     } else if (structRelationship.type === "inline") {
       throw new Error(
@@ -1902,7 +1917,7 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
@@ -2504,6 +2519,8 @@ class QueryQueryProject extends QueryQuery {}
 
 class QueryQueryIndex extends QueryQuery {
   fieldDef: TurtleDef;
+  fanPrefixes: string[] = [];
+
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
@@ -2511,6 +2528,21 @@ class QueryQueryIndex extends QueryQuery {
   ) {
     super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
+    this.findFanPrefexes(parent);
+  }
+
+  // we want to generate a different query for each
+  //  nested structure so we don't do a crazy cross product.
+  findFanPrefexes(qs: QueryStruct) {
+    for (const [_name, f] of qs.nameMap) {
+      if (
+        f instanceof QueryStruct &&
+        (f.fieldDef.structRelationship.type === "many" ||
+          f.fieldDef.structRelationship.type === "nested")
+      ) {
+        this.fanPrefixes.push(f.getFullOutputName());
+      }
+    }
   }
 
   // get a field ref and expand it.
@@ -3343,7 +3375,9 @@ export class QueryModel {
   async searchIndex(
     connection: Connection,
     explore: string,
-    searchValue: string
+    searchValue: string,
+    limit = 1000,
+    searchField: string | undefined = undefined
   ): Promise<SearchIndexResult[] | undefined> {
     if (!connection.canPersist()) {
       return undefined;
@@ -3383,11 +3417,15 @@ export class QueryModel {
         FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
         WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
-        )})
+        )}) ${
+        searchField !== undefined
+          ? " AND fieldName = '" + searchField + "' \n"
+          : ""
+      }
         ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
           searchValue + "%"
         )}) THEN 1 ELSE 0 END DESC, weight DESC
-        LIMIT 1000
+        LIMIT ${limit}
       `,
       { rowLimit: 1000 }
     );

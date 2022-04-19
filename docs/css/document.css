@@ -179,15 +179,15 @@ div.document {
 
 @media only screen and (min-width: 1200px) {
   div.document {
-    width: 75%;
-    margin-left: 12.5%;
+    width: 85%;
+    margin-left: 6%;
   }
 }
 
 @media only screen and (min-width: 1768px) {
   div.document {
-    width: 50%;
-    margin-left: 25%;
+    width: 75%;
+    margin-left: 12.5%;
   }
 }
 
@@ -509,6 +509,26 @@ div.document hr {
 
 td {
   line-height: 24px;
+  font-size: 14px;
+}
+
+div.document td pre code {
+  background-color: transparent;
+  border: none;
+  white-space: pre-wrap;
+  padding: 0;
+  display: block;
+}
+
+div.document td pre {
+  margin: 0;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+div.document td pre:not(:first-child) {
+  margin-top: 10px;
 }
 
 .result-inner td {

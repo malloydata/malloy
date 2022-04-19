@@ -526,7 +526,7 @@ export type StructRelationship =
   | { type: "basetable"; connectionName: string }
   | JoinOn
   | { type: "inline" }
-  | { type: "nested"; field: FieldRef };
+  | { type: "nested"; field: FieldRef; isArray: boolean };
 
 /**
  * Use factory makeSQLBlock to create one of these, it will compute the
@@ -775,6 +775,12 @@ export interface SearchIndexResult {
   fieldValue: string;
   fieldType: string;
   weight: number;
+}
+
+export interface SearchValueMapResult {
+  fieldName: string;
+  cardinality: number;
+  values: { fieldValue: string; weight: number }[];
 }
 
 // clang-format on

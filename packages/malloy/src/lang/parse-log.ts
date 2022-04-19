@@ -13,7 +13,7 @@
 
 import { DocumentLocation } from "../model/malloy_types";
 
-type LogSeverity = "error" | "warn" | "debug";
+export type LogSeverity = "error" | "warn" | "debug";
 
 /**
  * Default severity is "error"

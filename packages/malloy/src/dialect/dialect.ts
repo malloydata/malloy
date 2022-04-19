@@ -80,7 +80,8 @@ export abstract class Dialect {
     source: string,
     alias: string,
     fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    needDistinctKey: boolean,
+    isArray: boolean
   ): string;
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;

@@ -96,7 +96,7 @@ describe("structdef comprehension", () => {
       name: "t",
       type: "struct",
       dialect: "standardsql",
-      structRelationship: { type: "nested", field: "a" },
+      structRelationship: { type: "nested", field: "a", isArray: false },
       structSource: { type: "nested" },
       fields: [{ type: "string", name: "b" }],
     };
