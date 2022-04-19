@@ -125,4 +125,21 @@ describe("postgres tests", () => {
       .run();
     expect(result.data.value[0].n).toBe(1);
   });
+
+  it(`sql_block`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as "upperLower"
+       ;;
+
+      query: from_sql(one) -> { project: upperLower }
+      `
+      )
+      .run();
+    console.log(result.sql);
+    console.log(result.data.value[0]);
+    expect(result.data.value[0].upperLower).toBe(1);
+  });
 });
