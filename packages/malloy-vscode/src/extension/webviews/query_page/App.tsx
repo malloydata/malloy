@@ -132,6 +132,15 @@ export const App: React.FC = () => {
         ""
       )}
       {!error && <ResultKindToggle kind={resultKind} setKind={setResultKind} />}
+      {!error && resultKind === ResultKind.SQL && (
+        <CopyButton
+          onClick={() => {
+            navigator.clipboard.writeText(queryHTMLStringToString(sql));
+          }}
+        >
+          COPY SQL
+        </CopyButton>
+      )}
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
           <div style={{ margin: "10px" }}>
@@ -254,3 +263,19 @@ const DrillTooltip = styled.div`
   box-shadow: rgb(144 144 144) 0px 1px 5px 0px;
   padding: 5px;
 `;
+
+const CopyButton = styled.button`
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  width: fit-content;
+  color: #b1b1b1;
+  font-weight: 500;
+  font-size: 12px;
+  background-color: white;
+  padding: 5px 10px;
+`;
+
+function queryHTMLStringToString(query: string) {
+  return query.replace(/<[^>]+>/g, "");
+}
