@@ -20,6 +20,7 @@ import {
   mkExpr,
   TimeValue,
   TypecastFragment,
+  isDateUnit,
 } from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
@@ -294,9 +295,12 @@ ${indent(sql)}
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     if (sqlTime.valueType == "date") {
-      return mkExpr`DATE_TRUNC(${sqlTime.value}, ${units})`;
+      if (isDateUnit(units)) {
+        return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
+      }
+      return mkExpr`TIMESTAMP(${sqlTime.value})`;
     }
-    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value}, ${units})`;
+    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units})`;
   }
 
   sqlExtract(expr: TimeValue, units: ExtractUnit): Expr {
