@@ -425,6 +425,9 @@ query: airports -> {
 }
 ```
 
+Note: to pipeline a named query, the syntax to reference that named query is `-> query_name`. An example of this can be found in the [Query Doc](query.md#multi-stage-pipelines).
+
+
 ## Joins
 
 [Joins](join.md) are declared as part of a source. When joining a source to another, it brings with it all child joins.
