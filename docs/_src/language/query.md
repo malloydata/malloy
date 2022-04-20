@@ -90,7 +90,7 @@ Example of a Projection:
   }
 ```
 
-Note that the operations in a stage are not order-sensitive like SQL; they can be arranged
+Note that the operations in a stage are not order-sensitive like SQL; they can be arranged in any order.
 
 A reference to a [named query](nesting.md) (which defines its own pipeline) can be the first stage in a pipeline.
 
@@ -98,7 +98,53 @@ A reference to a [named query](nesting.md) (which defines its own pipeline) can 
 query: flights -> by_carrier
 ```
 
-### Fields
+### Multi-Stage Pipelines
+
+This example shows a pipeline with 3 stages, the multiple stages chained using `->`. Each stage generates a CTE in the SQL (click "SQL" on the right to see what this looks like.)
+```malloy
+--! {"isRunnable": true, "showAs":"html", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
+query: table('malloy-data.faa.flights') -> {
+  project: *
+  where: dep_time > @2003
+} -> {
+  declare: flight_count is count()     -- declare defines a measure or dimension for use within query
+  aggregate: flight_count
+  nest: main_query is {
+    group_by: carrier
+    aggregate: flight_count
+  }
+} -> {
+  project:
+    main_query.carrier
+    main_query.flight_count
+    flight_count_as_a_percent_of_total is main_query.flight_count / flight_count * 100.0
+}
+```
+
+This can also be broken into multiple named queries. The syntax to refer to a top-level query (not defined inside a source) like this for purposes of pipelining is `-> source_query_name`. Used in context:
+
+```malloy
+query: recent_flights is flights -> {
+  project: *
+  where: dep_time > @2003
+}
+
+query: -> recent_flights -> {
+  aggregate: flight_count
+  nest: main_query is {
+    group_by: carrier
+    aggregate: flight_count
+  }
+} -> {
+  project:
+    main_query.carrier
+    main_query.flight_count
+    flight_count_as_a_percent_of_total is main_query.flight_count / flight_count * 100.0
+}
+```
+
+
+## Fields
 
 In a query stage, fields (dimensions, measures, or
 queries) may be specified either by referencing an existing
@@ -119,7 +165,7 @@ See the [Fields](fields.md) section for more information
 about the different kinds of fields and how they can be
 defined.
 
-### Filters
+## Filters
 
 Filters specified at the top level of query stage apply to
 the whole stage.
@@ -147,7 +193,7 @@ Filters may also be applied to a [query's source](), an [entire source](source.m
 
 See the [Filters](filters.md) section for more information.
 
-### Ordering and Limiting
+## Ordering and Limiting
 
 Query stages may also include ordering and limiting
 specifications.
