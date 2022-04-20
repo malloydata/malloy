@@ -9,7 +9,7 @@ If you haven't already done so, you'll need to start by [Building the Malloy rep
 1. `yarn install` to install dependencies
 2. `yarn build` to build all the libraries Malloy needs
 
-Make sure you have a [database connected](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/looker-open-source/malloy#installing-the-extension).
+Make sure you have a [database connected](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/looker-open-source/malloy#installing-the-extension) to view and edit Malloy files.
 
 ### Launch the Composer
 
