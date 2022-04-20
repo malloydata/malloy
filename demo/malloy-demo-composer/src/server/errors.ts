@@ -11,5 +11,11 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+export async function wrapErrors(fn: () => any) {
+  try {
+    return await fn();
+  } catch (error) {
+    console.log(error);
+    return { error: error.message }
+  }
+}

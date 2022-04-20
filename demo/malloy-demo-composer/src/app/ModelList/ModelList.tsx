@@ -11,5 +11,23 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { Model } from "../../types";
+
+interface ModelListProps {
+  models: Model[];
+  setModel: (model: Model) => void;
+}
+
+export const ModelList: React.FC<ModelListProps> = ({ models, setModel }) => {
+  return (
+    <div>
+      {models.map((model) => {
+        return (
+          <div key={model.path} onClick={() => setModel(model)}>
+            {model.path}
+          </div>
+        );
+      })}
+    </div>
+  );
+};

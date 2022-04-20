@@ -11,5 +11,5 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+export { SearchList, useSearchList } from "./SearchList";
+export type { SearchItem } from "./SearchList";

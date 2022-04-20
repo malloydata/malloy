@@ -11,5 +11,21 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { useQuery } from "react-query";
+import * as explore from "../../types";
+import { API } from "./api";
+
+export const KEY = "models";
+
+async function fetchModels(): Promise<explore.Model[]> {
+  const raw = await (await fetch(`${API}/models`)).json();
+  return raw.models as explore.Model[];
+}
+
+export function useModels(): explore.Model[] | undefined {
+  const { data: models } = useQuery(KEY, fetchModels, {
+    refetchOnWindowFocus: false,
+  });
+
+  return models;
+}

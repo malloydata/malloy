@@ -11,5 +11,15 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { QueryClient, QueryClientProvider } from "react-query";
+import { Explore } from "./app";
+
+const client = new QueryClient();
+
+export const Main: React.FC = () => {
+  return (
+    <QueryClientProvider client={client}>
+      <Explore />
+    </QueryClientProvider>
+  );
+};

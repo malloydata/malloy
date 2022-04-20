@@ -11,5 +11,10 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { FixedConnectionMap } from "@malloydata/malloy";
+import { BigQueryConnection } from "@malloydata/db-bigquery";
+
+export const CONNECTIONS = new FixedConnectionMap(
+  new Map([["bigquery", new BigQueryConnection("bigquery")]]),
+  "bigquery"
+);

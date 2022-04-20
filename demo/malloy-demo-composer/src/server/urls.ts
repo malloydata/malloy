@@ -11,5 +11,12 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { URL, URLReader } from "@malloydata/malloy";
+import { promises as fs } from "fs";
+
+export const URL_READER: URLReader = {
+  readURL: (url: URL) => {
+    const path = url.toString().replace("file://", "");
+    return fs.readFile(path, "utf8");
+  },
+};

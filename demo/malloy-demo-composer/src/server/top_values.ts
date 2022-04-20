@@ -11,5 +11,16 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { SearchValueMapResult, StructDef } from "@malloydata/malloy";
+import { RUNTIME } from "./runtime";
+
+export async function topValues(
+  source: StructDef
+): Promise<SearchValueMapResult[] | undefined> {
+  const sourceName = source.as || source.name;
+  return RUNTIME._loadModelFromModelDef({
+    name: "_generated",
+    contents: { [sourceName]: source },
+    exports: [],
+  }).searchValueMap(sourceName);
+}

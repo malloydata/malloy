@@ -11,5 +11,8 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { Runtime } from "@malloydata/malloy";
+import { URL_READER } from "./urls";
+import { CONNECTIONS } from "./connections";
+
+export const RUNTIME = new Runtime(URL_READER, CONNECTIONS);

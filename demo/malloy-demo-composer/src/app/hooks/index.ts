@@ -11,5 +11,5 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+export { useClickOutside } from "./use_click_outside";
+export { usePrevious } from "./use_previous";

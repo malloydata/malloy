@@ -11,5 +11,8 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import logoSrc from "../assets/img/logo.png";
+
+export const MalloyLogo: React.FC = () => {
+  return <img src={logoSrc} alt="Malloy" style={{ height: "40px" }} />;
+};

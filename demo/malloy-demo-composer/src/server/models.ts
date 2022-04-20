@@ -1,0 +1,62 @@
+/*
+ * Copyright 2021 Google LLC
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
+import * as explore from "../types";
+import { promises as fs } from "fs";
+import * as path from "path";
+import * as os from "os";
+import { RUNTIME } from "./runtime";
+import { URL } from "@malloydata/malloy";
+
+const MODELS_PATH = path.join(os.homedir(), "malloy");
+
+export async function getModels(): Promise<explore.Model[]> {
+  const files = await fs.readdir(MODELS_PATH);
+  const models: explore.Model[] = [];
+  for (const file of files) {
+    if (file.endsWith(".malloy") && !file.endsWith(".a.malloy")) {
+      const fullPath = path.join(MODELS_PATH, file);
+      models.push(await getModel(fullPath));
+    }
+  }
+  return models;
+}
+
+export async function getModel(fullPath: string): Promise<explore.Model> {
+  const content = await fs.readFile(fullPath, "utf8");
+  const model = await RUNTIME.getModel(new URL("file://" + fullPath));
+  const sources = model.explores.map((explore) => {
+    return {
+      name: explore.name,
+    };
+  });
+  let dataStyles;
+  try {
+    const dsRaw = await fs.readFile(
+      fullPath.replace(/\.malloy$/, ".styles.json"),
+      "utf8"
+    );
+    dataStyles = JSON.parse(dsRaw);
+  } catch (error) {
+    dataStyles = {};
+  }
+  return {
+    type: "model",
+    path: path.basename(fullPath),
+    fullPath,
+    malloy: content,
+    sources,
+    modelDef: model._modelDef,
+    dataStyles,
+  };
+}

@@ -11,5 +11,18 @@
  * GNU General Public License for more details.
  */
 
-export * from "./malloy_types";
-export { Segment, QueryModel } from "./malloy_query";
+import { Result } from "@malloydata/malloy";
+import { Analysis } from "../types";
+import { RUNTIME } from "./runtime";
+
+export async function runQuery(
+  query: string,
+  queryName: string,
+  analysis: Analysis
+): Promise<Result> {
+  const runnable = RUNTIME.loadModel(
+    analysis.malloy + "\n" + query
+  ).loadQueryByName(queryName);
+  const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
+  return runnable.run({ rowLimit });
+}
