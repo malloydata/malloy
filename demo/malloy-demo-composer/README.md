@@ -13,12 +13,29 @@ Make sure you have a [database connected](https://looker-open-source.github.io/m
 
 ### Launch the Composer
 
-In the `malloy/demo/malloy-demo-composer` directory, run `yarn start`. 
+In the `malloy/demo/malloy-demo-composer` directory, run `yarn start-server`. 
 
-This should open up the composer at localhost:3000 in your browser. You should see any `.malloy` models you place in a `/malloy/` directory (you'll need to create this) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
+This will launch in your browser. You should see any sources defined in `.malloy` files you place in a `/malloy/` directory (you'll need to create this) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
 
-_Troubleshooting note: If you have models in your `/malloy/` directory and nothing is showing up in the explorer, you may have errors in one of them. Try opening them up in VS Code with the Malloy Extension installed to find the problem._
+Troubleshooting notes: 
+- If you have models in your `/malloy/` directory and nothing is showing up in the explorer, you may have errors in one of them. Try opening them up in VS Code with the Malloy Extension installed to find the problem.
+- You'll need to define a [source](https://looker-open-source.github.io/malloy/documentation/language/source.html) for it to be explorable; top-level named queries that are not inside a source are not explorable.
 
+### Set up Query Saving
+The composer can write saved queries back to `.a.malloy` files in the `/malloy`/ directory.
+1. Create a new file with the suffix `.a.malloy` (e.g. `flights.a.malloy`). You'll need separate ones for each source you want to make explorable.
+2. [Import](https://looker-open-source.github.io/malloy/documentation/language/imports.html) the base file in this `.a.malloy` file (e.g. import "file:///Users/anikaks/malloy/flights.malloy"), then create a refinement of a source named in the base file. For example, if your base file contains:
+
+```malloy
+source: flights_base is table('malloy-data.faa.flights'){}
+```
+Your `.a.malloy` file might look like this:
+```
+import "file:///Users/anikaks/malloy/flights.malloy"
+
+source: flights is flights_base {}
+```
+You should now see the name of your new source appear in the top left menu, and when you click the start icon in the top menu you should be able to save named queries and see them appear inside the new source. You can edit these, add additional fields, etc. _Note: Only the last source in a `.a.malloy` file will appear in the menu._
 
 ## Development
 
