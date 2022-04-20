@@ -12,13 +12,13 @@
  */
 
 import { compileModel } from "../../core/compile";
-import { Model, Analysis } from "../../types"
+import { Model, Analysis } from "../../types";
 import { SelectDropdown } from "../SelectDropdown";
 
 interface AnalysisPickerProps {
   models: Model[];
   analyses: Analysis[];
-  analysis: Analysis | undefined,
+  analysis: Analysis | undefined;
   selectAnalysis: (analysable: Analysis) => void;
 }
 
@@ -44,77 +44,64 @@ export const AnalysisPicker: React.FC<AnalysisPickerProps> = ({
   selectAnalysis,
 }) => {
   const options: { key: string; value: Option; label: string }[] = [
-    ...models.flatMap((model) => model.sources.map((source) => {
-      const option: Option = {
-        model,
-        sourceName: source.name,
-        type: "model/source",
-        key: `${model.fullPath}/${source.name}`,
-      };
-      return {
-        key: option.key,
-        value: option,
-        label: `${ model.path.replace(/\.malloy$/, "") } / ${source.name}`
-      };
-    })),
+    ...models.flatMap((model) =>
+      model.sources.map((source) => {
+        const option: Option = {
+          model,
+          sourceName: source.name,
+          type: "model/source",
+          key: `${model.fullPath}/${source.name}`,
+        };
+        return {
+          key: option.key,
+          value: option,
+          label: `${model.path.replace(/\.malloy$/, "")} / ${source.name}`,
+        };
+      })
+    ),
     ...analyses.map((analysis) => {
       const key = `${analysis.fullPath}/${analysis.sourceName}`;
       const option: Option = { type: "analysis", analysis, key };
       return {
         key,
         value: option,
-        label: analysis.path!.replace(/\.a\.malloy$/, "")
-      }
-    })
+        label: (analysis.path || "").replace(/\.a\.malloy$/, ""),
+      };
+    }),
   ];
 
   const value: Option | undefined = analysis
     ? { type: "analysis", analysis, key: analysis.id || "" }
     : undefined;
 
-  return <SelectDropdown
-    value={value}
-    options={options}
-    onChange={(o: Option) => {
-      if (o.type === "analysis") {
-        selectAnalysis({ ...o.analysis, id: o.key });
-      } else {
-        const sourceName = `${o.sourceName}_analysis`;
-        const code = `import "file://${o.model.fullPath}"\n\n explore: ${sourceName} is ${o.sourceName} {}`;
-        compileModel(o.model.modelDef, code).then((modelDef) => {
-          const analysis: Analysis = {
-            type: "analysis",
-            malloy: code,
-            path: undefined,
-            fullPath: undefined,
-            modelFullPath: o.model.fullPath,
-            sourceName,
-            modelDef,
-            id: o.key,
-            dataStyles: o.model.dataStyles,
-          };
-          selectAnalysis(analysis);
-        })
-      }
-    }}
-    placeholder="Select analysis..."
-    valueEqual={(a, b) => a.key === b.key}
-  />;
-}
-
-
-// return <select
-// value={value}
-// onChange={(event) =>
-//   selectAnalysis(options.find((option) => option.key === (event.target as any).value)!.value)
-// }
-// >
-// { options.map((option) => {
-//   return <option
-//     value={option.key}
-//     key={option.key}
-//   >
-//     { option.label }
-//   </option>
-// }) }
-// </select>
+  return (
+    <SelectDropdown
+      value={value}
+      options={options}
+      onChange={(o: Option) => {
+        if (o.type === "analysis") {
+          selectAnalysis({ ...o.analysis, id: o.key });
+        } else {
+          const sourceName = `${o.sourceName}_analysis`;
+          const code = `import "file://${o.model.fullPath}"\n\n explore: ${sourceName} is ${o.sourceName} {}`;
+          compileModel(o.model.modelDef, code).then((modelDef) => {
+            const analysis: Analysis = {
+              type: "analysis",
+              malloy: code,
+              path: undefined,
+              fullPath: undefined,
+              modelFullPath: o.model.fullPath,
+              sourceName,
+              modelDef,
+              id: o.key,
+              dataStyles: o.model.dataStyles,
+            };
+            selectAnalysis(analysis);
+          });
+        }
+      }}
+      placeholder="Select analysis..."
+      valueEqual={(a, b) => a.key === b.key}
+    />
+  );
+};
