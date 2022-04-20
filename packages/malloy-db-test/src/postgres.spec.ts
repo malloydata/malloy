@@ -141,7 +141,7 @@ describe("postgres tests", () => {
     expect(result.data.value[0].upperLower).toBe(1);
   });
 
-  it(`quote keword`, async () => {
+  it(`quote keyword`, async () => {
     const result = await runtime
       .loadQuery(
         `
