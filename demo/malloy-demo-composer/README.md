@@ -26,7 +26,7 @@ Troubleshooting notes:
 ### Set up Query Saving
 The composer can write saved queries back to `.a.malloy` files in the `/malloy`/ directory.
 1. Create a new file with the suffix `.a.malloy` (e.g. `flights.a.malloy`). You'll need separate ones for each source you want to make explorable.
-2. [Import](https://looker-open-source.github.io/malloy/documentation/language/imports.html) the base file in this `.a.malloy` file (e.g. import "file:///Users/anikaks/malloy/flights.malloy"), then create a refinement of a source named in the base file. For example, if your base file looks like:
+2. [Import](https://looker-open-source.github.io/malloy/documentation/language/imports.html) the base file in this `.a.malloy` file, then create a refinement of a source named in the base file. For example, if your base file looks like:
 
 ```malloy
 source: flights_base is table('malloy-data.faa.flights'){}
