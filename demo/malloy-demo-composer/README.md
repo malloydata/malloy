@@ -13,9 +13,11 @@ Make sure you have a [database connected](https://looker-open-source.github.io/m
 
 ### Launch the Composer
 
-In the `malloy/demo/malloy-demo-composer` directory, run `yarn start-server`. 
+In the `malloy/demo/malloy-demo-composer` directory, run:
+1. `yarn build` (you need to do this in addition to the above build in the top-level directory)
+2. `yarn start-server`
 
-This will launch in your browser. You should see any sources defined in `.malloy` files you place in a `/malloy/` directory (you'll need to create this) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
+The app will run at localhost:4000. You should see any sources defined in `.malloy` files you place in a `/malloy/` directory (you'll need to create this) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
 
 Troubleshooting notes: 
 - If you have models in your `/malloy/` directory and nothing is showing up in the explorer, you may have errors in one of them. Try opening them up in VS Code with the Malloy Extension installed to find the problem.
