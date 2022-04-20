@@ -1,6 +1,6 @@
 # Malloy Composer Demo
 
-The Malloy Composer Demo is provided as a working example of an application built using Malloy. 
+The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. 
 
 ## Running the Composer
 
