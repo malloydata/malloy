@@ -54,8 +54,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           query:
             from_sql(basicTypes) {
               dimension:
-                expect is ${result}
-                got is ${expr}
+                expect is (${result})
+                got is (${expr})
             }
             -> {
               project: calc is
@@ -425,17 +425,82 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(checkEqual(result)).toBe("=");
       });
     });
-    describe(`granular range checks - ${databaseName}`, () => {
+    describe(`range edge tests - ${databaseName}`, () => {
+      describe(`${databaseName} date`, () => {
+        test(`before is outside - ${databaseName}`, async () => {
+          const result = await sqlEq(
+            "t_date ? @2021-02-25 to @2021-03-01",
+            "false"
+          );
+          expect(checkEqual(result)).toBe("=");
+        });
+        test(`first is inside - ${databaseName}`, async () => {
+          const result = await sqlEq(
+            "t_date ? @2021-02-24 to @2021-03-01",
+            "true"
+          );
+          expect(checkEqual(result)).toBe("=");
+        });
+        test(`last is outside - ${databaseName}`, async () => {
+          const result = await sqlEq(
+            "t_date ? @2021-02-01 to @2021-02-24",
+            "false"
+          );
+          expect(checkEqual(result)).toBe("=");
+        });
+      });
+      describe(`${databaseName} timestamp`, () => {
+        test(`before is outside - ${databaseName}`, async () => {
+          const result = await sqlEq(
+            "t_timestamp ? @2021-02-25 00:00:00 to @2021-02-26 00:00:00",
+            "false"
+          );
+          expect(checkEqual(result)).toBe("=");
+        });
+        test(`first is inside - ${databaseName}`, async () => {
+          const result = await sqlEq(
+            "t_timestamp ? @2021-02-24 03:04:05 to @2021-02-26 00:00:00",
+            "true"
+          );
+          expect(checkEqual(result)).toBe("=");
+        });
+        test(`last is outside - ${databaseName}`, async () => {
+          const result = await sqlEq(
+            "t_timestamp ? @2021-02-24 00:00:00 to @2021-02-24 03:05:06",
+            "false"
+          );
+          expect(checkEqual(result)).toBe("=");
+        });
+      });
+    });
+    describe(`granular time range checks - ${databaseName}`, () => {
+      /*
+       * Here is the matrix of all possible tests, I don't know that we need
+       * this entire list, there may be coverage of all code with fewer tests.
+       *
+       * I also don't know how to test these. As I was writing the code I
+       * had worried and wanted tests to cover my worry, but now I don't
+       * even know what I was worried about
+       *
+       * I think the general worry is that we generate the correct expression
+       * given the large matrix of possible type combinations.
+       *
+       * So the first question is, what combinations require casting that
+       * would fail if the casting didn't happen, make sure those
+       * tests exist.
+       *
+       */
       for (const checkType of ["date", "timestamp", "literal"]) {
         for (const valueType of ["date", "timestamp", "literal"]) {
-          for (const castType of ["date", "timestasmp"]) {
-            test.todo(`granular ${checkType} ? ${valueType}.${castType}`);
+          for (const unitType of ["date", "timestasmp"]) {
+            test.todo(`granular ${checkType} ? ${valueType}.${unitType}`);
           }
           for (const endType of ["date", "timestasmp", "literal"]) {
             test.todo(`granular ${checkType} ? ${valueType} to ${endType}`);
           }
         }
       }
+
       /*
 
       i do not even know what this means this morning, and so now
