@@ -1563,7 +1563,7 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Malloy by Example",
       "The <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">nest</span><span style=\"color: #000000\">:</span></span></code> property embeds one query in another",
-      "Case statement improved with  <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> (<a href=\"language/expression.html\">Expression Documentation</a>)"
+      "Case statement improved with  <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">pick</span></span></code> (<a href=\"language/expressions.html#pick-expressions\">Expression Documentation</a>)"
     ],
     "paragraphs": [],
     "path": "/index.md"
@@ -2045,6 +2045,7 @@ window.SEARCH_SEGMENTS = [
       "Numeric values can be extracted from time values, e.g. <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">day_of_year</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">some_date</span><span style=\"color: #000000\">)</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #795E26\">minute</span><span style=\"color: #000000\">(</span><span style=\"color: #001080\">some_time</span><span style=\"color: #000000\">)</span></span></code>. See the full list of extraction functions <a href=\"time-ranges.html#extraction\">here</a>.",
       "In Malloy, queries can be <a href=\"nesting.html\">nested</a> to produce subtables on each output row. Such nested queries are called <em>aggregating subqueries</em>, or simply \"nested queries.\" When a query is nested inside another query, each output row of the outer query will have a nested table for the inner query which only includes data limited to that row.",
       "Filters can be isolated to any level of nesting. In the following example, we limit the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">major_facilities</span></span></code> query to only airports where <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">major</span></span></code> is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #A31515\">&#39;Y&#39;</span></span></code>. This particular filter applies <em>only</em> to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">major_facilities</span></span></code>, and not to other parts of the outer query.",
+      "Note: to pipeline a named query, the syntax to reference that named query is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt; </span><span style=\"color: #001080\">query_name</span></span></code>. An example of this can be found in the <a href=\"query.html#multi-stage-pipelines\">Query Doc</a>.",
       "<a href=\"join.html\">Joins</a> are declared as part of a source. When joining a source to another, it brings with it all child joins.",
       "As in SQL, aggregate functions <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">sum</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">count</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">avg</span></span></code> are available, and their use in\nan expression identifies the corresponding field as a <a href=\"fields.html#measures\">measure</a>.",
       "Aggregates may be computed with respect to any joined source, allowing for a wider variety of measurements to be calculated than is possible in SQL. See the <a href=\"aggregates.html#aggregate-locality\">Aggregate Locality</a> section for more information."
@@ -2796,7 +2797,7 @@ window.SEARCH_SEGMENTS = [
       "A stage can do one of:",
       "Example of a Reduction:",
       "Example of a Projection:",
-      "Note that the operations in a stage are not order-sensitive like SQL; they can be arranged"
+      "Note that the operations in a stage are not order-sensitive like SQL; they can be arranged in any order."
     ],
     "path": "/language/query.md"
   },
@@ -2804,6 +2805,14 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Queries",
       "Pipelines",
+      "Multi-Stage Pipelines"
+    ],
+    "paragraphs": [],
+    "path": "/language/query.md"
+  },
+  {
+    "titles": [
+      "Queries",
       "Fields"
     ],
     "paragraphs": [
@@ -2814,7 +2823,6 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Queries",
-      "Pipelines",
       "Filters"
     ],
     "paragraphs": [
@@ -2827,7 +2835,6 @@ window.SEARCH_SEGMENTS = [
   {
     "titles": [
       "Queries",
-      "Pipelines",
       "Ordering and Limiting"
     ],
     "paragraphs": [
@@ -2835,6 +2842,8 @@ window.SEARCH_SEGMENTS = [
       "The leading <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code> is used when the source is a query:",
       "a Reduction: a query containing <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code>/<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">aggregate</span></span></code> which includes aggregation and/or a group_by to reduce the grain of the data being transformed",
       "a Projection: select fields without reducing using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">project</span></span></code>.",
+      "This example shows a pipeline with 3 stages, the multiple stages chained using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code>. Each stage generates a CTE in the SQL (click \"SQL\" on the right to see what this looks like.)",
+      "This can also be broken into multiple named queries. The syntax to refer to a top-level query (not defined inside a source) like this for purposes of pipelining is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt; </span><span style=\"color: #001080\">source_query_name</span></span></code>. Used in context:",
       "When referencing existing fields, wildcard expressions <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">*</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">**</span></span></code>, and <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">some_join</span><span style=\"color: #000000\">.*</span></span></code> may be used.",
       "The basic syntax for a query in Malloy consists of a source and a \"pipeline\" of one or more <em>stages</em> separated by <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code>. The shape of the data defined in the original source is transformed by each stage.",
       "The source of a query can be a table, a <a href=\"source.html\">source</a>, or a <a href=\"statement.html#queries\">named query</a>.",
