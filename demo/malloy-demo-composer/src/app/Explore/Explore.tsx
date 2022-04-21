@@ -15,7 +15,7 @@ import { useRef, useState } from "react";
 import { QueryBuilder, QueryWriter } from "../../core/query";
 import styled from "styled-components";
 import { Analysis, QuerySummary, RendererName, StagePath } from "../../types";
-import { useSaveField } from "../data";
+import { useSaveField, useWatchAnalysis } from "../data";
 import { useDirectory } from "../data/use_directory";
 import { useRunQuery } from "../data/use_run_query";
 import { Result } from "../Result";
@@ -71,6 +71,13 @@ export const Explore: React.FC = () => {
   const [insertOpen, setInsertOpen] = useState(false);
   const [dataStyles, setDataStyles] = useState<DataStyles>({});
   const topValues = useTopValues(analysis);
+
+  useWatchAnalysis(analysis, (newAnalysis) => {
+    setAnalysis(newAnalysis);
+    withAnalysisSource(newAnalysis, (source) => {
+      queryBuilder.current?.updateSource(source);
+    });
+  });
 
   const selectAnalysis = (analysis: Analysis) => {
     setAnalysis(analysis);

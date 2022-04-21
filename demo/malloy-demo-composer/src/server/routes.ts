@@ -14,7 +14,7 @@
 import { FieldDef, StructDef } from "@malloydata/malloy";
 import express from "express";
 import { Analysis } from "../types";
-import { readMalloyDirectory } from "./directory";
+import { getAnalysis, readMalloyDirectory } from "./directory";
 import { wrapErrors } from "./errors";
 import { getModels } from "./models";
 import { runQuery } from "./run_query";
@@ -33,6 +33,18 @@ export function routes(router: express.Router): void {
       await wrapErrors(async () => ({ directory: await readMalloyDirectory() }))
     );
   });
+
+  router.get(
+    "/analysis",
+    async (req: express.Request, res: express.Response) => {
+      const analysisPath = req.query.path as string;
+      res.json(
+        await wrapErrors(async () => ({
+          analysis: await getAnalysis(analysisPath),
+        }))
+      );
+    }
+  );
 
   router.get("/schema", async (req: express.Request, res: express.Response) => {
     const analysableRef = req.query as unknown as Analysis;
