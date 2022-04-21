@@ -159,9 +159,6 @@ export const PillInput: React.FC<PillInputProps> = ({
           setFocused(true);
           setSelectedPill(undefined);
         }}
-        onBlur={() => {
-          setFocused(false);
-        }}
         autoFocus={autoFocus}
       />
     </OuterInput>
