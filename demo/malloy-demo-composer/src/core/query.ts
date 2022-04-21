@@ -246,7 +246,45 @@ export class QueryBuilder extends SourceUtils {
     if (definition.type !== "turtle") {
       throw new Error("Path does not refer to query.");
     }
-    this.query.pipeline = JSON.parse(JSON.stringify(definition.pipeline));
+    definition.pipeline.forEach((stage, stageIndex) => {
+      if (this.query.pipeline[stageIndex] === undefined) {
+        this.query.pipeline[stageIndex] = JSON.parse(JSON.stringify(stage));
+      } else {
+        const existingStage = this.query.pipeline[stageIndex];
+        if (existingStage.type !== "reduce" || stage.type !== "reduce") {
+          throw new Error("Cannot load query with non-reduce stages");
+        }
+        if (stage.by) {
+          existingStage.by = { ...stage.by };
+          existingStage.orderBy = undefined;
+        }
+        if (stage.filterList) {
+          existingStage.filterList = (existingStage.filterList || []).concat(
+            ...stage.filterList.filter((filter) => {
+              return !existingStage.filterList?.find(
+                (existingFilter) => existingFilter.code === filter.code
+              );
+            })
+          );
+        }
+        if (stage.limit) {
+          existingStage.limit = stage.limit;
+        }
+        if (stage.orderBy) {
+          existingStage.orderBy = stage.orderBy;
+          existingStage.by = undefined;
+        }
+        existingStage.fields = stage.fields
+          .map((field) => JSON.parse(JSON.stringify(field)))
+          .concat(
+            existingStage.fields.filter((field) => {
+              return !stage.fields.find(
+                (otherField) => this.nameOf(otherField) === this.nameOf(field)
+              );
+            })
+          );
+      }
+    });
     this.query.name = definition.as || definition.name;
   }
 
