@@ -173,11 +173,16 @@ export const AddFilter: React.FC<AddFilterProps> = ({
         <RightButtonRow style={{ padding: "0 15px 15px 15px" }}>
           <Button
             type="submit"
-            onClick={() => {
-              compileFilter(source, filter).then((filterExpression) => {
-                addFilter(filterExpression, newName || undefined);
-                onComplete();
-              });
+            onClick={(event) => {
+              compileFilter(source, filter)
+                .then((filterExpression) => {
+                  addFilter(filterExpression, newName || undefined);
+                  onComplete();
+                })
+                // eslint-disable-next-line no-console
+                .catch(console.log);
+              event.stopPropagation();
+              event.preventDefault();
             }}
           >
             Done

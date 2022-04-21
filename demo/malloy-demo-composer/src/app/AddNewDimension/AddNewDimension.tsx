@@ -67,11 +67,16 @@ export const AddNewDimension: React.FC<AddFilterProps> = ({
         <RightButtonRow>
           <Button
             type="submit"
-            onClick={() => {
-              compileDimension(source, newName, dimension).then((dimension) => {
-                addDimension(dimension);
-                onComplete();
-              });
+            onClick={(event) => {
+              compileDimension(source, newName, dimension)
+                .then((dimension) => {
+                  addDimension(dimension);
+                  onComplete();
+                })
+                // eslint-disable-next-line no-console
+                .catch(console.log);
+              event?.stopPropagation();
+              event?.preventDefault();
             }}
           >
             Done

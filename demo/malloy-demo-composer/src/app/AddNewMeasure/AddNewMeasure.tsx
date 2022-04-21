@@ -65,11 +65,16 @@ export const AddNewMeasure: React.FC<AddMeasureProps> = ({
         <RightButtonRow>
           <Button
             type="submit"
-            onClick={() => {
-              compileMeasure(source, newName, measure).then((measure) => {
-                addMeasure(measure);
-                onComplete();
-              });
+            onClick={(event) => {
+              compileMeasure(source, newName, measure)
+                .then((measure) => {
+                  addMeasure(measure);
+                  onComplete();
+                })
+                // eslint-disable-next-line no-console
+                .catch(console.log);
+              event.preventDefault();
+              event.stopPropagation();
             }}
           >
             Done

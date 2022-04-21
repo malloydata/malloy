@@ -156,17 +156,15 @@ export function SelectList<T>({
         const isSelected =
           value !== undefined && valueEqual(value, option.value);
         return (
-          <>
-            <OptionDiv
-              key={index}
-              onClick={() => onChange(option.value)}
-              className={isSelected ? "selected" : ""}
-            >
-              <OptionRadio type="radio" checked={isSelected} />
-              <CheckIcon className={isSelected ? "selected" : ""} />
-              <OptionSpan>{option.label}</OptionSpan>
-            </OptionDiv>
-          </>
+          <OptionDiv
+            key={index}
+            onClick={() => onChange(option.value)}
+            className={isSelected ? "selected" : ""}
+          >
+            <OptionRadio type="radio" defaultChecked={isSelected} />
+            <CheckIcon className={isSelected ? "selected" : ""} />
+            <OptionSpan>{option.label}</OptionSpan>
+          </OptionDiv>
         );
       })}
     </SelectListDiv>
