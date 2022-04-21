@@ -126,7 +126,7 @@ describe("postgres tests", () => {
     expect(result.data.value[0].n).toBe(1);
   });
 
-  it(`sql_block`, async () => {
+  it(`quote field name`, async () => {
     const result = await runtime
       .loadQuery(
         `

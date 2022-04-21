@@ -3023,7 +3023,7 @@ class QueryStruct extends QueryNode {
         const { tablePath } = parseTableURL(
           this.fieldDef.structSource.tablePath || this.fieldDef.name
         );
-        return this.dialect.quoteTableName(tablePath);
+        return this.dialect.quoteTablePath(tablePath);
       }
       case "sql":
         if (this.fieldDef.structSource.method === "nested") {
