@@ -95,7 +95,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             dimension:
               expect is ${result}
               got is ${expr}
-          }
           -> {
             project: calc is
               pick '=' when expect = got
@@ -104,14 +103,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `;
     }
     return await runtime.loadQuery(query).run();
-  }
-
-  function checkEqual(result: Result) {
-    let wantEq = result.data.path(0, "calc").value;
-    if (wantEq != "=") {
-      wantEq = wantEq + "\nSQL: " + result.sql;
-    }
-    return wantEq;
   }
 
   test(`date in sql_block no explore- ${databaseName}`, async () => {
@@ -469,7 +460,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         test(`before to is outside - ${databaseName}`, async () => {
           const result = await sqlEq(
             "t_date ? @2021-02-25 to @2021-03-01",
-            false,
+            false
           );
           expect(result).sqlToMatch();
         });
@@ -529,21 +520,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         });
       });
       describe(`${databaseName} timestamp`, () => {
-        test(`before from is outside - ${databaseName}`, async () => {
+        test(`before for-range is outside - ${databaseName}`, async () => {
           const result = await sqlEq(
             "t_timestamp ? @2021-02-25 00:00:00 for 1 day",
             false
           );
           expect(result).sqlToMatch();
         });
-        test(`first from is inside - ${databaseName}`, async () => {
+        test(`first for-range is inside - ${databaseName}`, async () => {
           const result = await sqlEq(
             "t_timestamp ? @2021-02-24 03:04:05 for 1 day",
             true
           );
           expect(result).sqlToMatch();
         });
-        test(`last from is outside - ${databaseName}`, async () => {
+        test(`last for-range is outside - ${databaseName}`, async () => {
           const result = await sqlEq(
             "t_timestamp ? @2021-02-23 03:05:06 for 1 day",
             false
@@ -603,34 +594,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       }
-
-      /*
-
-      i do not even know what this means this morning, and so now
-      coffee is required ...
-
-
-      tv = (date| timestamp | literal)
-      tst = date | timestamp
-      tv ? tv.tst           3 * 3 * 2 = 18
-      tv ? tv to tv         3 * 3 * 3 = 27
-                                      + --
-                                        45
-
-      write tests for each of these cases ....
-
-      vt  rt  gt  use
-      dt  dt  dt  dateRange
-      dt  dt  ts  == or timeStampRange
-      dt  ts  dt  timestampRange
-      dt  ts  ts  timeStampRange
-
-      ts  ts  ts  timestampRange
-      ts  ts  dt  timestampRange
-      ts  dt  ts  timestampRange
-      ts  dt  dt  either
-
-    */
     });
   });
 });
