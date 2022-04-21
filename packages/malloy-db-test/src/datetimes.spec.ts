@@ -74,17 +74,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   async function sqlEq(expr: string, result: string | boolean) {
     let query: string;
     if (typeof result == "boolean") {
+      const notEq = `concat('${expr} was ${!result} expected ${result}')`;
+      const whenPick = result ? "'=' when exprTrue" : `${notEq} when exprTrue`;
+      const elsePick = result ? notEq : "'='";
       query = `
         sql: basicTypes is || ${basicTypes[databaseName]} ;;
         query:
           from_sql(basicTypes) {
-            dimension:
-              theExpr is ${expr}
-          } -> { project: boolCalc is theExpr }
+            dimension: booleanExpression is ${expr}
+          } -> { project: exprTrue is booleanExpression }
           -> {
-            project: calc is
-              pick '=' when ${result ? "boolCalc" : "NOT(boolCalc)"}
-              else concat('${expr} was ${!result} expected ${result}')
+            project: calc is pick ${whenPick} else ${elsePick}
           }
       `;
     } else {
@@ -92,10 +92,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         sql: basicTypes is || ${basicTypes[databaseName]} ;;
         query:
           from_sql(basicTypes) {
-            dimension:
-              expect is ${result}
-              got is ${expr}
-          -> {
+            dimension: expect is ${result}
+            dimension: got is ${expr}
+          } -> {
             project: calc is
               pick '=' when expect = got
               else concat('${expr} != ${result}. Got: ', got::string)
