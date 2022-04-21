@@ -33,6 +33,8 @@ interface DimensionActionMenuProps {
   name: string;
   definition: string | undefined;
   editDimension: (fieldIndex: number, dimension: QueryFieldDef) => void;
+  canSave: boolean;
+  saveDimension?: () => void;
   source: StructDef;
 }
 
@@ -47,6 +49,8 @@ export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
   isEditable,
   editDimension,
   definition,
+  saveDimension,
+  canSave,
 }) => {
   return (
     <ActionMenu
@@ -126,6 +130,17 @@ export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
           iconColor: "other",
           label: "Move",
           onClick: beginReorderingField,
+        },
+        {
+          kind: "one_click",
+          id: "save_definition",
+          label: "Save Dimension",
+          iconName: "save",
+          isEnabled: canSave,
+          iconColor: "dimension",
+          onClick: () => {
+            saveDimension && saveDimension();
+          },
         },
       ]}
     />

@@ -31,9 +31,11 @@ import {
   QueryFieldDef,
   StructDef,
   TurtleDef,
+  FieldTypeDef,
 } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 import { Segment as QuerySegment } from "@malloydata/malloy";
+import { FilteredAliasedName } from "@malloydata/malloy/src/model";
 
 class SourceUtils {
   constructor(protected source: StructDef) {}
@@ -294,6 +296,15 @@ export class QueryBuilder extends SourceUtils {
     } else {
       return field.as || field.name;
     }
+  }
+
+  replaceSavedField(
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string
+  ): void {
+    const stage = this.stageAtPath(stagePath);
+    stage.fields.splice(fieldIndex, 1, name);
   }
 
   removeField(stagePath: StagePath, fieldIndex: number): void {
@@ -1005,6 +1016,7 @@ export class QueryWriter extends SourceUtils {
           items.push({
             type: "field",
             field: fieldDef,
+            saveDefinition: undefined,
             fieldIndex,
             isRefined: false,
             styles: styleItems.filter((s) => s.canRemove),
@@ -1040,6 +1052,10 @@ export class QueryWriter extends SourceUtils {
           items.push({
             type: "field",
             field: fieldDef,
+            saveDefinition:
+              source === this.source && fieldDef.type !== "turtle"
+                ? this.fanToDef(field, fieldDef)
+                : undefined,
             fieldIndex,
             filters: this.getSummaryItemsForFilterList(field.filterList || []),
             styles: styleItems.filter((s) => s.canRemove),
@@ -1072,6 +1088,7 @@ export class QueryWriter extends SourceUtils {
             type: "nested_query_definition",
             name: field.as || field.name,
             fieldIndex,
+            saveDefinition: source === this.source ? field : undefined,
             stages: stages,
             styles: styleItems,
           });
@@ -1080,6 +1097,7 @@ export class QueryWriter extends SourceUtils {
             type: "field_definition",
             name: field.as || field.name,
             fieldIndex,
+            saveDefinition: source === this.source ? field : undefined,
             source: field.code,
             kind: field.aggregate ? "measure" : "dimension",
             styles: styleItems,
@@ -1148,6 +1166,23 @@ export class QueryWriter extends SourceUtils {
       }
     }
     return { items, orderByFields, inputSource: source };
+  }
+
+  fanToDef(fan: FilteredAliasedName, def: FieldTypeDef): FieldDef {
+    const malloy: Fragment[] = [fan.name];
+    if (fan.filterList && fan.filterList.length > 0) {
+      malloy.push(" {", INDENT, "where:");
+      malloy.push(...this.getFiltersString(fan.filterList || []));
+      malloy.push(OUTDENT, "}");
+    }
+    const code = codeFromFragments(malloy);
+    return {
+      type: def.type,
+      name: fan.as || fan.name,
+      e: ["ignore"],
+      aggregate: def.aggregate,
+      code,
+    };
   }
 }
 

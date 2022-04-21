@@ -49,7 +49,7 @@ interface UseSaveFieldResult {
     type: "query" | "dimension" | "measure",
     name: string,
     field: FieldDef
-  ) => void;
+  ) => Promise<Analysis | undefined>;
   isSaving: boolean;
 }
 
@@ -85,6 +85,7 @@ export function useSaveField(
     if (analysis) {
       setAnalysis(analysis);
     }
+    return analysis;
   };
 
   return { result: data, saveField: saveFieldRet, isSaving: isLoading };

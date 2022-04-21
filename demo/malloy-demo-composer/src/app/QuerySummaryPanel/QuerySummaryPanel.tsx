@@ -111,8 +111,24 @@ interface QuerySummaryPanelProps {
   addStage: (stagePath: StagePath, fieldIndex: number) => void;
   removeStage: (stagePath: StagePath) => void;
   updateFieldOrder: (stagePath: StagePath, ordering: number[]) => void;
-  saveDimension: (name: string, fieldDef: FieldDef) => void;
-  saveMeasure: (name: string, fieldDef: FieldDef) => void;
+  saveDimension: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
+  saveMeasure: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
+  saveNestQuery: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
   topValues: SearchValueMapResult[] | undefined;
   queryName: string;
 }
@@ -264,8 +280,24 @@ interface SummaryStageProps {
   ) => void;
   removeStage: (stagePath: StagePath) => void;
   updateFieldOrder: (stagePath: StagePath, ordering: number[]) => void;
-  saveDimension: (name: string, fieldDef: FieldDef) => void;
-  saveMeasure: (name: string, fieldDef: FieldDef) => void;
+  saveDimension: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
+  saveMeasure: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
+  saveNestQuery: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
   topValues: SearchValueMapResult[] | undefined;
   fieldIndex?: number | undefined;
 }
@@ -441,8 +473,24 @@ interface SummaryItemProps {
     fieldIndex: number,
     measure: QueryFieldDef
   ) => void;
-  saveDimension: (name: string, fieldDef: FieldDef) => void;
-  saveMeasure: (name: string, fieldDef: FieldDef) => void;
+  saveDimension: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
+  saveMeasure: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
+  saveNestQuery: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    name: string,
+    definition: FieldDef
+  ) => void;
   fieldIndex?: number | undefined;
   isSelected: boolean;
   deselect: () => void;
@@ -509,9 +557,19 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   }}
                   name={item.name}
                   isEditable={item.type === "field_definition"}
+                  canSave={item.saveDefinition !== undefined}
                   definition={
                     item.type === "field_definition" ? item.source : undefined
                   }
+                  saveDimension={() => {
+                    item.saveDefinition &&
+                      query.saveDimension(
+                        stagePath,
+                        item.fieldIndex,
+                        item.name,
+                        item.saveDefinition
+                      );
+                  }}
                   editDimension={(fieldIndex, dimension) =>
                     query.editDimension(stagePath, fieldIndex, dimension)
                   }
@@ -553,9 +611,19 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   definition={
                     item.type === "field_definition" ? item.source : undefined
                   }
+                  canSave={item.saveDefinition !== undefined}
                   editMeasure={(fieldIndex, dimension) =>
                     query.editMeasure(stagePath, fieldIndex, dimension)
                   }
+                  saveMeasure={() => {
+                    item.saveDefinition &&
+                      query.saveMeasure(
+                        stagePath,
+                        item.fieldIndex,
+                        item.name,
+                        item.saveDefinition
+                      );
+                  }}
                   topValues={topValues}
                 />
               );
@@ -668,6 +736,19 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 stageSummary={item.stages[0].items}
                 updateFieldOrder={query.updateFieldOrder}
                 topValues={topValues}
+                rename={(newName) => {
+                  query.renameField(stagePath, item.fieldIndex, newName);
+                }}
+                canSave={item.saveDefinition !== undefined}
+                saveQuery={() => {
+                  item.saveDefinition &&
+                    query.saveNestQuery(
+                      stagePath,
+                      item.fieldIndex,
+                      item.name,
+                      item.saveDefinition
+                    );
+                }}
                 beginReorderingField={() => {
                   beginReorderingField(item.fieldIndex);
                   closeMenu();

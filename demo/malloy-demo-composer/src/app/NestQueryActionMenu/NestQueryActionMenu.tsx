@@ -37,6 +37,7 @@ import {
   pathParent,
   termsForField,
 } from "../utils";
+import { RenameField } from "../RenameField";
 
 interface NestQueryActionMenuProps {
   source: StructDef;
@@ -65,6 +66,9 @@ interface NestQueryActionMenuProps {
   updateFieldOrder: (stagePath: StagePath, ordering: number[]) => void;
   beginReorderingField: () => void;
   topValues: SearchValueMapResult[] | undefined;
+  saveQuery: () => void;
+  rename: (newName: string) => void;
+  canSave: boolean;
 }
 
 export const NestQueryActionMenu: React.FC<NestQueryActionMenuProps> = ({
@@ -83,6 +87,9 @@ export const NestQueryActionMenu: React.FC<NestQueryActionMenuProps> = ({
   beginReorderingField,
   addStage,
   topValues,
+  saveQuery,
+  canSave,
+  rename,
 }) => {
   return (
     <ActionMenu
@@ -230,6 +237,17 @@ export const NestQueryActionMenu: React.FC<NestQueryActionMenuProps> = ({
         //   />
         // },
         {
+          kind: "sub_menu",
+          id: "rename",
+          iconName: "rename",
+          iconColor: "other",
+          label: "Rename",
+          closeOnComplete: true,
+          Component: ({ onComplete }) => (
+            <RenameField rename={rename} onComplete={onComplete} />
+          ),
+        },
+        {
           kind: "one_click",
           id: "add_stage",
           label: "Add stage",
@@ -244,6 +262,15 @@ export const NestQueryActionMenu: React.FC<NestQueryActionMenuProps> = ({
           iconColor: "other",
           label: "Move",
           onClick: beginReorderingField,
+        },
+        {
+          kind: "one_click",
+          id: "save_definition",
+          label: "Save Query",
+          iconName: "save",
+          isEnabled: canSave,
+          iconColor: "query",
+          onClick: saveQuery,
         },
       ]}
       searchItems={flatFields(source).map(({ field, path }) => ({

@@ -96,6 +96,7 @@ export function fieldToSummaryItem(
       type: "field",
       field,
       path,
+      saveDefinition: undefined,
       isRefined: false,
       name: field.as || field.name,
       isRenamed: false,

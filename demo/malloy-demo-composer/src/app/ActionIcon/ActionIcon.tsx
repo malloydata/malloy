@@ -21,7 +21,7 @@ import { ReactComponent as ActionItemRename } from "../assets/img/insert_icons/i
 import { ReactComponent as ActionIconEdit } from "../assets/img/insert_icons/item_edit.svg";
 import { ReactComponent as ActionItemRemove } from "../assets/img/query_clear_hover.svg";
 import { ReactComponent as ActionItemAdd } from "../assets/img/query_add_hover.svg";
-import { ReactComponent as ActionItemSave } from "../assets/img/query_save_hover.svg";
+import { ReactComponent as ActionItemSave } from "../assets/img/save_icon.svg";
 import { ReactComponent as ActionItemContainerClosed } from "../assets/img/chevrons/chevron_right.svg";
 import { ReactComponent as ActionItemContainerOpen } from "../assets/img/chevrons/chevron_down.svg";
 import { ReactComponent as ActionItemDuplicate } from "../assets/img/insert_icons/item_duplicate.svg";

@@ -26,7 +26,7 @@ import { QuerySummaryPanel } from "../QuerySummaryPanel";
 import { MalloyLogo } from "../MalloyLogo";
 import { useCallback } from "react";
 import { SaveQueryButton } from "../SaveQueryButton";
-import { FilterExpression } from "@malloydata/malloy";
+import { FilterExpression, StructDef } from "@malloydata/malloy";
 import { FieldDef, QueryFieldDef } from "@malloydata/malloy";
 import { ActionIcon } from "../ActionIcon";
 import { DataStyles } from "@malloydata/render";
@@ -38,6 +38,16 @@ const KEY_MAP = {
   REMOVE_FIELDS: "command+k",
   RUN_QUERY: "command+enter",
 };
+
+function withAnalysisSource(
+  analysis: Analysis,
+  callback: (source: StructDef) => void
+) {
+  const source = analysis.modelDef.contents[analysis.sourceName];
+  if (source && source.type === "struct") {
+    callback(source);
+  }
+}
 
 export const Explore: React.FC = () => {
   const [analysis, setAnalysis] = useState<Analysis>();
@@ -54,10 +64,9 @@ export const Explore: React.FC = () => {
   } = useRunQuery(queryMalloy, queryName, analysis);
   const { saveField } = useSaveField(analysis, (newAnalysis) => {
     setAnalysis(newAnalysis);
-    const source = newAnalysis.modelDef.contents[newAnalysis.sourceName];
-    if (queryBuilder.current && source?.type === "struct") {
-      queryBuilder.current.updateSource(source);
-    }
+    withAnalysisSource(newAnalysis, (source) => {
+      queryBuilder.current?.updateSource(source);
+    });
   });
   const [insertOpen, setInsertOpen] = useState(false);
   const [dataStyles, setDataStyles] = useState<DataStyles>({});
@@ -80,7 +89,7 @@ export const Explore: React.FC = () => {
     }
   };
 
-  const writeQuery = (newDataStyles = dataStyles) => {
+  const writeQuery = (newDataStyles = dataStyles, newAnalysis = analysis) => {
     if (!queryBuilder.current) {
       return;
     }
@@ -88,12 +97,12 @@ export const Explore: React.FC = () => {
     setQueryName(query.name);
     // eslint-disable-next-line no-console
     console.log(query);
-    const source = analysis
-      ? analysis.modelDef.contents[analysis.sourceName]
-      : undefined;
-    if (source?.type === "struct") {
+    if (!newAnalysis) {
+      return;
+    }
+    withAnalysisSource(newAnalysis, (source) => {
       const writer = new QueryWriter(query, source);
-      if (queryBuilder.current.canRun()) {
+      if (queryBuilder.current?.canRun()) {
         const queryString = writer.getQueryStringForModel();
         setQueryMalloy(queryString);
         // eslint-disable-next-line no-console
@@ -106,7 +115,7 @@ export const Explore: React.FC = () => {
         newDataStyles
       );
       setQuerySummary(summary);
-    }
+    });
   };
 
   const toggleField = (stagePath: StagePath, fieldPath: string) => {
@@ -277,18 +286,61 @@ export const Explore: React.FC = () => {
     [saveField]
   );
 
-  const saveDimension = useCallback(
-    (name: string, fieldDef: FieldDef) => {
-      saveField("dimension", name, fieldDef);
+  const saveAnyField = useCallback(
+    (
+      kind: "dimension" | "measure" | "query",
+      stagePath: StagePath,
+      fieldIndex: number,
+      name: string,
+      fieldDef: FieldDef
+    ) => {
+      saveField(kind, name, fieldDef).then((analysis) => {
+        if (analysis) {
+          withAnalysisSource(analysis, (source) => {
+            queryBuilder.current?.updateSource(source);
+          });
+          queryBuilder.current?.replaceSavedField(stagePath, fieldIndex, name);
+          writeQuery(dataStyles, analysis);
+        }
+      });
     },
     [saveField]
   );
 
-  const saveMeasure = useCallback(
-    (name: string, fieldDef: FieldDef) => {
-      saveField("measure", name, fieldDef);
+  const saveDimension = useCallback(
+    (
+      stagePath: StagePath,
+      fieldIndex: number,
+      name: string,
+      fieldDef: FieldDef
+    ) => {
+      saveAnyField("dimension", stagePath, fieldIndex, name, fieldDef);
     },
-    [saveField]
+    [saveAnyField]
+  );
+
+  const saveMeasure = useCallback(
+    (
+      stagePath: StagePath,
+      fieldIndex: number,
+      name: string,
+      fieldDef: FieldDef
+    ) => {
+      saveAnyField("measure", stagePath, fieldIndex, name, fieldDef);
+    },
+    [saveAnyField]
+  );
+
+  const saveNestQuery = useCallback(
+    (
+      stagePath: StagePath,
+      fieldIndex: number,
+      name: string,
+      fieldDef: FieldDef
+    ) => {
+      saveAnyField("query", stagePath, fieldIndex, name, fieldDef);
+    },
+    [saveAnyField]
   );
 
   const clearQuery = (newAnalysis = analysis) => {
@@ -439,6 +491,7 @@ export const Explore: React.FC = () => {
                     editOrderBy={editOrderBy}
                     saveDimension={saveDimension}
                     saveMeasure={saveMeasure}
+                    saveNestQuery={saveNestQuery}
                     topValues={topValues}
                   />
                 )}

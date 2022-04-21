@@ -126,6 +126,7 @@ export interface QuerySummaryItemField {
   field: FieldDef;
   isRefined: boolean;
   isRenamed: boolean;
+  saveDefinition: FieldDef | undefined;
   fieldIndex: number;
   kind: "dimension" | "measure" | "query";
   name: string;
@@ -139,6 +140,7 @@ export interface QuerySummaryItemNestedQueryDefinition {
   name: string;
   fieldIndex: number;
   stages: StageSummary[];
+  saveDefinition: FieldDef | undefined;
   styles?: QuerySummaryItemDataStyle[];
 }
 
@@ -147,6 +149,7 @@ export interface QuerySummaryItemFieldDefinition {
   name: string;
   fieldIndex: number;
   source?: string;
+  saveDefinition: FieldDef | undefined;
   kind: "dimension" | "measure";
   filters?: QuerySummaryItemFilter[];
   styles?: QuerySummaryItemDataStyle[];

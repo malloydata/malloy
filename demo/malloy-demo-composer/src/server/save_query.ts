@@ -73,12 +73,15 @@ export async function saveField(
   const fieldString =
     field.type === "turtle"
       ? new QueryWriter(field, source).getQueryStringForSource(name)
-      : field.code;
+      : `${name} is ${field.code}`;
   if (fieldString === undefined) {
     throw new Error("Expected field to have code.");
   }
   const explore = model.getExploreByName(analysis.sourceName);
   const existingField = explore.allFields.find((field) => field.name === name);
+  if (existingField && typeOf(existingField) !== field.type) {
+    throw new Error("Cannot overwrite field of differing type");
+  }
   let newMalloy;
   if (existingField) {
     const existingLocation = locationOf(existingField);
@@ -117,5 +120,15 @@ function locationOf(existingField: Field) {
   } else if (existingField.isAtomicField()) {
     return (existingField as unknown as { fieldTypeDef: FieldTypeDef })
       .fieldTypeDef.location;
+  }
+}
+
+function typeOf(existingField: Field) {
+  if (existingField.isQueryField()) {
+    return (existingField as unknown as { turtleDef: TurtleDef }).turtleDef
+      .type;
+  } else if (existingField.isAtomicField()) {
+    return (existingField as unknown as { fieldTypeDef: FieldTypeDef })
+      .fieldTypeDef.type;
   }
 }
