@@ -27,6 +27,7 @@ import {
   isConditionParameter,
   StructDef,
   TimeFieldType,
+  mkExpr,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
@@ -104,7 +105,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * the appplication gets generated
    * @param fs The symbol table
    * @param op The operator being applied
-   * @param expr The "other" (besdies 'this') value
+   * @param expr The "other" (besides 'this') value
    * @returns The translated expression
    */
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
@@ -545,16 +546,26 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
   }
 
   apply(fs: FieldSpace, applyOp: string, expr: ExpressionDef): ExprValue {
-    const choice1 = this.left.apply(fs, applyOp, expr);
-    const choice2 = this.right.apply(fs, applyOp, expr);
+    /**
+     * When applying a tree with !=, we apply it with equal, and then
+     * NOT the result
+     */
+    const notEq = applyOp == "!=";
+    const useOp = notEq ? "=" : applyOp;
+    const choice1 = this.left.apply(fs, useOp, expr);
+    const choice2 = this.right.apply(fs, useOp, expr);
+    let value = compose(
+      choice1.value,
+      this.op === "&" ? "and" : "or",
+      choice2.value
+    );
+    if (notEq) {
+      value = mkExpr`(NOT(${value}))`;
+    }
     return {
       dataType: "boolean",
       aggregate: choice1.aggregate || choice2.aggregate,
-      value: compose(
-        choice1.value,
-        this.op === "&" ? "and" : "or",
-        choice2.value
-      ),
+      value,
     };
   }
 
