@@ -167,7 +167,7 @@ describe("expression tests", () => {
             {
               as: "dep_date",
               name: "dep_time",
-              timeframe: "date",
+              timeframe: "day",
               type: "timestamp",
             },
             {

@@ -200,21 +200,52 @@ export function isApplyFragment(f: Fragment): f is ApplyFragment {
   return (f as ApplyFragment)?.type === "apply";
 }
 
-export interface RangeValue {
-  type: "date" | "timestamp";
-  value: Expr;
+interface DialectFragmentBase {
+  type: "dialect";
+  function: string;
 }
 
-export function isTimeDiffFragment(f: Fragment): f is TimeDiffFragment {
-  return (f as TimeDiffFragment)?.type === "timeDiff";
+export interface TimeDiffFragment extends DialectFragmentBase {
+  function: "timeDiff";
+  units: TimestampUnit;
+  left: TimeValue;
+  right: TimeValue;
 }
 
-export interface TimeDiffFragment {
-  type: "timeDiff";
-  units: string;
-  left: RangeValue;
-  right: RangeValue;
+export interface TimeDeltaFragment extends DialectFragmentBase {
+  function: "delta";
+  base: TimeValue;
+  op: "+" | "-";
+  delta: Expr;
+  units: TimestampUnit;
 }
+
+export interface TimeTruncFragment extends DialectFragmentBase {
+  function: "trunc";
+  expr: TimeValue;
+  units: TimestampUnit;
+}
+
+export interface TimeExtractFragment extends DialectFragmentBase {
+  function: "extract";
+  expr: TimeValue;
+  units: ExtractUnit;
+}
+
+export interface TypecastFragment extends DialectFragmentBase {
+  function: "cast";
+  safe: boolean;
+  expr: Expr;
+  dstType: AtomicFieldType;
+  srcType?: AtomicFieldType;
+}
+
+export type DialectFragment =
+  | TimeDeltaFragment
+  | TimeDiffFragment
+  | TimeTruncFragment
+  | TypecastFragment
+  | TimeExtractFragment;
 
 export type Fragment =
   | string
@@ -224,9 +255,51 @@ export type Fragment =
   | ParameterFragment
   | FilterFragment
   | AggregateFragment
-  | TimeDiffFragment;
+  | DialectFragment;
 
 export type Expr = Fragment[];
+
+export interface TypedValue {
+  value: Expr;
+  valueType: AtomicFieldType;
+}
+export interface TimeValue extends TypedValue {
+  valueType: TimeFieldType;
+}
+
+type TagElement = Expr | string;
+/**
+ * Return an Expr based on the string template, subsittutions can be
+ * either strings, or other Exprs.
+
+ * ```
+ * units = "inches"
+ * len: Expr = [ "something", "returning", "a length "]
+ * computeExpr = mkExpr`MEASURE(${len} in ${units})`;
+ * ```
+ */
+export function mkExpr(
+  src: TemplateStringsArray,
+  ...exprs: TagElement[]
+): Expr {
+  const ret: Expr = [];
+  let index;
+  for (index = 0; index < exprs.length; index++) {
+    const el = exprs[index];
+    if (src[index].length > 0) {
+      ret.push(src[index]);
+    }
+    if (typeof el == "string") {
+      ret.push(el);
+    } else {
+      ret.push(...el);
+    }
+  }
+  if (src[index].length > 0) {
+    ret.push(src[index]);
+  }
+  return ret;
+}
 
 export interface Expression {
   e?: Expr;
@@ -243,12 +316,11 @@ export function hasExpression(f: FieldDef): f is HasExpression {
   return (f as JustExpression).e !== undefined;
 }
 
-export type AtomicFieldType =
-  | "string"
-  | "number"
-  | "date"
-  | "timestamp"
-  | "boolean";
+export type TimeFieldType = "date" | "timestamp";
+export function isTimeFieldType(s: string): s is TimeFieldType {
+  return s == "date" || s == "timestamp";
+}
+export type AtomicFieldType = "string" | "number" | TimeFieldType | "boolean";
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return ["string", "number", "date", "timestamp", "boolean"].includes(s);
 }
@@ -293,36 +365,18 @@ export interface FieldBooleanDef extends FieldAtomicDef {
   type: "boolean";
 }
 
-/** valid suffixes for a date field ref which are not valid timeframes */
-type LegacySecretTimeFrames =
-  | "date"
-  | "day_of_month"
-  | "day_of_year"
-  | "day_of_week"
-  | "month_of_year";
-/** valid timeframes for date */
-export type DateTimeframe =
-  | LegacySecretTimeFrames
-  | "day"
-  | "week"
-  | "month"
-  | "quarter"
-  | "year";
-export function isDateTimeFrame(str: string): str is DateTimeframe {
-  return [
-    "day",
-    "week",
-    "month",
-    "quarter",
-    "year",
-    // TODO Don't forget to remove legacy types here
-    "day_of_month",
-    "day_of_year",
-    "day_of_week",
-    "month_of_year",
-  ].includes(str);
+export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
+export function isDateUnit(str: string): str is DateUnit {
+  return ["day", "week", "month", "quarter", "year"].includes(str);
 }
-
+export type TimestampUnit = DateUnit | "hour" | "minute" | "second";
+export function isTimestampUnit(s: string): s is TimestampUnit {
+  return isDateUnit(s) || ["hour", "minute", "second"].includes(s);
+}
+export type ExtractUnit = TimestampUnit | "day_of_week" | "day_of_year";
+export function isExtractUnit(s: string): s is ExtractUnit {
+  return isTimestampUnit(s) || s == "day_of_week" || s == "day_of_year";
+}
 /** Value types distinguished by their usage in generated SQL, particularly with respect to filters. */
 export enum ValueType {
   Date = "date",
@@ -336,29 +390,13 @@ export type TimeValueType = ValueType.Date | ValueType.Timestamp;
 /** Scalar Date Field. */
 export interface FieldDateDef extends FieldAtomicDef {
   type: "date";
-  timeframe?: DateTimeframe;
+  timeframe?: DateUnit;
 }
 
-/** valid suffuxes for a timestamp field which are not valid timeframes */
-type LegacyTimeTimeframes = "hour_of_day";
-/** valid timeframes for a timestmap */
-export type TimeTimeframe =
-  | DateTimeframe
-  | LegacyTimeTimeframes
-  | "hour"
-  | "minute"
-  | "second";
-export function isTimeTimeframe(s: string): s is TimeTimeframe {
-  // TODO Don't forget to remove legacy types here
-  return (
-    isDateTimeFrame(s) ||
-    ["hour", "minute", "second", "hour_of_day"].includes(s)
-  );
-}
 /** Scalar Timestamp Field */
 export interface FieldTimestampDef extends FieldAtomicDef {
   type: "timestamp";
-  timeframe?: TimeTimeframe;
+  timeframe?: TimestampUnit;
 }
 
 /** parameter to order a query */
