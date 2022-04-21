@@ -482,7 +482,7 @@ export class ForRange extends ExpressionDef {
     // everything is dates, do date math
     if (checkV.dataType === "date" && rangeType === "date") {
       const rangeStart = this.from;
-      const rangeEndV = timeOffset("date", checkV.value, "+", nV.value, units);
+      const rangeEndV = timeOffset("date", startV.value, "+", nV.value, units);
       const rangeEnd = new ExprTime("date", rangeEndV);
       return new Range(rangeStart, rangeEnd).apply(fs, op, expr);
     }

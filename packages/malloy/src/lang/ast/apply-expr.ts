@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { isTimeFieldType, Expr } from "../../model/malloy_types";
+import { isTimeFieldType, Expr, mkExpr } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import {
   ExprDuration,
@@ -134,7 +134,7 @@ function timeCompare(
 
 export function nullsafeNot(expr: Expr, op?: Equality): Expr {
   if (op === undefined || op === "!=" || op === "!~") {
-    return ["IFNULL(NOT(", ...expr, "),FALSE)"];
+    return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
   }
   return expr;
 }

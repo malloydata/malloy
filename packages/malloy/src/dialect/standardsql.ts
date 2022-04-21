@@ -316,7 +316,7 @@ ${indent(sql)}
   ): Expr {
     let theTime = expr.value;
     let computeType: string = expr.valueType;
-    if (timestampAddUnits.includes(timeframe)) {
+    if (timeframe != "day" && timestampAddUnits.includes(timeframe)) {
       // The units must be done in timestamp, no matter the input type
       computeType = "timestamp";
       if (expr.valueType != "timestamp") {
