@@ -748,8 +748,11 @@ describe("expressions", () => {
   describe("literals", () => {
     test("integer", exprOK("42"));
     test("string", exprOK(`'fortywo-two'`));
-    test("string with \\'", exprOK(`'Isn` + `\\` + `'t this nice'`));
-    test("string with \\\\", exprOK(`'Is ` + `\\` + `\\` + ` nice'`));
+    test("string with quoted quote", exprOK(`'Isn` + `\\` + `'t this nice'`));
+    test(
+      "string with quoted backslash",
+      exprOK(`'Is ` + `\\` + `\\` + ` nice'`)
+    );
     test("year", exprOK("@1960"));
     test("quarter", exprOK("@1960-Q1"));
     test("week", exprOK("@WK1960-06-26"));
