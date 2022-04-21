@@ -82,12 +82,21 @@ export async function doBuild(target?: Target): Promise<void> {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(outDir, "third_party_notices.txt"),
-    development
-      ? "Third party notices are not produced during development builds to speed up the build."
-      : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
-  );
+  const licenseFilePath = path.join(outDir, "third_party_notices.txt");
+  if (development) {
+    fs.writeFileSync(
+      licenseFilePath,
+      "Third party notices are not produced during development builds to speed up the build."
+    );
+  } else {
+    const licenseFile = fs.createWriteStream(licenseFilePath);
+    licenseFile.on("open", () => {
+      execSync("yarn licenses generate-disclaimer --prod", {
+        stdio: ["ignore", licenseFile, licenseFile],
+      });
+    });
+    licenseFile.close();
+  }
 
   fs.writeFileSync(
     path.join(outDir, "build-sha"),
