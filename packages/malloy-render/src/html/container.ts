@@ -13,6 +13,7 @@
 
 import { Explore, Field } from "@malloydata/malloy";
 import { DataStyles, StyleDefaults } from "../data_styles";
+import { DrillFunction } from "../drill";
 import { ChildRenderers, RenderTree } from "../renderer";
 import { makeRenderer } from "./html_view";
 
@@ -26,7 +27,7 @@ export abstract class ContainerRenderer extends RenderTree {
     options: {
       dataStyles: DataStyles;
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string, target: HTMLElement) => void;
+      onDrill?: DrillFunction;
     }
   ): void {
     const result: ChildRenderers = {};
@@ -49,7 +50,7 @@ export abstract class ContainerRenderer extends RenderTree {
       document: Document,
       options: {
         isDrillingEnabled?: boolean;
-        onDrill?: (drillQuery: string, target: HTMLElement) => void;
+        onDrill?: DrillFunction;
       }
     ) => Type,
     document: Document,
@@ -57,7 +58,7 @@ export abstract class ContainerRenderer extends RenderTree {
     options: {
       dataStyles: DataStyles;
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string, target: HTMLElement) => void;
+      onDrill?: DrillFunction;
     }
   ): Type {
     const n = new c(document, {

@@ -122,11 +122,21 @@ export function getDrillFilters(data: DataArrayOrRecord): {
   return { formattedFilters: dedupedFilters, source };
 }
 
-export function getDrillQuery(data: DataArrayOrRecord): string {
+export function getDrillQuery(data: DataArrayOrRecord): {
+  drillQuery: string;
+  drillFilters: string[];
+} {
   const { formattedFilters, source } = getDrillFilters(data);
   let ret = `query: ${source?.name || '"unable to compute source"'} `;
   if (formattedFilters.length) {
     ret += `{ \n  where: \n    ${formattedFilters.join(",\n    ")}\n  \n}\n`;
   }
-  return ret + "-> ";
+  const drillQuery = ret + "-> ";
+  return { drillQuery, drillFilters: formattedFilters };
 }
+
+export type DrillFunction = (
+  drillQuery: string,
+  target: HTMLElement,
+  drillFilters: string[]
+) => void;

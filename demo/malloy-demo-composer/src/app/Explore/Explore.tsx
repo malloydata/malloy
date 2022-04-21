@@ -313,6 +313,17 @@ export const Explore: React.FC = () => {
     return <div>Source for analysis must be a source, not a query</div>;
   }
 
+  const onDrill = (filters: FilterExpression[]) => {
+    if (!source) {
+      return;
+    }
+    queryBuilder.current = new QueryBuilder(source);
+    for (const filter of filters) {
+      queryBuilder.current.addFilter({ stageIndex: 0 }, filter);
+    }
+    writeQuery();
+  };
+
   const setDataStyle = (name: string, renderer: RendererName | undefined) => {
     const newDataStyles = { ...dataStyles };
     if (renderer === undefined) {
@@ -438,12 +449,14 @@ export const Explore: React.FC = () => {
             </QueryBar>
           </SidebarOuter>
           <ScrollContent>
-            {analysis && (result || isRunning) && (
+            {analysis && source && (result || isRunning) && (
               <Result
+                source={source}
                 result={result}
                 analysis={analysis}
                 dataStyles={dataStyles}
                 malloy={queryMalloy}
+                onDrill={onDrill}
               />
             )}
           </ScrollContent>

@@ -12,6 +12,7 @@
  */
 
 import { DataColumn } from "@malloydata/malloy";
+import { DrillFunction } from "./drill";
 
 export type ChildRenderers = { [fieldName: string]: Renderer };
 
@@ -24,7 +25,7 @@ export abstract class RenderTree implements Renderer {
     protected readonly document: Document,
     protected readonly options: {
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string, target: HTMLElement) => void;
+      onDrill?: DrillFunction;
     }
   ) {}
 

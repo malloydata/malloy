@@ -18,20 +18,25 @@ import styled from "styled-components";
 import { LoadingSpinner } from "../Spinner";
 import { Analysis } from "../../types";
 import { usePrevious } from "../hooks";
-import { highlightPre } from "../utils";
+import { highlightPre, notUndefined } from "../utils";
+import { compileFilter } from "../../core/compile";
 
 interface ResultProps {
+  source: malloy.StructDef;
   result?: malloy.Result;
   analysis: Analysis;
   dataStyles: render.DataStyles;
   malloy: string;
+  onDrill: (filters: malloy.FilterExpression[]) => void;
 }
 
 export const Result: React.FC<ResultProps> = ({
+  source,
   result,
   analysis,
   dataStyles,
   malloy,
+  onDrill,
 }) => {
   const [html, setHTML] = useState<HTMLElement>();
   const [highlightedMalloy, setHighlightedMalloy] = useState<HTMLElement>();
@@ -68,9 +73,22 @@ export const Result: React.FC<ResultProps> = ({
       const currentResultId = ++resultId.current;
       const rendered = await new render.HTMLView(document).render(result.data, {
         dataStyles: { ...analysis.dataStyles, ...dataStyles },
-        isDrillingEnabled: false,
-        onDrill: () => {
-          // This is where I would put drilling behavior, if I had any!
+        isDrillingEnabled: true,
+        onDrill: (_1, _2, drillFilters) => {
+          Promise.all(
+            drillFilters.map((filter) =>
+              compileFilter(source, filter).catch((error) => {
+                // eslint-disable-next-line no-console
+                console.log(error);
+                return undefined;
+              })
+            )
+          ).then((filters) => {
+            const validFilters = filters.filter(notUndefined);
+            if (validFilters.length > 0) {
+              onDrill(validFilters);
+            }
+          });
         },
       });
       setTimeout(() => {

@@ -117,9 +117,12 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         const drillIcon = createDrillIcon(this.document);
         drillElement.appendChild(drillIcon);
         drillElement.style.cssText = `padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;`;
-        drillElement.onclick = () =>
-          this.options.onDrill &&
-          this.options.onDrill(getDrillQuery(row), drillIcon);
+        drillElement.onclick = () => {
+          if (this.options.onDrill) {
+            const { drillQuery, drillFilters } = getDrillQuery(row);
+            this.options.onDrill(drillQuery, drillIcon, drillFilters);
+          }
+        };
         rowElement.appendChild(drillElement);
       }
       const dashboardOuter = this.document.createElement("div");
