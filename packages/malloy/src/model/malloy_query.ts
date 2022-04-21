@@ -253,12 +253,16 @@ class QueryField extends QueryNode {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
     if (hasExpression(field.fieldDef)) {
-      return this.generateExpressionFromExpr(
+      let ret = this.generateExpressionFromExpr(
         resultSet,
         field.parent,
         field.fieldDef.e,
         state
       );
+      if (!ret.match(/^\(.*\)$/)) {
+        ret = `(${ret})`;
+      }
+      return ret;
     } else {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
@@ -717,7 +721,13 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
       return pk.generateExpression(resultSet);
     } else {
-      return this.parent.getIdentifier() + "." + "__distinct_key";
+      // return this.parent.getIdentifier() + "." + "__distinct_key";
+      return this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        "__distinct_key",
+        "string",
+        this.parent.fieldDef.structRelationship.type === "nested"
+      );
     }
   }
 
@@ -1750,7 +1760,11 @@ class QueryQuery extends QueryField {
         const resultType =
           fi.getRepeatedResultType() === "nested" ? "nested" : "inline";
         structDef.name = name;
-        structDef.structRelationship = { field: name, type: resultType };
+        structDef.structRelationship = {
+          field: name,
+          type: resultType,
+          isArray: false,
+        };
         structDef.structSource = { type: resultType };
         structDef.resultMetadata = resultMetadata;
         fields.push(structDef);
@@ -1939,7 +1953,8 @@ class QueryQuery extends QueryField {
         fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),
-        ji.makeUniqueKey
+        ji.makeUniqueKey,
+        structRelationship.isArray
       )}\n`;
     } else if (structRelationship.type === "inline") {
       throw new Error(
@@ -1968,7 +1983,7 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
