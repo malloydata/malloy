@@ -125,4 +125,39 @@ describe("postgres tests", () => {
       .run();
     expect(result.data.value[0].n).toBe(1);
   });
+
+  it(`sql_block`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as "upperLower"
+       ;;
+
+      query: from_sql(one) -> { project: upperLower }
+      `
+      )
+      .run();
+    expect(result.data.value[0].upperLower).toBe(1);
+  });
+
+  it(`quote keyword`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as "select"
+       ;;
+
+      query: from_sql(one) -> {
+        project:
+          select
+          create is select + 1
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].select).toBe(1);
+    expect(result.data.value[0].create).toBe(2);
+  });
 });

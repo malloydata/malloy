@@ -11,7 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import { AtomicFieldTypeInner } from "..";
+import {
+  AtomicFieldTypeInner,
+  TimeFieldType,
+  TimestampUnit,
+  ExtractUnit,
+  DialectFragment,
+  TimeValue,
+} from "..";
+import { Expr, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -29,39 +37,6 @@ export interface FunctionInfo {
 }
 
 export type DialectFieldList = DialectField[];
-
-export const timeTypes = ["date", "timestamp "];
-export type TimeType = "date" | "timestamp";
-
-const dateTimeframes = ["day", "week", "month", "quarter", "year"];
-export type DateTimeframe = typeof dateTimeframes[number];
-
-const timestampTimeframes = [...dateTimeframes, "hour", "minute", "second"];
-export type TimestampTimeframe = typeof timestampTimeframes[number];
-
-export function isDateTimeframe(t: TimestampTimeframe): t is DateTimeframe {
-  return dateTimeframes.indexOf(t) != -1;
-}
-
-const extractDateTimeframes = [
-  "DAY_OF_WEEK",
-  "DAY",
-  "DAY_OF_YEAR",
-  "WEEK",
-  "MONTH",
-  "QUARTER",
-  "YEAR",
-  "HOUR",
-  "HOURS",
-  "MINUTE",
-  "MINUTES",
-  "SECOND",
-  "SECOND",
-];
-
-export type ExtractDateTimeframe = typeof extractDateTimeframes[number];
-
-export type DialectExpr = (string | unknown)[];
 
 export abstract class Dialect {
   abstract name: string;
@@ -139,38 +114,20 @@ export abstract class Dialect {
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
-  // date truncation
-  abstract sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr;
+  abstract sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr;
+  abstract sqlExtract(sqlTime: TimeValue, units: ExtractUnit): Expr;
+  abstract sqlMeasureTime(
+    from: TimeValue,
+    to: TimeValue,
+    units: TimestampUnit
+  ): Expr;
 
-  // Timestamp truncation
-  abstract sqlTimestampTrunc(
-    expr: unknown,
-    timeframe: TimestampTimeframe,
-    timezone: string
-  ): DialectExpr;
-
-  abstract sqlExtractDateTimeframe(
-    expr: unknown,
-    timeframe: ExtractDateTimeframe
-  ): DialectExpr;
-
-  abstract sqlDateCast(expr: unknown): DialectExpr;
-
-  abstract sqlTimestampCast(expr: unknown): DialectExpr;
-
-  abstract sqlDateAdd(
+  abstract sqlAlterTime(
     op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr;
-
-  abstract sqlTimestampAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr;
+    expr: TimeValue,
+    n: Expr,
+    timeframe: TimestampUnit
+  ): Expr;
 
   // BigQuery has some fieldNames that are Pseudo Fields and shouldn't be
   //  included in projections.
@@ -178,11 +135,11 @@ export abstract class Dialect {
     return false;
   }
 
-  abstract sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr;
+  abstract sqlCast(cast: TypecastFragment): Expr;
 
   abstract sqlLiteralTime(
     timeString: string,
-    type: "date" | "timestamp",
+    type: TimeFieldType,
     timezone: string
   ): string;
 
@@ -190,11 +147,18 @@ export abstract class Dialect {
     return this.functionInfo[functionName.toLowerCase()];
   }
 
-  abstract timeDiff(
-    leftType: TimeType,
-    leftValue: string,
-    rightType: TimeType,
-    rightValue: string,
-    units: string
-  ): string;
+  dialectExpr(df: DialectFragment): Expr {
+    switch (df.function) {
+      case "timeDiff":
+        return this.sqlMeasureTime(df.left, df.right, df.units);
+      case "delta":
+        return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
+      case "trunc":
+        return this.sqlTrunc(df.expr, df.units);
+      case "extract":
+        return this.sqlExtract(df.expr, df.units);
+      case "cast":
+        return this.sqlCast(df);
+    }
+  }
 }

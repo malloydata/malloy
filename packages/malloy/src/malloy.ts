@@ -1351,7 +1351,7 @@ export class AtomicField extends Entity {
 }
 
 export enum DateTimeframe {
-  Date = "date",
+  Day = "day",
   Week = "week",
   Month = "month",
   Quarter = "quarter",
@@ -1359,7 +1359,7 @@ export enum DateTimeframe {
 }
 
 export enum TimestampTimeframe {
-  Date = "date",
+  Day = "day",
   Week = "week",
   Month = "month",
   Quarter = "quarter",
@@ -1386,7 +1386,7 @@ export class DateField extends AtomicField {
     }
     switch (this.fieldDateDef.timeframe) {
       case "day":
-        return DateTimeframe.Date;
+        return DateTimeframe.Day;
       case "week":
         return DateTimeframe.Week;
       case "month":
@@ -1415,8 +1415,8 @@ export class TimestampField extends AtomicField {
       return undefined;
     }
     switch (this.fieldTimestampDef.timeframe) {
-      case "date":
-        return TimestampTimeframe.Date;
+      case "day":
+        return TimestampTimeframe.Day;
       case "week":
         return TimestampTimeframe.Week;
       case "month":
@@ -2051,7 +2051,9 @@ export class ModelMaterializer extends FluentState<Model> {
           limit: 1000
         }
     `;
-    const result = await this.loadQuery(searchMapMalloy).run();
+    const result = await this.loadQuery(searchMapMalloy).run({
+      rowLimit: 1000,
+    });
     return result._queryResult.result as unknown as SearchValueMapResult[];
   }
 

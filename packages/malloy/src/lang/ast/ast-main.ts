@@ -34,6 +34,7 @@ import {
 import { QueryField } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 import { inspect } from "util";
+import { castTo } from "./time-utils";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -44,8 +45,8 @@ export class ErrorFactory {
   static get structDef(): model.StructDef {
     const ret: model.StructDef = {
       type: "struct",
-      name: "//undefined_error_structdef",
-      dialect: "//undefined_errror_dialect",
+      name: "~malformed~",
+      dialect: "~malformed~",
       structSource: { type: "table" },
       structRelationship: {
         type: "basetable",
@@ -57,7 +58,8 @@ export class ErrorFactory {
   }
 
   static isErrorStructdef(s: model.StructDef): boolean {
-    return s.name === this.structDef.name;
+    const sd = this.structDef;
+    return s.name.includes(sd.name);
   }
 
   static get query(): model.Query {
@@ -717,12 +719,11 @@ export class NamedSource extends Mallobj {
 
     const ret = this.modelStruct();
     if (!ret) {
-      const noSql = {
-        ...ErrorFactory.structDef,
-        name: "_reference_undefined_" + this.refName,
-        dialect: "MISSING_reference_undefined_" + this.refName,
-      };
-      return noSql;
+      const notFound = ErrorFactory.structDef;
+      const err = `${this.refName}-undefined`;
+      notFound.name = notFound.name + err;
+      notFound.dialect = notFound.dialect + err;
+      return notFound;
     }
     const declared = { ...ret.parameters } || {};
 
@@ -738,18 +739,9 @@ export class NamedSource extends Mallobj {
             pExpr.log(`Cannot override constant parameter ${pName}`);
           } else {
             const pVal = pExpr.constantValue();
-            let value: model.Expr | null = pVal.value;
+            let value = pVal.value;
             if (pVal.dataType !== decl.type) {
-              if (decl.type === "timestamp" && pVal.dataType === "date") {
-                // @mtoy-googly-moogly : I've stubbed for now as we don't do parameters yet
-                //  not sure how to get to a dialect from here.
-                // value = toTimestampV(getDialect(this.dialect), pVal).value;
-              } else {
-                pExpr.log(
-                  `Type mismatch for parameter '${pName}', expected '${decl.type}'`
-                );
-                value = null;
-              }
+              value = castTo(decl.type, pVal.value, true);
             }
             decl.value = value;
           }
@@ -1894,6 +1886,15 @@ export class FullQuery extends TurtleHeadedPipe {
       : this.explore.structDef();
     let pipeFs = new DynamicSpace(structDef);
 
+    if (ErrorFactory.isErrorStructdef(structDef)) {
+      return {
+        outputStruct: structDef,
+        query: {
+          structRef: structRef,
+          pipeline: [],
+        },
+      };
+    }
     if (this.turtleName) {
       const { error } = this.turtleName.getField(pipeFs);
       if (error) this.log(error);
