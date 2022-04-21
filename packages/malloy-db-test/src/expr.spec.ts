@@ -15,7 +15,33 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloydata/malloy";
+import { Result } from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace jest {
+    interface Matchers<R> {
+      isSqlEq(): R;
+    }
+  }
+}
+
+expect.extend({
+  isSqlEq: (result: Result) => {
+    const wantEq = result.data.path(0, "calc").value;
+    if (wantEq != "=") {
+      return {
+        pass: false,
+        message: () => `${wantEq}\nSQL:\n${result.sql}`,
+      };
+    }
+    return {
+      pass: true,
+      message: () => "SQL expression matched",
+    };
+  },
+});
 
 const runtimes = new RuntimeList([
   "bigquery", //
@@ -565,6 +591,73 @@ expressionModels.forEach((expressionModel, databaseName) => {
     // console.log(result.data.toObject());
     expect(result.data.path(0, "flight_count").value).toBe(199726);
     expect(result.data.path(0, "popular_name").value).toBe("Isabella");
+  });
+});
+
+runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  async function sqlEq(expr: string, result: string | boolean) {
+    const qExpr = expr.replace(/'/g, "`");
+    const sourceDef = `
+      sql: nothing is || SELECT 1 as one ;;
+      source: basicTypes is from_sql(nothing) + {
+        dimension: friName is 'friday'
+        dimension: friDay is 5
+        dimension: satName is 'saturday'
+        dimension: satDay is 6
+        dimension: dayTime is @2001-01-01 00:00:00
+      }\n`;
+    let query: string;
+    if (typeof result == "boolean") {
+      const notEq = `concat('${qExpr} was ${!result} expected ${result}')`;
+      const whenPick = result ? "'=' when exprTrue" : `${notEq} when exprTrue`;
+      const elsePick = result ? notEq : "'='";
+      query = `${sourceDef}
+        query: basicTypes
+        -> { project: exprTrue is ${expr} }
+        -> {
+          project: calc is pick ${whenPick} else ${elsePick}
+        }`;
+    } else {
+      const qResult = result.replace(/'/g, "`");
+      query = `${sourceDef}
+        query: basicTypes
+        -> {
+          project: expect is ${result}
+          project: got is ${expr}
+        } -> {
+          project: calc is
+            pick '=' when expect = got
+            else concat('${qExpr} != ${qResult}. Got: ', got::string)
+        }`;
+    }
+    return await runtime.loadQuery(query).run();
+  }
+
+  describe(`alternations - ${databaseName}`, () => {
+    test(`with numeric = - ${databaseName}`, async () => {
+      const result = await sqlEq("satDay = 6|7", true);
+      expect(result).isSqlEq();
+    });
+    test(`with numeric != - ${databaseName}`, async () => {
+      const result = await sqlEq("satDay != 6|7", false);
+      expect(result).isSqlEq();
+    });
+    test(`with string = - ${databaseName}`, async () => {
+      const result = await sqlEq("satName = 'saturday' | 'sunday'", true);
+      expect(result).isSqlEq();
+    });
+    test(`with string != - ${databaseName}`, async () => {
+      const result = await sqlEq("satName != 'saturday' | 'sunday'", false);
+      expect(result).isSqlEq();
+    });
+    test(`with time = - ${databaseName}`, async () => {
+      const result = await sqlEq("dayTime = @2001 | @2002", true);
+      expect(result).isSqlEq();
+    });
+    test(`with time != - ${databaseName}`, async () => {
+      const result = await sqlEq("dayTime != @2001 | @2002", false);
+      expect(result).isSqlEq();
+    });
   });
 });
 
