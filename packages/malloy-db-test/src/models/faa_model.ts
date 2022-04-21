@@ -678,7 +678,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
               type: "timestamp",
               name: "dep_time",
               as: "dep_date",
-              timeframe: "date",
+              timeframe: "day",
             },
             "carrier",
             {
@@ -746,7 +746,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
               type: "timestamp",
               name: "dep_time",
               as: "dep_date",
-              timeframe: "date",
+              timeframe: "day",
             },
             "carrier",
             "flight_count",

@@ -15,8 +15,9 @@ import {
   AtomicFieldType,
   Fragment,
   isAtomicFieldType,
-  TimeTimeframe,
+  TimestampUnit,
   Expr,
+  TimeFieldType,
 } from "../../model/malloy_types";
 
 // These are the types which a field expression will evaluate to
@@ -134,13 +135,10 @@ export interface ExprResult extends FragType {
   value: Fragment[];
 }
 
-export type TimeType = "date" | "timestamp";
-export function isTimeType(s: string): s is TimeType {
-  return s === "date" || s === "timestamp";
-}
 export interface GranularResult extends ExprResult {
-  dataType: TimeType;
-  timeframe: TimeTimeframe;
+  dataType: TimeFieldType;
+  timeframe: TimestampUnit;
+  alsoTimestamp?: true;
 }
 export function isGranularResult(v: ExprValue): v is GranularResult {
   if (v.dataType !== "date" && v.dataType !== "timestamp") {
@@ -148,7 +146,7 @@ export function isGranularResult(v: ExprValue): v is GranularResult {
   }
   return (v as GranularResult).timeframe !== undefined;
 }
-export function granularity(t: TimeTimeframe): number {
+export function granularity(t: TimestampUnit): number {
   const granularityMap: Record<string, number> = {
     microsecond: -2,
     millisecond: -1,
@@ -243,7 +241,7 @@ export function dateOffset(
   from: Fragment[],
   op: "+" | "-",
   n: Fragment[],
-  timeframe: TimeTimeframe
+  timeframe: TimestampUnit
 ): Fragment[] {
   const add = op === "+" ? "_ADD" : "_SUB";
   const units = timeframe.toUpperCase();
@@ -260,7 +258,7 @@ export function timestampOffset(
   from: Fragment[],
   op: "+" | "-",
   n: Fragment[],
-  timeframe: TimeTimeframe,
+  timeframe: TimestampUnit,
   fromNotTimestamp = false
 ): Fragment[] {
   const useDatetime = ["week", "month", "quarter", "year"].includes(timeframe);
