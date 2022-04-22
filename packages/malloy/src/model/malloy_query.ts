@@ -1852,7 +1852,7 @@ class QueryQuery extends QueryField {
       }
       if (ji.children.length === 0 || conditions === undefined) {
         if (conditions !== undefined && conditions.length >= 1) {
-          filters = ` AND ${conditions.join(" AND ")}`;
+          filters = ` AND (${conditions.join(" AND ")})`;
         }
         s += `LEFT JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
