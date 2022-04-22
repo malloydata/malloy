@@ -47,8 +47,8 @@ export abstract class Dialect {
   abstract divisionIsInteger: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
 
-  // return a quoted string for use as a table name.
-  abstract quoteTableName(tableName: string): string;
+  // return a quoted string for use as a table path.
+  abstract quoteTablePath(tablePath: string): string;
 
   // returns an table that is a 0 based array of numbers
   abstract sqlGroupSetTable(groupSetCount: number): string;
