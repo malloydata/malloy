@@ -1,6 +1,8 @@
 # Malloy Composer Demo
 
-The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. If you have any questions about getting this running, please reach out to us for help! If you find bugs or have feature requests, you can submit them as issues in this repo. 
+The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. If you have any questions about getting it running, please reach out to us for help! If you find bugs or have feature requests, you can submit them as issues in this repo. 
+
+_The composer is only intended for demo purposes, and is not a finished or supported product._
 
 ## Running the Composer
 
@@ -20,7 +22,7 @@ In the `malloy/demo/malloy-demo-composer` directory, run:
 The app will run at localhost:4000. You should see any sources defined in `.malloy` files you place in a `/malloy/` directory (you'll need to create this) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
 
 Troubleshooting notes: 
-- If you have models in your `/malloy/` directory and nothing is showing up in the explorer, you may have errors in one of them. Try opening them up in VS Code with the Malloy Extension installed to find the problem.
+- If you have models in your `/malloy/` directory and one or all of them are not showing up in the composer menu, you may have an error in your Malloy code. Try opening them up in VS Code with the Malloy Extension installed to find the problem.
 - You'll need to define a [source](https://looker-open-source.github.io/malloy/documentation/language/source.html) for it to be explorable; top-level named queries that are not inside a source are not explorable.
 
 ### Set up Query Saving
@@ -37,7 +39,7 @@ import "file:///Users/anikaks/malloy/flights.malloy"
 
 source: flights is flights_base {}
 ```
-You should now see the name of your new source appear in the top left menu, and when you click the start icon in the top menu you should be able to save named queries and see them appear inside the new source. _Note: Only the last source in a `.a.malloy` file will appear in the menu._
+You should now see the name of your new source appear in the top left menu, and when you click the start icon in the top menu you should be able to save named queries and see them appear inside the new source. _Note: Only the **last source** in a `.a.malloy` file will appear in the menu._
 
 The composer is a two-way tool; saved queries are saved into this source by the app, but you can also add/edit named queries, add fields, joins, etc. 
 
