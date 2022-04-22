@@ -35,7 +35,7 @@ export const FieldLabel = styled.div`
   font-weight: normal;
   font-family: "Roboto Mono";
   gap: 5px;
-  margin-bottom: -2px;
+  margin-top: -3px;
   align-items: center;
   user-select: none;
 `;
@@ -171,6 +171,7 @@ export const ContextMenuTitle = styled.div`
   gap: 10px;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
 `;
 
 export const ContextMenuMain = styled.div`

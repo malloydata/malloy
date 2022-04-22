@@ -21,11 +21,13 @@ interface HoverToPopoverProps {
     closeMenu: () => void;
   }) => ReactElement | null;
   content: (props: { isOpen: boolean; closeMenu: () => void }) => ReactElement;
+  width: number;
 }
 
 export const HoverToPopover: React.FC<HoverToPopoverProps> = ({
   popoverContent,
   content,
+  width,
 }) => {
   const [open, setOpen] = useState(false);
   const closing = useRef(false);
@@ -55,6 +57,7 @@ export const HoverToPopover: React.FC<HoverToPopoverProps> = ({
               setOpen={setOpen}
               referenceDiv={ref}
               zIndex={11}
+              width={width}
             >
               {content}
             </Popover>

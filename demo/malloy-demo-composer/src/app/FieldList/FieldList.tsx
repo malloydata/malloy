@@ -15,12 +15,12 @@ import { FieldDef, SearchValueMapResult, StructDef } from "@malloydata/malloy";
 import { useState } from "react";
 import styled from "styled-components";
 import { ActionIcon } from "../ActionIcon";
-import { ContextMenuContent, ScrollMain } from "../CommonElements";
 import { FieldButton } from "../FieldButton";
+import { FieldDetailPanel } from "../FieldDetailPanel";
 import { HoverToPopover } from "../HoverToPopover";
 import { ListNest } from "../ListNest";
 import { TypeIcon } from "../TypeIcon";
-import { largeNumberLabel } from "../utils";
+import { typeOfField } from "../utils";
 
 interface FieldListProps {
   path?: string[];
@@ -64,6 +64,7 @@ export const FieldList: React.FC<FieldListProps> = ({
             const fieldPath = [...path, field.as || field.name].join(".");
             return (
               <HoverToPopover
+                width={300}
                 key={field.as || field.name}
                 content={() => (
                   <FieldButton
@@ -74,35 +75,14 @@ export const FieldList: React.FC<FieldListProps> = ({
                   />
                 )}
                 popoverContent={() => {
-                  const fieldTopValues = topValues?.find(
-                    (entry) => entry.fieldName === fieldPath
+                  return (
+                    <FieldDetailPanel
+                      fieldName={field.as || field.name}
+                      fieldType={typeOfField(field)}
+                      fieldPath={fieldPath}
+                      topValues={topValues}
+                    />
                   );
-                  if (fieldTopValues) {
-                    return (
-                      <ScrollMain>
-                        <ContextMenuContent>
-                          <ListDiv>
-                            {fieldTopValues.values.slice(0, 8).map((value) => {
-                              return (
-                                <FieldButton
-                                  key={value.fieldValue}
-                                  icon={
-                                    <TypeIcon type="string" kind="dimension" />
-                                  }
-                                  name={value.fieldValue}
-                                  color="dimension"
-                                  detail={largeNumberLabel(value.weight)}
-                                  fullDetail={true}
-                                />
-                              );
-                            })}
-                          </ListDiv>
-                        </ContextMenuContent>
-                      </ScrollMain>
-                    );
-                  } else {
-                    return null;
-                  }
                 }}
               />
             );

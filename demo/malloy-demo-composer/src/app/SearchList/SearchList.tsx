@@ -14,15 +14,12 @@
 import { SearchValueMapResult } from "@malloydata/malloy";
 import styled from "styled-components";
 import { QuerySummaryItem, QuerySummaryItemField } from "../../types";
-import {
-  ContextMenuContent,
-  EmptyMessage,
-  ScrollMain,
-} from "../CommonElements";
+import { EmptyMessage } from "../CommonElements";
 import { FieldButton } from "../FieldButton";
+import { FieldDetailPanel } from "../FieldDetailPanel";
 import { HoverToPopover } from "../HoverToPopover";
 import { TypeIcon } from "../TypeIcon";
-import { largeNumberLabel, typeOfField } from "../utils";
+import { typeOfField } from "../utils";
 
 export interface SearchItem {
   select: () => void;
@@ -63,6 +60,7 @@ export const useSearchList = ({
           const type = typeOfField(item.item.field);
           return (
             <HoverToPopover
+              width={300}
               key={item.key}
               content={() => (
                 <FieldButton
@@ -73,37 +71,14 @@ export const useSearchList = ({
                   detail={item.detail}
                 />
               )}
-              popoverContent={() => {
-                const fieldTopValues = topValues?.find(
-                  (entry) => entry.fieldName === field.path
-                );
-                if (fieldTopValues) {
-                  return (
-                    <ScrollMain>
-                      <ContextMenuContent>
-                        <ListDiv>
-                          {fieldTopValues.values.slice(0, 8).map((value) => {
-                            return (
-                              <FieldButton
-                                key={value.fieldValue}
-                                icon={
-                                  <TypeIcon type="string" kind="dimension" />
-                                }
-                                name={value.fieldValue}
-                                color="dimension"
-                                detail={largeNumberLabel(value.weight)}
-                                fullDetail={true}
-                              />
-                            );
-                          })}
-                        </ListDiv>
-                      </ContextMenuContent>
-                    </ScrollMain>
-                  );
-                } else {
-                  return null;
-                }
-              }}
+              popoverContent={() => (
+                <FieldDetailPanel
+                  fieldName={field.name}
+                  fieldType={typeOfField(field.field)}
+                  fieldPath={field.path}
+                  topValues={topValues}
+                />
+              )}
             />
           );
         } else {
