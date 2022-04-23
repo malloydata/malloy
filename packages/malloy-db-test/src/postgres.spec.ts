@@ -20,6 +20,19 @@ if (runtime === undefined) {
   throw new Error("Couldn't build runtime");
 }
 
+// Idempotently create schema and tables with capital letters to use in tests.
+beforeAll(async () => {
+  await runtime.connection.runSQL('create schema if not exists "UpperSchema";');
+  await Promise.all([
+    runtime.connection.runSQL(
+      'create table if not exists "UpperSchema"."UpperSchemaUpperTable" as select 1 as one;'
+    ),
+    runtime.connection.runSQL(
+      'create table if not exists "UpperTablePublic" as select 1 as one;'
+    ),
+  ]);
+});
+
 afterAll(async () => {
   await runtimeList.closeAll();
 });
@@ -159,5 +172,27 @@ describe("postgres tests", () => {
       .run();
     expect(result.data.value[0].select).toBe(1);
     expect(result.data.value[0].create).toBe(2);
+  });
+
+  it(`quote table name`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      query: table('public.UpperTablePublic') -> { project: one }
+      `
+      )
+      .run();
+    expect(result.data.value[0].one).toBe(1);
+  });
+
+  it(`quote schema name`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      query: table('UpperSchema.UpperSchemaUpperTable') -> { project: one }
+      `
+      )
+      .run();
+    expect(result.data.value[0].one).toBe(1);
   });
 });
