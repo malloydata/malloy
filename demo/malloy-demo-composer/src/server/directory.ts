@@ -19,8 +19,7 @@ import { URLReader, URL, Runtime } from "@malloydata/malloy";
 import { CONNECTIONS } from "./connections";
 import { URL_READER } from "./urls";
 import { getModel } from "./models";
-
-const MODELS_PATH = path.join(os.homedir(), "malloy");
+import { getConfig } from "./config";
 
 class FirstImportCapturingURLReader implements URLReader {
   private firstImport: string | undefined = undefined;
@@ -84,19 +83,24 @@ export async function getAnalysis(fullPath: string): Promise<explore.Analysis> {
 }
 
 export async function getAnalyses(): Promise<explore.Analysis[]> {
-  const files = await fs.readdir(MODELS_PATH);
+  const { modelsPath } = await getConfig();
+  const files = await fs.readdir(modelsPath);
   const analyses: explore.Analysis[] = [];
   for (const file of files) {
     if (file.endsWith(".a.malloy")) {
-      analyses.push(await getAnalysis(path.join(MODELS_PATH, file)));
+      analyses.push(await getAnalysis(path.join(modelsPath, file)));
     }
   }
   return analyses;
 }
 
 export async function readMalloyDirectory(
-  thePath: string = MODELS_PATH
+  thePath?: string
 ): Promise<explore.Directory> {
+  if (thePath === undefined) {
+    const { modelsPath } = await getConfig();
+    thePath = modelsPath;
+  }
   const directory = {
     path: path.basename(thePath),
     fullPath: thePath,

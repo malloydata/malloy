@@ -26,6 +26,7 @@ demo/**/tsconfig.tsbuildinfo
 demo/**/package-lock.json
 demo/**/.eslintcache
 /node_modules
+demo/malloy-demo-composer/composer_config.json
 
 # misc
 .DS_Store

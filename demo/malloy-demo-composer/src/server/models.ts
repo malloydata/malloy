@@ -14,18 +14,17 @@
 import * as explore from "../types";
 import { promises as fs } from "fs";
 import * as path from "path";
-import * as os from "os";
 import { RUNTIME } from "./runtime";
 import { URL } from "@malloydata/malloy";
-
-const MODELS_PATH = path.join(os.homedir(), "malloy");
+import { getConfig } from "./config";
 
 export async function getModels(): Promise<explore.Model[]> {
-  const files = await fs.readdir(MODELS_PATH);
+  const { modelsPath } = await getConfig();
+  const files = await fs.readdir(modelsPath);
   const models: explore.Model[] = [];
   for (const file of files) {
     if (file.endsWith(".malloy") && !file.endsWith(".a.malloy")) {
-      const fullPath = path.join(MODELS_PATH, file);
+      const fullPath = path.join(modelsPath, file);
       models.push(await getModel(fullPath));
     }
   }
