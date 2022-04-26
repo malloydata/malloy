@@ -47,7 +47,7 @@ import { VisIcon } from "../VisIcon";
 import { StageActionMenu } from "../StageActionMenu";
 import { BackPart, CloseIconStyled } from "../FieldButton/FieldButton";
 import { ErrorFieldActionMenu } from "../ErrorFieldActionMenu";
-import { notUndefined } from "../utils";
+import { notUndefined, scalarTypeOfField } from "../utils";
 import { useClickOutside } from "../hooks";
 import { HoverToPopover } from "../HoverToPopover";
 import { FieldDetailPanel } from "../FieldDetailPanel";
@@ -559,12 +559,17 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                     beginReorderingField(item.fieldIndex);
                     closeMenu();
                   }}
+                  filterField={item.type === "field" ? item.field : undefined}
+                  filterFieldPath={
+                    item.type === "field" ? item.path : undefined
+                  }
                   name={item.name}
                   isEditable={item.type === "field_definition"}
                   canSave={item.saveDefinition !== undefined}
                   definition={
                     item.type === "field_definition" ? item.source : undefined
                   }
+                  addFilter={query.addFilter}
                   saveDimension={() => {
                     item.saveDefinition &&
                       query.saveDimension(
@@ -577,6 +582,12 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   editDimension={(fieldIndex, dimension) =>
                     query.editDimension(stagePath, fieldIndex, dimension)
                   }
+                  addOrderBy={query.addOrderBy}
+                  orderByField={{
+                    name: item.name,
+                    fieldIndex: item.fieldIndex,
+                    type: scalarTypeOfField(item.field),
+                  }}
                 />
               );
             } else if (item.kind === "measure") {
@@ -585,6 +596,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 (item.kind === "measure" && item.isRenamed);
               return (
                 <AggregateActionMenu
+                  stagePath={stagePath}
                   source={source}
                   removeField={() =>
                     query.removeField(stagePath, item.fieldIndex)
@@ -629,6 +641,12 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                       );
                   }}
                   topValues={topValues}
+                  addOrderBy={query.addOrderBy}
+                  orderByField={{
+                    name: item.name,
+                    fieldIndex: item.fieldIndex,
+                    type: scalarTypeOfField(item.field),
+                  }}
                 />
               );
             } else {

@@ -68,6 +68,16 @@ export function typeOfField(
     : fieldDef.type;
 }
 
+export function scalarTypeOfField(
+  fieldDef: FieldDef
+): "string" | "number" | "boolean" | "date" | "timestamp" {
+  return fieldDef.type === "struct"
+    ? "string"
+    : fieldDef.type === "turtle"
+    ? "string"
+    : fieldDef.type;
+}
+
 export function kindOfField(
   fieldDef: FieldDef
 ): "query" | "source" | "dimension" | "measure" {

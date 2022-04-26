@@ -147,6 +147,7 @@ export interface QuerySummaryItemNestedQueryDefinition {
 export interface QuerySummaryItemFieldDefinition {
   type: "field_definition";
   name: string;
+  field: FieldDef;
   fieldIndex: number;
   source?: string;
   saveDefinition: FieldDef | undefined;

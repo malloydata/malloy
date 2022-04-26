@@ -1097,6 +1097,7 @@ export class QueryWriter extends SourceUtils {
             type: "field_definition",
             name: field.as || field.name,
             fieldIndex,
+            field,
             saveDefinition: source === this.source ? field : undefined,
             source: field.code,
             kind: field.aggregate ? "measure" : "dimension",

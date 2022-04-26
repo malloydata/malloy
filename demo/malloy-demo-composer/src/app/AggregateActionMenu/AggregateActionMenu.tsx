@@ -12,13 +12,14 @@
  */
 
 import { FilterExpression, StructDef } from "@malloydata/malloy";
-import { RendererName } from "../../types";
+import { OrderByField, RendererName, StagePath } from "../../types";
 import { FilterContextBar } from "../FilterContextBar";
 import { RenameField } from "../RenameField";
 import { ActionMenu } from "../ActionMenu";
 import { DataStyleContextBar } from "../DataStyleContextBar";
 import { AddNewMeasure } from "../AddNewMeasure";
 import { QueryFieldDef, SearchValueMapResult } from "@malloydata/malloy";
+import { EditOrderBy } from "../EditOrderBy";
 
 interface AggregateActionMenuProps {
   source: StructDef;
@@ -37,6 +38,13 @@ interface AggregateActionMenuProps {
   topValues: SearchValueMapResult[] | undefined;
   canSave: boolean;
   saveMeasure?: () => void;
+  addOrderBy: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    direction?: "asc" | "desc"
+  ) => void;
+  orderByField: OrderByField;
+  stagePath: StagePath;
 }
 
 export const AggregateActionMenu: React.FC<AggregateActionMenuProps> = ({
@@ -55,6 +63,9 @@ export const AggregateActionMenu: React.FC<AggregateActionMenuProps> = ({
   topValues,
   saveMeasure,
   canSave,
+  addOrderBy,
+  orderByField,
+  stagePath,
 }) => {
   return (
     <ActionMenu
@@ -86,6 +97,23 @@ export const AggregateActionMenu: React.FC<AggregateActionMenuProps> = ({
           closeOnComplete: true,
           Component: ({ onComplete }) => (
             <RenameField rename={rename} onComplete={onComplete} />
+          ),
+        },
+        {
+          kind: "sub_menu",
+          id: "order_by",
+          iconName: "order_by",
+          label: "Order By",
+          iconColor: "other",
+          closeOnComplete: true,
+          Component: ({ onComplete }) => (
+            <EditOrderBy
+              byField={orderByField}
+              addOrderBy={(fieldIndex, direction) =>
+                addOrderBy(stagePath, fieldIndex, direction)
+              }
+              onComplete={onComplete}
+            />
           ),
         },
         {

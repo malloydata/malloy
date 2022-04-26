@@ -11,12 +11,19 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "@malloydata/malloy";
+import { FieldDef, FilterExpression, StructDef } from "@malloydata/malloy";
 import { QueryFieldDef } from "@malloydata/malloy";
-import { RendererName, StagePath, QuerySummaryItem } from "../../types";
+import {
+  RendererName,
+  StagePath,
+  QuerySummaryItem,
+  OrderByField,
+} from "../../types";
 import { ActionMenu } from "../ActionMenu";
+import { AddFilter } from "../AddFilter";
 import { AddNewDimension } from "../AddNewDimension";
 import { DataStyleContextBar } from "../DataStyleContextBar";
+import { EditOrderBy } from "../EditOrderBy";
 import { RenameField } from "../RenameField";
 
 interface DimensionActionMenuProps {
@@ -36,6 +43,15 @@ interface DimensionActionMenuProps {
   canSave: boolean;
   saveDimension?: () => void;
   source: StructDef;
+  filterField?: FieldDef;
+  filterFieldPath?: string;
+  addFilter: (stagePath: StagePath, filterExpression: FilterExpression) => void;
+  addOrderBy: (
+    stagePath: StagePath,
+    fieldIndex: number,
+    direction?: "asc" | "desc"
+  ) => void;
+  orderByField: OrderByField;
 }
 
 export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
@@ -51,6 +67,12 @@ export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
   definition,
   saveDimension,
   canSave,
+  filterField,
+  filterFieldPath,
+  addFilter,
+  stagePath,
+  addOrderBy,
+  orderByField,
 }) => {
   return (
     <ActionMenu
@@ -65,6 +87,44 @@ export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
           closeOnComplete: true,
           Component: ({ onComplete }) => (
             <RenameField rename={rename} onComplete={onComplete} />
+          ),
+        },
+        {
+          kind: "sub_menu",
+          id: "filter_on",
+          iconName: "filter",
+          label: "Filter By",
+          iconColor: "filter",
+          closeOnComplete: true,
+          Component: ({ onComplete }) =>
+            filterField && filterFieldPath ? (
+              <AddFilter
+                onComplete={onComplete}
+                source={source}
+                field={filterField}
+                fieldPath={filterFieldPath}
+                needsRename={false}
+                addFilter={(filter) => addFilter(stagePath, filter)}
+              />
+            ) : (
+              <div />
+            ),
+        },
+        {
+          kind: "sub_menu",
+          id: "order_by",
+          iconName: "order_by",
+          label: "Order By",
+          iconColor: "other",
+          closeOnComplete: true,
+          Component: ({ onComplete }) => (
+            <EditOrderBy
+              byField={orderByField}
+              addOrderBy={(fieldIndex, direction) =>
+                addOrderBy(stagePath, fieldIndex, direction)
+              }
+              onComplete={onComplete}
+            />
           ),
         },
         {
