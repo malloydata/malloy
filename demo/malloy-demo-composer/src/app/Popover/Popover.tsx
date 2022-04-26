@@ -25,6 +25,8 @@ interface PopoverProps {
   placement?: Placement;
   referenceDiv?: RefObject<HTMLDivElement>;
   zIndex?: number;
+  xOffset?: number;
+  yOffset?: number;
 }
 
 export const PopoverBox = styled.div<{
@@ -55,6 +57,8 @@ export const Popover: React.FC<PopoverProps> = ({
   placement = "right-start",
   referenceDiv,
   zIndex = 10,
+  xOffset = 0,
+  yOffset = 10,
 }) => {
   const triggerRef = useRef<HTMLDivElement>(null);
   const [tooltipRef, setTooltipRef] = useState<HTMLElement | null>(null);
@@ -68,7 +72,7 @@ export const Popover: React.FC<PopoverProps> = ({
         {
           name: "offset",
           options: {
-            offset: [0, 10],
+            offset: [xOffset, yOffset],
           },
         },
         {

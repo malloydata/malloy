@@ -73,8 +73,6 @@ export const useSearchList = ({
               )}
               popoverContent={() => (
                 <FieldDetailPanel
-                  fieldName={field.name}
-                  fieldType={typeOfField(field.field)}
                   fieldPath={field.path}
                   topValues={topValues}
                 />

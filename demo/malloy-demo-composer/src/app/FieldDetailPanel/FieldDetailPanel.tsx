@@ -13,34 +13,21 @@
 
 import { SearchValueMapResult } from "@malloydata/malloy";
 import styled from "styled-components";
-import {
-  ContextMenuMain,
-  ContextMenuTitle,
-  FieldLabel,
-  ScrollMain,
-} from "../CommonElements";
-import { TypeIcon } from "../TypeIcon";
+import { ContextMenuMain, ScrollMain } from "../CommonElements";
 import { largeNumberLabel } from "../utils";
 
 interface FieldDetailPanelProps {
-  fieldName: string;
-  fieldType:
-    | "string"
-    | "boolean"
-    | "number"
-    | "date"
-    | "timestamp"
-    | "query"
-    | "source";
-  fieldPath: string;
+  fieldPath?: string;
+  filterExpression?: string;
+  definition?: string;
   topValues: SearchValueMapResult[] | undefined;
 }
 
 export const FieldDetailPanel: React.FC<FieldDetailPanelProps> = ({
-  fieldName,
-  fieldType,
   fieldPath,
   topValues,
+  filterExpression,
+  definition,
 }) => {
   const fieldTopValues = topValues?.find(
     (entry) => entry.fieldName === fieldPath
@@ -48,24 +35,31 @@ export const FieldDetailPanel: React.FC<FieldDetailPanelProps> = ({
   return (
     <ScrollMain>
       <ContextMenuDetail>
-        <ContextMenuTitle>
-          Detail
-          <FieldLabel>
-            <TypeIcon type={fieldType} kind="dimension" />
-            {fieldName}
-          </FieldLabel>
-        </ContextMenuTitle>
         <InfoDiv>
-          <InfoSection>
-            <div>Path</div>
-            <FieldPath>
-              {fieldPath.length <= 32 ? (
-                fieldPath
-              ) : (
-                <NestingFieldName path={fieldPath.split(".")} />
-              )}
-            </FieldPath>
-          </InfoSection>
+          {fieldPath && (
+            <InfoSection>
+              <div>Path</div>
+              <FieldPath>
+                {fieldPath.length <= 32 ? (
+                  fieldPath
+                ) : (
+                  <NestingFieldName path={fieldPath.split(".")} />
+                )}
+              </FieldPath>
+            </InfoSection>
+          )}
+          {definition && (
+            <InfoSection>
+              <div>Definition</div>
+              <FieldPath>{definition}</FieldPath>
+            </InfoSection>
+          )}
+          {filterExpression && (
+            <InfoSection>
+              <div>Filter</div>
+              <FieldPath>{filterExpression}</FieldPath>
+            </InfoSection>
+          )}
           {fieldTopValues && (
             <InfoSection>
               <div>Top Values</div>

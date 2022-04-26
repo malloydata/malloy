@@ -18,8 +18,9 @@ import styled from "styled-components";
 import { LoadingSpinner } from "../Spinner";
 import { Analysis } from "../../types";
 import { usePrevious } from "../hooks";
-import { highlightPre, notUndefined } from "../utils";
+import { downloadFile, highlightPre, notUndefined } from "../utils";
 import { compileFilter } from "../../core/compile";
+import { DownloadMenu } from "../DownloadMenu";
 
 interface ResultProps {
   source: malloy.StructDef;
@@ -119,6 +120,19 @@ export const Result: React.FC<ResultProps> = ({
         <ViewTab onClick={() => setView("html")} selected={view === "html"}>
           Results
         </ViewTab>
+        <DownloadMenu
+          disabled={!result || html === undefined || rendering}
+          onDownloadHTML={() =>
+            downloadFile(html?.outerHTML || "", "text/html", "result.html")
+          }
+          onDownloadJSON={() =>
+            downloadFile(
+              JSON.stringify(result?.data.toObject() || {}, null, 2),
+              "application/json",
+              "result.json"
+            )
+          }
+        />
       </Header>
       <ContentDiv>
         {result === undefined && view !== "malloy" && (

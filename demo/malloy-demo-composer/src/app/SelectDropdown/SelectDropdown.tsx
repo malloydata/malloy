@@ -171,6 +171,22 @@ export function SelectList<T>({
   );
 }
 
+interface DropdownMenuProps {
+  options: { label: string; onSelect: () => void }[];
+}
+
+export function DropdownMenu({ options }: DropdownMenuProps): JSX.Element {
+  return (
+    <SelectListDiv>
+      {options.map((option, index) => (
+        <OptionDiv key={index} onClick={() => option.onSelect()}>
+          <OptionSpan>{option.label}</OptionSpan>
+        </OptionDiv>
+      ))}
+    </SelectListDiv>
+  );
+}
+
 const OptionRadio = styled.input`
   width: 0;
   height: 0;

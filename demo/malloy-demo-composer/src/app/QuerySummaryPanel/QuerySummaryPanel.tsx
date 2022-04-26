@@ -49,6 +49,8 @@ import { BackPart, CloseIconStyled } from "../FieldButton/FieldButton";
 import { ErrorFieldActionMenu } from "../ErrorFieldActionMenu";
 import { notUndefined } from "../utils";
 import { useClickOutside } from "../hooks";
+import { HoverToPopover } from "../HoverToPopover";
+import { FieldDetailPanel } from "../FieldDetailPanel";
 
 interface QuerySummaryPanelProps {
   source: StructDef;
@@ -397,7 +399,9 @@ const ClickToPopover: React.FC<ClickToPopoverProps> = ({
   return (
     <>
       <ClickToPopoverDiv onClick={() => !closing.current && setOpen(true)}>
-        <div ref={ref}>{content({ isOpen: open, closeMenu })}</div>
+        <div ref={ref} key={open ? "open" : "closed"}>
+          {content({ isOpen: open, closeMenu })}
+        </div>
         <Popover open={open} setOpen={setOpen} referenceDiv={ref}>
           {popoverContent({ setOpen, closeMenu })}
         </Popover>
@@ -769,8 +773,9 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
         content={({ isOpen, closeMenu }) => {
           if (item.type === "field" || item.type === "field_definition") {
             const isSaved = item.type === "field" && !item.isRefined;
+            let button: ReactElement;
             if (item.kind === "dimension") {
-              return (
+              button = (
                 <FieldButton
                   icon={<ActionIcon action="group_by" />}
                   name={item.name}
@@ -785,7 +790,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 />
               );
             } else if (item.kind === "measure") {
-              return (
+              button = (
                 <FieldButton
                   icon={<ActionIcon action="aggregate" />}
                   name={item.name}
@@ -800,7 +805,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 />
               );
             } else {
-              return (
+              button = (
                 <FieldButton
                   icon={<ActionIcon action="nest" />}
                   name={item.name}
@@ -814,18 +819,56 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 />
               );
             }
+            return (
+              <HoverToPopover
+                width={300}
+                enabled={!isOpen}
+                content={() => button}
+                zIndex={9}
+                popoverContent={() => {
+                  return (
+                    <FieldDetailPanel
+                      fieldPath={item.type === "field" ? item.path : undefined}
+                      definition={
+                        item.type !== "field" ? item.source : undefined
+                      }
+                      topValues={undefined}
+                    />
+                  );
+                }}
+              />
+            );
           } else if (item.type === "filter") {
             return (
-              <FieldButton
-                icon={<ActionIcon action="filter" />}
-                name={item.filterSource}
-                canRemove={true}
-                onRemove={() => {
-                  query.removeFilter(stagePath, item.filterIndex, fieldIndex);
-                  closeMenu();
+              <HoverToPopover
+                width={300}
+                enabled={!isOpen}
+                zIndex={9}
+                content={() => (
+                  <FieldButton
+                    icon={<ActionIcon action="filter" />}
+                    name={item.filterSource}
+                    canRemove={true}
+                    onRemove={() => {
+                      query.removeFilter(
+                        stagePath,
+                        item.filterIndex,
+                        fieldIndex
+                      );
+                      closeMenu();
+                    }}
+                    color="filter"
+                    active={isOpen || isSelected}
+                  />
+                )}
+                popoverContent={() => {
+                  return (
+                    <FieldDetailPanel
+                      filterExpression={item.filterSource}
+                      topValues={undefined}
+                    />
+                  );
                 }}
-                color="filter"
-                active={isOpen || isSelected}
               />
             );
           } else if (item.type === "limit") {

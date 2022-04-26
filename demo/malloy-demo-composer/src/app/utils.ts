@@ -165,3 +165,16 @@ export function largeNumberLabel(n: number): string {
     return Math.floor(n / 1000).toLocaleString() + "M";
   }
 }
+
+export function downloadFile(
+  content: string,
+  mimeType: string,
+  filename: string
+): void {
+  const downloadLink = document.createElement("a");
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  downloadLink.setAttribute("href", url);
+  downloadLink.setAttribute("download", filename);
+  downloadLink.click();
+}

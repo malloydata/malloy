@@ -20,7 +20,6 @@ import { FieldDetailPanel } from "../FieldDetailPanel";
 import { HoverToPopover } from "../HoverToPopover";
 import { ListNest } from "../ListNest";
 import { TypeIcon } from "../TypeIcon";
-import { typeOfField } from "../utils";
 
 interface FieldListProps {
   path?: string[];
@@ -77,8 +76,6 @@ export const FieldList: React.FC<FieldListProps> = ({
                 popoverContent={() => {
                   return (
                     <FieldDetailPanel
-                      fieldName={field.as || field.name}
-                      fieldType={typeOfField(field)}
                       fieldPath={fieldPath}
                       topValues={topValues}
                     />

@@ -22,12 +22,16 @@ interface HoverToPopoverProps {
   }) => ReactElement | null;
   content: (props: { isOpen: boolean; closeMenu: () => void }) => ReactElement;
   width: number;
+  enabled?: boolean;
+  zIndex?: number;
 }
 
 export const HoverToPopover: React.FC<HoverToPopoverProps> = ({
   popoverContent,
   content,
   width,
+  enabled = true,
+  zIndex = 11,
 }) => {
   const [open, setOpen] = useState(false);
   const closing = useRef(false);
@@ -43,28 +47,26 @@ export const HoverToPopover: React.FC<HoverToPopoverProps> = ({
   }, [open]);
 
   return (
-    <>
-      <HoverToPopoverDiv
-        onMouseEnter={() => !closing.current && setOpen(true)}
-        onMouseLeave={closeMenu}
-      >
-        <div ref={ref}>{content({ isOpen: open, closeMenu })}</div>
-        {(() => {
-          const content = popoverContent({ setOpen, closeMenu });
-          return (
-            <Popover
-              open={open && content !== null}
-              setOpen={setOpen}
-              referenceDiv={ref}
-              zIndex={11}
-              width={width}
-            >
-              {content}
-            </Popover>
-          );
-        })()}
-      </HoverToPopoverDiv>
-    </>
+    <HoverToPopoverDiv
+      onMouseEnter={() => !closing.current && setOpen(true)}
+      onMouseLeave={closeMenu}
+    >
+      <div ref={ref}>{content({ isOpen: open, closeMenu })}</div>
+      {(() => {
+        const content = popoverContent({ setOpen, closeMenu });
+        return (
+          <Popover
+            open={enabled && open && content !== null}
+            setOpen={setOpen}
+            referenceDiv={ref}
+            zIndex={zIndex}
+            width={width}
+          >
+            {content}
+          </Popover>
+        );
+      })()}
+    </HoverToPopoverDiv>
   );
 };
 
