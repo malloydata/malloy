@@ -1784,7 +1784,7 @@ and Uppercase words in the output of our query.</p>
 <span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   base.word </span><span style="color: #0000FF">as</span><span style="color: #000000"> word</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage0`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
-<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> </span><span style="color: #0000FF">IFNULL</span><span style="color: #000000">(</span><span style="color: #0000FF">NOT</span><span style="color: #000000">(REGEXP_CONTAINS(base.word,r</span><span style="color: #A31515">&#39;[SLOPE]&#39;</span><span style="color: #000000">)),FALSE)</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> </span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(</span><span style="color: #0000FF">NOT</span><span style="color: #000000">(REGEXP_CONTAINS(base.word,r</span><span style="color: #A31515">&#39;[SLOPE]&#39;</span><span style="color: #000000">)),FALSE)</span></span>
 <span class="line"></span></pre></pre>
       </div>
     </div>

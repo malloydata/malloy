@@ -13,7 +13,7 @@ footer: /generated/footers/language/apply.html
     <p>The apply operator takes one expression and applies it to another.
 The primary us of apply is to "apply" a value to a partial comparison,
 but there are a number of other powerful gestures which use this operator.</p>
-<p>For an expression matching the pattern <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> : </span><span style="color: #001080">expression</span></span></code>, the following table outlines the various meanings.</p>
+<p>For an expression matching the pattern <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ? </span><span style="color: #001080">expression</span></span></code>, the following table outlines the various meanings.</p>
 <table>
 <thead>
 <tr>
@@ -27,7 +27,7 @@ but there are a number of other powerful gestures which use this operator.</p>
 <tbody><tr>
 <td>partial comparison</td>
 
-<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000">:  &gt; </span><span style="color: #098658">10</span><span style="color: #000000"> &amp; &lt; </span><span style="color: #098658">100</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ?  &gt; </span><span style="color: #098658">10</span><span style="color: #000000"> &amp; &lt; </span><span style="color: #098658">100</span></span></code></td>
 
 <td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> &gt; </span><span style="color: #098658">10</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">x</span><span style="color: #000000"> &lt; </span><span style="color: #098658">100</span></span></code></td>
 </tr>
@@ -35,7 +35,7 @@ but there are a number of other powerful gestures which use this operator.</p>
 <tr>
 <td>alternate choices</td>
 
-<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;A&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;B&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ? </span><span style="color: #A31515">&#39;A&#39;</span><span style="color: #000000"> | </span><span style="color: #A31515">&#39;B&#39;</span></span></code></td>
 
 <td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;A&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">or</span><span style="color: #000000"> </span><span style="color: #001080">x</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;B&#39;</span></span></code></td>
 </tr>
@@ -43,7 +43,7 @@ but there are a number of other powerful gestures which use this operator.</p>
 <tr>
 <td>range match</td>
 
-<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000">: </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ? </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span></code></td>
 
 <td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> &gt;= </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">and</span><span style="color: #000000"> </span><span style="color: #001080">x</span><span style="color: #000000"> &lt; </span><span style="color: #098658">10</span></span></code></td>
 </tr>
@@ -51,7 +51,7 @@ but there are a number of other powerful gestures which use this operator.</p>
 <tr>
 <td>equality</td>
 
-<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000">: </span><span style="color: #098658">47</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ? </span><span style="color: #098658">47</span></span></code></td>
 
 <td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> = </span><span style="color: #098658">47</span></span></code></td>
 </tr>
@@ -59,9 +59,9 @@ but there are a number of other powerful gestures which use this operator.</p>
 <tr>
 <td>match</td>
 
-<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000">: </span><span style="color: #811F3F">/&#39;ab&#39;</span></span></code></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ? </span><span style="color: #811F3F">r&#39;ab&#39;</span></span></code></td>
 
-<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">/&#39;ab&#39;</span></span></code> <em>(this only works when applying a regular expression to a string)</em></td>
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">x</span><span style="color: #000000"> ~ </span><span style="color: #811F3F">r&#39;ab&#39;</span></span></code> <em>(this only works when applying a regular expression to a string)</em></td>
 </tr>
 </tbody></table>
 <p>In addition it is very common to use <a href="time-ranges.html">Time Ranges</a>

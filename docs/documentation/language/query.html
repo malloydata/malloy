@@ -255,7 +255,6 @@ When a query is defined as part of a source or nested inside another query stage
 <span class="line"><span style="color: #000000">   main_query_0.flight_count </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count,</span></span>
 <span class="line"><span style="color: #000000">   (main_query_0.flight_count/base.flight_count)*</span><span style="color: #098658">100</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count_as_a_percent_of_total</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage2`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
-<span class="line"></span>
 <span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST(base.main_query) </span><span style="color: #0000FF">as</span><span style="color: #000000"> main_query_0</span></span>
 <span class="line"></span></pre></pre>
       </div>

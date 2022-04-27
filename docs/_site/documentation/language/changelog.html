@@ -393,6 +393,26 @@
 <p>We will use this space to highlight major and/or breaking changes to Malloy.</p>
 
       <h2>
+        <a id="v0-0-10" class="header-link anchor" href="#v0-0-10">
+          v0.0.10
+        </a>
+      </h2>
+    
+      <h3>
+        <a id="the-apply-operator-is-now-and-not-" class="header-link anchor" href="#the-apply-operator-is-now-and-not-">
+          The apply operator is now ? and not :
+        </a>
+      </h3>
+    <p>In the transition from filters being with an array like syntax ...</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">sourceName :[ fieldName: value1|value2 ]
+</span></span></pre><p>The use of <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">:</span></span></code> as the apply operator became a readability problem ...</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">sourceName { where: fieldName: value1|value2 }
+</span></span></pre><p>As of this release, use of the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">:</span></span></code> as an apply operator will generate a warning,
+and in a near future release it will be a compiler error. The correct
+syntax for apply is now the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">?</span></span></code> operator. As in</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">sourceName { where: fieldName ? value1|value2 }
+</span></span></pre>
+      <h2>
         <a id="0-0-9" class="header-link anchor" href="#0-0-9">
           0.0.9
         </a>

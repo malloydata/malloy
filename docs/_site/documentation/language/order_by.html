@@ -461,7 +461,7 @@ important concept in the query.  Because the most recent data is usually the mos
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
-<span class="line"><span style="color: #000000">   TIMESTAMP_TRUNC(flights.dep_time, </span><span style="color: #795E26">MONTH</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> dep_month,</span></span>
+<span class="line"><span style="color: #000000">   TIMESTAMP_TRUNC(TIMESTAMP_TRUNC(flights.dep_time,</span><span style="color: #795E26">month</span><span style="color: #000000">),</span><span style="color: #795E26">month</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> dep_month,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
@@ -698,7 +698,7 @@ the results are ordered by <code class="language-malloy" style="background-color
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
-<span class="line"><span style="color: #000000">   TIMESTAMP_TRUNC(flights.dep_time, </span><span style="color: #795E26">MONTH</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> dep_month,</span></span>
+<span class="line"><span style="color: #000000">   TIMESTAMP_TRUNC(TIMESTAMP_TRUNC(flights.dep_time,</span><span style="color: #795E26">month</span><span style="color: #000000">),</span><span style="color: #795E26">month</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> dep_month,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> flight_count</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
