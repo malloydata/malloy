@@ -138,10 +138,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloy-data.malloytest.airports'){
+      explore: a is table('malloytest.airports'){
         where: state = 'NH' | 'CA'
       }
-      explore: b is table('malloy-data.malloytest.state_facts') {
+      explore: b is table('malloytest.state_facts') {
         join_many: a on state=a.state
       }
       query: b->{
