@@ -748,8 +748,11 @@ describe("expressions", () => {
   describe("literals", () => {
     test("integer", exprOK("42"));
     test("string", exprOK(`'fortywo-two'`));
-    test("string with \\'", exprOK(`'Isn` + `\\` + `'t this nice'`));
-    test("string with \\\\", exprOK(`'Is ` + `\\` + `\\` + ` nice'`));
+    test("string with quoted quote", exprOK(`'Isn` + `\\` + `'t this nice'`));
+    test(
+      "string with quoted backslash",
+      exprOK(`'Is ` + `\\` + `\\` + ` nice'`)
+    );
     test("year", exprOK("@1960"));
     test("quarter", exprOK("@1960-Q1"));
     test("week", exprOK("@WK1960-06-26"));
@@ -807,7 +810,7 @@ describe("expressions", () => {
     test("less than", exprOK("42 < 7"));
     test("match", exprOK("'forty-two' ~ 'fifty-four'"));
     test("not match", exprOK("'forty-two' !~ 'fifty-four'"));
-    test("apply", exprOK("'forty-two' : 'fifty-four'"));
+    test("apply", exprOK("'forty-two' ? 'fifty-four'"));
     test("not", exprOK("not true"));
     test("and", exprOK("true and false"));
     test("or", exprOK("true or false"));
@@ -842,7 +845,7 @@ describe("expressions", () => {
     test(
       "applied",
       exprOK(`
-        astr:
+        astr ?
           pick 'the answer' when = '42'
           pick 'the questionable answer' when = '54'
           else 'random'
@@ -851,13 +854,13 @@ describe("expressions", () => {
     test(
       "filtering",
       exprOK(`
-        astr: pick 'missing value' when NULL
+        astr ? pick 'missing value' when NULL
     `)
     );
     test(
       "tiering",
       exprOK(`
-      ai:
+      ai ?
         pick 1 when < 10
         pick 10 when < 100
         pick 100 when < 1000
@@ -867,7 +870,7 @@ describe("expressions", () => {
     test(
       "transforming",
       exprOK(`
-        ai:
+        ai ?
           pick 'small' when < 10
           pick 'medium' when < 100
           else 'large'
@@ -877,7 +880,7 @@ describe("expressions", () => {
     test(
       "when single values",
       exprOK(`
-        ai :
+        ai ?
           pick 'one' when 1
           else 'a lot'
       `)

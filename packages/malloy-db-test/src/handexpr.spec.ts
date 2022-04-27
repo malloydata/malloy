@@ -445,8 +445,8 @@ it(`hand: lots of kinds of sums - ${databaseName}`, async () => {
               total_seats2 is sum(aircraft_models.seats),
               total_seats3 is aircraft_models.sum(aircraft_models.seats),
               aircraft_models.boeing_seats,
-              boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer: 'BOEING'},
-              boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer: ~'B%'}
+              boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer ? 'BOEING'},
+              boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer ? ~'B%'}
           }
         `
     )
@@ -497,7 +497,7 @@ it(`model: filtered measures - ${databaseName}`, async () => {
     .loadQuery(
       `
             query: aircraft->{
-              aggregate: boeing_seats is aircraft_models.total_seats {? aircraft_models.manufacturer:'BOEING'}
+              aggregate: boeing_seats is aircraft_models.total_seats {? aircraft_models.manufacturer ?'BOEING'}
             }
           `
     )
@@ -511,7 +511,7 @@ it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
     .loadQuery(
       `
             query: aircraft->{
-              aggregate: boeing_aircraft is count() {?aircraft_models.manufacturer:'BOEING'}
+              aggregate: boeing_aircraft is count() {?aircraft_models.manufacturer ?'BOEING'}
             }
           `
     )

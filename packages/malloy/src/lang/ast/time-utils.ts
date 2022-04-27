@@ -11,43 +11,73 @@
  * GNU General Public License for more details.
  */
 
-import { Dialect } from "../../dialect";
-import { Expr, Fragment, TimeTimeframe } from "../../model/malloy_types";
-import { compressExpr, ExprValue, TimeType } from "./ast-types";
+import {
+  TimestampUnit,
+  Expr,
+  TimeFieldType,
+  TypecastFragment,
+  AtomicFieldType,
+} from "../../model/malloy_types";
 
-export function dateOffset(
-  dialect: Dialect,
-  from: Fragment[],
+export function timeOffset(
+  timeType: TimeFieldType,
+  from: Expr,
   op: "+" | "-",
-  n: Fragment[],
-  timeframe: TimeTimeframe
-): Fragment[] {
-  return compressExpr(dialect.sqlDateAdd(op, from, n, timeframe) as Expr);
+  n: Expr,
+  timeframe: TimestampUnit
+): Expr {
+  return [
+    {
+      type: "dialect",
+      function: "delta",
+      base: { valueType: timeType, value: from },
+      op,
+      delta: n,
+      units: timeframe,
+    },
+  ];
 }
 
-export function timestampOffset(
-  dialect: Dialect,
-  from: Fragment[],
-  op: "+" | "-",
-  n: Fragment[],
-  timeframe: TimeTimeframe
-  // fromNotTimestamp = false
-): Fragment[] {
-  return compressExpr(dialect.sqlTimestampAdd(op, from, n, timeframe) as Expr);
-}
-
-export function toTimestampV(dialect: Dialect, v: ExprValue): ExprValue {
-  if (v.dataType === "timestamp") {
-    return v;
-  }
-  return {
-    ...v,
-    dataType: "timestamp",
-    value: compressExpr(dialect.sqlTimestampCast(v.value) as Expr),
+export function castTo(
+  castType: AtomicFieldType,
+  from: Expr,
+  safe = false
+): Expr {
+  const cast: TypecastFragment = {
+    type: "dialect",
+    function: "cast",
+    dstType: castType,
+    expr: from,
+    safe,
   };
+  return [cast];
 }
 
-export function resolution(timeframe: string): TimeType {
+export function castTimestampToDate(from: Expr, safe = false): Expr {
+  const cast: TypecastFragment = {
+    type: "dialect",
+    function: "cast",
+    dstType: "date",
+    srcType: "timestamp",
+    expr: from,
+    safe,
+  };
+  return [cast];
+}
+
+export function castDateToTimestamp(from: Expr, safe = false): Expr {
+  const cast: TypecastFragment = {
+    type: "dialect",
+    function: "cast",
+    dstType: "timestamp",
+    srcType: "date",
+    expr: from,
+    safe,
+  };
+  return [cast];
+}
+
+export function resolution(timeframe: string): TimeFieldType {
   switch (timeframe) {
     case "hour":
     case "minute":

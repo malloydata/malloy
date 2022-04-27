@@ -28,7 +28,7 @@ query: horror_combo is movies + {
 -> {
   group_by: genre_combo is concat('Horror + ', genres.value)
   aggregate: title_count
-  nest: by_title is { 
+  nest: by_title is {
     group_by: primaryTitle, ratings.numVotes
     order_by: 2 desc
     limit: 10
@@ -60,14 +60,14 @@ query: imdb_dashboard is movies_plus + {
 // Genre - Genre, by number of votes
 query: movies + {
   join_many: x is from( movies-> {
-    group_by: tconst, genres.value 
+    group_by: tconst, genres.value
   } ) on tconst = x.tconst
 }
 ->  by_genre + {
   where: genres.value != x.value
   nest: genre is {
     group_by: genre2 is x.value
-    nest: by_title_list is { 
+    nest: by_title_list is {
       group_by: primaryTitle, ratings.numVotes
       order_by: 2 desc
       limit: 10

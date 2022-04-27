@@ -6,7 +6,7 @@ source: airports is table('malloy-data.faa.airports') {
   measure: airport_count is count()
 
   dimension: name is concat(code, ' - ', full_name)
-  dimension: faa_region_name is faa_region:
+  dimension: faa_region_name is faa_region ?
     pick 'Southwest' when 'ASW'
     pick 'Northwest Mountain' when 'ANM'
     pick 'Eastern' when 'AEA'

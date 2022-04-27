@@ -54,8 +54,7 @@ import {
   isPhysical,
   isJoinOn,
   isQuerySegment,
-  isTimeDiffFragment,
-  TimeDiffFragment,
+  DialectFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -443,17 +442,17 @@ class QueryField extends QueryNode {
     }
   }
 
-  generateTimeDiff(
+  generateDialect(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: TimeDiffFragment
+    expr: DialectFragment,
+    state: GenerateState
   ): string {
-    return context.dialect.timeDiff(
-      expr.left.type,
-      this.generateExpressionFromExpr(resultSet, context, expr.left.value),
-      expr.right.type,
-      this.generateExpressionFromExpr(resultSet, context, expr.right.value),
-      expr.units
+    return this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      context.dialect.dialectExpr(expr),
+      state
     );
   }
 
@@ -508,8 +507,8 @@ class QueryField extends QueryNode {
             `Internal Error: Partial application value referenced but not provided`
           );
         }
-      } else if (isTimeDiffFragment(expr)) {
-        s += this.generateTimeDiff(resultSet, context, expr);
+      } else if (expr.type == "dialect") {
+        s += this.generateDialect(resultSet, context, expr, state);
       } else {
         throw new Error(
           `Internal Error: Unknown expression fragment ${JSON.stringify(
@@ -523,22 +522,28 @@ class QueryField extends QueryNode {
     return s;
   }
 
-  generateExpression(resultSet: FieldInstanceResult): string {
+  getExpr(): Expr {
     if (hasExpression(this.fieldDef)) {
-      return this.generateExpressionFromExpr(
-        resultSet,
-        this.parent,
-        this.fieldDef.e
-      );
+      return this.fieldDef.e;
     }
-    return this.parent.dialect.sqlFieldReference(
-      this.parent.getIdentifier(),
-      this.fieldDef.name,
-      this.fieldDef.type,
-      this.parent.fieldDef.structSource.type === "nested" ||
-        this.parent.fieldDef.structSource.type === "inline" ||
-        (this.parent.fieldDef.structSource.type === "sql" &&
-          this.parent.fieldDef.structSource.method === "nested")
+    return [
+      this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        this.fieldDef.name,
+        this.fieldDef.type,
+        this.parent.fieldDef.structSource.type === "nested" ||
+          this.parent.fieldDef.structSource.type === "inline" ||
+          (this.parent.fieldDef.structSource.type === "sql" &&
+            this.parent.fieldDef.structSource.method === "nested")
+      ),
+    ];
+  }
+
+  generateExpression(resultSet: FieldInstanceResult): string {
+    return this.generateExpressionFromExpr(
+      resultSet,
+      this.parent,
+      this.getExpr()
     );
   }
 }
@@ -608,42 +613,17 @@ class QueryFieldStruct extends QueryAtomicField {
   }
 }
 
-const timeframeBQMap = {
-  hour_of_day: "HOUR",
-  day_of_month: "DAY",
-  day_of_year: "DAYOFYEAR",
-  month_of_year: "MONTH",
-};
-
 class QueryFieldDate extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldDateDef;
     if (!fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      const exprString = super.generateExpression(resultSet);
-      let exprArray: string[] = [exprString];
-      switch (fd.timeframe) {
-        case "date":
-          break;
-        case "year":
-        case "month":
-        case "week":
-          exprArray = this.parent.dialect.sqlDateTrunc(
-            exprString,
-            fd.timeframe
-          ) as string[];
-          break;
-        case "day_of_month":
-        case "day_of_year":
-          exprArray = [
-            `EXTRACT(${timeframeBQMap[fd.timeframe]} FROM ${exprString})`,
-          ];
-          break;
-        default:
-          exprArray = [`DATE_TRUNC(${exprString}, ${fd.timeframe})`];
-      }
-      return exprArray.join("");
+      const truncated = this.parent.dialect.sqlTrunc(
+        { value: this.getExpr(), valueType: "date" },
+        fd.timeframe
+      );
+      return this.generateExpressionFromExpr(resultSet, this.parent, truncated);
     }
   }
 
@@ -661,46 +641,14 @@ class QueryFieldDate extends QueryAtomicField {
 class QueryFieldTimestamp extends QueryAtomicField {
   generateExpression(resultSet: FieldInstanceResult): string {
     const fd = this.fieldDef as FieldTimestampDef;
-    if (fd.e || !fd.timeframe) {
+    if (!fd.timeframe) {
       return super.generateExpression(resultSet);
     } else {
-      const exprString = super.generateExpression(resultSet);
-      let exprArray: string[] = [exprString];
-      switch (fd.timeframe) {
-        case "year":
-        case "month":
-        case "week":
-        case "date":
-          exprArray = this.parent.dialect.sqlTimestampTrunc(
-            exprString,
-            fd.timeframe,
-            "UTC"
-          ) as string[];
-          break;
-        case "day_of_month":
-        case "day_of_year":
-        case "hour_of_day":
-        case "month_of_year":
-          exprArray = [
-            `EXTRACT(${
-              timeframeBQMap[fd.timeframe]
-            } FROM ${exprString} AT TIME ZONE 'UTC')`,
-          ];
-          break;
-        // case "date":
-        //   e = `DATE(${e},'UTC')`;
-        //   break;
-        case "hour":
-        case "minute":
-        case "second":
-          exprArray = this.parent.dialect.sqlTimestampTrunc(
-            exprString,
-            fd.timeframe,
-            "UTC"
-          ) as string[];
-          break;
-      }
-      return exprArray.join("");
+      const truncated = this.parent.dialect.sqlTrunc(
+        { value: this.getExpr(), valueType: "timestamp" },
+        fd.timeframe
+      );
+      return this.generateExpressionFromExpr(resultSet, this.parent, truncated);
     }
   }
 
@@ -1815,24 +1763,10 @@ class QueryQuery extends QueryField {
                   break;
                 case "second":
                 case "minute":
-                case "date":
                 case "hour":
                   fields.push({
                     name,
                     type: "timestamp",
-                    timeframe,
-                    resultMetadata,
-                    location,
-                  });
-                  break;
-                case "hour_of_day":
-                case "day_of_month":
-                case "day_of_year":
-                case "month_of_year":
-                  fields.push({
-                    name,
-                    type: "number",
-                    numberType: "integer",
                     timeframe,
                     resultMetadata,
                     location,
@@ -3089,7 +3023,7 @@ class QueryStruct extends QueryNode {
         const { tablePath } = parseTableURL(
           this.fieldDef.structSource.tablePath || this.fieldDef.name
         );
-        return this.dialect.quoteTableName(tablePath);
+        return this.dialect.quoteTablePath(tablePath);
       }
       case "sql":
         if (this.fieldDef.structSource.method === "nested") {

@@ -7,7 +7,7 @@ Retain the original flight events.
 ```malloy
 --! {"isRunnable": true, "showAs": "json", "runMode": "auto", "isPaginationEnabled": true, "size": "large"}
 query: table('malloy-data.faa.flights') {
-  where: carrier = 'WN' and dep_time: @2002-03-03
+  where: carrier = 'WN' and dep_time ? @2002-03-03
   measure: flight_count is count()
 } -> {
   group_by:

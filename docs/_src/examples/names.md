@@ -79,7 +79,7 @@ query: names -> {
     gender
   aggregate: total_cohort_population
   nest: names is {
-    where: name : 'Michael' | 'Lloyd' | 'Olivia'
+    where: name  ? 'Michael' | 'Lloyd' | 'Olivia'
     group_by: name
     aggregate: population is by_name.population.sum()
     group_by: births_per_100k
