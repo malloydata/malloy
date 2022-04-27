@@ -25,9 +25,9 @@ query: top_actor_year is movies + {
   nest: top_actors is {
     where:  principals.category ~ 'act%'
       and people.birthYear != null
-    group_by: 
+    group_by:
       people.primaryName
-      gender is principals.category: 
+      gender is principals.category ?
         pick 'M' when 'actor'
         pick 'F' when 'actress'
       age_at_production is startYear -  people.birthYear
@@ -37,7 +37,7 @@ query: top_actor_year is movies + {
 query: under_40_by_year_gender is from(-> top_actor_year) -> {
   declare:
     first_name is REGEXP_EXTRACT(top_actors.primaryName, r'([A-Za-z]+)\s')
-  group_by: 
+  group_by:
     startYear
   nest: by_gender is {
     group_by: top_actors.gender

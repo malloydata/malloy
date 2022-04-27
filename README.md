@@ -24,7 +24,7 @@ We recommend starting with the [Quickstart](https://looker-open-source.github.io
 
 ```malloy
 query: table('malloy-data.faa.flights') -> {
-  where: origin: 'SFO'
+  where: origin ? 'SFO'
   group_by: carrier
   aggregate:
     flight_count is count()

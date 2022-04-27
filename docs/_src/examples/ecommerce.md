@@ -38,7 +38,7 @@ query: table('malloy-data.ecomm.order_items') {
   join_one: users is table('malloy-data.ecomm.users') on user_id = users.id
 } -> {
   where:
-    created_at: @2020,
+    created_at ? @2020,
     status != 'Cancelled' & != 'Returned'
   group_by: users.state
   aggregate: total_sales is sale_price.sum()
@@ -67,7 +67,7 @@ Having defined this in the model, the VSCode plugin will give us handy "Outline"
 Our query is now very simple:
 ```malloy
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large", "queryName": "sales_by_state_2020"}
-query: sales_by_state_2020 is order_items {where: created_at: @2020} -> {
+query: sales_by_state_2020 is order_items {where: created_at ? @2020} -> {
   group_by: users.state
   aggregate: total_sales
 }
@@ -76,7 +76,7 @@ query: sales_by_state_2020 is order_items {where: created_at: @2020} -> {
 To further simplify, we can add this and a couple other queries we’ll frequently use to our model. Once you define these, the VSCode plugin will supply a “Run” button next to each query:
 ```malloy
   query: sales_by_state_2020 is {
-    where: created_at: @2020
+    where: created_at ? @2020
     group_by: users.state
     aggregate: total_sales
   }
@@ -104,12 +104,12 @@ Note that queries can be filtered at any level. A filter on a source applies to 
 --! {"isRunnable": true, "source": "ecommerce/ecommerce.malloy", "size": "large"}
 query: order_items {
   where:
-    users.state: 'California' | 'New York' | 'Texas',
-    status: != 'Cancelled' & != 'Processing'
+    users.state = 'California' | 'New York' | 'Texas',
+    status != 'Cancelled' & != 'Processing'
 } -> {
   group_by: users.state
   aggregate:
-    total_sale_price_2020 is sale_price.sum() { where: created_at : @2020 },
+    total_sale_price_2020 is sale_price.sum() { where: created_at  ? @2020 },
     percent_items_returned is 100.0 * (count() { where: status = 'Returned' }) / count()
 }
 ```

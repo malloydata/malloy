@@ -8,7 +8,7 @@ import "hackernews.malloy"
 source: faang_analysis is stories {
 
   dimension:
-    faang is title :
+    faang is title ?
       pick 'Facebook' when ~ r'(Facebook|Instagram|Whatsapp)'
       pick 'Apple' when ~ r'(Apple|iPhone|IOS|Macbook)'
       pick 'Amazon' when ~ r'(Amazon|AWS)'
