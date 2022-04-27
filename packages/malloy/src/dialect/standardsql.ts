@@ -54,8 +54,8 @@ export class StandardSQLDialect extends Dialect {
     timestamp_seconds: { returnType: "timestamp" },
   };
 
-  quoteTableName(tableName: string): string {
-    return `\`${tableName}\``;
+  quoteTablePath(tablePath: string): string {
+    return `\`${tablePath}\``;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {

@@ -61,8 +61,11 @@ export class PostgresDialect extends Dialect {
   divisionIsInteger = true;
   functionInfo: Record<string, FunctionInfo> = {};
 
-  quoteTableName(tableName: string): string {
-    return `${tableName}`;
+  quoteTablePath(tablePath: string): string {
+    return tablePath
+      .split(".")
+      .map((part) => `"${part}"`)
+      .join(".");
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
