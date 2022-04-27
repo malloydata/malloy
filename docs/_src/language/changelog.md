@@ -4,7 +4,7 @@ _Breaking changes indicated with *_
 We will use this space to highlight major and/or breaking changes to Malloy.
 
 
-## 0.0.10
+## v0.0.10
 
 ### The apply operator is now ? and not :
 
