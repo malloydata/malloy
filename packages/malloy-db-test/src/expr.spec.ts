@@ -633,29 +633,42 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     return await runtime.loadQuery(query).run();
   }
 
-  describe(`alternations - ${databaseName}`, () => {
-    test(`with numeric = - ${databaseName}`, async () => {
-      const result = await sqlEq("satDay = 6|7", true);
+  describe.skip(`alternations with not-eq - ${databaseName}`, () => {
+    /*
+     Here's the desired truth table ...
+
+     x      x != y | z
+     ====== ============
+     y      false
+     z      false
+     ^[yz]  true
+     */
+    test("x not-eq y or z : x eq y", async () => {
+      const result = await sqlEq("6 != (6|7)", false);
       expect(result).isSqlEq();
     });
-    test(`with numeric != - ${databaseName}`, async () => {
-      const result = await sqlEq("satDay != 6|7", false);
+    test("x not-eq y or z : x eq z", async () => {
+      const result = await sqlEq("7 != (6|7)", false);
       expect(result).isSqlEq();
     });
-    test(`with string = - ${databaseName}`, async () => {
-      const result = await sqlEq("satName = 'saturday' | 'sunday'", true);
+    test("x not-eq y or z : else", async () => {
+      const result = await sqlEq("5 != (6|7)", true);
       expect(result).isSqlEq();
     });
-    test(`with string != - ${databaseName}`, async () => {
-      const result = await sqlEq("satName != 'saturday' | 'sunday'", false);
+    /*
+      Writing this the old way, should have the same truth table ...
+        x != y & != z
+    */
+    test("x not-eq y and not-eq z : x eq y", async () => {
+      const result = await sqlEq("6 != (6 & !=7)", false);
       expect(result).isSqlEq();
     });
-    test(`with time = - ${databaseName}`, async () => {
-      const result = await sqlEq("dayTime = @2001 | @2002", true);
+    test("x not-eq y and not-eq z : x eq z", async () => {
+      const result = await sqlEq("7 != (6 & != 7)", false);
       expect(result).isSqlEq();
     });
-    test(`with time != - ${databaseName}`, async () => {
-      const result = await sqlEq("dayTime != @2001 | @2002", false);
+    test("x not-eq y and not-eq z : else", async () => {
+      const result = await sqlEq("5 != (6 & !=7)", true);
       expect(result).isSqlEq();
     });
   });
