@@ -1,10 +1,6 @@
 --! styles flights.styles.json
 
-source: airports is table('malloy-data.faa.airports') {
-  primary_key: code
-  dimension: name is concat(code, ' - ', full_name)
-  measure: airport_count is count()
-}
+import "airports.malloy"
 
 source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
@@ -50,16 +46,6 @@ source: flights is table('malloy-data.faa.flights') {
     total_distance is sum(distance)
     seats_for_sale is sum(aircraft.aircraft_models.seats)
     seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
-    // average_seats is aircraft.aircraft_models.avg(aircraft.aircraft_models.seats)
-    // average_seats is aircraft.aircraft_models.seats.avg()
-
-  query: measures is {
-    aggregate:
-      flight_count
-      aircraft.aircraft_count
-      dest_count is destination.airport_count
-      origin_count is origin.airport_count
-  }
 
   // shows carriers and number of destinations (bar chart)
   query: by_carrier is {
@@ -82,7 +68,7 @@ source: flights is table('malloy-data.faa.flights') {
     aggregate: aircraft.aircraft_count, flight_count
   }
 
-  query: delay_by_hour_of_day is {
+  query: delays_by_hour_of_day is {
     where: dep_delay > 30
     group_by: dep_hour is hour(dep_time)
     aggregate: flight_count
@@ -96,11 +82,9 @@ source: flights is table('malloy-data.faa.flights') {
   }
 
   query: seats_by_distance is {
-    // seats rounded to 5
-    group_by: seats is floor(aircraft.aircraft_models.seats / 5) * 5
+    group_by: seats is floor(aircraft.aircraft_models.seats / 5) * 5    -- seats rounded to 5
     aggregate: flight_count
-    // distance rounded to 20
-    group_by: distance is floor(distance / 20) * 20
+    group_by: distance is floor(distance / 20) * 20     -- distance rounded to 20
   }
 
   query: routes_map is {
@@ -118,6 +102,14 @@ source: flights is table('malloy-data.faa.flights') {
     group_by: destination.name
   }
 
+  query: measures is {
+    aggregate:
+      flight_count
+      aircraft.aircraft_count
+      dest_count is destination.airport_count
+      origin_count is origin.airport_count
+  }
+
   // query: flights -> { where: origin.code = 'SJC' } -> airport_dashboard
   query: airport_dashboard is {
     top: 10
@@ -127,7 +119,7 @@ source: flights is table('malloy-data.faa.flights') {
     nest:
       carriers_by_month
       routes_map
-      delay_by_hour_of_day
+      delays_by_hour_of_day
   }
 
   query: plane_usage is {
@@ -221,14 +213,7 @@ source: flights is table('malloy-data.faa.flights') {
     }
   }
 
-  // search_index is (index : dep_time: @2004-01
-  //   *, carriers.*,
-  //   origin.code, origin.state, origin.city, origin.full_name, origin.fac_type
-  //   destination.code, destination.state, destination.city, destination.full_name
-  //   aircraft.aircraft_model_code, aircraft.aircraft_models.manufacturer
-  //   aircraft.aircraft_models.model
-  //   on flight_count
-  // )
+  query: search_index is {index: * where: dep_time? @2004-01}
 }
 
 query: sessionize_delta_southwest is
