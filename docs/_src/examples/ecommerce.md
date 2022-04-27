@@ -105,7 +105,7 @@ Note that queries can be filtered at any level. A filter on a source applies to 
 query: order_items {
   where:
     users.state = 'California' | 'New York' | 'Texas',
-    status: != 'Cancelled' & != 'Processing'
+    status != 'Cancelled' & != 'Processing'
 } -> {
   group_by: users.state
   aggregate:
