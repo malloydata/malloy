@@ -18,6 +18,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
 | [Numeric ranges](#numeric-ranges)<br/>Numeric ranges with start and end | `10 to 20` |
 | [Time truncation](#time-truncation) | `event_time.quarter` <br/> `now.year` |
 | [Time extraction](#time-extraction)<br/>Extract one part of a time value | `day_of_year(event_time)` <br/> `minute(now)` |
+| [Interval extraction](#interval-extraction)<br/>Extract the interval between two times  | `days(created_at to shipped_at)` |
 | [Time literals](time-ranges.md#literals) | `@2003-04-19`<br/>`@2020-Q4`<br/>`@2021-10-24 10:00:00`
 | [Partial comparison](#partial-comparison)<br/>Reusable conditions | `> 42`<br/>`!= null`<br/>`~ r'C.*'` |
 | [Alternation](#alternation)<br/>Logically combine conditions | `> 5 & < 10`</br> `'red' \| 'blue'`  |
@@ -246,7 +247,7 @@ These will return a negative number if t1 is later than t2.
 <!-- * `@2021-10-24 10:00:00` -->
 <!-- * `now` -->
 
-Time literals are specified in malloy with the `@` character. A literal
+Time literals are specified in Malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 
