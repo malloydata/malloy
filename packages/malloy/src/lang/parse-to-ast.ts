@@ -1000,7 +1000,7 @@ export class MalloyToAST
     return new ast.ForRange(begin, duration, units);
   }
 
-  visitExprFunc(pcx: parse.ExprFuncContext): ast.ExprFunc {
+  visitExprFunc(pcx: parse.ExprFuncContext): ast.ExpressionDef {
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
@@ -1016,7 +1016,7 @@ export class MalloyToAST
       fn = "FUNCTION_NAME_ERROR";
     }
 
-    if (ast.ExprTimeExtract.isExtractor(fn)) {
+    if (ast.ExprTimeExtract.extractor(fn)) {
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
     return this.astAt(new ast.ExprFunc(fn, args), pcx);

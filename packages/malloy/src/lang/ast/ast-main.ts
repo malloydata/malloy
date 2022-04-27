@@ -34,31 +34,33 @@ import {
 import { QueryField } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 import { inspect } from "util";
+import { castTo } from "./time-utils";
 
 /*
  ** For times when there is a code generation error but your function needs
  ** to return some kind of object to type properly, the ErrorFactory is
  ** here to help you.
  */
+
+const theErrorStuct: model.StructDef = {
+  type: "struct",
+  name: "~malformed~",
+  dialect: "~malformed~",
+  structSource: { type: "table" },
+  structRelationship: {
+    type: "basetable",
+    connectionName: "//undefined_error_conection",
+  },
+  fields: [],
+};
+
 export class ErrorFactory {
   static get structDef(): model.StructDef {
-    const ret: model.StructDef = {
-      type: "struct",
-      name: "~malformed~",
-      dialect: "~malformed~",
-      structSource: { type: "table" },
-      structRelationship: {
-        type: "basetable",
-        connectionName: "//undefined_error_conection",
-      },
-      fields: [],
-    };
-    return ret;
+    return { ...theErrorStuct };
   }
 
   static isErrorStructdef(s: model.StructDef): boolean {
-    const sd = this.structDef;
-    return s.name.includes(sd.name);
+    return s.name.includes(theErrorStuct.name);
   }
 
   static get query(): model.Query {
@@ -86,8 +88,7 @@ function opOutputStruct(
   inputStruct: model.StructDef,
   opDesc: model.PipeSegment
 ): model.StructDef {
-  const badModel =
-    logTo.errorsExist() || ErrorFactory.isErrorStructdef(inputStruct);
+  const badModel = ErrorFactory.isErrorStructdef(inputStruct);
   // Don't call into the model code with a broken model
   if (!badModel) {
     try {
@@ -99,7 +100,7 @@ function opOutputStruct(
       );
     }
   }
-  return ErrorFactory.structDef;
+  return { ...ErrorFactory.structDef, dialect: inputStruct.dialect };
 }
 
 type ChildBody = MalloyElement | MalloyElement[];
@@ -738,18 +739,9 @@ export class NamedSource extends Mallobj {
             pExpr.log(`Cannot override constant parameter ${pName}`);
           } else {
             const pVal = pExpr.constantValue();
-            let value: model.Expr | null = pVal.value;
+            let value = pVal.value;
             if (pVal.dataType !== decl.type) {
-              if (decl.type === "timestamp" && pVal.dataType === "date") {
-                // @mtoy-googly-moogly : I've stubbed for now as we don't do parameters yet
-                //  not sure how to get to a dialect from here.
-                // value = toTimestampV(getDialect(this.dialect), pVal).value;
-              } else {
-                pExpr.log(
-                  `Type mismatch for parameter '${pName}', expected '${decl.type}'`
-                );
-                value = null;
-              }
+              value = castTo(decl.type, pVal.value, true);
             }
             decl.value = value;
           }
@@ -1569,6 +1561,11 @@ export class Document extends MalloyElement implements NameSpace {
       }
     }
     for (const stmt of this.statements) {
+      if (this.errorsExist()) {
+        // Once errors appear, don't continue executing statements, stops
+        // a number of cascasding errors.
+        break;
+      }
       stmt.execute(this);
     }
     const def: model.ModelDef = { name: "", exports: [], contents: {} };

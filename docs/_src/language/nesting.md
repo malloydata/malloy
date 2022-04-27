@@ -44,7 +44,7 @@ Filters can be applied at any level within nested queries.
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
 query: airports -> {
-  where: state: 'CA' | 'NY' | 'MN'
+  where: state ? 'CA' | 'NY' | 'MN'
   group_by: state
   aggregate: airport_count
   nest: top_5_counties is {

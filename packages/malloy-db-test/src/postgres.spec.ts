@@ -126,7 +126,7 @@ describe("postgres tests", () => {
     expect(result.data.value[0].n).toBe(1);
   });
 
-  it(`sql_block`, async () => {
+  it(`quote field name`, async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -138,8 +138,26 @@ describe("postgres tests", () => {
       `
       )
       .run();
-    console.log(result.sql);
-    console.log(result.data.value[0]);
     expect(result.data.value[0].upperLower).toBe(1);
+  });
+
+  it(`quote keyword`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 1 as "select"
+       ;;
+
+      query: from_sql(one) -> {
+        project:
+          select
+          create is select + 1
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].select).toBe(1);
+    expect(result.data.value[0].create).toBe(2);
   });
 });

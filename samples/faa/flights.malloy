@@ -176,7 +176,7 @@ source: flights is table('malloy-data.faa.flights') {
   }
 
   // query that you might run for to build a flight search interface
-  // query: flights { where: origin.code: 'SJC', destination.code: 'LAX' | 'BUR', dep_time: @2004-01-01 } -> kayak
+  // query: flights { where: origin.code: 'SJC', destination.code ? 'LAX' | 'BUR', dep_time ? @2004-01-01 } -> kayak
   query: kayak is {
     nest: carriers is {
       group_by: carriers.nickname
@@ -232,25 +232,25 @@ source: flights is table('malloy-data.faa.flights') {
 }
 
 query: sessionize_delta_southwest is
-  flights -> sessionize { where: carrier: 'WN' | 'DL', dep_time: @2002-03-03 }
+  flights -> sessionize { where: carrier ? 'WN' | 'DL', dep_time ? @2002-03-03 }
 
 query: kayak_query_sj_to_la is
   flights -> kayak {
     where:
-      origin.code: 'SJC',
-      destination.code: 'LAX' | 'BUR',
-      dep_time: @2004-01-01
+      origin.code ? 'SJC',
+      destination.code ? 'LAX' | 'BUR',
+      dep_time ? @2004-01-01
   }
 
 query: southwest_dashboard is flights -> carrier_dashboard {
-  where: carriers.nickname: 'Southwest'
+  where: carriers.nickname ? 'Southwest'
 }
 query: jetblue_dashbaord is flights -> carrier_dashboard {
-  where: carriers.nickname: 'Jetblue'
+  where: carriers.nickname ? 'Jetblue'
 }
 query: sjc_dashboard is flights -> airport_dashboard {
-  where: origin.code: 'SJC'
+  where: origin.code ? 'SJC'
 }
 query: sfo_dashboard is flights -> airport_dashboard {
-  where:  origin.code: 'SFO'
+  where:  origin.code ? 'SFO'
 }
