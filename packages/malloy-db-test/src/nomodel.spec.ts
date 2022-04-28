@@ -192,12 +192,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(1845);
-    expect(result.data.value[0].state).toBe("TX");
-    expect(result.data.value[1].c).toBe(500);
-    expect(result.data.value[1].state).toBe("LA");
-    expect(result.data.value[2].c).toBeNull();
-    expect(result.data.value[2].state).toBeNull();
+    expect(result.data.value).toHaveLength(3);
+    expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
+    expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
+    expect(result.data.value).toContainEqual({ c: null, state: null });
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {
