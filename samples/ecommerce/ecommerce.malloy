@@ -83,6 +83,7 @@ source: order_items is table('malloy-data.ecomm.order_items'){
   }
 
   query: top_customers is {
+    top: 5
     group_by: users.full_name
     aggregate: total_sales, order_item_count
   }
