@@ -192,6 +192,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
+    // https://github.com/looker-open-source/malloy/pull/501#discussion_r861022857
     expect(result.data.value).toHaveLength(3);
     expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
     expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
