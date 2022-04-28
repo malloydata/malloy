@@ -1,8 +1,11 @@
 -- --! styles airports.styles.json
 
 source: airports is table('malloy-data.faa.airports') {
+  primary_key: code
+
   measure: airport_count is count()
 
+  dimension: name is concat(code, ' - ', full_name)
   dimension: faa_region_name is faa_region ?
     pick 'Southwest' when 'ASW'
     pick 'Northwest Mountain' when 'ANM'
@@ -30,17 +33,6 @@ source: airports is table('malloy-data.faa.airports') {
     aggregate:
       airport_count
       avg_elevation is elevation.avg()
-  }
-
-  query: by_state_and_county is {
-    group_by: state
-    aggregate: airport_count
-    nest: by_facility_type
-    nest: by_county is {
-      top: 5
-      group_by: county
-      aggregate: airport_count
-    }
   }
 
   query: major_airports is {

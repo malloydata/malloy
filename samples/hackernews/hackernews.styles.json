@@ -10,5 +10,8 @@
     },
     "url" : {
       "renderer" : "link"
+    },
+    "by_score_class" : {
+      "renderer" : "bar_chart"
     }
   }

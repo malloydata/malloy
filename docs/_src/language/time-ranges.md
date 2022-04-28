@@ -84,7 +84,7 @@ These will return a negative number if t1 is later than t2.
 
 ## Literals
 
-Time literals are specified in malloy with the `@` character. A literal
+Time literals are specified in Malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 
