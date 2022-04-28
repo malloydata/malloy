@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="110px" height="110px" viewBox="0 0 110 110" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>query_save_hover</title>
+    <g id="query_save_hover" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle id="Oval" class="hoverfill" fill="transparent" cx="55" cy="55" r="55"></circle>
+        <polygon id="Star-Copy" class="primarystroke" stroke="#4285F4" stroke-width="7" stroke-linejoin="round" points="55 72.0346903 32.0763752 86.5516628 38.7990468 60.2640088 17.9087959 42.9483372 44.9872603 41.2186461 55 16 65.0127397 41.2186461 92.0912041 42.9483372 71.2009532 60.2640088 77.9236248 86.5516628"></polygon>
+    </g>
+</svg>

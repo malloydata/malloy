@@ -68,9 +68,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
         const drillIcon = createDrillIcon(this.document);
         drillCell.appendChild(drillIcon);
         drillCell.style.cssText = `padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; width: 25px; cursor: pointer`;
-        drillCell.onclick = () =>
-          this.options.onDrill &&
-          this.options.onDrill(getDrillQuery(row), drillIcon);
+        drillCell.onclick = () => {
+          if (this.options.onDrill) {
+            const { drillQuery, drillFilters } = getDrillQuery(row);
+            this.options.onDrill(drillQuery, drillIcon, drillFilters);
+          }
+        };
         rowElement.appendChild(drillCell);
       }
       tableBody.appendChild(rowElement);

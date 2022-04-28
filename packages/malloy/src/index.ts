@@ -34,6 +34,18 @@ export type {
   // Needed for drills in render
   FilterExpression,
   SQLBlock,
+  // Used in Composer Demo
+  FieldDef,
+  PipeSegment,
+  QueryFieldDef,
+  TurtleDef,
+  SearchValueMapResult,
+  SearchIndexResult,
+} from "./model";
+export {
+  // Used in Composer Demo
+  Segment,
+  isFilteredAliasedName,
 } from "./model";
 export {
   // Neede for VSCode extension
@@ -92,6 +104,7 @@ export type {
   ModelURL,
   PooledConnection,
   TestableConnection,
+  PersistSQLResults,
 } from "./runtime_types";
 export { URL } from "./runtime_types";
 export type { Loggable } from "./malloy";

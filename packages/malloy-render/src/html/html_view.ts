@@ -39,6 +39,7 @@ import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
 import { AtomicFieldType } from "@malloydata/malloy";
 import { createErrorElement } from "./utils";
+import { DrillFunction } from "../drill";
 
 export class HTMLView {
   private readonly document: Document;
@@ -52,7 +53,7 @@ export class HTMLView {
     options: {
       dataStyles: DataStyles;
       isDrillingEnabled?: boolean;
-      onDrill?: (drillQuery: string, target: HTMLElement) => void;
+      onDrill?: DrillFunction;
     }
   ): Promise<HTMLElement> {
     const renderer = makeRenderer(table.field, this.document, options, {
@@ -131,7 +132,7 @@ export function makeRenderer(
   options: {
     dataStyles: DataStyles;
     isDrillingEnabled?: boolean;
-    onDrill?: (drillQuery: string, target: HTMLElement) => void;
+    onDrill?: DrillFunction;
   },
   styleDefaults: StyleDefaults
 ): Renderer {
