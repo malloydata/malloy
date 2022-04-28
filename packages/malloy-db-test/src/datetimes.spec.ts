@@ -14,8 +14,9 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import { Result } from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
+import "./sql-eq";
+import { mkSqlEq } from "./sql-eq";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
@@ -32,31 +33,6 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace jest {
-    interface Matchers<R> {
-      isSqlEq(): R;
-    }
-  }
-}
-
-expect.extend({
-  isSqlEq: (result: Result) => {
-    const wantEq = result.data.path(0, "calc").value;
-    if (wantEq != "=") {
-      return {
-        pass: false,
-        message: () => `${wantEq}\nSQL:\n${result.sql}`,
-      };
-    }
-    return {
-      pass: true,
-      message: () => "SQL expression matched",
-    };
-  },
-});
-
 const basicTypes: Record<DialectNames, string> = {
   bigquery: `
     SELECT * FROM UNNEST([STRUCT(
@@ -71,38 +47,7 @@ const basicTypes: Record<DialectNames, string> = {
 };
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  async function sqlEq(expr: string, result: string | boolean) {
-    let query: string;
-    if (typeof result == "boolean") {
-      const notEq = `concat('${expr} was ${!result} expected ${result}')`;
-      const whenPick = result ? "'=' when exprTrue" : `${notEq} when exprTrue`;
-      const elsePick = result ? notEq : "'='";
-      query = `
-        sql: basicTypes is || ${basicTypes[databaseName]} ;;
-        query:
-          from_sql(basicTypes) {
-            dimension: booleanExpression is ${expr}
-          } -> { project: exprTrue is booleanExpression }
-          -> {
-            project: calc is pick ${whenPick} else ${elsePick}
-          }
-      `;
-    } else {
-      query = `
-        sql: basicTypes is || ${basicTypes[databaseName]} ;;
-        query:
-          from_sql(basicTypes) {
-            dimension: expect is ${result}
-            dimension: got is ${expr}
-          } -> {
-            project: calc is
-              pick '=' when expect = got
-              else concat('${expr} != ${result}. Got: ', got::string)
-          }
-      `;
-    }
-    return await runtime.loadQuery(query).run();
-  }
+  const sqlEq = mkSqlEq(runtime, { sql: basicTypes[databaseName] });
 
   test(`date in sql_block no explore- ${databaseName}`, async () => {
     const result = await sqlEq("t_date", "@2021-02-24");
