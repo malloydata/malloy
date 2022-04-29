@@ -16,10 +16,11 @@ expect.extend({
    */
   isSqlEq(result: Result) {
     const wantEq = result.data.path(0, "calc").value;
+    const sql = result.sql.replace(/\n/g, "\n    ");
     if (wantEq != "=") {
       return {
         pass: false,
-        message: () => `${wantEq}\nSQL:\n${result.sql}`,
+        message: () => `${wantEq}\nSQL:\n    ${sql}`,
       };
     }
     return {

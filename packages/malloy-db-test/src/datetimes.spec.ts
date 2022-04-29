@@ -330,7 +330,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(result).isSqlEq();
       });
       test(`timestamp delta hours - ${databaseName}`, async () => {
-        const eq = await sqlEq("t_timestamp + 10 hours", "@2021-02-24 13:05:06");
+        const eq = await sqlEq(
+          "t_timestamp + 10 hours",
+          "@2021-02-24 13:05:06"
+        );
         expect(eq).isSqlEq();
       });
       test(`timestamp delta week - ${databaseName}`, async () => {
