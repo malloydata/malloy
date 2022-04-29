@@ -16,7 +16,7 @@
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
-import "./sql-eq";
+import "./is-sql-eq";
 import { mkSqlEqWith } from "./sql-eq";
 
 const runtimes = new RuntimeList([
