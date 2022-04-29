@@ -110,7 +110,6 @@ export class ConnectionManager {
             password,
             port: connectionConfig.port,
             databaseName: connectionConfig.databaseName,
-            defaultSchema: connectionConfig.defaultSchema,
           };
         };
         return new PostgresConnection(

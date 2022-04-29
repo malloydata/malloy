@@ -84,19 +84,6 @@ export const PostgresConnectionEditor: React.FC<PostgresConnectionEditorProps> =
           </tr>
           <tr>
             <LabelCell>
-              <Label>Default Schema:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.defaultSchema || ""}
-                setValue={(defaultSchema) => {
-                  setConfig({ ...config, defaultSchema });
-                }}
-              ></TextField>
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
               <Label>Username:</Label>
             </LabelCell>
             <td>

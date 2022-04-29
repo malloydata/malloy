@@ -66,7 +66,6 @@ interface PostgresConnectionConfiguration {
   username?: string;
   password?: string;
   databaseName?: string;
-  defaultSchema?: string;
 }
 
 type PostgresConnectionConfigurationReader =
@@ -314,19 +313,14 @@ export class PostgresConnection implements Connection {
     };
 
     const { tablePath } = parseTableURL(tableURL);
-    let schema: string, table: string;
-
     const tablePathSplit = tablePath.split(".");
+
+    let schema: string, table: string;
 
     if (tablePathSplit.length === 2) {
       [schema, table] = tablePathSplit;
     } else if (tablePathSplit.length === 1) {
-      const config = await this.readConfig();
-      if (config.defaultSchema) {
-        [schema, table] = [config.defaultSchema, ...tablePathSplit];
-      } else {
-        throw new Error("Specify Postgres schema or set default schema.");
-      }
+      [schema, table] = ["public", ...tablePathSplit];
     } else {
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 1 or 2 segments`
