@@ -239,6 +239,9 @@
                   },
                   "databaseName": {
                     "type": "string"
+                  },
+                  "defaultSchema": {
+                    "type": "string"
                   }
                 }
               },

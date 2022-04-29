@@ -195,4 +195,28 @@ describe("postgres tests", () => {
       .run();
     expect(result.data.value[0].one).toBe(1);
   });
+
+  it(`omit schema if default schema is set`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+    query: table('UpperTablePublic') -> { project: one }
+    `
+      )
+      .run();
+    expect(result.data.value[0].one).toBe(1);
+  });
+
+  // This test will work if we use a connection without a default schema
+  // it(`error if no schema`, async () => {
+  //   await expect(
+  //     runtime
+  //       .loadQuery(
+  //         `
+  //     query: table('UpperTablePublic') -> { project: one }
+  //     `
+  //       )
+  //       .run()
+  //   ).rejects.toThrow(/.*Specify Postgres schema or set default schema.*/);
+  // });
 });

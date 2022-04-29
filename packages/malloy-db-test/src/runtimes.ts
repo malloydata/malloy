@@ -18,7 +18,7 @@ import {
   SingleConnectionRuntime,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
-import { PooledPostgresConnection } from "@malloydata/db-postgres";
+import { PostgresConnection } from "@malloydata/db-postgres";
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -33,7 +33,7 @@ export class BigQueryTestConnection extends BigQueryConnection {
   }
 }
 
-export class PostgresTestConnection extends PooledPostgresConnection {
+export class PostgresTestConnection extends PostgresConnection {
   // we probably need a better way to do this.
 
   public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
@@ -62,7 +62,11 @@ export class RuntimeList {
     {},
     { defaultProject: "malloy-data" }
   );
-  postgresConnection = new PostgresTestConnection("postgres");
+  postgresConnection = new PostgresTestConnection(
+    "postgres",
+    {},
+    { defaultSchema: "public" }
+  );
   runtimeMap = new Map<string, SingleConnectionRuntime>();
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
@@ -71,21 +75,13 @@ export class RuntimeList {
         case "bigquery":
           this.runtimeMap.set(
             "bigquery",
-            new SingleConnectionRuntime(
-              files,
-              new BigQueryTestConnection(
-                "bigquery",
-                {},
-                { defaultProject: "malloy-data" }
-              )
-            )
+            new SingleConnectionRuntime(files, this.bqConnection)
           );
           break;
         case "postgres": {
-          const pg = new PostgresTestConnection("postgres");
           this.runtimeMap.set(
             "postgres",
-            new SingleConnectionRuntime(files, pg)
+            new SingleConnectionRuntime(files, this.postgresConnection)
           );
         }
       }

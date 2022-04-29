@@ -36,6 +36,7 @@ export interface PostgresConnectionConfig {
   host?: string;
   port?: number;
   databaseName?: string;
+  defaultSchema?: string;
   useKeychainPassword?: boolean;
 }
 

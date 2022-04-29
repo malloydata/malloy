@@ -66,6 +66,7 @@ interface PostgresConnectionConfiguration {
   username?: string;
   password?: string;
   databaseName?: string;
+  defaultSchema?: string;
 }
 
 type PostgresConnectionConfigurationReader =
@@ -312,11 +313,26 @@ export class PostgresConnection implements Connection {
       fields: [],
     };
 
-    const { tablePath: tableName } = parseTableURL(tableURL);
-    const [schema, table] = tableName.split(".");
-    if (table === undefined) {
-      throw new Error("Default schema not supported Yet in Postgres");
+    const { tablePath } = parseTableURL(tableURL);
+    let schema: string, table: string;
+
+    const tablePathSplit = tablePath.split(".");
+
+    if (tablePathSplit.length === 2) {
+      [schema, table] = tablePathSplit;
+    } else if (tablePathSplit.length === 1) {
+      const config = await this.readConfig();
+      if (config.defaultSchema) {
+        [schema, table] = [config.defaultSchema, ...tablePathSplit];
+      } else {
+        throw new Error("Specify Postgres schema or set default schema.");
+      }
+    } else {
+      throw new Error(
+        `Improper table path: ${tablePath}. A table path requires 1 or 2 segments`
+      );
     }
+
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e
