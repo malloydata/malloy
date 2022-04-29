@@ -20,12 +20,13 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     `;
     let query: string;
     if (typeof result == "boolean") {
-      const notEq = `'sqlEq failed\nExpected: ${qExpr} to be ${result}`;
-      const whenPick = result ? "'=' when exprTrue" : `${notEq} when exprTrue`;
+      const notEq = `'sqlEq failed\nExpected: ${qExpr} to be ${result}'`;
+      const varName = result ? "exprTrue" : "exprFalse";
+      const whenPick = result ? `'=' when ${varName}` : `${notEq} when ${varName}`;
       const elsePick = result ? notEq : "'='";
       query = `${sourceDef}
           query: basicTypes
-          -> { project: exprTrue is ${expr} }
+          -> { project: ${varName} is ${expr} }
           -> {
             project: calc is pick ${whenPick} else ${elsePick}
           }`;
