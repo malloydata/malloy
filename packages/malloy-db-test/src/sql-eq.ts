@@ -1,30 +1,5 @@
 import { Result, Runtime } from "@malloydata/malloy";
 
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace jest {
-    interface Matchers<R> {
-      isSqlEq(): R;
-    }
-  }
-}
-
-expect.extend({
-  isSqlEq: (result: Result) => {
-    const wantEq = result.data.path(0, "calc").value;
-    if (wantEq != "=") {
-      return {
-        pass: false,
-        message: () => `${wantEq}\nSQL:\n${result.sql}`,
-      };
-    }
-    return {
-      pass: true,
-      message: () => "SQL expression matched",
-    };
-  },
-});
-
 interface InitValues {
   sql?: string;
   malloy?: string;
