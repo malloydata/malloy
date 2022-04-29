@@ -20,7 +20,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     `;
     let query: string;
     if (typeof result == "boolean") {
-      const notEq = `'sqlEq failed\nExpected: ${qExpr} to be ${result}'`;
+      const notEq = `concat('sqlEq failed', CHR(10), ' .   Expected: ${qExpr} to be ${result}')`;
       const varName = result ? "expectTrue" : "expectFalse";
       const whenPick = result
         ? `'=' when ${varName}`
@@ -42,7 +42,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
           } -> {
             project: calc is
               pick '=' when expect = got
-              else concat('sqlEq failed\nExpected: ${qExpr} == ${qResult}.\nReceived: ', got::string)
+              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
           }`;
     }
     return runtime.loadQuery(query).run();
