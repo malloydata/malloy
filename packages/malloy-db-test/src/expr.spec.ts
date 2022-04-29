@@ -16,8 +16,8 @@
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
-import "./is-sql-eq";
-import { mkSqlEq } from "./sql-eq";
+import "./sql-eq";
+import { mkSqlEqWith } from "./sql-eq";
 
 const runtimes = new RuntimeList([
   "bigquery", //
@@ -571,7 +571,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  const sqlEq = mkSqlEq(runtime, {
+  const sqlEq = mkSqlEqWith(runtime, {
     malloy: `+ {
       dimension: friName is 'friday'
       dimension: friDay is 5

@@ -5,7 +5,7 @@ interface InitValues {
   malloy?: string;
 }
 
-export function mkSqlEq(runtime: Runtime, initV?: InitValues) {
+export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return async function (
     expr: string,

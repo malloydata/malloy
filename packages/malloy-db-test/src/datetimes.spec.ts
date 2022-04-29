@@ -16,7 +16,7 @@
 
 import { RuntimeList } from "./runtimes";
 import "./is-sql-eq";
-import { mkSqlEq } from "./sql-eq";
+import { mkSqlEqWith } from "./sql-eq";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
@@ -47,7 +47,7 @@ const basicTypes: Record<DialectNames, string> = {
 };
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  const sqlEq = mkSqlEq(runtime, { sql: basicTypes[databaseName] });
+  const sqlEq = mkSqlEqWith(runtime, { sql: basicTypes[databaseName] });
 
   test(`date in sql_block no explore- ${databaseName}`, async () => {
     const result = await sqlEq("t_date", "@2021-02-24");
@@ -330,11 +330,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         expect(result).isSqlEq();
       });
       test(`timestamp delta hours - ${databaseName}`, async () => {
-        const result = await sqlEq(
-          "t_timestamp + 10 hours",
-          "@2021-02-24 13:05:06"
-        );
-        expect(result).isSqlEq();
+        const eq = await sqlEq("t_timestamp + 10 hours", "@2021-02-24 13:05:06");
+        expect(eq).isSqlEq();
       });
       test(`timestamp delta week - ${databaseName}`, async () => {
         const result = await sqlEq(
