@@ -88,6 +88,7 @@ export class PostgresConnection implements Connection {
   >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
+  private searchPaths: string[] | undefined;
   public readonly name;
 
   constructor(
@@ -98,6 +99,7 @@ export class PostgresConnection implements Connection {
     this.queryConfigReader = queryConfigReader;
     this.configReader = configReader;
     this.name = name;
+    this.searchPaths = undefined;
   }
 
   private async readQueryConfig(): Promise<PostgresQueryConfiguration> {
@@ -126,6 +128,64 @@ export class PostgresConnection implements Connection {
 
   public canPersist(): this is PersistSQLResults {
     return false;
+  }
+
+  private async getSearchPaths(): Promise<string[]> {
+    if (this.searchPaths) return this.searchPaths;
+
+    const [searchPathData, sessionUserData] = await Promise.all([
+      this.runPostgresQuery("show search_path", 0, 0, false),
+      this.runPostgresQuery("select session_user", 0, 0, false),
+    ]);
+
+    const searchPaths = (searchPathData.rows[0].search_path as string)
+      .split(",")
+      .map((x) => x.trim());
+    const sessionUser = sessionUserData.rows[0].session_user;
+
+    if (sessionUser) {
+      for (let i = 0; i < searchPaths.length; i++) {
+        if (searchPaths[i] === '"$user"') {
+          searchPaths[i] = sessionUser as string;
+          break;
+        }
+      }
+    }
+
+    this.searchPaths = searchPaths;
+    return this.searchPaths;
+  }
+
+  private async getDefaultSchemaForTableName(
+    tableName: string
+  ): Promise<string | null> {
+    const searchPaths = await this.getSearchPaths();
+    const matchingSchemaData = await this.runPostgresQuery(
+      `
+          select schemaname from pg_catalog.pg_tables where tablename = '${tableName}'
+          and schemaname in (${searchPaths
+            .map((path) => `'${path}'`)
+            .join(",")})
+      `,
+      0,
+      0,
+      false
+    );
+
+    const matchingSchemas = matchingSchemaData.rows.map((x) => x.schemaname);
+
+    // For an unqualified table name, Postgres will use the first match among
+    // schemas in the search-path
+    let firstMatchingSchema: string | null = null;
+
+    for (let i = 0; i < searchPaths.length; i++) {
+      if (matchingSchemas.includes(searchPaths[i])) {
+        firstMatchingSchema = searchPaths[i];
+        break;
+      }
+    }
+
+    return firstMatchingSchema;
   }
 
   public async fetchSchemaForTables(missing: string[]): Promise<{
@@ -320,7 +380,13 @@ export class PostgresConnection implements Connection {
     if (tablePathSplit.length === 2) {
       [schema, table] = tablePathSplit;
     } else if (tablePathSplit.length === 1) {
-      [schema, table] = ["public", ...tablePathSplit];
+      const defaultSchema = await this.getDefaultSchemaForTableName(tablePath);
+
+      if (!defaultSchema) {
+        throw new Error(`No default schema in search_path for ${tablePath}`);
+      }
+
+      [schema, table] = [defaultSchema, ...tablePathSplit];
     } else {
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 1 or 2 segments`

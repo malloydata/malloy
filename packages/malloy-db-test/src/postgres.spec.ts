@@ -196,12 +196,12 @@ describe("postgres tests", () => {
     expect(result.data.value[0].one).toBe(1);
   });
 
-  it(`use public schema if not specified`, async () => {
+  it(`use default schema from search_path`, async () => {
     const result = await runtime
       .loadQuery(
         `
-    query: table('UpperTablePublic') -> { project: one }
-    `
+      query: table('UpperTablePublic') -> { project: one }
+      `
       )
       .run();
     expect(result.data.value[0].one).toBe(1);
