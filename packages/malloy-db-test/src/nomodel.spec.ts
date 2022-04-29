@@ -39,7 +39,7 @@ afterAll(async () => {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   // Issue: #151
-  it(`unknonwn dialect  - ${databaseName}`, async () => {
+  it(`unknown dialect  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -134,6 +134,31 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].c).toBe(19701);
   });
 
+  it(`join_many filter multiple values - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.airports'){
+        where: state = 'NH' | 'CA'
+      }
+      explore: b is table('malloytest.state_facts') {
+        join_many: a on state=a.state
+      }
+      query: b->{
+        aggregate: c is airport_count.sum()
+        group_by: a.state
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(18605);
+    expect(result.data.value[0].state).toBeNull();
+    expect(result.data.value[1].c).toBe(984);
+    expect(result.data.value[1].state).toBe("CA");
+    expect(result.data.value[2].c).toBe(112);
+    expect(result.data.value[2].state).toBe("NH");
+  });
+
   it(`join_one condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -148,6 +173,30 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.data.value[0].c).toBe(19701);
+  });
+
+  it(`join_one filter multiple values - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.state_facts'){
+        where: state = 'TX' | 'LA'
+      }
+      explore: b is table('malloytest.airports') {
+        join_one: a on state=a.state
+      }
+      query: b->{
+        aggregate: c is a.airport_count.sum()
+        group_by: a.state
+      }
+      `
+      )
+      .run();
+    // https://github.com/looker-open-source/malloy/pull/501#discussion_r861022857
+    expect(result.data.value).toHaveLength(3);
+    expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
+    expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
+    expect(result.data.value).toContainEqual({ c: null, state: null });
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {
