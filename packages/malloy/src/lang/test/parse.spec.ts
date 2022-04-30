@@ -177,6 +177,15 @@ expect.extend({
     const t = m.translate();
     if (t.translated) {
       return { pass: false, message: () => emsg };
+    } else if (t.errors == undefined) {
+      return {
+        pass: false,
+        message: () =>
+          `TEST ERROR, not all objects resolved in source\n` +
+          pretty(t) +
+          "\n" +
+          emsg,
+      };
     } else {
       const errList = m.errors().errors;
       const firstError = errList[0];
@@ -186,8 +195,8 @@ expect.extend({
           message: () => `Received errror: ${firstError.message}\n${emsg}`,
         };
       }
-      if (typeof s != "string") {
-        const have = errList[0].at?.range;
+      if (typeof s != "string" && s.locations[0]) {
+        const have = firstError.at?.range;
         const want = s.locations[0].range;
         if (!this.equals(have, want)) {
           return {
@@ -957,6 +966,16 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
+  test("redefine source", () => {
+    expect(markSource`
+      source: airports is table('malloytest.airports') + {
+        primary_key: code
+      }
+      source: airports is table('malloytest.airports') + {
+        primary_key: code
+      }
+    `).compileToFailWith("Cannot redefine 'airports'");
+  });
   test("query from undefined source", () => {
     expect(markSource`query: ${"x"}->{ project: y }`).compileToFailWith(
       "Undefined source 'x'"

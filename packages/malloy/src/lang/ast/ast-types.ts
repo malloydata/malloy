@@ -135,33 +135,20 @@ export interface ExprResult extends FragType {
   value: Fragment[];
 }
 
-export interface GranularResult extends ExprResult {
+export interface TimeResult extends ExprResult {
   dataType: TimeFieldType;
-  timeframe: TimestampUnit;
   alsoTimestamp?: true;
 }
+
+export interface GranularResult extends TimeResult {
+  timeframe: TimestampUnit;
+}
+
 export function isGranularResult(v: ExprValue): v is GranularResult {
   if (v.dataType !== "date" && v.dataType !== "timestamp") {
     return false;
   }
   return (v as GranularResult).timeframe !== undefined;
-}
-export function granularity(t: TimestampUnit): number {
-  const granularityMap: Record<string, number> = {
-    microsecond: -2,
-    millisecond: -1,
-    second: 1,
-    minute: 2,
-    hour: 3,
-    day: 4,
-    date: 4,
-    week: 5,
-    month: 6,
-    quarter: 7,
-    year: 8,
-  };
-
-  return granularityMap[t] || granularityMap.millisecond;
 }
 
 /**
