@@ -18,6 +18,7 @@ import {
   TypecastFragment,
   AtomicFieldType,
 } from "../../model/malloy_types";
+import { GranularResult, TimeResult } from "./ast-types";
 
 export function timeOffset(
   timeType: TimeFieldType,
@@ -87,4 +88,14 @@ export function resolution(timeframe: string): TimeFieldType {
       return "timestamp";
   }
   return "date";
+}
+
+export function timeResult(
+  t: TimeResult,
+  tt: TimestampUnit | undefined
+): TimeResult | GranularResult {
+  if (tt) {
+    return { ...t, timeframe: tt };
+  }
+  return t;
 }
