@@ -88,7 +88,7 @@ export class PostgresConnection implements Connection {
   >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
-  private searchPaths: string[] | undefined;
+  private searchPathsPromise: Promise<string[]> | undefined;
   public readonly name;
 
   constructor(
@@ -99,7 +99,7 @@ export class PostgresConnection implements Connection {
     this.queryConfigReader = queryConfigReader;
     this.configReader = configReader;
     this.name = name;
-    this.searchPaths = undefined;
+    this.searchPathsPromise = undefined;
   }
 
   private async readQueryConfig(): Promise<PostgresQueryConfiguration> {
@@ -131,8 +131,13 @@ export class PostgresConnection implements Connection {
   }
 
   private async getSearchPaths(): Promise<string[]> {
-    if (this.searchPaths) return this.searchPaths;
+    // Only get the search paths one time even if concurrent calls to this function
+    if (this.searchPathsPromise) return this.searchPathsPromise;
+    this.searchPathsPromise = this.getSearchPathsPromise();
+    return this.searchPathsPromise;
+  }
 
+  private async getSearchPathsPromise(): Promise<string[]> {
     const [searchPathData, sessionUserData] = await Promise.all([
       this.runPostgresQuery("show search_path", 0, 0, false),
       this.runPostgresQuery("select session_user", 0, 0, false),
@@ -152,8 +157,7 @@ export class PostgresConnection implements Connection {
       }
     }
 
-    this.searchPaths = searchPaths;
-    return this.searchPaths;
+    return searchPaths;
   }
 
   private async getDefaultSchemaForTableName(
