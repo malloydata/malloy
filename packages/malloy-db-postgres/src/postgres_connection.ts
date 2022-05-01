@@ -24,6 +24,7 @@ import {
 } from "@malloydata/malloy";
 import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool } from "pg";
+import { v4 as uuidv4 } from "uuid";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -243,8 +244,7 @@ export class PostgresConnection implements Connection {
       fields: [],
     };
 
-    // TODO -- Should be a uuid
-    const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
+    const tempTableName = `malloy_${uuidv4().replace(/-/g, "_")}`;
     const infoQuery = `
       drop table if exists ${tempTableName};
       create temp table ${tempTableName} as SELECT * FROM (

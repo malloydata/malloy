@@ -12,8 +12,12 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@types/pg": "^8.6.1",
     "@malloydata/malloy": "*",
-    "pg": "^8.7.1"
+    "pg": "^8.7.1",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.6.1",
+    "@types/uuid": "^8.3.4"
   }
 }
