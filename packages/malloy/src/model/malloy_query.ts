@@ -1746,7 +1746,7 @@ class QueryQuery extends QueryField {
               });
               break;
             case "timestamp": {
-              const timeframe = fi.f.fieldDef.timeframe || "second";
+              const timeframe = fi.f.fieldDef.timeframe;
               switch (timeframe) {
                 case "year":
                 case "month":
@@ -1768,6 +1768,14 @@ class QueryQuery extends QueryField {
                     name,
                     type: "timestamp",
                     timeframe,
+                    resultMetadata,
+                    location,
+                  });
+                  break;
+                default:
+                  fields.push({
+                    name,
+                    type: "timestamp",
                     resultMetadata,
                     location,
                   });
