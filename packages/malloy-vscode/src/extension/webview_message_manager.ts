@@ -90,6 +90,7 @@ export enum QueryRunStatus {
 export enum QueryMessageType {
   QueryStatus = "query-status",
   AppReady = "app-ready",
+  StartDownload = "start-download",
 }
 
 interface QueryMessageStatusCompiling {
@@ -125,7 +126,20 @@ interface QueryMessageAppReady {
   type: QueryMessageType.AppReady;
 }
 
-export type QueryPanelMessage = QueryMessageStatus | QueryMessageAppReady;
+export interface QueryDownloadOptions {
+  format: "json" | "csv";
+  amount: "current" | "all" | number;
+}
+
+interface QueryMessageStartDownload {
+  type: QueryMessageType.StartDownload;
+  downloadOptions: QueryDownloadOptions;
+}
+
+export type QueryPanelMessage =
+  | QueryMessageStatus
+  | QueryMessageAppReady
+  | QueryMessageStartDownload;
 
 export enum ConnectionMessageType {
   SetConnections = "set-connections",

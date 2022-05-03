@@ -26,6 +26,8 @@ import Prism from "prismjs";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { usePopperTooltip } from "react-popper-tooltip";
+import { DownloadForm } from "./DownloadForm";
+import { useQueryVSCodeContext } from "./query_vscode_context";
 
 enum Status {
   Ready = "ready",
@@ -50,6 +52,12 @@ export const App: React.FC = () => {
     visible: drillTooltipVisible,
     placement: "top",
   });
+
+  const vscode = useQueryVSCodeContext();
+
+  useEffect(() => {
+    vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
+  }, []);
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -121,6 +129,14 @@ export const App: React.FC = () => {
         flexDirection: "column",
       }}
     >
+      <DownloadForm
+        onDownload={async (downloadOptions) => {
+          vscode.postMessage({
+            type: QueryMessageType.StartDownload,
+            downloadOptions,
+          });
+        }}
+      />
       {[
         Status.Compiling,
         Status.Running,

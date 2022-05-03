@@ -33,10 +33,17 @@ import {
   NamedStructDefs,
   SQLBlock,
   Connection,
+  QueryDataRow,
+  toAsyncGenerator,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
-import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
+import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  PersistSQLResults,
+  StreamingConnection,
+} from "@malloydata/malloy/src/runtime_types";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -96,7 +103,13 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection implements Connection, PersistSQLResults {
+export class BigQueryConnection
+  implements
+    Connection,
+    PersistSQLResults,
+    StreamingConnection,
+    FetchSchemaAndRunSimultaneously
+{
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -188,6 +201,18 @@ export class BigQueryConnection implements Connection, PersistSQLResults {
 
   public canPersist(): this is PersistSQLResults {
     return true;
+  }
+
+  public canStream(): this is StreamingConnection {
+    return true;
+  }
+
+  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
+    return true;
+  }
+
+  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
+    return false;
   }
 
   private async _runSQL(
@@ -670,5 +695,35 @@ export class BigQueryConnection implements Connection, PersistSQLResults {
       ...createQueryJobOptions,
     });
     return job;
+  }
+
+  public runSQLStream(
+    sqlCommand: string,
+    options: Partial<BigQueryQueryOptions> = {}
+  ): AsyncIterableIterator<QueryDataRow> {
+    const bigQuery = this.bigQuery;
+    function streamBigQuery(
+      onError: (error: Error) => void,
+      onData: (data: QueryDataRow) => void,
+      onEnd: () => void
+    ) {
+      let index = 0;
+      function handleData(
+        this: ResourceStream<RowMetadata>,
+        rowMetadata: RowMetadata
+      ) {
+        onData(rowMetadata);
+        index += 1;
+        if (options.rowLimit !== undefined && index >= options.rowLimit) {
+          this.end();
+        }
+      }
+      bigQuery
+        .createQueryStream(sqlCommand)
+        .on("error", onError)
+        .on("data", handleData)
+        .on("end", onEnd);
+    }
+    return toAsyncGenerator<QueryDataRow>(streamBigQuery);
   }
 }

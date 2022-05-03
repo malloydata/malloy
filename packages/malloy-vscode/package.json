@@ -205,6 +205,11 @@
           "description": "Maximum number of top-level rows to fetch when running queries.",
           "default": 50
         },
+        "malloy.downloadsPath": {
+          "type": "string",
+          "description": "Path to directory to save downloaded results",
+          "default": "~/Downloads"
+        },
         "malloy.connections": {
           "type": "array",
           "items": {

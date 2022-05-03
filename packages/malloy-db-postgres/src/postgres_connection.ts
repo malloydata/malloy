@@ -21,9 +21,16 @@ import {
   parseTableURL,
   SQLBlock,
   Connection,
+  QueryDataRow,
 } from "@malloydata/malloy";
-import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
+import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  PersistSQLResults,
+  StreamingConnection,
+} from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool } from "pg";
+import QueryStream from "pg-query-stream";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -75,7 +82,7 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
-export class PostgresConnection implements Connection {
+export class PostgresConnection implements Connection, StreamingConnection {
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -126,6 +133,19 @@ export class PostgresConnection implements Connection {
 
   public canPersist(): this is PersistSQLResults {
     return false;
+  }
+
+  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
+    // TODO feature-sql-block Implement FetchSchemaAndRunSimultaneously
+    return false;
+  }
+
+  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
+    return false;
+  }
+
+  public canStream(): this is StreamingConnection {
+    return true;
   }
 
   public async fetchSchemaForTables(missing: string[]): Promise<{
@@ -185,16 +205,15 @@ export class PostgresConnection implements Connection {
     return { schemas, errors };
   }
 
-  public async runSQLBlockAndFetchResultSchema(
-    // TODO feature-sql-block Implement an actual version of this that does these simultaneously
-    sqlBlock: SQLBlock,
-    options?: { rowLimit?: number | undefined }
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sqlBlock.select, options);
-    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock])).schemas[
-      sqlBlock.name
-    ];
-    return { data, schema };
+  protected async getClient(): Promise<Client> {
+    const config = await this.readConfig();
+    return new Client({
+      user: config.username,
+      password: config.password,
+      database: config.databaseName,
+      port: config.port,
+      host: config.host,
+    });
   }
 
   protected async runPostgresQuery(
@@ -203,14 +222,7 @@ export class PostgresConnection implements Connection {
     _rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
-    const config = await this.readConfig();
-    const client = new Client({
-      user: config.username,
-      password: config.password,
-      database: config.databaseName,
-      port: config.port,
-      host: config.host,
-    });
+    const client = await this.getClient();
     await client.connect();
 
     let result = await client.query(sqlCommand);
@@ -359,6 +371,23 @@ export class PostgresConnection implements Connection {
       true
     );
   }
+
+  public async *runSQLStream(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): AsyncIterableIterator<QueryDataRow> {
+    const query = new QueryStream(sqlCommand);
+    const client = await this.getClient();
+    let index = 0;
+    for await (const row of client.query(query)) {
+      yield row.row as QueryDataRow;
+      index += 1;
+      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+        query.destroy();
+      }
+    }
+    await client.end();
+  }
 }
 
 export class PooledPostgresConnection
@@ -387,6 +416,7 @@ export class PooledPostgresConnection
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     let result = await this.pool.query(sqlCommand);
+
     if (result instanceof Array) {
       result = result.pop();
     }
@@ -396,5 +426,20 @@ export class PooledPostgresConnection
       }
     }
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
+  }
+
+  public async *runSQLStream(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): AsyncIterableIterator<QueryDataRow> {
+    const query = new QueryStream(sqlCommand);
+    let index = 0;
+    for await (const row of this.pool.query(query)) {
+      yield row.row as QueryDataRow;
+      index += 1;
+      if (options?.rowLimit !== undefined && index > options.rowLimit) {
+        query.destroy();
+      }
+    }
   }
 }
