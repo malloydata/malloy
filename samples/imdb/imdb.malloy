@@ -3,11 +3,9 @@ source: people is table('imdb.name_basics') {
 }
 
 source: movies is table('imdb.movies') + {
-  
+
   join_one: people is people on principals.nconst = people.nconst
 
-
-  // join_one: cast_crew with tconst
   declare:
     title_count is count(distinct tconst)
     total_ratings is sum(ratings.numVotes)
@@ -23,9 +21,9 @@ source: movies is table('imdb.movies') + {
   }
 
   query: by_name is {
-    group_by: 
+    group_by:
       people.primaryName, principals.nconst
-    aggregate: 
+    aggregate:
       total_ratings
       title_count
   }
@@ -42,5 +40,10 @@ source: movies is table('imdb.movies') + {
   query: by_character is {
     group_by: principals.characters.value
     aggregate: title_count
+  }
+
+  query: search_index is {
+    index: * by total_ratings
+    where: ratings.numVotes > 10000
   }
 }
