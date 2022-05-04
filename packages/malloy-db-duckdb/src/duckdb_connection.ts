@@ -16,10 +16,12 @@ import {
   MalloyQueryData,
   NamedStructDefs,
   parseTableURL,
+  PersistSQLResults,
   PooledConnection,
   SQLBlock,
   StructDef,
 } from "@malloydata/malloy";
+import { ColumnSpaceField } from "@malloydata/malloy/src/lang/space-field";
 
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
@@ -58,12 +60,17 @@ export class DuckDBConnection implements Connection {
     return false;
   }
 
+  public canPersist(): this is PersistSQLResults {
+    return false;
+  }
+
   protected async runDuckDBQuery(sql: string): Promise<MalloyQueryData> {
     return new Promise((resolve, reject) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.connection.all(sql, (err: any, result: any) => {
-        if (err) reject(err);
-        else
+        if (err) {
+          reject(err);
+        } else
           resolve({
             rows: result,
             totalRows: result.length,
@@ -73,6 +80,7 @@ export class DuckDBConnection implements Connection {
   }
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {
+    console.log(sql);
     return await this.runDuckDBQuery(sql);
   }
 

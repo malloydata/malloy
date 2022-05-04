@@ -11,21 +11,39 @@
  * GNU General Public License for more details.
  */
 
-import { indent } from "../model/utils";
+import { DateTimeframe, TimestampTimeframe } from "..";
 import {
-  DateTimeframe,
-  Dialect,
-  DialectExpr,
-  DialectFieldList,
-  ExtractDateTimeframe,
-  FunctionInfo,
-  isDateTimeframe,
-  TimestampTimeframe,
-} from "./dialect";
+  DateUnit,
+  Expr,
+  ExtractUnit,
+  isDateUnit,
+  mkExpr,
+  TimeFieldType,
+  TimestampUnit,
+  TimeValue,
+  TypecastFragment,
+} from "../model";
+import { indent } from "../model/utils";
+import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {
   number: "double precision",
   string: "varchar",
+};
+
+const extractMap: Record<string, string> = {
+  day_of_week: "dayofweek",
+  day_of_year: "dayofyear",
+};
+
+const pgMakeIntervalMap: Record<string, string> = {
+  year: "years",
+  month: "months",
+  week: "weeks",
+  day: "days",
+  hour: "hours",
+  minute: "mins",
+  second: "secs",
 };
 
 export class DuckDBDialect extends Dialect {
@@ -37,12 +55,12 @@ export class DuckDBDialect extends Dialect {
   divisionIsInteger = true;
   functionInfo: Record<string, FunctionInfo> = {};
 
-  quoteTableName(tableName: string): string {
+  quoteTablePath(tableName: string): string {
     return `${tableName}`;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
-    return `CROSS JOIN GENERATE_SERIES(0,${groupSetCount},1) as group_set`;
+    return `CROSS JOIN (SELECT UNNEST(GENERATE_SERIES(0,${groupSetCount},1)) as group_set  ) as group_set`;
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
@@ -67,13 +85,10 @@ export class DuckDBDialect extends Dialect {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
-    let tail = "";
-    if (limit !== undefined) {
-      tail += `[1:${limit}]`;
-    }
-    const fields = this.mapFields(fieldList);
-    // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
-    return `TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail})`;
+    const fields = fieldList
+      .map((f) => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
+      .join(", ");
+    return `(ARRAY_AGG({${fields}}))`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -84,7 +99,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `(ARRAY_AGG(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
+    return `1`; // `(ARRAY_AGG(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
@@ -176,76 +191,82 @@ export class DuckDBDialect extends Dialect {
     throw new Error("Not implemented Yet");
   }
 
-  sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr {
-    return [`DATE_TRUNC('${timeframe}', `, expr, `)::date`];
+  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
+    return undefined;
   }
 
-  sqlTimestampTrunc(
-    expr: unknown,
-    timeframe: TimestampTimeframe,
-    _timezone: string
-  ): DialectExpr {
-    if (timeframe === "date") {
-      return [`(`, expr, `)::date`];
-    } else if (isDateTimeframe(timeframe)) {
-      return [`DATE_TRUNC('${timeframe}', `, expr, `)::date`];
+  sqlExtract(expr: TimeValue, units: ExtractUnit): Expr {
+    const extractTo = extractMap[units] || units;
+    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value})`;
+  }
+
+  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+    let lVal = from.value;
+    let rVal = to.value;
+    let diffUsing = "TIMESTAMP_DIFF";
+
+    if (units == "second" || units == "minute" || units == "hour") {
+      if (from.valueType != "timestamp") {
+        lVal = mkExpr`TIMESTAMP(${lVal})`;
+      }
+      if (to.valueType != "timestamp") {
+        rVal = mkExpr`TIMESTAMP(${rVal})`;
+      }
     } else {
-      return [`DATE_TRUNC('${timeframe}', `, expr, `)`];
+      diffUsing = "DATE_DIFF";
+      if (from.valueType != "date") {
+        lVal = mkExpr`DATE(${lVal})`;
+      }
+      if (to.valueType != "date") {
+        rVal = mkExpr`DATE(${rVal})`;
+      }
     }
+    return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
   }
 
-  sqlExtractDateTimeframe(
-    expr: unknown,
-    timeframe: ExtractDateTimeframe
-  ): DialectExpr {
-    return [`EXTRACT(${timeframe} FROM `, expr, ")"];
+  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+    if (sqlTime.valueType == "date") {
+      if (isDateUnit(units)) {
+        return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
+      }
+      return mkExpr`TIMESTAMP(${sqlTime.value})`;
+    }
+    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units})`;
   }
 
-  sqlDateCast(expr: unknown): DialectExpr {
-    return ["(", expr, ")::date"];
-  }
-
-  sqlTimestampCast(expr: unknown): DialectExpr {
-    return ["(", expr, ")::timestamp"];
-  }
-
-  sqlDateAdd(
+  sqlAlterTime(
     op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
+    expr: TimeValue,
+    n: Expr,
+    timeframe: DateUnit
+  ): Expr {
+    if (timeframe == "quarter") {
+      timeframe = "month";
+      n = mkExpr`${n}*3`;
+    }
+    const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    return mkExpr`((${expr.value})${op}${interval})`;
   }
 
-  sqlTimestampAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
-  }
-
-  sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr {
-    return ["(", expr, `)::${castMap[castTo] || castTo}`];
+  sqlCast(cast: TypecastFragment): Expr {
+    if (cast.dstType !== cast.srcType) {
+      const castTo = castMap[cast.dstType] || cast.dstType;
+      return mkExpr`cast(${cast.expr} as ${castTo})`;
+    }
+    return cast.expr;
   }
 
   sqlLiteralTime(
     timeString: string,
-    type: "date" | "timestamp",
+    type: TimeFieldType,
     _timezone: string
   ): string {
-    if (type === "date") {
+    if (type == "date") {
       return `DATE('${timeString}')`;
-    } else if (type === "timestamp") {
+    } else if (type == "timestamp") {
       return `TIMESTAMP '${timeString}'`;
     } else {
-      throw new Error(`Unknown Liternal time format ${type}`);
+      throw new Error(`Unknown Literal time format ${type}`);
     }
-  }
-
-  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
-    return undefined;
   }
 }

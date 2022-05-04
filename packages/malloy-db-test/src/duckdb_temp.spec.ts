@@ -21,13 +21,18 @@ it(`silly test}`, async () => {
   // // eslint-disable-next-line @typescript-eslint/no-var-requires
   // // const count = await duckDB.runSQL("SELECT COUNT(*) FROM 'airports';");
   const count = await duckDB.runSQL(
+`
+  SELECT
+   row(state,airport_count) as state
+  FROM malloytest.state_facts
+`
     // `SELECT ('x'|| SUBSTR(MD5('hello')::varchar,16,14))::DECIMAL(38,9)`
     // `SELECT
     //   SUM(
-    `
-      SELECT
-        (10::DECIMAL(18,3)*100000000)
-    `
+    // `
+    //   SELECT
+    //     (10::DECIMAL(18,3)*100000000)
+    // `
     //     (
     //     SELECT
     //     0::DECIMAL(38,9) + sum(DISTINCT 16::DECIMAL(38,9)^rr::DECIMAL(38,9) * CASE WHEN f >= 'a' THEN ord(f)- ord('a') ELSE  ord(f) - ord('0') END)
