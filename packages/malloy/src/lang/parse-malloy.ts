@@ -11,13 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import { URL } from "url";
 import {
   ANTLRErrorListener,
   Token,
   CharStreams,
   CommonTokenStream,
   ParserRuleContext,
+  CodePointCharStream,
 } from "antlr4ts";
 import type { ParseTree } from "antlr4ts/tree";
 import {
@@ -189,7 +189,8 @@ interface TranslationStep {
 
 export interface MalloyParseRoot {
   root: ParseTree;
-  tokens: CommonTokenStream;
+  tokenStream: CommonTokenStream;
+  sourceStream: CodePointCharStream;
   subTranslator: MalloyTranslation;
   malloyVersion: string;
 }
@@ -316,7 +317,8 @@ class ParseStep implements TranslationStep {
 
     return {
       root: parseFunc.call(malloyParser) as ParseTree,
-      tokens: tokenStream,
+      tokenStream: tokenStream,
+      sourceStream: inputStream,
       // TODO put the real version here
       malloyVersion: "?.?.?-????",
       subTranslator: that,
@@ -338,7 +340,7 @@ class ImportsAndTablesStep implements TranslationStep {
       this.alreadyLooked = true;
       const parseRefs = findReferences(
         that,
-        parseReq.parse.tokens,
+        parseReq.parse.tokenStream,
         parseReq.parse.root
       );
 
@@ -531,7 +533,7 @@ class MetadataStep implements TranslationStep {
         try {
           symbols = walkForDocumentSymbols(
             that,
-            tryParse.parse.tokens,
+            tryParse.parse.tokenStream,
             tryParse.parse.root
           );
         } catch {
@@ -540,7 +542,7 @@ class MetadataStep implements TranslationStep {
         let walkHighlights: DocumentHighlight[];
         try {
           walkHighlights = walkForDocumentHighlights(
-            tryParse.parse.tokens,
+            tryParse.parse.tokenStream,
             tryParse.parse.root
           );
         } catch {
@@ -549,7 +551,7 @@ class MetadataStep implements TranslationStep {
         this.response = {
           symbols,
           highlights: sortHighlights([
-            ...passForHighlights(tryParse.parse.tokens),
+            ...passForHighlights(tryParse.parse.tokenStream),
             ...walkHighlights,
           ]),
           final: true,
@@ -575,7 +577,7 @@ class CompletionsStep implements TranslationStep {
       if (position !== undefined) {
         try {
           completions = walkForDocumentCompletions(
-            tryParse.parse.tokens,
+            tryParse.parse.tokenStream,
             tryParse.parse.root,
             position
           );

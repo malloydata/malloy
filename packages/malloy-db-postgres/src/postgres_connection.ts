@@ -22,6 +22,7 @@ import {
   SQLBlock,
   Connection,
 } from "@malloydata/malloy";
+import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool } from "pg";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -120,6 +121,10 @@ export class PostgresConnection implements Connection {
   }
 
   public isPool(): this is PooledConnection {
+    return false;
+  }
+
+  public canPersist(): this is PersistSQLResults {
     return false;
   }
 
@@ -245,7 +250,11 @@ export class PostgresConnection implements Connection {
       create temp table ${tempTableName} as SELECT * FROM (
         ${sqlRef.select}
       ) as x where false;
-      SELECT column_name, data_type FROM information_schema.columns where table_name='${tempTableName}';
+      SELECT column_name, c.data_type, e.data_type as element_type
+      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
+        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
+          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
+      where table_name='${tempTableName}';
     `;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
@@ -263,11 +272,26 @@ export class PostgresConnection implements Connection {
     );
     for (const row of result.rows) {
       const postgresDataType = row["data_type"] as string;
-      const malloyType = postgresToMalloyTypes[postgresDataType];
-      if (malloyType !== undefined) {
-        structDef.fields.push({
-          type: malloyType,
+      let s = structDef;
+      let malloyType = postgresToMalloyTypes[postgresDataType];
+      let name = row["column_name"] as string;
+      if (postgresDataType === "ARRAY") {
+        malloyType = postgresToMalloyTypes[row["element_type"] as string];
+        s = {
+          type: "struct",
           name: row["column_name"] as string,
+          dialect: this.dialectName,
+          structRelationship: { type: "nested", field: name, isArray: true },
+          structSource: { type: "nested" },
+          fields: [],
+        };
+        structDef.fields.push(s);
+        name = "value";
+      }
+      if (malloyType !== undefined) {
+        s.fields.push({
+          type: malloyType,
+          name,
         });
       } else {
         throw new Error(`unknown postgres type ${postgresDataType}`);
@@ -294,9 +318,12 @@ export class PostgresConnection implements Connection {
       throw new Error("Default schema not yet supported in Postgres");
     }
     const infoQuery = `
-      SELECT column_name, data_type FROM information_schema.columns
-      WHERE table_name = '${table}'
-        AND table_schema = '${schema}'
+      SELECT column_name, c.data_type, e.data_type as element_type
+      FROM information_schema.columns c LEFT JOIN information_schema.element_types e
+        ON ((c.table_catalog, c.table_schema, c.table_name, 'TABLE', c.dtd_identifier)
+          = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
+        WHERE table_name = '${table}'
+          AND table_schema = '${schema}'
     `;
 
     await this.schemaFromQuery(infoQuery, structDef);

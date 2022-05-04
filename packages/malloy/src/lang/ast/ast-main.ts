@@ -10,7 +10,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { URL } from "url";
 import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
@@ -35,30 +34,33 @@ import {
 import { QueryField } from "../space-field";
 import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
 import { inspect } from "util";
+import { castTo } from "./time-utils";
 
 /*
  ** For times when there is a code generation error but your function needs
  ** to return some kind of object to type properly, the ErrorFactory is
  ** here to help you.
  */
+
+const theErrorStuct: model.StructDef = {
+  type: "struct",
+  name: "~malformed~",
+  dialect: "~malformed~",
+  structSource: { type: "table" },
+  structRelationship: {
+    type: "basetable",
+    connectionName: "//undefined_error_conection",
+  },
+  fields: [],
+};
+
 export class ErrorFactory {
   static get structDef(): model.StructDef {
-    const ret: model.StructDef = {
-      type: "struct",
-      name: "//undefined_error_structdef",
-      dialect: "//undefined_errror_dialect",
-      structSource: { type: "table" },
-      structRelationship: {
-        type: "basetable",
-        connectionName: "//undefined_error_conection",
-      },
-      fields: [],
-    };
-    return ret;
+    return { ...theErrorStuct };
   }
 
   static isErrorStructdef(s: model.StructDef): boolean {
-    return s.name === this.structDef.name;
+    return s.name.includes(theErrorStuct.name);
   }
 
   static get query(): model.Query {
@@ -86,8 +88,7 @@ function opOutputStruct(
   inputStruct: model.StructDef,
   opDesc: model.PipeSegment
 ): model.StructDef {
-  const badModel =
-    logTo.errorsExist() || ErrorFactory.isErrorStructdef(inputStruct);
+  const badModel = ErrorFactory.isErrorStructdef(inputStruct);
   // Don't call into the model code with a broken model
   if (!badModel) {
     try {
@@ -99,7 +100,7 @@ function opOutputStruct(
       );
     }
   }
-  return ErrorFactory.structDef;
+  return { ...ErrorFactory.structDef, dialect: inputStruct.dialect };
 }
 
 type ChildBody = MalloyElement | MalloyElement[];
@@ -718,7 +719,11 @@ export class NamedSource extends Mallobj {
 
     const ret = this.modelStruct();
     if (!ret) {
-      return ErrorFactory.structDef;
+      const notFound = ErrorFactory.structDef;
+      const err = `${this.refName}-undefined`;
+      notFound.name = notFound.name + err;
+      notFound.dialect = notFound.dialect + err;
+      return notFound;
     }
     const declared = { ...ret.parameters } || {};
 
@@ -734,18 +739,9 @@ export class NamedSource extends Mallobj {
             pExpr.log(`Cannot override constant parameter ${pName}`);
           } else {
             const pVal = pExpr.constantValue();
-            let value: model.Expr | null = pVal.value;
+            let value = pVal.value;
             if (pVal.dataType !== decl.type) {
-              if (decl.type === "timestamp" && pVal.dataType === "date") {
-                // @mtoy-googly-moogly : I've stubbed for now as we don't do parameters yet
-                //  not sure how to get to a dialect from here.
-                // value = toTimestampV(getDialect(this.dialect), pVal).value;
-              } else {
-                pExpr.log(
-                  `Type mismatch for parameter '${pName}', expected '${decl.type}'`
-                );
-                value = null;
-              }
+              value = castTo(decl.type, pVal.value, true);
             }
             decl.value = value;
           }
@@ -1024,12 +1020,12 @@ export class FilterElement extends MalloyElement {
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
       return {
-        source: this.exprSrc,
+        code: this.exprSrc,
         expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
       };
     }
     const exprCond: model.FilterExpression = {
-      source: this.exprSrc,
+      code: this.exprSrc,
       expression: compressExpr(exprVal.value),
     };
     if (exprVal.aggregate) {
@@ -1160,20 +1156,14 @@ export class FieldReference extends ListOf<FieldName> {
   }
 }
 
-export type FieldListReference = FieldReference | WildcardFieldReference;
+export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
-export class FieldReferences extends ListOf<FieldListReference> {
-  constructor(members: FieldListReference[]) {
+export class FieldReferences extends ListOf<FieldReferenceElement> {
+  constructor(members: FieldReferenceElement[]) {
     super("fieldReferenceList", members);
   }
 }
-export function isFieldListReference(
-  me: MalloyElement
-): me is FieldListReference {
-  return me instanceof FieldReference || me instanceof WildcardFieldReference;
-}
-
-export type FieldCollectionMember = FieldListReference | FieldDeclaration;
+export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
 ): el is FieldCollectionMember {
@@ -1256,7 +1246,7 @@ class ReduceExecutor implements QueryExecutor {
     } else if (isNestedQuery(qp)) {
       this.queryFS.addQueryItems(qp);
     } else if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      this.filters.push(...qp.getFilterList(this.queryFS.inputFS()));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.log("Query operation already limited");
@@ -1331,7 +1321,7 @@ class ReduceExecutor implements QueryExecutor {
   finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
     let from: model.ReduceSegment | undefined;
     if (fromSeg) {
-      if (fromSeg.type == "reduce") {
+      if (model.isReduceSegment(fromSeg)) {
         from = fromSeg;
       } else {
         this.queryFS.log(`Can't refine reduce with ${fromSeg.type}`);
@@ -1367,7 +1357,7 @@ class ProjectExecutor extends ReduceExecutor {
   finalize(fromSeg: model.PipeSegment | undefined): model.PipeSegment {
     let from: model.ProjectSegment | undefined;
     if (fromSeg) {
-      if (fromSeg.type == "project") {
+      if (model.isProjectSegment(fromSeg)) {
         from = fromSeg;
       } else {
         this.queryFS.log(`Can't refine project with ${fromSeg.type}`);
@@ -1571,6 +1561,11 @@ export class Document extends MalloyElement implements NameSpace {
       }
     }
     for (const stmt of this.statements) {
+      if (this.errorsExist()) {
+        // Once errors appear, don't continue executing statements, stops
+        // a number of cascasding errors.
+        break;
+      }
       stmt.execute(this);
     }
     const def: model.ModelDef = { name: "", exports: [], contents: {} };
@@ -1765,7 +1760,7 @@ abstract class PipelineDesc extends MalloyElement {
     }
     const pipeline: model.PipeSegment[] = [];
     if (modelPipe.pipeHead) {
-      const { pipeline: turtlePipe } = this.importTurtle(
+      const { pipeline: turtlePipe } = this.expandTurtle(
         modelPipe.pipeHead.name,
         fs.structDef()
       );
@@ -1780,7 +1775,7 @@ abstract class PipelineDesc extends MalloyElement {
     return { pipeline };
   }
 
-  protected importTurtle(
+  protected expandTurtle(
     turtleName: string,
     fromStruct: model.StructDef
   ): {
@@ -1896,11 +1891,20 @@ export class FullQuery extends TurtleHeadedPipe {
       : this.explore.structDef();
     let pipeFs = new DynamicSpace(structDef);
 
+    if (ErrorFactory.isErrorStructdef(structDef)) {
+      return {
+        outputStruct: structDef,
+        query: {
+          structRef: structRef,
+          pipeline: [],
+        },
+      };
+    }
     if (this.turtleName) {
       const { error } = this.turtleName.getField(pipeFs);
       if (error) this.log(error);
       const name = this.turtleName.refString;
-      const { pipeline, location } = this.importTurtle(name, structDef);
+      const { pipeline, location } = this.expandTurtle(name, structDef);
       destQuery.location = location;
       const refined = this.refinePipeline(pipeFs, { pipeline }).pipeline;
       if (this.headRefinement) {

@@ -18,6 +18,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
 | [Numeric ranges](#numeric-ranges)<br/>Numeric ranges with start and end | `10 to 20` |
 | [Time truncation](#time-truncation) | `event_time.quarter` <br/> `now.year` |
 | [Time extraction](#time-extraction)<br/>Extract one part of a time value | `day_of_year(event_time)` <br/> `minute(now)` |
+| [Interval extraction](#interval-extraction)<br/>Extract the interval between two times  | `days(created_at to shipped_at)` |
 | [Time literals](time-ranges.md#literals) | `@2003-04-19`<br/>`@2020-Q4`<br/>`@2021-10-24 10:00:00`
 | [Partial comparison](#partial-comparison)<br/>Reusable conditions | `> 42`<br/>`!= null`<br/>`~ r'C.*'` |
 | [Alternation](#alternation)<br/>Logically combine conditions | `> 5 & < 10`</br> `'red' \| 'blue'`  |
@@ -107,8 +108,8 @@ Aggregate expressions may be filtered, using the [usual filter syntax](filters.m
 --! {"isRunnable": true, "runMode": "auto", "source": "faa/flights.malloy", "size": "large"}
 query: flights -> {
   aggregate:
-    distance_2003 is sum(distance) { where: dep_time: @2003 }
-    ca_flights is count() { where: origin.state: 'CA' }
+    distance_2003 is sum(distance) { where: dep_time ? @2003 }
+    ca_flights is count() { where: origin.state ? 'CA' }
 }
 ```
 
@@ -139,7 +140,7 @@ else 'large'
 Pick expressions are also compatible with the [apply operator](#apply-operator) and partial comparisons.
 
 ```malloy
-size:
+size ?
   pick 'small' when < 10
   pick 'medium' when < 20
   else 'large'
@@ -150,7 +151,7 @@ shipped" statuses, and because there is no `else`, leaves the other
 status values alone.
 
 ```malloy
-shipping_status:
+shipping_status ?
   pick 'shipped' when 'will call' | 'shipped'
   pick 'ignore' when 'bad1' | 'bad2' | 'testing'
 ```
@@ -160,7 +161,7 @@ by and all other values are compressed into `null`. A `pick` clause with no valu
 picks an applied value when the condition is met.
 
 ```malloy
-status:
+status ?
   pick when 'good' | 'ok' | 'fine' // leave these alone
   else null                        // ignore the rest
 ```
@@ -177,7 +178,7 @@ Ranges between a start and end time can be constructed with the `to` operator, e
 
 Time ranges can also be constructed with a start time and duration using the `for` operator, e.g. `@2003 for 6 years` or `now for 20 minutes`.
 
-A time value can be compared to a range. If the time is within the range it will be `=`, before the range it will be `<`, and after the range it will be `>`. If you [apply](#apply-operator) a time to a range, (for example, `event_time: @2003 to @2004`) that will also check if the value is within the range.
+A time value can be compared to a range. If the time is within the range it will be `=`, before the range it will be `<`, and after the range it will be `>`. If you [apply](#apply-operator) a time to a range, (for example, `event_time ? @2003 to @2004`) that will also check if the value is within the range.
 
 ### Time Truncation
 
@@ -202,7 +203,7 @@ at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example `time.year`
 would be a range covering the entire year which contains `time`.
 
-This is extremely useful with the [apply operator](#apply-operator), `:`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `one_time: other_time.year`.
+This is extremely useful with the [apply operator](#apply-operator), `?`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `one_time ? other_time.year`.
 
 ### Time Extraction
 
@@ -221,6 +222,24 @@ expression | meaning | result
 `minute(expr)` | minute of hour 0-59 | 55
 `second(expr)` | second of minute 0-59 | 5
 
+### Interval extraction
+
+To measure the difference between two times, pass a range expression to
+one of the below extraction functions. This is Malloy's take on SQL's <code>DATE_DIFF()</code> and <code>TIMESTAMP_DIFF()</code> :
+
+expression | meaning
+---- | ----
+`seconds(t1 to t2)` | Number of seconds from t1 until t2
+`minutes(t1 to t2)` | ... minutes ...
+`hours(t1 to t2)` | ... hours ...
+`days(t1 to t2)` | ... days ...
+`weeks(t1 to t2)` | ... weeks ...
+`months(t1 to t2)` | ... months ...
+`quarters(t1 to t2)` | ... quarters ...
+`years(t1 to t2)` | ... years ...
+
+These will return a negative number if t1 is later than t2.
+
 ### Time Literals
 
 <!-- * `@2003-04-19` -->
@@ -228,7 +247,7 @@ expression | meaning | result
 <!-- * `@2021-10-24 10:00:00` -->
 <!-- * `now` -->
 
-Time literals are specified in malloy with the `@` character. A literal
+Time literals are specified in Malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 
@@ -272,29 +291,29 @@ The _conjunction alternation_ operator `&` represents the logical conjunction of
 Values can be used directly with the alternation operators, in which case the operator is assumed to be `=`. For example, `'CA' | 'NY'` is equivalent to `= 'CA' | = 'NY'`.
 ### Application
 
-<!-- * `state: 'CA'` -->
-<!-- * `weight: > 100 & < 1000` -->
-<!-- * `kind: pick 'other' when null` -->
+<!-- * `state ? 'CA'` -->
+<!-- * `weight ? > 100 & < 1000` -->
+<!-- * `kind ? pick 'other' when null` -->
 
-The apply operator `:` "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.
+The apply operator `?` "applies" a value to another value, condition, or computation. This is most often used with partial comparisons or alternations.
 
-Applying a value to a condition is like filling in the condition with the given value. For example, `height: > 5 & < 10` is equivalent to `height > 5 and height < 10`.
+Applying a value to a condition is like filling in the condition with the given value. For example, `height ? > 5 & < 10` is equivalent to `height > 5 and height < 10`.
 
 Applying a value to another value applies a default comparison on the two values:
 
 | Left | Right | Example| Meaning |
 |------|-------|--------|---------|
-| `number` | `number` | `size: 10` | `size = 10` |
-| `string` | `string` | `state: 'CA'` | `state = 'CA'` |
-| `string` | regular expression | `name: r'Z$'` | `name ~ r'Z$'` |
-| `boolean` | `boolean` | `is_cool: true` | `is_cool = true` |
-| `number` | numeric range | `x: 10 to 20` | `x >= 10 and x < 20` |
-| `date` or `timestamp` | `date` or `timestamp` | `time: @2003` | `time` is during 2003 |
+| `number` | `number` | `size ? 10` | `size = 10` |
+| `string` | `string` | `state ? 'CA'` | `state = 'CA'` |
+| `string` | regular expression | `name ? r'Z$'` | `name ~ r'Z$'` |
+| `boolean` | `boolean` | `is_cool ? true` | `is_cool = true` |
+| `number` | numeric range | `x ? 10 to 20` | `x >= 10 and x < 20` |
+| `date` or `timestamp` | `date` or `timestamp` | `time ? @2003` | `time` is during 2003 |
 
 Values can be applied to [pick expressions](#pick-expressions) to make them more succinct.
 
 ```malloy
-size:
+size ?
   pick 'small' when < 10
   pick 'medium' when < 20
   else 'large'

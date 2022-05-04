@@ -12,4 +12,4 @@
  */
 
 export * from "./malloy_types";
-export { QueryModel } from "./malloy_query";
+export { Segment, QueryModel } from "./malloy_query";

@@ -16,6 +16,8 @@
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
+import "./is-sql-eq";
+import { mkSqlEqWith } from "./sql-eq";
 
 const runtimes = new RuntimeList([
   // "bigquery", //
@@ -30,7 +32,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
     airport_count is count(*),
     aircraft_model_count is count(),
     total_seats is sum(seats),
-    boeing_seats is sum(seats) {? manufacturer: 'BOEING'},
+    boeing_seats is sum(seats) {? manufacturer ? 'BOEING'},
     percent_boeing is boeing_seats / total_seats * 100,
     percent_boeing_floor is FLOOR(boeing_seats / total_seats * 100),
   dimension: seats_bucketed is FLOOR(seats/20)*20.0
@@ -64,8 +66,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
             total_seats,
             total_seats2 is sum(seats),
             boeing_seats,
-            boeing_seats2 is sum(seats) {? manufacturer: 'BOEING'},
-            boeing_seats3 is total_seats {? manufacturer: 'BOEING'},
+            boeing_seats2 is sum(seats) {? manufacturer ? 'BOEING'},
+            boeing_seats3 is total_seats {? manufacturer ? 'BOEING'},
             percent_boeing,
             percent_boeing2 is boeing_seats / total_seats * 100,
             -- percent_boeing_floor,
@@ -140,7 +142,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
           query: aircraft->{
-            nest: b is by_manufacturer{? aircraft_models.manufacturer:~'B%'}
+            nest: b is by_manufacturer{? aircraft_models.manufacturer ?~'B%'}
           }
         `
       )
@@ -195,7 +197,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       query: aircraft->{
         order_by: 2 asc
-        having: aircraft_count: >500
+        having: aircraft_count ? >500
         group_by: region
         aggregate: aircraft_count
         nest: by_state is {
@@ -205,7 +207,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           aggregate: aircraft_count
           nest: by_city is {
             order_by: 2 asc
-            having: aircraft_count: >5
+            having: aircraft_count ? >5
             group_by: city
             aggregate: aircraft_count
           }
@@ -247,15 +249,15 @@ expressionModels.forEach((expressionModel, databaseName) => {
         query: aircraft_models->{
           aggregate:
             distinct_seats is count(distinct seats),
-            boeing_distinct_seats is count(distinct seats) {?manufacturer: 'BOEING'},
+            boeing_distinct_seats is count(distinct seats) {?manufacturer ? 'BOEING'},
             min_seats is min(seats),
-            cessna_min_seats is min(seats) {? manufacturer: 'CESSNA'},
+            cessna_min_seats is min(seats) {? manufacturer ? 'CESSNA'},
             max_seats is max(seats),
-            cessna_max_seats is max(seats) {? manufacturer: 'CESSNA'},
+            cessna_max_seats is max(seats) {? manufacturer ? 'CESSNA'},
             min_code is min(aircraft_model_code),
-            boeing_min_model is min(model) {? manufacturer: 'BOEING'},
+            boeing_min_model is min(model) {? manufacturer ? 'BOEING'},
             max_model is max(model),
-            boeing_max_model is max(model) {? manufacturer: 'BOEING'},
+            boeing_max_model is max(model) {? manufacturer ? 'BOEING'},
         }
         `
       )
@@ -384,7 +386,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-        explore: b is aircraft{ where: aircraft_models.manufacturer: ~'B%' }
+        explore: b is aircraft{ where: aircraft_models.manufacturer ? ~'B%' }
 
         query: b->{aggregate: m_count is count(distinct aircraft_models.manufacturer) }
         `
@@ -447,7 +449,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       .loadQuery(
         `
     explore: a_models is table('malloytest.aircraft_models'){
-      where: manufacturer: ~'B%'
+      where: manufacturer ? ~'B%'
       primary_key: aircraft_model_code
       measure:model_count is count()
     }
@@ -475,7 +477,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
     explore: bo_models is
       from(
-          table('malloytest.aircraft_models') {? manufacturer: ~ 'BO%' }
+          table('malloytest.aircraft_models') {? manufacturer ? ~ 'BO%' }
           -> { project: aircraft_model_code, manufacturer, seats }
         ) {
           primary_key: aircraft_model_code
@@ -484,7 +486,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     explore: b_models is
         from(
-          table('malloytest.aircraft_models') {? manufacturer: ~ 'B%' }
+          table('malloytest.aircraft_models') {? manufacturer ? ~ 'B%' }
           -> { project: aircraft_model_code, manufacturer, seats }
         ) {
           where: bo_models.seats > 200
@@ -566,6 +568,57 @@ expressionModels.forEach((expressionModel, databaseName) => {
     // console.log(result.data.toObject());
     expect(result.data.path(0, "flight_count").value).toBe(199726);
     expect(result.data.path(0, "popular_name").value).toBe("Isabella");
+  });
+});
+
+runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  const sqlEq = mkSqlEqWith(runtime, {
+    malloy: `+ {
+      dimension: friName is 'friday'
+      dimension: friDay is 5
+      dimension: satName is 'saturday'
+      dimension: satDay is 6
+    }`,
+  });
+
+  describe.skip(`alternations with not-eq - ${databaseName}`, () => {
+    /*
+     Here's the desired truth table ...
+
+     x      x != y | z
+     ====== ============
+     y      false
+     z      false
+     ^[yz]  true
+     */
+    test("x not-eq y or z : x eq y", async () => {
+      const result = await sqlEq("6 != (6|7)", false);
+      expect(result).isSqlEq();
+    });
+    test("x not-eq y or z : x eq z", async () => {
+      const result = await sqlEq("7 != (6|7)", false);
+      expect(result).isSqlEq();
+    });
+    test("x not-eq y or z : else", async () => {
+      const result = await sqlEq("5 != (6|7)", true);
+      expect(result).isSqlEq();
+    });
+    /*
+      Writing this the old way, should have the same truth table ...
+        x != y & != z
+    */
+    test("x not-eq y and not-eq z : x eq y", async () => {
+      const result = await sqlEq("6 != (6 & !=7)", false);
+      expect(result).isSqlEq();
+    });
+    test("x not-eq y and not-eq z : x eq z", async () => {
+      const result = await sqlEq("7 != (6 & != 7)", false);
+      expect(result).isSqlEq();
+    });
+    test("x not-eq y and not-eq z : else", async () => {
+      const result = await sqlEq("5 != (6 & !=7)", true);
+      expect(result).isSqlEq();
+    });
   });
 });
 

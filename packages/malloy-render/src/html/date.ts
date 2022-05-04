@@ -23,6 +23,10 @@ export class HTMLDateRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
   async render(data: DataColumn): Promise<HTMLElement> {
+    if (data.isNull()) {
+      return createNullElement(this.document);
+    }
+
     if (!data.isDate() && !data.isTimestamp()) {
       return createErrorElement(
         this.document,
@@ -30,13 +34,9 @@ export class HTMLDateRenderer implements Renderer {
       );
     }
 
-    if (data.isNull()) {
-      return createNullElement(this.document);
-    }
-
     const timeframe =
       data.field.timeframe ||
-      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Date);
+      (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Day);
 
     const timestring = timeToString(data.value, timeframe);
 

@@ -177,6 +177,15 @@ expect.extend({
     const t = m.translate();
     if (t.translated) {
       return { pass: false, message: () => emsg };
+    } else if (t.errors == undefined) {
+      return {
+        pass: false,
+        message: () =>
+          `TEST ERROR, not all objects resolved in source\n` +
+          pretty(t) +
+          "\n" +
+          emsg,
+      };
     } else {
       const errList = m.errors().errors;
       const firstError = errList[0];
@@ -186,8 +195,8 @@ expect.extend({
           message: () => `Received errror: ${firstError.message}\n${emsg}`,
         };
       }
-      if (typeof s != "string") {
-        const have = errList[0].at?.range;
+      if (typeof s != "string" && s.locations[0]) {
+        const have = firstError.at?.range;
         const want = s.locations[0].range;
         if (!this.equals(have, want)) {
           return {
@@ -454,6 +463,18 @@ describe("explore properties", () => {
       }
     `)
   );
+  test(
+    "where clause can use the join namespace in source refined query",
+    modelOK(`
+    source: flights is table('malloytest.flights') + {
+      query: boo is {
+        join_one: carriers is table('malloytest.carriers') on carrier = carriers.code
+        where: carriers.code = 'WN' | 'AA'
+        group_by: carriers.nickname
+        aggregate: flight_count is count()
+      }
+    }`)
+  );
   describe("joins", () => {
     test("with", modelOK("explore: x is a { join_one: b with astr }"));
     test("with", modelOK("explore: x is a { join_one: y is b with astr }"));
@@ -567,6 +588,9 @@ describe("qops", () => {
     `)
   );
   test("index single", modelOK("query:a->{index: astr}"));
+  test("index path", modelOK("query:ab->{index: ab.astr}"));
+  test("index unique on path", modelOK("query:ab->{index: b.astr, ab.astr}"));
+  test("index join.*", modelOK("query:ab->{index: ab.*}"));
   test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
   test("index by", modelOK("query:a->{index: * by ai}"));
@@ -607,6 +631,38 @@ describe("qops", () => {
     "where multiple",
     modelOK("query:a->{ group_by: astr; where: af > 10,astr~'a%' }")
   );
+  test(`filters preserve source formatting in code:`, () => {
+    const model = new BetaModel(`source: notb is a + { where: astr  !=  'b' }`);
+    expect(model).toTranslate();
+    const t = model.translate();
+    const notb = t.translated?.modelDef.contents.notb;
+    expect(notb).toBeDefined();
+    if (notb) {
+      const f = notb.filterList;
+      expect(f).toBeDefined();
+      if (f) {
+        expect(f[0].code).toBe("astr  !=  'b'");
+      }
+    }
+  });
+  test(`field expressions preserve source formatting in code:`, () => {
+    const model = new BetaModel(
+      `source: notb is a + { dimension: d is 1 +   2 }`
+    );
+    expect(model).toTranslate();
+    const t = model.translate();
+    const notb = t.translated?.modelDef.contents.notb;
+    expect(notb).toBeDefined();
+    expect(notb?.type).toBe("struct");
+    if (notb?.type === "struct") {
+      const d = notb.fields.find((f) => f.as || f.name === "d");
+      expect(d).toBeDefined();
+      expect(d?.type).toBe("number");
+      if (d?.type === "number") {
+        expect(d.code).toBe("1 +   2");
+      }
+    }
+  });
   test(
     "nest single",
     modelOK(`
@@ -701,8 +757,11 @@ describe("expressions", () => {
   describe("literals", () => {
     test("integer", exprOK("42"));
     test("string", exprOK(`'fortywo-two'`));
-    test("string with \\'", exprOK(`'Isn` + `\\` + `'t this nice'`));
-    test("string with \\\\", exprOK(`'Is ` + `\\` + `\\` + ` nice'`));
+    test("string with quoted quote", exprOK(`'Isn` + `\\` + `'t this nice'`));
+    test(
+      "string with quoted backslash",
+      exprOK(`'Is ` + `\\` + `\\` + ` nice'`)
+    );
     test("year", exprOK("@1960"));
     test("quarter", exprOK("@1960-Q1"));
     test("week", exprOK("@WK1960-06-26"));
@@ -735,10 +794,10 @@ describe("expressions", () => {
       }
     });
 
-    describe("timestamp extraction", () => {
+    describe("timestamp difference", () => {
       for (const unit of timeframes) {
         // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(ats)`));
+        test(`timestamp extract ${unit}`, exprOK(`${unit}(@2021 to ats)`));
       }
     });
   });
@@ -760,7 +819,7 @@ describe("expressions", () => {
     test("less than", exprOK("42 < 7"));
     test("match", exprOK("'forty-two' ~ 'fifty-four'"));
     test("not match", exprOK("'forty-two' !~ 'fifty-four'"));
-    test("apply", exprOK("'forty-two' : 'fifty-four'"));
+    test("apply", exprOK("'forty-two' ? 'fifty-four'"));
     test("not", exprOK("not true"));
     test("and", exprOK("true and false"));
     test("or", exprOK("true or false"));
@@ -795,7 +854,7 @@ describe("expressions", () => {
     test(
       "applied",
       exprOK(`
-        astr:
+        astr ?
           pick 'the answer' when = '42'
           pick 'the questionable answer' when = '54'
           else 'random'
@@ -804,13 +863,13 @@ describe("expressions", () => {
     test(
       "filtering",
       exprOK(`
-        astr: pick 'missing value' when NULL
+        astr ? pick 'missing value' when NULL
     `)
     );
     test(
       "tiering",
       exprOK(`
-      ai:
+      ai ?
         pick 1 when < 10
         pick 10 when < 100
         pick 100 when < 1000
@@ -820,7 +879,7 @@ describe("expressions", () => {
     test(
       "transforming",
       exprOK(`
-        ai:
+        ai ?
           pick 'small' when < 10
           pick 'medium' when < 100
           else 'large'
@@ -830,7 +889,7 @@ describe("expressions", () => {
     test(
       "when single values",
       exprOK(`
-        ai :
+        ai ?
           pick 'one' when 1
           else 'a lot'
       `)
@@ -907,10 +966,27 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
-  test("query reference to undefined explore", () => {
-    expect(markSource`query: ${"x"}->{ group_by: y }`).compileToFailWith(
+  test("redefine source", () => {
+    expect(markSource`
+      source: airports is table('malloytest.airports') + {
+        primary_key: code
+      }
+      source: airports is table('malloytest.airports') + {
+        primary_key: code
+      }
+    `).compileToFailWith("Cannot redefine 'airports'");
+  });
+  test("query from undefined source", () => {
+    expect(markSource`query: ${"x"}->{ project: y }`).compileToFailWith(
       "Undefined source 'x'"
     );
+  });
+  test("query with expression from undefined source", () => {
+    // Regression check: Once upon a time this died with an exception even
+    // when "query: x->{ group_by: y}" (above) generated the correct error.
+    expect(
+      markSource`query: ${"x"}->{ project: y is z / 2 }`
+    ).compileToFailWith("Undefined source 'x'");
   });
   test("join reference before definition", () => {
     expect(

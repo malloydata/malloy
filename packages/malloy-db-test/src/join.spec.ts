@@ -241,7 +241,7 @@ describe("join expression tests", () => {
           `
           // produce a table with 4 rows that has a nested element
           query: a_states is table('malloytest.state_facts')-> {
-            where: state: ~ 'A%'
+            where: state ? ~ 'A%'
             group_by: state
             nest: somthing is {group_by: state}
           }

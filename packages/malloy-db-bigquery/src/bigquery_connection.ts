@@ -36,6 +36,7 @@ import {
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
+import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -95,7 +96,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 };
 
 // manage access to BQ, control costs, enforce global data/API limits
-export class BigQueryConnection implements Connection {
+export class BigQueryConnection implements Connection, PersistSQLResults {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -183,6 +184,10 @@ export class BigQueryConnection implements Connection {
 
   public isPool(): this is PooledConnection {
     return false;
+  }
+
+  public canPersist(): this is PersistSQLResults {
+    return true;
   }
 
   private async _runSQL(
@@ -443,7 +448,21 @@ export class BigQueryConnection implements Connection {
       const type = field.type as string;
       const name = field.name as string;
 
-      if (["STRUCT", "RECORD"].includes(type)) {
+      // check for an array
+      if (field.mode === "REPEATED" && !["STRUCT", "RECORD"].includes(type)) {
+        const malloyType = this.bqToMalloyTypes[type];
+        if (malloyType) {
+          const innerStructDef: StructDef = {
+            type: "struct",
+            name,
+            dialect: this.dialectName,
+            structSource: { type: "nested" },
+            structRelationship: { type: "nested", field: name, isArray: true },
+            fields: [{ ...malloyType, name: "value" } as FieldTypeDef],
+          };
+          structDef.fields.push(innerStructDef);
+        }
+      } else if (["STRUCT", "RECORD"].includes(type)) {
         const innerStructDef: StructDef = {
           type: "struct",
           name,
@@ -452,7 +471,7 @@ export class BigQueryConnection implements Connection {
             field.mode === "REPEATED" ? { type: "nested" } : { type: "inline" },
           structRelationship:
             field.mode === "REPEATED"
-              ? { type: "nested", field: name }
+              ? { type: "nested", field: name, isArray: false }
               : { type: "inline" },
           fields: [],
         };

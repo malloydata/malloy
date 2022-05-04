@@ -167,7 +167,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
       .loadQuery(
         `
       query: models->{
-        aggregate: model_count is count(){? manufacturer: ~'A%' }
+        aggregate: model_count is count(){? manufacturer ? ~'A%' }
       }
       `
       )

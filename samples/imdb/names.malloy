@@ -1,5 +1,4 @@
-import "movies.malloy"
-
+import "imdb.malloy"
 
 // lets fined the top actors in the 100 top movies per year.
 
@@ -25,20 +24,20 @@ query: top_actor_year is movies + {
   order_by: 2 desc
   nest: top_actors is {
     where:  principals.category ~ 'act%'
-      and principals.people.birthYear != null
-    group_by: 
-      principals.people.primaryName
-      gender is principals.category: 
+      and people.birthYear != null
+    group_by:
+      people.primaryName
+      gender is principals.category ?
         pick 'M' when 'actor'
         pick 'F' when 'actress'
-      age_at_production is startYear -  principals.people.birthYear
+      age_at_production is startYear -  people.birthYear
   }
 }
 
 query: under_40_by_year_gender is from(-> top_actor_year) -> {
   declare:
     first_name is REGEXP_EXTRACT(top_actors.primaryName, r'([A-Za-z]+)\s')
-  group_by: 
+  group_by:
     startYear
   nest: by_gender is {
     group_by: top_actors.gender

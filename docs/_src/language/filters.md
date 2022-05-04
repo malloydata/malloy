@@ -41,7 +41,7 @@ query: flights -> {
   group_by: carrier
   aggregate: flight_count
 } -> {
-  where: carrier: 'UA' | 'AA'
+  where: carrier ? 'UA' | 'AA'
   project: carrier, flight_count
 }
 ```

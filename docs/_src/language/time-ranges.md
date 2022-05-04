@@ -45,7 +45,7 @@ at the moment of truncation and the duration is the timeframe unit
 used to specify the truncation, so for example `eventDate.year`
 would be a range covering the entire year which contains `eventDate`
 
-This is extremely useful with the [Apply operator](apply.md), `:`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `oneEvent: otherEvent.year`
+This is extremely useful with the [Apply operator](apply.md), `?`. To see if two events happen in the same calendar year, for example, the boolean expression in Malloy is `oneEvent ? otherEvent.year`
 
 ## Extraction
 
@@ -64,10 +64,27 @@ expression | meaning | result
 `minute(expr)` | minute of hour 0-59 | 55
 `second(expr)` | second of minute 0-59 | 5
 
+## Interval extraction
+
+To measure the difference between two times, pass a range expression to
+one of these extraction functions:
+
+expression | meaning
+---- | ----
+`seconds(t1 to t2)` | Number of seconds from t1 until t2
+`minutes(t1 to t2)` | ... minutes ...
+`hours(t1 to t2)` | ... hours ...
+`days(t1 to t2)` | ... days ...
+`weeks(t1 to t2)` | ... weeks ...
+`months(t1 to t2)` | ... months ...
+`quarters(t1 to t2)` | ... quarters ...
+`years(t1 to t2)` | ... years ...
+
+These will return a negative number if t1 is later than t2.
 
 ## Literals
 
-Time literals are specified in malloy with the `@` character. A literal
+Time literals are specified in Malloy with the `@` character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.
 

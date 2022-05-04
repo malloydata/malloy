@@ -24,13 +24,23 @@ const runtimes = new RuntimeList([
   "duckdb", //
 ]);
 
+const splitFunction: Record<string, string> = {
+  bigquery: "split",
+  postgres: "string_to_array",
+};
+
+const rootDbPath: Record<string, string> = {
+  bigquery: "malloy-data.",
+  postgres: "",
+};
+
 afterAll(async () => {
   await runtimes.closeAll();
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   // Issue: #151
-  it(`unknonwn dialect  - ${databaseName}`, async () => {
+  it(`unknown dialect  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -125,6 +135,31 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].c).toBe(19701);
   });
 
+  it(`join_many filter multiple values - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.airports'){
+        where: state = 'NH' | 'CA'
+      }
+      explore: b is table('malloytest.state_facts') {
+        join_many: a on state=a.state
+      }
+      query: b->{
+        aggregate: c is airport_count.sum()
+        group_by: a.state
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(18605);
+    expect(result.data.value[0].state).toBeNull();
+    expect(result.data.value[1].c).toBe(984);
+    expect(result.data.value[1].state).toBe("CA");
+    expect(result.data.value[2].c).toBe(112);
+    expect(result.data.value[2].state).toBe("NH");
+  });
+
   it(`join_one condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -139,6 +174,30 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.data.value[0].c).toBe(19701);
+  });
+
+  it(`join_one filter multiple values - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      explore: a is table('malloytest.state_facts'){
+        where: state = 'TX' | 'LA'
+      }
+      explore: b is table('malloytest.airports') {
+        join_one: a on state=a.state
+      }
+      query: b->{
+        aggregate: c is a.airport_count.sum()
+        group_by: a.state
+      }
+      `
+      )
+      .run();
+    // https://github.com/looker-open-source/malloy/pull/501#discussion_r861022857
+    expect(result.data.value).toHaveLength(3);
+    expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
+    expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
+    expect(result.data.value).toContainEqual({ c: null, state: null });
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {
@@ -276,6 +335,28 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  it(`single value to udf - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      source: f is  table('malloytest.state_facts') {
+        query: fun is {
+          aggregate: t is count()
+        }
+        -> {
+          project: t1 is t+1
+        }
+      }
+      query: f-> {
+        nest: fun
+      }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+  });
+
   it(`sql_block - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -379,5 +460,76 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.data.value[0].d).toBe(3);
+  });
+
+  it(`substitution precidence- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 5 as a, 2 as b
+        UNION ALL SELECT 3, 4
+      ;;
+
+      query: from_sql(one) -> {
+        declare: c is b + 4
+        project: x is a * c
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].x).toBe(30);
+  });
+
+  it(`array unnest - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        sql: atitle is ||
+          SELECT
+            city,
+            ${splitFunction[databaseName]}(city,' ') as words
+          FROM ${rootDbPath[databaseName]}malloytest.aircraft
+        ;;
+
+        source: title is from_sql(atitle){}
+
+        query: title ->  {
+          group_by: words.value
+          aggregate: c is count()
+        }
+      `
+      )
+      .run();
+    expect(result.data.value[0].c).toBe(145);
+  });
+
+  // make sure we can count the total number of elements when fanning out.
+  it(`array unnest x 2 - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        sql: atitle is ||
+          SELECT
+            city,
+            ${splitFunction[databaseName]}(city,' ') as words,
+            ${splitFunction[databaseName]}(city,'A') as abreak
+          FROM ${rootDbPath[databaseName]}malloytest.aircraft
+        ;;
+
+        source: title is from_sql(atitle){}
+
+        query: title ->  {
+          aggregate:
+            b is count()
+            c is words.count()
+            a is abreak.count()
+        }
+      `
+      )
+      .run();
+    expect(result.data.value[0].b).toBe(3599);
+    expect(result.data.value[0].c).toBe(4586);
+    expect(result.data.value[0].a).toBe(8963);
   });
 });

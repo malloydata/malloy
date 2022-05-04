@@ -19,6 +19,8 @@ import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
+import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
+import { LogSeverity } from "./parse-log";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -49,20 +51,29 @@ export class MalloyToAST
   /**
    * Log an error message relative to an AST node
    */
-  protected astError(el: ast.MalloyElement, str: string): void {
-    this.msgLog.log({ message: str, at: el.location });
+  protected astError(
+    el: ast.MalloyElement,
+    str: string,
+    sev: LogSeverity = "error"
+  ): void {
+    this.msgLog.log({ message: str, at: el.location, severity: sev });
   }
 
   /**
    * Log an error message relative to a parse node
    */
-  protected contextError(cx: ParserRuleContext, msg: string): void {
+  protected contextError(
+    cx: ParserRuleContext,
+    msg: string,
+    sev: LogSeverity = "error"
+  ): void {
     this.msgLog.log({
       message: msg,
       at: {
         url: this.parse.subTranslator.sourceURL,
         range: this.parse.subTranslator.rangeFromContext(cx),
       },
+      severity: sev,
     });
   }
 
@@ -180,9 +191,16 @@ export class MalloyToAST
     return el;
   }
 
+  protected getSourceCode(cx: ParserRuleContext): string {
+    const from = cx.start.startIndex;
+    const lastToken = cx.stop || cx.start;
+    const sourceRange = new StreamInterval(from, lastToken.stopIndex);
+    return this.parse.sourceStream.getText(sourceRange);
+  }
+
   protected getFilterElement(cx: parse.FieldExprContext): ast.FilterElement {
     const expr = this.getFieldExpr(cx);
-    const fel = new ast.FilterElement(expr, cx.text);
+    const fel = new ast.FilterElement(expr, this.getSourceCode(cx));
     return this.astAt(fel, cx);
   }
 
@@ -402,7 +420,11 @@ export class MalloyToAST
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
-    const def = new ast.FieldDeclaration(valExpr, fieldName, defCx.text);
+    const def = new ast.FieldDeclaration(
+      valExpr,
+      fieldName,
+      this.getSourceCode(defCx)
+    );
     return this.astAt(def, pcx);
   }
 
@@ -481,19 +503,10 @@ export class MalloyToAST
     return this.astAt(node, pcx);
   }
 
-  visitFieldOrStar(pcx: parse.FieldOrStarContext): ast.FieldListReference {
-    if (pcx.STAR()) {
-      return this.astAt(new ast.WildcardFieldReference(undefined, "*"), pcx);
-    }
-    const fcx = pcx.fieldName();
-    if (fcx) {
-      return this.astAt(new ast.FieldReference([this.getFieldName(fcx)]), fcx);
-    }
-    throw this.internalError(pcx, "mis-parsed field name reference");
-  }
-
   visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldReferences {
-    const members = pcx.fieldOrStar().map((cx) => this.visitFieldOrStar(cx));
+    const members = pcx
+      .fieldName()
+      .map((cx) => new ast.FieldReference([this.getFieldName(cx)]));
     return new ast.FieldReferences(members);
   }
 
@@ -580,15 +593,31 @@ export class MalloyToAST
     return this.astAt(new ast.ProjectStatement(fields), pcx);
   }
 
-  visitWildMember(pcx: parse.WildMemberContext): ast.FieldListReference {
+  visitWildMember(pcx: parse.WildMemberContext): ast.FieldReferenceElement {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? "*" : "**";
     const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
     return new ast.WildcardFieldReference(join, stars);
   }
 
+  visitIndexFields(pcx: parse.IndexFieldsContext): ast.FieldReferences {
+    const refList = pcx.indexElement().map((el) => {
+      const hasStar = el.STAR() != undefined;
+      const pathCx = el.fieldPath();
+      if (!pathCx) {
+        return new ast.WildcardFieldReference(undefined, "*");
+      }
+      const path = this.visitFieldPath(pathCx);
+      if (!hasStar) {
+        return this.astAt(path, pcx);
+      }
+      return this.astAt(new ast.WildcardFieldReference(path, "*"), pcx);
+    });
+    return new ast.FieldReferences(refList);
+  }
+
   visitIndexStatement(pcx: parse.IndexStatementContext): ast.Index {
-    const fields = this.visitFieldNameList(pcx.fieldNameList());
+    const fields = this.visitIndexFields(pcx.indexFields());
     const indexStmt = new ast.Index(fields);
     const weightCx = pcx.fieldName();
     if (weightCx) {
@@ -918,6 +947,9 @@ export class MalloyToAST
   }
 
   visitExprApply(pcx: parse.ExprApplyContext): ast.Apply {
+    if (pcx.COLON()) {
+      this.contextError(pcx, "':' for apply is deprecated, use '?'", "warn");
+    }
     return new ast.Apply(
       this.getFieldExpr(pcx.fieldExpr()),
       this.getFieldExpr(pcx.partialAllowedFieldExpr())
@@ -968,29 +1000,26 @@ export class MalloyToAST
     return new ast.ForRange(begin, duration, units);
   }
 
-  visitExprFunc(pcx: parse.ExprFuncContext): ast.ExprFunc {
+  visitExprFunc(pcx: parse.ExprFuncContext): ast.ExpressionDef {
     const argsCx = pcx.argumentList();
-    let fn: string | undefined;
+    const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
     const idCx = pcx.id();
+    const dCx = pcx.timeframe();
+    let fn: string;
     if (idCx) {
       fn = this.getIdText(idCx);
-    }
-
-    const dCx = pcx.timeframe();
-    if (dCx) {
+    } else if (dCx) {
       fn = dCx.text;
-    }
-
-    if (fn === undefined) {
+    } else {
       this.contextError(pcx, "Funciton name error");
       fn = "FUNCTION_NAME_ERROR";
     }
 
-    if (argsCx) {
-      return new ast.ExprFunc(fn, this.allFieldExpressions(argsCx.fieldExpr()));
+    if (ast.ExprTimeExtract.extractor(fn)) {
+      return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return new ast.ExprFunc(fn, []);
+    return this.astAt(new ast.ExprFunc(fn, args), pcx);
   }
 
   visitExprDuration(pcx: parse.ExprDurationContext): ast.ExprDuration {

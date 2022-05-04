@@ -200,6 +200,53 @@ export function isApplyFragment(f: Fragment): f is ApplyFragment {
   return (f as ApplyFragment)?.type === "apply";
 }
 
+interface DialectFragmentBase {
+  type: "dialect";
+  function: string;
+}
+
+export interface TimeDiffFragment extends DialectFragmentBase {
+  function: "timeDiff";
+  units: TimestampUnit;
+  left: TimeValue;
+  right: TimeValue;
+}
+
+export interface TimeDeltaFragment extends DialectFragmentBase {
+  function: "delta";
+  base: TimeValue;
+  op: "+" | "-";
+  delta: Expr;
+  units: TimestampUnit;
+}
+
+export interface TimeTruncFragment extends DialectFragmentBase {
+  function: "trunc";
+  expr: TimeValue;
+  units: TimestampUnit;
+}
+
+export interface TimeExtractFragment extends DialectFragmentBase {
+  function: "extract";
+  expr: TimeValue;
+  units: ExtractUnit;
+}
+
+export interface TypecastFragment extends DialectFragmentBase {
+  function: "cast";
+  safe: boolean;
+  expr: Expr;
+  dstType: AtomicFieldType;
+  srcType?: AtomicFieldType;
+}
+
+export type DialectFragment =
+  | TimeDeltaFragment
+  | TimeDiffFragment
+  | TimeTruncFragment
+  | TypecastFragment
+  | TimeExtractFragment;
+
 export type Fragment =
   | string
   | ApplyFragment
@@ -207,14 +254,58 @@ export type Fragment =
   | FieldFragment
   | ParameterFragment
   | FilterFragment
-  | AggregateFragment;
+  | AggregateFragment
+  | DialectFragment;
 
 export type Expr = Fragment[];
+
+export interface TypedValue {
+  value: Expr;
+  valueType: AtomicFieldType;
+}
+export interface TimeValue extends TypedValue {
+  valueType: TimeFieldType;
+}
+
+type TagElement = Expr | string;
+
+/**
+ * Return an Expr based on the string template, subsittutions can be
+ * either strings, or other Exprs.
+
+ * ```
+ * units = "inches"
+ * len: Expr = [ "something", "returning", "a length "]
+ * computeExpr = mkExpr`MEASURE(${len} in ${units})`;
+ * ```
+ */
+export function mkExpr(
+  src: TemplateStringsArray,
+  ...exprs: TagElement[]
+): Expr {
+  const ret: Expr = [];
+  let index;
+  for (index = 0; index < exprs.length; index++) {
+    const el = exprs[index];
+    if (src[index].length > 0) {
+      ret.push(src[index]);
+    }
+    if (typeof el == "string") {
+      ret.push(el);
+    } else {
+      ret.push(...el);
+    }
+  }
+  if (src[index].length > 0) {
+    ret.push(src[index]);
+  }
+  return ret;
+}
 
 export interface Expression {
   e?: Expr;
   aggregate?: boolean;
-  source?: string;
+  code?: string;
 }
 
 interface JustExpression {
@@ -226,12 +317,11 @@ export function hasExpression(f: FieldDef): f is HasExpression {
   return (f as JustExpression).e !== undefined;
 }
 
-export type AtomicFieldType =
-  | "string"
-  | "number"
-  | "date"
-  | "timestamp"
-  | "boolean";
+export type TimeFieldType = "date" | "timestamp";
+export function isTimeFieldType(s: string): s is TimeFieldType {
+  return s == "date" || s == "timestamp";
+}
+export type AtomicFieldType = "string" | "number" | TimeFieldType | "boolean";
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return ["string", "number", "date", "timestamp", "boolean"].includes(s);
 }
@@ -276,36 +366,18 @@ export interface FieldBooleanDef extends FieldAtomicDef {
   type: "boolean";
 }
 
-/** valid suffixes for a date field ref which are not valid timeframes */
-type LegacySecretTimeFrames =
-  | "date"
-  | "day_of_month"
-  | "day_of_year"
-  | "day_of_week"
-  | "month_of_year";
-/** valid timeframes for date */
-export type DateTimeframe =
-  | LegacySecretTimeFrames
-  | "day"
-  | "week"
-  | "month"
-  | "quarter"
-  | "year";
-export function isDateTimeFrame(str: string): str is DateTimeframe {
-  return [
-    "day",
-    "week",
-    "month",
-    "quarter",
-    "year",
-    // TODO Don't forget to remove legacy types here
-    "day_of_month",
-    "day_of_year",
-    "day_of_week",
-    "month_of_year",
-  ].includes(str);
+export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
+export function isDateUnit(str: string): str is DateUnit {
+  return ["day", "week", "month", "quarter", "year"].includes(str);
 }
-
+export type TimestampUnit = DateUnit | "hour" | "minute" | "second";
+export function isTimestampUnit(s: string): s is TimestampUnit {
+  return isDateUnit(s) || ["hour", "minute", "second"].includes(s);
+}
+export type ExtractUnit = TimestampUnit | "day_of_week" | "day_of_year";
+export function isExtractUnit(s: string): s is ExtractUnit {
+  return isTimestampUnit(s) || s == "day_of_week" || s == "day_of_year";
+}
 /** Value types distinguished by their usage in generated SQL, particularly with respect to filters. */
 export enum ValueType {
   Date = "date",
@@ -319,29 +391,13 @@ export type TimeValueType = ValueType.Date | ValueType.Timestamp;
 /** Scalar Date Field. */
 export interface FieldDateDef extends FieldAtomicDef {
   type: "date";
-  timeframe?: DateTimeframe;
+  timeframe?: DateUnit;
 }
 
-/** valid suffuxes for a timestamp field which are not valid timeframes */
-type LegacyTimeTimeframes = "hour_of_day";
-/** valid timeframes for a timestmap */
-export type TimeTimeframe =
-  | DateTimeframe
-  | LegacyTimeTimeframes
-  | "hour"
-  | "minute"
-  | "second";
-export function isTimeTimeframe(s: string): s is TimeTimeframe {
-  // TODO Don't forget to remove legacy types here
-  return (
-    isDateTimeFrame(s) ||
-    ["hour", "minute", "second", "hour_of_day"].includes(s)
-  );
-}
 /** Scalar Timestamp Field */
 export interface FieldTimestampDef extends FieldAtomicDef {
   type: "timestamp";
-  timeframe?: TimeTimeframe;
+  timeframe?: TimestampUnit;
 }
 
 /** parameter to order a query */
@@ -409,24 +465,24 @@ export interface Query extends Pipeline, Filtered, HasLocation {
 
 export type NamedQuery = Query & NamedObject;
 
-export type PipeSegment = ReduceSegment | ProjectSegment | IndexSegment;
+export type PipeSegment = QuerySegment | IndexSegment;
 
 export interface ReduceSegment extends QuerySegment {
   type: "reduce";
 }
 export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
-  return (pe as ReduceSegment).type === "reduce";
+  return pe.type === "reduce";
 }
 
 export interface ProjectSegment extends QuerySegment {
   type: "project";
 }
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
-  return (pe as ProjectSegment).type === "project";
+  return pe.type === "project";
 }
 
 export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
-  return pe.type === "project" || pe.type === "reduce";
+  return isProjectSegment(pe) || isReduceSegment(pe);
 }
 
 export interface IndexSegment extends Filtered {
@@ -471,7 +527,7 @@ export type StructRelationship =
   | { type: "basetable"; connectionName: string }
   | JoinOn
   | { type: "inline" }
-  | { type: "nested"; field: FieldRef };
+  | { type: "nested"; field: FieldRef; isArray: boolean };
 
 /**
  * Use factory makeSQLBlock to create one of these, it will compute the
@@ -572,7 +628,7 @@ export type PrimaryKeyRef = string;
 /** filters */
 export interface FilterExpression {
   expression: Expr;
-  source: string;
+  code: string;
   aggregate?: boolean;
 }
 
@@ -713,6 +769,19 @@ export function isValueDate(
   field: FieldDef
 ): value is { value: string } | null {
   return field.type === "date";
+}
+
+export interface SearchIndexResult {
+  fieldName: string;
+  fieldValue: string;
+  fieldType: string;
+  weight: number;
+}
+
+export interface SearchValueMapResult {
+  fieldName: string;
+  cardinality: number;
+  values: { fieldValue: string; weight: number }[];
 }
 
 // clang-format on

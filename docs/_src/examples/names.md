@@ -18,7 +18,7 @@ all the columns for the first 10 rows.
 
 ## Grouping a query
 In SQL there are basically two kinds of <code>SELECT</code> commands: <code>SELECT ... GROUP BY</code> and <code>SELECT</code> without a grouping.
-In malloy, these are two different commands.  The command in malloy for <code>SELECT ... GROUP BY</code> is `group_by`.  Since `number`
+In Malloy, these are two different commands.  The command in Malloy for <code>SELECT ... GROUP BY</code> is `group_by`.  Since `number`
 and `year` are reserved words, we have to quote the names with back-tics.
 
 ```malloy
@@ -28,7 +28,7 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
   aggregate: population is `number`.sum()
 }
 ```
-malloy compiles to SQL.  The SQL query for the above command is.
+Malloy compiles to SQL.  The SQL query for the above command is.
 
 ```sql
 SELECT
@@ -79,7 +79,7 @@ query: names -> {
     gender
   aggregate: total_cohort_population
   nest: names is {
-    where: name : 'Michael' | 'Lloyd' | 'Olivia'
+    where: name  ? 'Michael' | 'Lloyd' | 'Olivia'
     group_by: name
     aggregate: population is by_name.population.sum()
     group_by: births_per_100k

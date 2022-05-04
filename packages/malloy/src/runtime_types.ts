@@ -132,6 +132,8 @@ export interface Connection extends InfoConnection {
 
   // TODO feature-sql-block Comment
   isPool(): this is PooledConnection;
+
+  canPersist(): this is PersistSQLResults;
 }
 
 // TODO feature-sql-block Comment
@@ -145,6 +147,10 @@ export interface PooledConnection extends Connection {
   // PooledConnection, drain() should be called when connection usage is over
   drain(): Promise<void>;
   isPool(): true;
+}
+
+export interface PersistSQLResults extends Connection {
+  manifestTemporaryTable(sqlCommand: string): Promise<string>;
 }
 
 /**

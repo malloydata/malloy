@@ -325,7 +325,7 @@ A reference to a value parameter will produce an expression fragment which looks
         has dep_filter timestamp condition @2003
         is (explore flights : [ dep_filter ]);
 
-Needs to make a structdef, and the default value of that filter needs to expand `@2003` to a range test, like it would if it had been the right hand side of a `:` in an expression.
+Needs to make a structdef, and the default value of that filter needs to expand `@2003` to a range test, like it would if it had been the right hand side of a `?` in an expression.
 
 ```javascript
 {

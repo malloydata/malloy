@@ -595,26 +595,26 @@ export class ProjectFieldSpace extends QuerySpace {
 
 export class IndexFieldSpace extends QueryOperationSpace {
   segType: QuerySegType = "index";
+  fieldList = new Set<string>();
+
+  addReference(ref: FieldReference): void {
+    if (ref.getField(this.inputFS()).found) {
+      this.fieldList.add(ref.refString);
+    }
+  }
 
   getPipeSegment(refineIndex?: model.PipeSegment): model.IndexSegment {
-    const seg: model.IndexSegment = {
-      type: "index",
-      fields: [],
-    };
-    const inIndex: Record<string, boolean> = {};
-    for (const [name, _] of this.entries()) {
-      inIndex[name] = true;
-      seg.fields.push(name);
-    }
     if (refineIndex && refineIndex.fields) {
       for (const exists of refineIndex.fields) {
-        if (typeof exists === "string" && !inIndex[exists]) {
-          seg.fields.push(exists);
-          inIndex[exists] = true;
+        if (typeof exists == "string") {
+          this.fieldList.add(exists);
         }
       }
     }
-    return seg;
+    return {
+      type: "index",
+      fields: Array.from(this.fieldList.values()),
+    };
   }
 }
 

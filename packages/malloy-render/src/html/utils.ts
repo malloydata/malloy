@@ -93,8 +93,8 @@ export function timeToString(
       const day = numberFixedDigits(time.getUTCDate(), 2);
       return `WK${year}-${month}-${day}`;
     }
-    case DateTimeframe.Date:
-    case TimestampTimeframe.Date: {
+    case DateTimeframe.Day:
+    case TimestampTimeframe.Day: {
       const year = numberFixedDigits(time.getUTCFullYear(), 2);
       const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
       const day = numberFixedDigits(time.getUTCDate(), 2);

@@ -37,6 +37,10 @@
           "link": "/language/overview.md"
         },
         {
+          "title": "SQL to Malloy",
+          "link": "/language/sql_to_malloy.md"
+        },
+        {
           "title": "Models",
           "link": "/language/statement.md"
         },

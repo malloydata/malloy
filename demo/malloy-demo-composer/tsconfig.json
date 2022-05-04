@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "declaration": true,
+    "composite": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "lib": [
+      "es2019",
+      "es2020.bigint",
+      "es2020.string",
+      "es2020.symbol.wellknown",
+      "dom"
+    ],
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "isolatedModules": true,
+    "target": "es2019",
+    "experimentalDecorators": true,
+    "sourceMap": true,
+    "useUnknownInCatchVariables": false,
+    "jsx": "react-jsx",
+  },
+  "include": [
+    "src",
+  ],
+  "references": [
+    {
+      "path": "../../packages/malloy"
+    },
+    {
+      "path": "../../packages/malloy-db-bigquery"
+    },
+    {
+      "path": "../../packages/malloy-render"
+    }
+  ]
+}

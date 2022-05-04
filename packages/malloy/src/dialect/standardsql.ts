@@ -13,21 +13,34 @@
 
 import { indent } from "../model/utils";
 import {
-  DateTimeframe,
-  Dialect,
-  DialectExpr,
-  DialectFieldList,
-  ExtractDateTimeframe,
-  FunctionInfo,
-  TimestampTimeframe,
-} from "./dialect";
-
-const timeTruncMap: { [key: string]: string } = {
-  date: "day",
-};
+  TimestampUnit,
+  ExtractUnit,
+  Expr,
+  isTimeFieldType,
+  mkExpr,
+  TimeValue,
+  TypecastFragment,
+  isDateUnit,
+} from "../model";
+import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {
   number: "float64",
+};
+
+// These are the units that "TIMESTAMP_ADD" accepts
+const timestampAddUnits = [
+  "microsecond",
+  "millisecond",
+  "second",
+  "minute",
+  "hour",
+  "day",
+];
+
+const extractMap: Record<string, string> = {
+  day_of_week: "dayofweek",
+  day_of_year: "dayofyear",
 };
 
 export class StandardSQLDialect extends Dialect {
@@ -41,8 +54,8 @@ export class StandardSQLDialect extends Dialect {
     timestamp_seconds: { returnType: "timestamp" },
   };
 
-  quoteTableName(tableName: string): string {
-    return `\`${tableName}\``;
+  quoteTablePath(tablePath: string): string {
+    return `\`${tablePath}\``;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -105,9 +118,16 @@ export class StandardSQLDialect extends Dialect {
     source: string,
     alias: string,
     fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    needDistinctKey: boolean,
+    isArray: boolean
   ): string {
-    if (needDistinctKey) {
+    if (isArray) {
+      if (needDistinctKey) {
+        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, value FROM UNNEST(${source}) value))) as ${alias}`;
+      } else {
+        return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
+      }
+    } else if (needDistinctKey) {
       return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
       return `LEFT JOIN UNNEST(${source}) as ${alias}`;
@@ -136,8 +156,12 @@ export class StandardSQLDialect extends Dialect {
     return `${alias}.${fieldName}`;
   }
 
-  sqlUnnestPipelineHead(): string {
-    return "UNNEST(__param)";
+  sqlUnnestPipelineHead(isSingleton: boolean): string {
+    let p = "__param";
+    if (isSingleton) {
+      p = `[${p}]`;
+    }
+    return `UNNEST(${p})`;
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
@@ -269,98 +293,62 @@ ${indent(sql)}
       : identifier;
   }
 
-  static mapTimeframe(timeframe: TimestampTimeframe): string {
-    const t = timeTruncMap[timeframe];
-    return (t || timeframe).toUpperCase();
-  }
-
-  sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr {
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    return [`DATE_TRUNC(`, expr, `, ${units})`];
-  }
-
-  // sqlTimestampTrunc(
-  //   expr: unknown,
-  //   timeframe: TimestampTimeframe,
-  //   timezone: string
-  // ): DialectExpr {
-  //   const units = StandardSQLDialect.mapTimeframe(timeframe);
-  //   if (isDateTimeframe(timeframe)) {
-  //     return [`DATE_TRUNC(DATE(`, expr, `, '${timezone}'), ${units})`];
-  //   } else {
-  //     return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
-  //   }
-  // }
-
-  sqlTimestampTrunc(
-    expr: unknown,
-    timeframe: TimestampTimeframe,
-    _timezone: string
-  ): DialectExpr {
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    return [`TIMESTAMP_TRUNC(`, expr, `, ${units})`];
-  }
-
-  sqlExtractDateTimeframe(
-    expr: unknown,
-    timeframe: ExtractDateTimeframe
-  ): DialectExpr {
-    return [`EXTRACT(${timeframe} FROM `, expr, ")"];
-  }
-
-  sqlDateCast(expr: unknown): DialectExpr {
-    return ["DATE(", expr, ")"];
-  }
-
-  sqlTimestampCast(expr: unknown): DialectExpr {
-    return ["TIMESTAMP(", expr, ")"];
-  }
-
-  sqlDateAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    const add = op === "+" ? "_ADD" : "_SUB";
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    return [`DATE${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
-  }
-
-  sqlTimestampAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    const useDatetime = ["week", "month", "quarter", "year"].includes(
-      timeframe
-    );
-    const add = op === "+" ? "_ADD" : "_SUB";
-    const units = StandardSQLDialect.mapTimeframe(timeframe);
-    if (useDatetime) {
-      return [
-        `TIMESTAMP(DATETIME${add}(DATETIME(`,
-        expr,
-        `),INTERVAL `,
-        n,
-        ` ${units}))`,
-      ];
+  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+    if (sqlTime.valueType == "date") {
+      if (isDateUnit(units)) {
+        return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
+      }
+      return mkExpr`TIMESTAMP(${sqlTime.value})`;
     }
-    // const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", expr, ")"] : expr;
-    return [`TIMESTAMP${add}(`, expr, `,INTERVAL `, n, ` ${units})`];
+    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units})`;
+  }
+
+  sqlExtract(expr: TimeValue, units: ExtractUnit): Expr {
+    const extractTo = extractMap[units] || units;
+    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value})`;
+  }
+
+  sqlAlterTime(
+    op: "+" | "-",
+    expr: TimeValue,
+    n: Expr,
+    timeframe: TimestampUnit
+  ): Expr {
+    let theTime = expr.value;
+    let computeType: string = expr.valueType;
+    if (timeframe != "day" && timestampAddUnits.includes(timeframe)) {
+      // The units must be done in timestamp, no matter the input type
+      computeType = "timestamp";
+      if (expr.valueType != "timestamp") {
+        theTime = mkExpr`TIMESTAMP(${theTime})`;
+      }
+    } else if (expr.valueType == "timestamp") {
+      theTime = mkExpr`DATETIME(${theTime})`;
+      computeType = "datetime";
+    }
+    const funcName = computeType.toUpperCase() + (op == "+" ? "_ADD" : "_SUB");
+    const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
+    return computeType == "datetime" ? mkExpr`TIMESTAMP(${newTime})` : newTime;
   }
 
   ignoreInProject(fieldName: string): boolean {
     return fieldName === "_PARTITIONTIME";
   }
 
-  sqlCast(expr: unknown, castTo: string, safe: boolean): DialectExpr {
-    return [
-      `${safe ? "SAFE_" : ""}CAST(`,
-      expr,
-      ` AS ${castMap[castTo] || castTo})`,
-    ];
+  sqlCast(cast: TypecastFragment): Expr {
+    if (cast.srcType !== cast.dstType) {
+      const dstType = castMap[cast.dstType] || cast.dstType;
+      // This just makes the code look a little prettier ...
+      if (!cast.safe && cast.srcType && isTimeFieldType(cast.srcType)) {
+        if (dstType == "date") {
+          return mkExpr`DATE(${cast.expr})`;
+        }
+        return mkExpr`TIMESTAMP(${cast.expr})`;
+      }
+      const castFunc = cast.safe ? "SAFE_CAST" : "CAST";
+      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+    }
+    return cast.expr;
   }
 
   sqlLiteralTime(
@@ -375,5 +363,29 @@ ${indent(sql)}
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
     }
+  }
+
+  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+    let lVal = from.value;
+    let rVal = to.value;
+    let diffUsing = "TIMESTAMP_DIFF";
+
+    if (units == "second" || units == "minute" || units == "hour") {
+      if (from.valueType != "timestamp") {
+        lVal = mkExpr`TIMESTAMP(${lVal})`;
+      }
+      if (to.valueType != "timestamp") {
+        rVal = mkExpr`TIMESTAMP(${rVal})`;
+      }
+    } else {
+      diffUsing = "DATE_DIFF";
+      if (from.valueType != "date") {
+        lVal = mkExpr`DATE(${lVal})`;
+      }
+      if (to.valueType != "date") {
+        rVal = mkExpr`DATE(${rVal})`;
+      }
+    }
+    return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
   }
 }

@@ -82,12 +82,21 @@ export async function doBuild(target?: Target): Promise<void> {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(outDir, "third_party_notices.txt"),
-    development
-      ? "Third party notices are not produced during development builds to speed up the build."
-      : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
-  );
+  const licenseFilePath = path.join(outDir, "third_party_notices.txt");
+  if (development) {
+    fs.writeFileSync(
+      licenseFilePath,
+      "Third party notices are not produced during development builds to speed up the build."
+    );
+  } else {
+    const licenseFile = fs.createWriteStream(licenseFilePath);
+    licenseFile.on("open", () => {
+      execSync("yarn licenses generate-disclaimer --prod", {
+        stdio: ["ignore", licenseFile, licenseFile],
+      });
+    });
+    licenseFile.close();
+  }
 
   fs.writeFileSync(
     path.join(outDir, "build-sha"),
@@ -97,6 +106,9 @@ export async function doBuild(target?: Target): Promise<void> {
   // copy the README.md from the root to this package. vsce does not provide a way to specifiy a readme path in the "manifest",
   // the only option is to put a readme file at the root of the package :(
   fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
+
+  // same story as README, but this time it's CHANGELOG
+  fs.copyFileSync(path.join("..", "..", "CHANGELOG.md"), "CHANGELOG.md");
 
   if (target) {
     fs.copyFileSync(

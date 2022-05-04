@@ -44,7 +44,7 @@ source: vis_flights is flights {
     group_by: carriers.nickname     // string
     aggregate: flight_count          // measure
     group_by:
-      dist is distance:     // string
+      dist is distance ?     // string
         pick 'short' when < 300
         pick 'medium' when < 1000
         else 'long'
@@ -57,7 +57,7 @@ source: vis_flights is flights {
   query: by_carrier_repeated_bar is {
     group_by: carriers.nickname                 // string
     aggregate:
-      dist is distance:                         // string
+      dist is distance ?                         // string
         pick 'short' when < 300
         pick 'medium' when < 1000
         else 'long'
@@ -118,7 +118,7 @@ source: vis_flights is flights {
     nest: carrier_by_distance_over_time_grid_line is {
       group_by:
         carriers.nickname               // string
-        dist is distance:               // string
+        dist is distance ?               // string
           pick 'short' when < 300
           pick 'medium' when < 1000
           else 'long'
@@ -134,7 +134,7 @@ source: vis_flights is flights {
     // spark_bar_SM
     nest: dist_sb is {
       group_by:
-        dist is distance:                   // string
+        dist is distance ?                   // string
           pick 'short' when < 300
           pick 'medium' when < 1000
           else 'long'

@@ -62,6 +62,7 @@ const ResultControlsBar = styled.div`
   justify-content: space-between;
   align-items: center;
   color: #b1b1b1;
+  user-select: none;
 `;
 
 const ResultLabel = styled.span`

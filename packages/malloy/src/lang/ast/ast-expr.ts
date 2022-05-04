@@ -23,9 +23,10 @@ import {
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
+  isTimeFieldType,
   isConditionParameter,
   StructDef,
-  Expr,
+  TimeFieldType,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
@@ -39,13 +40,13 @@ import {
   FT,
   isGranularResult,
   compressExpr,
-  TimeType,
   ExprCompare,
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
 import { FieldReference } from "./ast-main";
+import { castTo } from "./time-utils";
 
 /**
  * Root node for any element in an expression. These essentially
@@ -108,14 +109,6 @@ export abstract class ExpressionDef extends MalloyElement {
    */
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     return applyBinary(fs, left, op, this);
-  }
-
-  thisValueToTimestamp(selfValue: ExprValue, d: Dialect): ExpressionDef {
-    if (selfValue.dataType === "timestamp") {
-      return this;
-    }
-    const tsSelf = compressExpr(d.sqlTimestampCast(selfValue.value) as Expr);
-    return new ExprTime("timestamp", tsSelf, selfValue.aggregate);
   }
 }
 
@@ -248,7 +241,7 @@ export class FieldDeclaration extends MalloyElement {
         template.aggregate = true;
       }
       if (this.exprSrc) {
-        template.source = this.exprSrc;
+        template.code = this.exprSrc;
       }
       // TODO this should work for dates too
       if (isGranularResult(exprValue) && template.type === "timestamp") {
@@ -315,7 +308,7 @@ export class ExprTime extends ExpressionDef {
   elementType = "timestampOrDate";
   readonly translationValue: ExprValue;
   constructor(
-    timeType: TimeType,
+    timeType: TimeFieldType,
     value: Fragment[] | string,
     aggregate = false
   ) {
@@ -330,6 +323,24 @@ export class ExprTime extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return this.translationValue;
+  }
+
+  static fromValue(timeType: TimeFieldType, expr: ExprValue): ExprTime {
+    let value = expr.value;
+    if (timeType != expr.dataType) {
+      const toTs: Fragment = {
+        type: "dialect",
+        function: "cast",
+        safe: false,
+        dstType: timeType,
+        expr: expr.value,
+      };
+      if (isTimeFieldType(expr.dataType)) {
+        toTs.srcType = expr.dataType;
+      }
+      value = compressExpr([toTs]);
+    }
+    return new ExprTime(timeType, value, expr.aggregate);
   }
 }
 
@@ -850,29 +861,10 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    const castTo =
-      this.castType === "number"
-        ? fs.getDialect().defaultNumberType
-        : this.castType;
-    let castValue = fs
-      .getDialect()
-      .sqlCast(expr.value, castTo, this.safe) as Expr;
-    if (castTo === "timestamp" && expr.dataType === "date") {
-      castValue = fs.getDialect().sqlTimestampCast(expr.value) as Expr;
-    }
-    if (castTo === "date" && expr.dataType === "timestamp") {
-      // Give date cast timestamps a granularity
-      return {
-        dataType: "date",
-        aggregate: expr.aggregate,
-        timeframe: "day",
-        value: compressExpr(fs.getDialect().sqlDateCast(expr.value) as Expr),
-      };
-    }
     return {
-      ...expr,
       dataType: this.castType,
-      value: compressExpr(castValue),
+      aggregate: expr.aggregate,
+      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
     };
   }
 }

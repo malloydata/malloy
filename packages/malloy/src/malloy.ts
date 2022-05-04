@@ -40,6 +40,8 @@ import {
   SQLBlock,
   DocumentReference,
   DocumentPosition as ModelDocumentPosition,
+  SearchIndexResult,
+  SearchValueMapResult,
 } from "./model";
 import {
   LookupConnection,
@@ -158,10 +160,9 @@ export class Malloy {
     model?: Model;
   }): Promise<Model> {
     const translator = parse._translator;
-    translator.translate(model?._modelDef);
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const result = translator.translate();
+      const result = translator.translate(model?._modelDef);
       if (result.final) {
         if (result.translated) {
           return new Model(
@@ -1182,6 +1183,10 @@ export class Explore extends Entity {
     return field;
   }
 
+  public getFieldByNameIfExists(fieldName: string): Field | undefined {
+    return this.fieldMap.get(fieldName);
+  }
+
   public get primaryKey(): string | undefined {
     return this.structDef.primaryKey;
   }
@@ -1346,7 +1351,7 @@ export class AtomicField extends Entity {
 }
 
 export enum DateTimeframe {
-  Date = "date",
+  Day = "day",
   Week = "week",
   Month = "month",
   Quarter = "quarter",
@@ -1354,7 +1359,7 @@ export enum DateTimeframe {
 }
 
 export enum TimestampTimeframe {
-  Date = "date",
+  Day = "day",
   Week = "week",
   Month = "month",
   Quarter = "quarter",
@@ -1381,7 +1386,7 @@ export class DateField extends AtomicField {
     }
     switch (this.fieldDateDef.timeframe) {
       case "day":
-        return DateTimeframe.Date;
+        return DateTimeframe.Day;
       case "week":
         return DateTimeframe.Week;
       case "month":
@@ -1410,8 +1415,8 @@ export class TimestampField extends AtomicField {
       return undefined;
     }
     switch (this.fieldTimestampDef.timeframe) {
-      case "date":
-        return TimestampTimeframe.Date;
+      case "day":
+        return TimestampTimeframe.Day;
       case "week":
         return TimestampTimeframe.Week;
       case "month":
@@ -1985,6 +1990,71 @@ export class ModelMaterializer extends FluentState<Model> {
       });
       return queryModel.preparedQuery;
     });
+  }
+
+  public async search(
+    sourceName: string,
+    searchTerm: string,
+    limit = 1000,
+    searchField: string | undefined = undefined
+  ): Promise<SearchIndexResult[] | undefined> {
+    const model = await this.materialize();
+    const queryModel = new QueryModel(model._modelDef);
+    const schema = model.getExploreByName(sourceName).structDef;
+    if (schema.structRelationship.type !== "basetable") {
+      throw new Error(
+        "Expected schema's structRelationship type to be 'basetable'."
+      );
+    }
+    const connectionName = schema.structRelationship.connectionName;
+    const connection = await this.runtime.connections.lookupConnection(
+      connectionName
+    );
+    return await queryModel.searchIndex(
+      connection,
+      sourceName,
+      searchTerm,
+      limit,
+      searchField
+    );
+  }
+
+  public async searchValueMap(
+    sourceName: string,
+    limit = 10
+  ): Promise<SearchValueMapResult[] | undefined> {
+    const model = await this.materialize();
+    const schema = model.getExploreByName(sourceName);
+    if (schema.structDef.structRelationship.type !== "basetable") {
+      throw new Error(
+        "Expected schema's structRelationship type to be 'basetable'."
+      );
+    }
+    let indexQuery = "{index: *}";
+
+    if (schema.getFieldByNameIfExists("search_index")) {
+      indexQuery = "search_index";
+    }
+
+    const searchMapMalloy = `
+      query: ${sourceName}
+        -> ${indexQuery}
+        -> {
+          where: fieldType = 'string'
+          group_by: fieldName
+          aggregate: cardinality is count(distinct fieldValue)
+          nest: values is {
+            project: fieldValue, weight
+            order_by: weight desc
+            limit: ${limit}
+          }
+          limit: 1000
+        }
+    `;
+    const result = await this.loadQuery(searchMapMalloy).run({
+      rowLimit: 1000,
+    });
+    return result._queryResult.result as unknown as SearchValueMapResult[];
   }
 
   /**

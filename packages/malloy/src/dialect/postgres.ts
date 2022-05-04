@@ -13,19 +13,43 @@
 
 import { indent } from "../model/utils";
 import {
-  DateTimeframe,
-  Dialect,
-  DialectExpr,
-  DialectFieldList,
-  ExtractDateTimeframe,
-  FunctionInfo,
-  isDateTimeframe,
-  TimestampTimeframe,
-} from "./dialect";
+  DateUnit,
+  ExtractUnit,
+  TimeFieldType,
+  TimestampUnit,
+  Expr,
+  TimeValue,
+  mkExpr,
+  TypecastFragment,
+} from "../model";
+import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {
   number: "double precision",
   string: "varchar",
+};
+
+const pgExtractionMap: Record<string, string> = {
+  day_of_week: "dow",
+  day_of_year: "doy",
+};
+
+const pgMakeIntervalMap: Record<string, string> = {
+  year: "years",
+  month: "months",
+  week: "weeks",
+  day: "days",
+  hour: "hours",
+  minute: "mins",
+  second: "secs",
+};
+
+const inSeconds: Record<string, number> = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+  day: 86400,
+  week: 604800,
 };
 
 export class PostgresDialect extends Dialect {
@@ -37,8 +61,11 @@ export class PostgresDialect extends Dialect {
   divisionIsInteger = true;
   functionInfo: Record<string, FunctionInfo> = {};
 
-  quoteTableName(tableName: string): string {
-    return `${tableName}`;
+  quoteTablePath(tablePath: string): string {
+    return tablePath
+      .split(".")
+      .map((part) => `"${part}"`)
+      .join(".");
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -134,9 +161,16 @@ export class PostgresDialect extends Dialect {
     source: string,
     alias: string,
     fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    needDistinctKey: boolean,
+    isArray: boolean
   ): string {
-    if (needDistinctKey) {
+    if (isArray) {
+      if (needDistinctKey) {
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text, 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+      } else {
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+      }
+    } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
       return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
@@ -173,12 +207,16 @@ export class PostgresDialect extends Dialect {
       }
       return ret;
     } else {
-      return `${alias}.${fieldName}`;
+      return `${alias}."${fieldName}"`;
     }
   }
 
-  sqlUnnestPipelineHead(): string {
-    return "JSONB_ARRAY_ELEMENTS($1)";
+  sqlUnnestPipelineHead(isSingleton: boolean): string {
+    if (isSingleton) {
+      return "UNNEST(ARRAY((SELECT $1)))";
+    } else {
+      return "JSONB_ARRAY_ELEMENTS($1)";
+    }
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
@@ -200,7 +238,7 @@ export class PostgresDialect extends Dialect {
   }
   // TODO
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return identifier;
+    return `"${identifier}"`;
   }
 
   // The simple way to do this is to add a comment on the table
@@ -210,76 +248,85 @@ export class PostgresDialect extends Dialect {
     throw new Error("Not implemented Yet");
   }
 
-  sqlDateTrunc(expr: unknown, timeframe: DateTimeframe): DialectExpr {
-    return [`DATE_TRUNC('${timeframe}', `, expr, `)::date`];
+  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+    // adjusting for monday/sunday weeks
+    const week = units == "week";
+    const truncThis = week
+      ? mkExpr`${sqlTime.value}+interval'1'day`
+      : sqlTime.value;
+    const trunced = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    return week ? mkExpr`(${trunced}-interval'1'day)` : trunced;
   }
 
-  sqlTimestampTrunc(
-    expr: unknown,
-    timeframe: TimestampTimeframe,
-    _timezone: string
-  ): DialectExpr {
-    if (timeframe === "date") {
-      return [`(`, expr, `)::date`];
-    } else if (isDateTimeframe(timeframe)) {
-      return [`DATE_TRUNC('${timeframe}', `, expr, `)::date`];
-    } else {
-      return [`DATE_TRUNC('${timeframe}', `, expr, `)`];
+  sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
+    const pgUnits = pgExtractionMap[units] || units;
+    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
+    return units == "day_of_week" ? mkExpr`(${extracted}+1)` : extracted;
+  }
+
+  sqlAlterTime(
+    op: "+" | "-",
+    expr: TimeValue,
+    n: Expr,
+    timeframe: DateUnit
+  ): Expr {
+    if (timeframe == "quarter") {
+      timeframe = "month";
+      n = mkExpr`${n}*3`;
     }
+    const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    return mkExpr`((${expr.value})${op}${interval})`;
   }
 
-  sqlExtractDateTimeframe(
-    expr: unknown,
-    timeframe: ExtractDateTimeframe
-  ): DialectExpr {
-    return [`EXTRACT(${timeframe} FROM `, expr, ")"];
-  }
-
-  sqlDateCast(expr: unknown): DialectExpr {
-    return ["(", expr, ")::date"];
-  }
-
-  sqlTimestampCast(expr: unknown): DialectExpr {
-    return ["(", expr, ")::timestamp"];
-  }
-
-  sqlDateAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
-  }
-
-  sqlTimestampAdd(
-    op: "+" | "-",
-    expr: unknown,
-    n: unknown,
-    timeframe: DateTimeframe
-  ): DialectExpr {
-    return ["(", expr, ")", op, "(", n, ` * interval '1 ${timeframe}')`];
-  }
-
-  sqlCast(expr: unknown, castTo: string, _safe: boolean): DialectExpr {
-    return ["(", expr, `)::${castMap[castTo] || castTo}`];
+  sqlCast(cast: TypecastFragment): Expr {
+    if (cast.dstType !== cast.srcType) {
+      const castTo = castMap[cast.dstType] || cast.dstType;
+      return mkExpr`cast(${cast.expr} as ${castTo})`;
+    }
+    return cast.expr;
   }
 
   sqlLiteralTime(
     timeString: string,
-    type: "date" | "timestamp",
+    type: TimeFieldType,
     _timezone: string
   ): string {
-    if (type === "date") {
+    if (type == "date") {
       return `DATE('${timeString}')`;
-    } else if (type === "timestamp") {
+    } else if (type == "timestamp") {
       return `TIMESTAMP '${timeString}'`;
     } else {
-      throw new Error(`Unknown Liternal time format ${type}`);
+      throw new Error(`Unknown Literal time format ${type}`);
     }
   }
 
   getFunctionInfo(_functionName: string): FunctionInfo | undefined {
     return undefined;
+  }
+
+  sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+    let lVal = from.value;
+    let rVal = to.value;
+    if (inSeconds[units]) {
+      lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
+      rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
+      const duration = mkExpr`(${rVal} - ${lVal})`;
+      return units == "second"
+        ? duration
+        : mkExpr`TRUNC(${duration}/${inSeconds[units].toString()})`;
+    }
+    const yearDiff = mkExpr`TRUNC(EXTRACT(YEAR FROM ${rVal}) - EXTRACT(YEAR FROM ${lVal}))`;
+    if (units == "year") {
+      return yearDiff;
+    }
+    if (units == "month") {
+      const monthDiff = mkExpr`TRUNC(EXTRACT(MONTH FROM ${rVal}) - EXTRACT(MONTH FROM ${lVal}))`;
+      return mkExpr`${yearDiff} * 12 + ${monthDiff}`;
+    }
+    if (units == "quarter") {
+      const qDiff = mkExpr`TRUNC(EXTRACT(QUARTER FROM ${rVal}) - EXTRACT(QUARTER FROM ${lVal}))`;
+      return mkExpr`${yearDiff} * 4 + ${qDiff}`;
+    }
+    throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
   }
 }

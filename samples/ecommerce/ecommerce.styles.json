@@ -1,8 +1,8 @@
 {
-  "total_revenue": {
+  "total_sales": {
     "renderer": "currency",
     "currency": {
-      "unit": "pounds"
+      "unit": "dollars"
     },
     "text": {
       "italic": true
@@ -11,11 +11,26 @@
       "color": "#21877d"
     }
   },
-  "top_products": {
-    "renderer": "bar_chart"
+  "total_gross_margin" : {
+    "renderer": "currency",
+    "currency": {
+      "unit": "dollars"
+    }
+  },
+  "sale_price" : {
+    "renderer": "currency",
+    "currency": {
+      "unit": "dollars"
+    }
   },
   "by_month": {
     "renderer": "line_chart"
+  },
+  "by_year": {
+    "renderer": "bar_chart"
+  },
+  "top_categories": {
+    "renderer": "bar_chart"
   },
   "scatter": {
     "renderer": "scatter_chart",
