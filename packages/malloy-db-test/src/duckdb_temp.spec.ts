@@ -18,13 +18,43 @@ import { DuckDBTestConnection } from "./runtimes";
 const duckDB = new DuckDBTestConnection("duckdb");
 
 it(`silly test}`, async () => {
-  // // eslint-disable-next-line @typescript-eslint/no-var-requires
+  // // eslint-disable-next-line @typescript-eslint/nom-var-requires
   // // const count = await duckDB.runSQL("SELECT COUNT(*) FROM 'airports';");
   const count = await duckDB.runSQL(
 `
+WITH __stage0 AS (
   SELECT
-   row(state,airport_count) as state
-  FROM malloytest.state_facts
+    group_set,
+    base.state as state__0,
+    CASE WHEN group_set=0 THEN
+      COUNT( 1)
+      END as airport_count__0,
+    CASE WHEN group_set=1 THEN
+      base.fac_type
+      END as fac_type__1,
+    CASE WHEN group_set=1 THEN
+      COUNT( 1)
+      END as airport_count__1
+  FROM malloytest.airports as base
+  CROSS JOIN (SELECT UNNEST(GENERATE_SERIES(0,1,1)) as group_set  ) as group_set
+  WHERE base.state IS NOT NULL
+  GROUP BY 1,2,4
+)
+, __stage1 AS (
+  SELECT
+    state__0 as state,
+    (LIST(airport_count__0) FILTER (WHERE group_set=0 AND airport_count__0 IS NOT NULL))[1] as airport_count,
+    LIST({
+      fac_type: fac_type__1,
+      airport_count: airport_count__1}  ORDER BY  airport_count__1 desc) FILTER(WHERE group_set=1) as by_fac_type
+  FROM __stage0
+  GROUP BY 1
+  ORDER BY 2 desc
+  LIMIT 2
+), __stage2 as (
+  SELECT *, UNNEST(by_fac_type) as by_fac_type  FROM __stage1
+)
+SELECT to_json(list(row(state, airport_count, by_fac_type)))::VARCHAR as results FROM __stage2 AS finalStage
 `
     // `SELECT ('x'|| SUBSTR(MD5('hello')::varchar,16,14))::DECIMAL(38,9)`
     // `SELECT

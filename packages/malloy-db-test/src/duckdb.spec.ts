@@ -26,19 +26,23 @@ describe("duckdb tests", () => {
       .loadQuery(
         `
         query: table('malloytest.airports') ->{
+          where: state != null
+          limit: 2
           group_by: state
-          // aggregate: airport_count is count()
+          aggregate: airport_count is count()
           nest: by_fac_type is {
             group_by: fac_type
             aggregate: airport_count is count()
           }
+        } -> {
+          group_by: state, airport_count, by_fac_type.fac_type
         }
         `
       )
       .run();
     console.log(result.sql);
     console.log(result.data.toObject());
-    expect(result.data.value[0].airport_count).toBe(1);
+    expect(result.data.value[0].state).toBe("TX");
     // );
   });
 });

@@ -43,6 +43,7 @@ export class DuckDBConnection implements Connection {
 
   protected connection;
   protected database;
+  protected isSetup = false;
 
   constructor(name: string) {
     this.name = name;
@@ -64,7 +65,16 @@ export class DuckDBConnection implements Connection {
     return false;
   }
 
-  protected async runDuckDBQuery(sql: string): Promise<MalloyQueryData> {
+  // @bporterfield need help writing this. it needs to wait if a setup is in process.
+  protected async setup(): Promise<void> {
+    if (!this.isSetup) {
+      await this.runDuckDBQuery("INSTALL 'json'");
+      await this.runDuckDBQuery("LOAD 'json'");
+    }
+    this.isSetup = true;
+  }
+
+  protected async runDuckDBQuery(sql: string): Promise<any> {
     return new Promise((resolve, reject) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       this.connection.all(sql, (err: any, result: any) => {
@@ -80,8 +90,11 @@ export class DuckDBConnection implements Connection {
   }
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {
+    await this.setup();
     console.log(sql);
-    return await this.runDuckDBQuery(sql);
+    const retVal = await this.runDuckDBQuery(sql);
+    const result = JSON.parse(retVal.rows[0].results);
+    return { rows: result, totalRows: result.length };
   }
 
   public async runSQLBlockAndFetchResultSchema(

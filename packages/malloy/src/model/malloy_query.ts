@@ -3334,8 +3334,12 @@ export class QueryModel {
 
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
+      const fieldNames: string[] = [];
+      for (const f of ret.outputStruct.fields) {
+        fieldNames.push(getIdentifier(f));
+      }
       ret.lastStageName = stageWriter.addStage(
-        q.parent.dialect.sqlFinalStage(ret.lastStageName)
+        q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );
     }
     return {
@@ -3361,7 +3365,8 @@ export class QueryModel {
         : "(need to figure this out)";
     if (this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
-        this.dialect.sqlFinalStage(ret.lastStageName)
+        // note this will be broken on duckDB waiting on a real fix.
+        this.dialect.sqlFinalStage(ret.lastStageName, [])
       );
     }
     return {

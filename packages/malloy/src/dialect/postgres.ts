@@ -229,7 +229,7 @@ export class PostgresDialect extends Dialect {
     return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
   }
 
-  sqlFinalStage(lastStageName: string): string {
+  sqlFinalStage(lastStageName: string, _fields: string[]): string {
     return `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
   }
 

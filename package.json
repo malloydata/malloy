@@ -30,7 +30,8 @@
     "vscode-build-extension-dev": "yarn workspace malloy-vscode build-extension-dev",
     "vscode-publish-extensions": "yarn workspace malloy-vscode publish-extensions",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
-    "malloyc": "ts-node scripts/malloy-to-json"
+    "malloyc": "ts-node scripts/malloy-to-json",
+    "build-duckdb-db": "ts-node  scripts/build_duckdb_test_database"
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",

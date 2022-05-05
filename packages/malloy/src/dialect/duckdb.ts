@@ -50,7 +50,7 @@ export class DuckDBDialect extends Dialect {
   name = "duckdb";
   defaultNumberType = "DOUBLE";
   udfPrefix = "pg_temp.__udf";
-  hasFinalStage = false;
+  hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   functionInfo: Record<string, FunctionInfo> = {};
@@ -85,10 +85,14 @@ export class DuckDBDialect extends Dialect {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
+    let tail = "";
+    if (limit !== undefined) {
+      tail += `[1:${limit}]`;
+    }
     const fields = fieldList
       .map((f) => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(", ");
-    return `(ARRAY_AGG({${fields}}))`;
+    return `LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail}`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -99,7 +103,14 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `1`; // `(ARRAY_AGG(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
+    return `(LIST(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
+  }
+
+  // we should remov this code when https://github.com/duckdb/duckdb/issues/3544 is fixed.
+  sqlFinalStage(lastStageName: string, fields: string[]): string {
+    return `SELECT to_json(list(row(${fields.join(
+      ", "
+    )})))::VARCHAR as results FROM ${lastStageName} AS finalStage`;
   }
 
   sqlCoaleseMeasuresInline(
