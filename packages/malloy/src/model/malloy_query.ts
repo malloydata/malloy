@@ -368,7 +368,11 @@ class QueryField extends QueryNode {
       expr.structPath
     );
     if (distinctKeySQL) {
-      return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+      if (this.parent.dialect.supportsSumDistinctFunction) {
+        return this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+      } else {
+        return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+      }
     } else {
       return `SUM(${dimSQL})`;
     }
@@ -406,11 +410,20 @@ class QueryField extends QueryNode {
       if (state.whereSQL) {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
-      return `${sqlSumDistinct(
-        this.parent.dialect,
-        dimSQL,
-        distinctKeySQL
-      )}/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
+      let sumDistinctSQL;
+      if (this.parent.dialect.supportsSumDistinctFunction) {
+        sumDistinctSQL = this.parent.dialect.sqlSumDistinct(
+          distinctKeySQL,
+          dimSQL
+        );
+      } else {
+        sumDistinctSQL = sqlSumDistinct(
+          this.parent.dialect,
+          dimSQL,
+          distinctKeySQL
+        );
+      }
+      return `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
     } else {
       return `AVG(${dimSQL})`;
     }

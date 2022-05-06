@@ -70,10 +70,25 @@ export class DuckDBConnection implements Connection {
     if (!this.isSetup) {
       await this.runDuckDBQuery("INSTALL 'json'");
       await this.runDuckDBQuery("LOAD 'json'");
+      await this.runDuckDBQuery("DROP macro sum_distinct");
+      await this.runDuckDBQuery(
+        `
+        create macro sum_distinct(l) as  (
+          with cte as (
+            select unnest(l) x
+          ),
+          cte2 as (
+            select distinct x FROM cte
+          )
+          select sum(x.val) as value FROM cte2
+        )
+        `
+      );
     }
     this.isSetup = true;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   protected async runDuckDBQuery(sql: string): Promise<any> {
     return new Promise((resolve, reject) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,6 +102,11 @@ export class DuckDBConnection implements Connection {
           });
       });
     });
+  }
+
+  public async runRawSQL(sql: string): Promise<any> {
+    await this.setup();
+    return this.runDuckDBQuery(sql);
   }
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {

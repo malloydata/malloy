@@ -50,6 +50,8 @@ export class StandardSQLDialect extends Dialect {
   hasFinalStage = false;
   stringTypeName = "STRING";
   divisionIsInteger = false;
+  supportsSumDistinctFunction = false;
+
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
   };

@@ -53,6 +53,8 @@ export class DuckDBDialect extends Dialect {
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
+  supportsSumDistinctFunction = true;
+
   functionInfo: Record<string, FunctionInfo> = {};
 
   quoteTablePath(tableName: string): string {
@@ -136,13 +138,8 @@ export class DuckDBDialect extends Dialect {
     }
   }
 
-  sqlSumDistinctHashedKey(sqlDistinctKey: string): string {
-    // return `('x' || MD5(${sqlDistinctKey}::varchar))::bit(64)::bigint::DECIMAL(65,0)  *18446744073709551616 + ('x' || SUBSTR(MD5(${sqlDistinctKey}::varchar),17))::bit(64)::bigint::DECIMAL(65,0)`;
-    return `(
-      SELECT
-     0::HUGEINT + sum(10::HUGEINT^rr::hugeint * CASE WHEN f >= 'a' THEN ord(f)- ord('a') ELSE  ord(f) - ord('0') END) + 4
-     FROM (SELECT f, row_number() over () as rr FROM (SELECT UNNEST(STR_SPLIT(MD5(${sqlDistinctKey})[1:16],'')) f) as x)
-    )`;
+  sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
+    return "uses sumDistinctFunction, should not be called";
   }
 
   sqlGenerateUUID(): string {
@@ -279,5 +276,9 @@ export class DuckDBDialect extends Dialect {
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
     }
+  }
+
+  sqlSumDistinct(key: string, value: string): string {
+    return `sum_distinct(list({key:${key}, val: ${value}}))`;
   }
 }

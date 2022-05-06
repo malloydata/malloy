@@ -59,6 +59,8 @@ export class PostgresDialect extends Dialect {
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
+  supportsSumDistinctFunction = false;
+
   functionInfo: Record<string, FunctionInfo> = {};
 
   quoteTablePath(tablePath: string): string {
