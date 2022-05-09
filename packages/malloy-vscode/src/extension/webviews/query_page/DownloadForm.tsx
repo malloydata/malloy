@@ -12,8 +12,9 @@
  */
 
 import React, { useState } from "react";
+import styled from "styled-components";
 import { QueryDownloadOptions } from "../../webview_message_manager";
-import { Dropdown, TextField } from "../components";
+import { Dropdown, TextField, VSCodeButton } from "../components";
 
 interface DownloadFormProps {
   onDownload: (options: QueryDownloadOptions) => Promise<void>;
@@ -24,32 +25,38 @@ export const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
   const [rowLimit, setRowLimit] = useState(1000);
   const [amount, setAmount] = useState<"current" | "all" | number>("current");
   return (
-    <>
-      <Dropdown
-        value={format}
-        setValue={(newValue) => setFormat(newValue as "json" | "csv")}
-        options={[
-          { value: "json", label: "JSON" },
-          { value: "csv", label: "CSV" },
-        ]}
-      />
-      <Dropdown
-        value={typeof amount === "number" ? "rows" : amount}
-        setValue={(newValue) => {
-          if (newValue === "current" || newValue === "all") {
-            setAmount(newValue);
-          } else {
-            setAmount(rowLimit);
-          }
-        }}
-        options={[
-          { value: "current", label: "Current result set" },
-          { value: "all", label: "All results" },
-          { value: "rows", label: "Limited rows" },
-        ]}
-      />
+    <Form>
+      <FormRow>
+        <Dropdown
+          value={format}
+          setValue={(newValue) => setFormat(newValue as "json" | "csv")}
+          options={[
+            { value: "json", label: "JSON" },
+            { value: "csv", label: "CSV" },
+          ]}
+          style={{ width: "100%" }}
+        />
+      </FormRow>
+      <FormRow>
+        <Dropdown
+          value={typeof amount === "number" ? "rows" : amount}
+          setValue={(newValue) => {
+            if (newValue === "current" || newValue === "all") {
+              setAmount(newValue);
+            } else {
+              setAmount(rowLimit);
+            }
+          }}
+          options={[
+            { value: "current", label: "Current result set" },
+            { value: "all", label: "All results" },
+            { value: "rows", label: "Limited rows" },
+          ]}
+          style={{ width: "100%" }}
+        />
+      </FormRow>
       {typeof amount === "number" && (
-        <>
+        <FormRow>
           <TextField
             value={rowLimit.toString()}
             setValue={(newValue) => {
@@ -59,10 +66,25 @@ export const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {
                 setAmount(parsed);
               }
             }}
+            style={{ width: "100%" }}
           />
-        </>
+        </FormRow>
       )}
-      <button onClick={() => onDownload({ format, amount })}>Download</button>
-    </>
+      <FormRow>
+        <VSCodeButton onClick={() => onDownload({ format, amount })}>
+          Download
+        </VSCodeButton>
+      </FormRow>
+    </Form>
   );
 };
+
+const Form = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const FormRow = styled.div`
+  display: flex;
+`;

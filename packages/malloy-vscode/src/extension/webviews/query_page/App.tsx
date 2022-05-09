@@ -26,8 +26,8 @@ import Prism from "prismjs";
 import "prismjs/components/prism-json";
 import "prismjs/components/prism-sql";
 import { usePopperTooltip } from "react-popper-tooltip";
-import { DownloadForm } from "./DownloadForm";
 import { useQueryVSCodeContext } from "./query_vscode_context";
+import { DownloadButton } from "./DownloadButton";
 
 enum Status {
   Ready = "ready",
@@ -129,14 +129,6 @@ export const App: React.FC = () => {
         flexDirection: "column",
       }}
     >
-      <DownloadForm
-        onDownload={async (downloadOptions) => {
-          vscode.postMessage({
-            type: QueryMessageType.StartDownload,
-            downloadOptions,
-          });
-        }}
-      />
       {[
         Status.Compiling,
         Status.Running,
@@ -147,7 +139,22 @@ export const App: React.FC = () => {
       ) : (
         ""
       )}
-      {!error && <ResultKindToggle kind={resultKind} setKind={setResultKind} />}
+      {!error && (
+        <ResultControlsBar>
+          <ResultLabel>QUERY RESULTS</ResultLabel>
+          <ResultControlsItems>
+            <ResultKindToggle kind={resultKind} setKind={setResultKind} />
+            <DownloadButton
+              onDownload={async (downloadOptions) => {
+                vscode.postMessage({
+                  type: QueryMessageType.StartDownload,
+                  downloadOptions,
+                });
+              }}
+            />
+          </ResultControlsItems>
+        </ResultControlsBar>
+      )}
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
           <div style={{ margin: "10px" }}>
@@ -269,4 +276,23 @@ const DrillTooltip = styled.div`
   border-radius: 5px;
   box-shadow: rgb(144 144 144) 0px 1px 5px 0px;
   padding: 5px;
+`;
+
+const ResultControlsBar = styled.div`
+  display: flex;
+  border-bottom: 1px solid #efefef;
+  justify-content: space-between;
+  align-items: center;
+  color: #b1b1b1;
+  padding: 0 10px;
+`;
+
+const ResultLabel = styled.span`
+  font-weight: 500;
+  font-size: 12px;
+`;
+
+const ResultControlsItems = styled.div`
+  display: flex;
+  align-items: center;
 `;

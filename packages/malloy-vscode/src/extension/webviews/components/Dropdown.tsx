@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { VSCodeDropdown, VSCodeOption } from "./fast";
 
 interface DropdownProps {
@@ -19,6 +19,7 @@ interface DropdownProps {
   setValue: (value: string) => void;
   id?: string;
   options: { value: string; label: string }[];
+  style?: React.CSSProperties;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -26,6 +27,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   setValue,
   id,
   options,
+  style,
 }) => {
   const onChange = (event: any) => {
     setValue(event.target.value);
@@ -41,7 +43,13 @@ export const Dropdown: React.FC<DropdownProps> = ({
   });
 
   return (
-    <VSCodeDropdown value={value} onChange={onChange} id={id} ref={theElement}>
+    <VSCodeDropdown
+      value={value}
+      onChange={onChange}
+      id={id}
+      ref={theElement}
+      style={style}
+    >
       {options.map((option, index) => (
         <VSCodeOption
           key={index}

@@ -21,6 +21,7 @@ interface TextFieldProps {
   setValue: (value: string) => void;
   placeholder?: string;
   id?: string;
+  style?: React.CSSProperties;
 }
 
 export const TextField: React.FC<TextFieldProps> = ({
@@ -29,6 +30,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   type,
   placeholder,
   id,
+  style,
 }) => {
   const onChange = (event: any) => {
     setValue(event.target.value);
@@ -41,6 +43,7 @@ export const TextField: React.FC<TextFieldProps> = ({
       type={type}
       placeholder={placeholder}
       id={id}
+      style={style}
     />
   );
 };

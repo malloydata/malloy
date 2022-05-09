@@ -359,6 +359,7 @@
     "uuid": "^8.3.2",
     "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
-    "vscode-webview": "^1.0.1-beta.1"
+    "vscode-webview": "^1.0.1-beta.1",
+    "esbuild-plugin-svgr": "^1.0.1"
   }
 }

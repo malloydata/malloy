@@ -74,6 +74,9 @@ export async function queryDownload(
           ? new JSONWriter(writeStream)
           : new CSVWriter(writeStream);
       await writer.process(rowStream);
+      vscode.window.showInformationMessage(
+        `Malloy Download (${name}): Complete`
+      );
     }
   );
 }

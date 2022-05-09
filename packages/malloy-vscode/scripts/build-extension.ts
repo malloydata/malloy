@@ -18,6 +18,7 @@ import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/e
 import * as path from "path";
 import { execSync } from "child_process";
 import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
+import svgrPlugin from "esbuild-plugin-svgr";
 
 // importing this in normal fashion seems to import an older API?!
 // for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
@@ -156,6 +157,16 @@ export async function doBuild(target?: Target): Promise<void> {
       : false,
   });
 
+  const webviewPlugins = [
+    svgrPlugin({
+      typescript: true,
+    }),
+  ];
+
+  if (development) {
+    webviewPlugins.push(noNodeModulesSourceMaps);
+  }
+
   // build the webviews
   await build({
     entryPoints: [
@@ -173,7 +184,7 @@ export async function doBuild(target?: Target): Promise<void> {
     define: {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
     },
-    plugins: development ? [noNodeModulesSourceMaps] : [],
+    plugins: webviewPlugins,
     watch: development
       ? {
           onRebuild(error, result) {
