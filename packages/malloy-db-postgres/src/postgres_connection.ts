@@ -29,7 +29,7 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { Client, Pool } from "pg";
+import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -378,12 +378,15 @@ export class PostgresConnection implements Connection, StreamingConnection {
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
+    client.connect();
+    const rowStream = client.query(query);
     let index = 0;
-    for await (const row of client.query(query)) {
+    for await (const row of rowStream) {
       yield row.row as QueryDataRow;
       index += 1;
       if (options?.rowLimit !== undefined && index >= options.rowLimit) {
         query.destroy();
+        break;
       }
     }
     await client.end();
@@ -428,18 +431,38 @@ export class PooledPostgresConnection
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
   }
 
+  private async getClientFromPool(): Promise<[PoolClient, () => void]> {
+    return await new Promise((resolve, reject) =>
+      this.pool.connect((error, client: PoolClient, releaseClient) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve([client, releaseClient]);
+        }
+      })
+    );
+  }
+
   public async *runSQLStream(
     sqlCommand: string,
     options?: { rowLimit?: number }
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     let index = 0;
-    for await (const row of this.pool.query(query)) {
+    // This is a strange hack... `this.pool.query(query)` seems to return the wrong
+    // type. Because `query` is a `QueryStream`, the result is supposed to be a
+    // `QueryStream` as well, but it's not. So instead, we get a client and call
+    // `client.query(query)`, which does what it's supposed to.
+    const [client, releaseClient] = await this.getClientFromPool();
+    const resultStream: QueryStream = client.query(query);
+    for await (const row of resultStream) {
       yield row.row as QueryDataRow;
       index += 1;
-      if (options?.rowLimit !== undefined && index > options.rowLimit) {
+      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
         query.destroy();
+        break;
       }
     }
+    releaseClient();
   }
 }
