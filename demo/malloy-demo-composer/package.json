@@ -57,6 +57,10 @@
     ]
   },
   "devDependencies": {
+    "@babel/core": "^7.17.10",
+    "@babel/plugin-syntax-flow": "^7.16.7",
+    "@babel/plugin-transform-react-jsx": "^7.17.3",
+    "@testing-library/dom": "^7.21.4",
     "@types/cors": "^2.8.12",
     "concurrently": "^6.2.1",
     "wait-on": "^6.0.1",
