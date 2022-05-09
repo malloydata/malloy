@@ -26,6 +26,11 @@ import {
   URLReader,
 } from "@malloydata/malloy";
 import { PersistSQLResults } from "@malloydata/malloy";
+import {
+  FetchSchemaAndRunSimultaneously,
+  StreamingConnection,
+  FetchSchemaAndRunStreamSimultaneously,
+} from "@malloydata/malloy/src/runtime_types";
 
 class DummyFiles implements URLReader {
   async readURL(): Promise<string> {
@@ -66,6 +71,18 @@ class DummyConnection implements Connection {
   }
 
   canPersist(): this is PersistSQLResults {
+    return false;
+  }
+
+  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
+    return false;
+  }
+
+  canStream(): this is StreamingConnection {
+    return false;
+  }
+
+  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
     return false;
   }
 }
