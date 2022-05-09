@@ -1746,7 +1746,7 @@ class QueryQuery extends QueryField {
               });
               break;
             case "timestamp": {
-              const timeframe = fi.f.fieldDef.timeframe || "second";
+              const timeframe = fi.f.fieldDef.timeframe;
               switch (timeframe) {
                 case "year":
                 case "month":
@@ -1768,6 +1768,14 @@ class QueryQuery extends QueryField {
                     name,
                     type: "timestamp",
                     timeframe,
+                    resultMetadata,
+                    location,
+                  });
+                  break;
+                default:
+                  fields.push({
+                    name,
+                    type: "timestamp",
                     resultMetadata,
                     location,
                   });
@@ -2575,18 +2583,19 @@ class QueryQueryIndex extends QueryQuery {
         resultIndex,
         type: "result",
       });
+      if (field instanceof QueryAtomicField) {
+        this.addDependancies(resultStruct, field);
+      }
       resultIndex++;
     }
     const measure = (this.firstSegment as IndexSegment).weightMeasure;
     if (measure !== undefined) {
-      resultStruct.addField(
-        measure,
-        this.parent.getFieldByName(measure) as QueryField,
-        {
-          resultIndex,
-          type: "result",
-        }
-      );
+      const f = this.parent.getFieldByName(measure) as QueryField;
+      resultStruct.addField(measure, f, {
+        resultIndex,
+        type: "result",
+      });
+      this.addDependancies(resultStruct, f);
     }
     this.expandFilters(resultStruct);
   }
