@@ -15,6 +15,7 @@ import {
   CSVWriter,
   JSONWriter,
   QueryMaterializer,
+  Result,
   SQLBlockMaterializer,
 } from "@malloydata/malloy";
 import { QueryDownloadOptions } from "../webview_message_manager";
@@ -27,7 +28,7 @@ import * as path from "path";
 export async function queryDownload(
   query: SQLBlockMaterializer | QueryMaterializer,
   downloadOptions: QueryDownloadOptions,
-  defaultRowLimit: number | undefined,
+  currentResults: Result,
   name?: string
 ): Promise<void> {
   const rawDownloadPath = vscode.workspace
@@ -52,12 +53,6 @@ export async function queryDownload(
   const fileExtension = downloadOptions.format === "json" ? "json" : "csv";
   const rawFilePath = path.join(downloadPath, `${name}.${fileExtension}`);
   const filePath = dedupFileName(rawFilePath);
-  const rowLimit =
-    downloadOptions.amount === "all"
-      ? undefined
-      : downloadOptions.amount === "current"
-      ? defaultRowLimit
-      : downloadOptions.amount;
   vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -65,18 +60,33 @@ export async function queryDownload(
       cancellable: false,
     },
     async () => {
-      const rowStream = query.runStream({
-        rowLimit,
-      });
-      const writeStream = fs.createWriteStream(filePath);
-      const writer =
-        downloadOptions.format === "json"
-          ? new JSONWriter(writeStream)
-          : new CSVWriter(writeStream);
-      await writer.process(rowStream);
-      vscode.window.showInformationMessage(
-        `Malloy Download (${name}): Complete`
-      );
+      try {
+        const writeStream = fs.createWriteStream(filePath);
+        const writer =
+          downloadOptions.format === "json"
+            ? new JSONWriter(writeStream)
+            : new CSVWriter(writeStream);
+        let rowStream;
+        if (downloadOptions.amount === "current") {
+          rowStream = currentResults.data.inMemoryStream();
+        } else {
+          const rowLimit =
+            downloadOptions.amount === "all"
+              ? undefined
+              : downloadOptions.amount;
+          rowStream = query.runStream({
+            rowLimit,
+          });
+        }
+        await writer.process(rowStream);
+        vscode.window.showInformationMessage(
+          `Malloy Download (${name}): Complete`
+        );
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Malloy Download (${name}): Error\n${error.message}`
+        );
+      }
     }
   );
 }

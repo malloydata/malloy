@@ -266,12 +266,6 @@ export function runMalloyQuery(
               ? (await runnable.getPreparedResult()).resultExplore.limit
               : undefined;
 
-          current.messages.onReceiveMessage((message) => {
-            if (message.type === QueryMessageType.StartDownload) {
-              queryDownload(runnable, message.downloadOptions, rowLimit, name);
-            }
-          });
-
           try {
             const sql = await runnable.getSQL();
             styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
@@ -299,6 +293,17 @@ export function runMalloyQuery(
           progress.report({ increment: 40, message: "Running" });
           const queryResult = await runnable.run({ rowLimit });
           if (canceled) return;
+
+          current.messages.onReceiveMessage((message) => {
+            if (message.type === QueryMessageType.StartDownload) {
+              queryDownload(
+                runnable,
+                message.downloadOptions,
+                queryResult,
+                name
+              );
+            }
+          });
 
           const runEnd = performance.now();
           logTime("Run", runBegin, runEnd);

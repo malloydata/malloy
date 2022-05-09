@@ -2835,6 +2835,12 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
       },
     };
   }
+
+  async *inMemoryStream(): AsyncIterableIterator<DataRecord> {
+    for (let i = 0; i < this.queryData.length; i++) {
+      yield this.row(i);
+    }
+  }
 }
 
 function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
