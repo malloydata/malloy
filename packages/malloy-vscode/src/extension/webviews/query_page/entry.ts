@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -17,11 +17,15 @@ import ReactDOM from "react-dom";
 import React from "react";
 import { App } from "./App";
 import { QueryPanelMessage } from "../../webview_message_manager";
+import { getVSCodeAPI, QueryVSCodeContext } from "./query_vscode_context";
 
 (() => {
-  const vscode = acquireVsCodeApi<unknown>();
-  vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
+  const vscode = getVSCodeAPI<void, QueryPanelMessage>();
+  const el = React.createElement(
+    QueryVSCodeContext.Provider,
+    { value: vscode },
+    [React.createElement(App, { key: "app" }, null)]
+  );
 
-  const el = React.createElement(App, {}, null);
   ReactDOM.render(el, document.getElementById("app"));
 })();

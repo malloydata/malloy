@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -279,6 +279,23 @@ export class Malloy {
     }
   }
 
+  private static async runSQLBlockAndFetchResultSchema(
+    connection: Connection,
+    sqlBlock: SQLBlock,
+    options?: { rowLimit?: number }
+  ) {
+    if (connection.canFetchSchemaAndRunSimultaneously()) {
+      return connection.runSQLBlockAndFetchResultSchema(sqlBlock, options);
+    }
+    const [schema, data] = await Promise.all([
+      connection
+        .fetchSchemaForSQLBlocks([sqlBlock])
+        .then((result) => result.schemas[sqlBlock.name]),
+      connection.runSQL(sqlBlock.select),
+    ]);
+    return { schema, data };
+  }
+
   /**
    * Run a fully-prepared query.
    *
@@ -345,7 +362,8 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlBlock !== undefined) {
-      const { schema, data } = await connection.runSQLBlockAndFetchResultSchema(
+      const { schema, data } = await this.runSQLBlockAndFetchResultSchema(
+        connection,
         sqlBlock,
         options
       );
@@ -388,6 +406,95 @@ export class Malloy {
       throw new Error(
         "Internal error: sqlBlock or preparedResult must be provided."
       );
+    }
+  }
+
+  public static runStream(params: {
+    connections: LookupConnection<Connection>;
+    preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord>;
+  public static runStream(params: {
+    connection: Connection;
+    preparedResult: PreparedResult;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord>;
+  public static runStream(params: {
+    connection: Connection;
+    sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord>;
+  public static runStream(params: {
+    connections: LookupConnection<Connection>;
+    sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord>;
+  public static runStream(params: {
+    connection: Connection;
+    sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord>;
+  public static runStream(params: {
+    connections: LookupConnection<Connection>;
+    sqlBlock: SQLBlock;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord>;
+  public static async *runStream({
+    connections,
+    preparedResult,
+    sqlBlock,
+    connection,
+    options,
+  }: {
+    connection?: Connection;
+    preparedResult?: PreparedResult;
+    sqlBlock?: SQLBlock;
+    connections?: LookupConnection<Connection>;
+    options?: { rowLimit?: number };
+  }): AsyncIterableIterator<DataRecord> {
+    if (sqlBlock === undefined && preparedResult === undefined) {
+      throw new Error(
+        "Internal error: sqlBlock or preparedResult must be provided."
+      );
+    }
+    const connectionName =
+      sqlBlock?.connection || preparedResult?.connectionName;
+    if (connection === undefined) {
+      if (connections === undefined) {
+        throw new Error(
+          "Internal Error: Connection or LookupConnection<Connection> must be provided."
+        );
+      }
+      connection = await connections.lookupConnection(connectionName);
+    }
+    // TODO is there a better way to handle this case? Just require StreamingConnections?
+    if (!connection.canStream()) {
+      throw new Error(`Connection '${connectionName}' cannot stream results.`);
+    }
+    let sql;
+    let resultExplore;
+    if (sqlBlock !== undefined) {
+      const schema = (await connection.fetchSchemaForSQLBlocks([sqlBlock]))
+        .schemas[sqlBlock.name];
+      if (schema.structRelationship.type !== "basetable") {
+        throw new Error(
+          "Expected schema's structRelationship type to be 'basetable'."
+        );
+      }
+      resultExplore = new Explore(schema);
+      sql = sqlBlock.select;
+    } else if (preparedResult !== undefined) {
+      resultExplore = preparedResult.resultExplore;
+      sql = preparedResult.sql;
+    } else {
+      throw new Error(
+        "Internal error: sqlBlock or preparedResult must be provided."
+      );
+    }
+    let index = 0;
+    for await (const row of connection.runSQLStream(sql, options)) {
+      yield new DataRecord(row, index, resultExplore, undefined);
+      index += 1;
     }
   }
 }
@@ -2207,6 +2314,17 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
     return Malloy.run({ connections, preparedResult, options });
   }
 
+  async *runStream(options?: {
+    rowLimit?: number;
+  }): AsyncIterableIterator<DataRecord> {
+    const preparedResult = await this.getPreparedResult();
+    const connections = this.runtime.connections;
+    const stream = Malloy.runStream({ connections, preparedResult, options });
+    for await (const row of stream) {
+      yield row;
+    }
+  }
+
   /**
    * Load the prepared result of this loaded query.
    *
@@ -2264,6 +2382,17 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
     return Malloy.run({ connections, preparedResult, options });
   }
 
+  async *runStream(options?: {
+    rowLimit?: number;
+  }): AsyncIterableIterator<DataRecord> {
+    const preparedResult = await this.getPreparedResult();
+    const connections = this.runtime.connections;
+    const stream = Malloy.runStream({ connections, preparedResult, options });
+    for await (const row of stream) {
+      yield row;
+    }
+  }
+
   /**
    * Materialize this loaded prepared result.
    *
@@ -2302,6 +2431,17 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
       sqlBlock,
       options,
     });
+  }
+
+  async *runStream(options?: {
+    rowLimit?: number;
+  }): AsyncIterableIterator<DataRecord> {
+    const sqlBlock = await this.getSQLBlock();
+    const connections = this.runtime.connections;
+    const stream = Malloy.runStream({ connections, sqlBlock, options });
+    for await (const row of stream) {
+      yield row;
+    }
   }
 
   /**
@@ -2695,6 +2835,12 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
       },
     };
   }
+
+  async *inMemoryStream(): AsyncIterableIterator<DataRecord> {
+    for (let i = 0; i < this.queryData.length; i++) {
+      yield this.row(i);
+    }
+  }
 }
 
 function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
@@ -2814,4 +2960,110 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | Connection
 ): thing is LookupConnection<T> {
   return "lookupConnection" in thing;
+}
+
+export interface WriteStream {
+  write: (text: string) => void;
+  close: () => void;
+}
+
+export abstract class DataWriter {
+  constructor(protected readonly stream: WriteStream) {}
+
+  abstract process(data: AsyncIterableIterator<DataRecord>): Promise<void>;
+}
+
+export class JSONWriter extends DataWriter {
+  async process(data: AsyncIterableIterator<DataRecord>): Promise<void> {
+    this.stream.write("[\n");
+    for await (const row of data) {
+      if (row.index !== undefined && row.index > 0) {
+        this.stream.write(",\n");
+      }
+      const json = JSON.stringify(row.toObject(), null, 2);
+      const jsonLines = json.split("\n");
+      for (let i = 0; i < jsonLines.length; i++) {
+        const line = jsonLines[i];
+        this.stream.write(`  ${line}`);
+        if (i < jsonLines.length - 1) {
+          this.stream.write("\n");
+        }
+      }
+    }
+    this.stream.write("\n]\n");
+    this.stream.close();
+  }
+}
+
+export class CSVWriter extends DataWriter {
+  private readonly columnSeparator = ",";
+  private readonly rowSeparator = "\n";
+  private readonly quoteCharacter = '"';
+  private readonly includeHeader = true;
+
+  private escape(value: string) {
+    const hasInnerQuote = value.includes(this.quoteCharacter);
+    const hasInnerCommas = value.includes(this.columnSeparator);
+    const hasNewline = value.includes(this.rowSeparator);
+    const needsQuoting = hasInnerCommas || hasInnerQuote || hasNewline;
+    if (hasInnerQuote) {
+      value = value.replace(
+        new RegExp(this.quoteCharacter, "g"),
+        this.quoteCharacter + this.quoteCharacter
+      );
+    }
+
+    if (needsQuoting) {
+      value = this.quoteCharacter + value + this.quoteCharacter;
+    }
+
+    return value;
+  }
+
+  private stringify(cell: DataColumn) {
+    if (cell.isNull()) {
+      return "";
+    } else if (
+      cell.isArray() ||
+      cell.isRecord() ||
+      cell.isBoolean() ||
+      cell.isNumber()
+    ) {
+      return JSON.stringify(cell.value);
+    } else if (cell.isDate() || cell.isTimestamp()) {
+      return cell.value.toISOString();
+    } else if (cell.isString()) {
+      return cell.value;
+    } else {
+      return `${cell.value}`;
+    }
+  }
+
+  async process(data: AsyncIterableIterator<DataRecord>): Promise<void> {
+    let fields;
+    for await (const row of data) {
+      if (fields === undefined) {
+        fields = row.field.allFields;
+        if (this.includeHeader) {
+          for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+            const field = fields[fieldIndex];
+            this.stream.write(this.escape(field.name));
+            if (fieldIndex !== fields.length - 1) {
+              this.stream.write(this.columnSeparator);
+            }
+          }
+          this.stream.write(this.rowSeparator);
+        }
+      }
+      for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+        const field = fields[fieldIndex];
+        this.stream.write(this.escape(this.stringify(row.cell(field))));
+        if (fieldIndex !== fields.length - 1) {
+          this.stream.write(this.columnSeparator);
+        }
+      }
+      this.stream.write(this.rowSeparator);
+    }
+    this.stream.close();
+  }
 }

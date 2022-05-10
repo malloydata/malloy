@@ -11,18 +11,12 @@
  * GNU General Public License for more details.
  */
 
-module.exports = {
-  globals: {
-    "ts-jest": { tsconfig: "<rootDir>/tsconfig.json" },
-  },
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  setupFilesAfterEnv: ["jest-expect-message"],
-  testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/out/"],
-  transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
-  },
-  testTimeout: 100000,
-  verbose: true,
-  testEnvironment: "node",
-};
+import { QueryPanelMessage } from "../../webview_message_manager";
+import { makeVSCodeContext } from "../vscode_context";
+import { makeUseVSCodeContext } from "../vscode_context";
+
+export const QueryVSCodeContext = makeVSCodeContext<void, QueryPanelMessage>();
+
+export const useQueryVSCodeContext = makeUseVSCodeContext(QueryVSCodeContext);
+
+export { getVSCodeAPI } from "../vscode_context";

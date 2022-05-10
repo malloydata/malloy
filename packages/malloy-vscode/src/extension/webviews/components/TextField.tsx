@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@ interface TextFieldProps {
   setValue: (value: string) => void;
   placeholder?: string;
   id?: string;
+  style?: React.CSSProperties;
 }
 
 export const TextField: React.FC<TextFieldProps> = ({
@@ -29,6 +30,7 @@ export const TextField: React.FC<TextFieldProps> = ({
   type,
   placeholder,
   id,
+  style,
 }) => {
   const onChange = (event: any) => {
     setValue(event.target.value);
@@ -41,6 +43,7 @@ export const TextField: React.FC<TextFieldProps> = ({
       type={type}
       placeholder={placeholder}
       id={id}
+      style={style}
     />
   );
 };

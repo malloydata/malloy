@@ -205,6 +205,11 @@
           "description": "Maximum number of top-level rows to fetch when running queries.",
           "default": 50
         },
+        "malloy.downloadsPath": {
+          "type": "string",
+          "description": "Path to directory to save downloaded results",
+          "default": "~/Downloads"
+        },
         "malloy.connections": {
           "type": "array",
           "items": {
@@ -354,6 +359,7 @@
     "uuid": "^8.3.2",
     "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
-    "vscode-webview": "^1.0.1-beta.1"
+    "vscode-webview": "^1.0.1-beta.1",
+    "esbuild-plugin-svgr": "^1.0.1"
   }
 }
