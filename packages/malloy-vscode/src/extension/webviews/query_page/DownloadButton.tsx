@@ -27,8 +27,6 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
 
-  // console.log(Spinner);
-
   return (
     <>
       <StyledDownloadIcon
