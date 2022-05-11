@@ -12,7 +12,7 @@
  */
 
 import React, { useEffect, useRef } from "react";
-import { VSCodeDropdown, VSCodeOption } from "./fast";
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 
 interface DropdownProps {
   value: string;
