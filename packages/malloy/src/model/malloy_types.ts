@@ -529,16 +529,19 @@ export type StructRelationship =
   | { type: "inline" }
   | { type: "nested"; field: FieldRef; isArray: boolean };
 
+export interface SQLSelectStatements {
+  before?: string[];
+  select: string;
+  after?: string[];
+}
+
 /**
  * Use factory makeSQLBlock to create one of these, it will compute the
  * name: property and fill it in.
  */
-export interface SQLBlock extends NamedObject {
+export interface SQLBlock extends NamedObject, SQLSelectStatements {
   type: "sqlBlock";
   name: string; //  hash of the connection and the select
-  before?: string[];
-  select: string;
-  after?: string[];
   connection?: string;
 }
 

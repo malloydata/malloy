@@ -26,6 +26,9 @@ import {
 import { indent } from "../model/utils";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
+// need to refactor runSQL to take a SQLBlock instead of just a sql string.
+const hackSplitComment = "-- hack: split on this";
+
 const castMap: Record<string, string> = {
   number: "double precision",
   string: "varchar",
@@ -49,13 +52,17 @@ const pgMakeIntervalMap: Record<string, string> = {
 export class DuckDBDialect extends Dialect {
   name = "duckdb";
   defaultNumberType = "DOUBLE";
-  udfPrefix = "pg_temp.__udf";
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
 
   functionInfo: Record<string, FunctionInfo> = {};
+
+  // hack until they support temporary macros.
+  get udfPrefix(): string {
+    return `__udf${Math.floor(Math.random() * 100000)}`;
+  }
 
   quoteTablePath(tableName: string): string {
     return `${tableName}`;
@@ -70,15 +77,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   mapFields(fieldList: DialectFieldList): string {
-    return fieldList
-      .map(
-        (f) =>
-          `\n  ${f.sqlExpression}${
-            f.type == "number" ? `::${this.defaultNumberType}` : ""
-          } as ${f.sqlOutputName}`
-        //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
-      )
-      .join(", ");
+    return fieldList.join(", ");
   }
 
   sqlAggregateTurtle(
@@ -101,7 +100,7 @@ export class DuckDBDialect extends Dialect {
     const fields = fieldList
       .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
       .join(", ");
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ROW(${fields}))`;
   }
 
   sqlAnyValueLastTurtle(name: string, sqlName: string): string {
@@ -119,8 +118,15 @@ export class DuckDBDialect extends Dialect {
     groupSet: number,
     fieldList: DialectFieldList
   ): string {
-    const fields = this.mapFields(fieldList);
-    return `TO_JSONB((ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x)) FILTER (WHERE group_set=${groupSet}))[1])`;
+    const fields = fieldList
+      .map((f) => `${f.sqlOutputName}: ${f.sqlExpression} `)
+      .join(", ");
+    const _nullValues = fieldList
+      .map((f) => `NULL as ${f.sqlOutputName}`)
+      .join(", ");
+
+    // return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
+    return `{${fields}}`;
   }
 
   sqlUnnestAlias(
@@ -149,39 +155,24 @@ export class DuckDBDialect extends Dialect {
   sqlFieldReference(
     alias: string,
     fieldName: string,
-    fieldType: string,
-    isNested: boolean
+    _fieldType: string,
+    _isNested: boolean
   ): string {
-    let ret = `${alias}->>'${fieldName}'`;
-    if (isNested) {
-      switch (fieldType) {
-        case "string":
-          break;
-        case "number":
-          ret = `(${ret})::double precision`;
-          break;
-        case "struct":
-          ret = `(${ret})::jsonb`;
-          break;
-      }
-      return ret;
-    } else {
-      return `${alias}.${fieldName}`;
-    }
+    return `${alias}.${fieldName}`;
   }
 
   sqlUnnestPipelineHead(): string {
-    return "JSONB_ARRAY_ELEMENTS($1)";
+    return "(SELECT UNNEST(_param) as base)";
   }
 
   sqlCreateFunction(id: string, funcText: string): string {
-    return `CREATE FUNCTION ${id}(JSONB) RETURNS JSONB AS $$\n${indent(
+    return `DROP MACRO ${id}; \n${hackSplitComment}\n CREATE MACRO ${id}(_param) AS (\n${indent(
       funcText
-    )}\n$$ LANGUAGE SQL;\n`;
+    )}\n);\n${hackSplitComment}\n`;
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
+    return `SELECT * FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string): string {
@@ -279,6 +270,13 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlSumDistinct(key: string, value: string): string {
-    return `sum_distinct(list({key:${key}, val: ${value}}))`;
+    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+    return `(
+      fail -- force the query for fail until the bug is fixed.
+      SELECT sum(a.val) as value
+      FROM (
+        SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
+      )
+    )`;
   }
 }

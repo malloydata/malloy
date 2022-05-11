@@ -70,20 +70,16 @@ export class DuckDBConnection implements Connection {
     if (!this.isSetup) {
       await this.runDuckDBQuery("INSTALL 'json'");
       await this.runDuckDBQuery("LOAD 'json'");
-      await this.runDuckDBQuery("DROP macro sum_distinct");
-      await this.runDuckDBQuery(
-        `
-        create macro sum_distinct(l) as  (
-          with cte as (
-            select unnest(l) x
-          ),
-          cte2 as (
-            select distinct x FROM cte
-          )
-          select sum(x.val) as value FROM cte2
-        )
-        `
-      );
+      //   await this.runDuckDBQuery("DROP MACRO sum_distinct");
+      //   try {
+      //     await this.runDuckDBQuery(
+      //       `
+      //       create macro sum_distinct(l) as  (
+      //         select sum(x.val) as value FROM (select unnest(l)) x
+      //       )
+      //       `
+      //     );
+      //   } catch (e) {}
     }
     this.isSetup = true;
   }
@@ -112,7 +108,16 @@ export class DuckDBConnection implements Connection {
   public async runSQL(sql: string): Promise<MalloyQueryData> {
     await this.setup();
     console.log(sql);
-    const retVal = await this.runDuckDBQuery(sql);
+
+    const statements = sql.split("-- hack: split on this");
+
+    while (statements.length > 1) {
+      try {
+        await this.runDuckDBQuery(statements[0]);
+        statements.unshift();
+      } catch (e) {}
+    }
+    const retVal = await this.runDuckDBQuery(statements[0]);
     const result = JSON.parse(retVal.rows[0].results);
     return { rows: result, totalRows: result.length };
   }

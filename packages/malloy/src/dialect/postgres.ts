@@ -331,4 +331,14 @@ export class PostgresDialect extends Dialect {
     }
     throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
   }
+
+  sqlSumDistinct(key: string, value: string): string {
+    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+    return `(
+      SELECT sum((a::json->>'f2')::DOUBLE PRECISION) as value
+      FROM (
+        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
+      ) a
+    )`;
+  }
 }

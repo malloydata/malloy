@@ -20,8 +20,8 @@ import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
   // "bigquery", //
-  // "postgres", //
-  "duckdb", //
+  "postgres", //
+  // "duckdb", //
 ]);
 
 const splitFunction: Record<string, string> = {
@@ -117,8 +117,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].avg_seats).toBe(7);
     expect(result.data.value[0].avg_year).toBe(1969);
+    expect(result.data.value[0].avg_seats).toBe(7);
+
   });
   it(`join_many condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
