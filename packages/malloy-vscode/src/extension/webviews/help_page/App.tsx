@@ -14,7 +14,10 @@
 import React, { useState } from "react";
 import styled from "styled-components";
 import { HelpMessageType } from "../../webview_message_manager";
-import { VSCodeButton, VSCodeTextField } from "../components/fast";
+import {
+  VSCodeButton,
+  VSCodeTextField,
+} from "@vscode/webview-ui-toolkit/react";
 import { useHelpVSCodeContext } from "./help_vscode_context";
 
 export const App: React.FC = () => {

@@ -13,7 +13,7 @@
 
 import { TextFieldType } from "@vscode/webview-ui-toolkit";
 import React from "react";
-import { VSCodeTextField } from "./fast";
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react";
 
 interface TextFieldProps {
   value: string;

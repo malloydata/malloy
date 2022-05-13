@@ -19,7 +19,11 @@ import {
 } from "../../../../common/connection_manager_types";
 import { ConnectionMessageTest } from "../../../webview_message_manager";
 import { Dropdown } from "../../components";
-import { VSCodeButton, VSCodeDivider, VSCodeTag } from "../../components/fast";
+import {
+  VSCodeButton,
+  VSCodeDivider,
+  VSCodeTag,
+} from "@vscode/webview-ui-toolkit/react";
 import { ButtonGroup } from "../ButtonGroup";
 import { BigQueryConnectionEditor } from "./BigQueryConnectionEditor";
 import { Label } from "./Label";
