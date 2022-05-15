@@ -8,8 +8,7 @@
     "start-server": "nodemon -e ts src/server/server.ts",
     "start-app": "ts-node scripts/serve",
     "build": "ts-node scripts/build",
-    "clean": "rm -rf ./node_modules",
-    "eject": "react-scripts eject"
+    "clean": "rm -rf ./node_modules"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^5.11.0",
@@ -29,7 +28,6 @@
     "react-hotkeys": "^2.0.0",
     "react-popper": "^2.2.5",
     "react-query": "^3.34.16",
-    "react-scripts": "5.0.0",
     "shiki": "^0.10.1",
     "styled-components": "^5.3.3",
     "ts-node": "^10.5.0",
