@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,8 +11,20 @@
  * GNU General Public License for more details.
  */
 
-import logoSrc from "../assets/img/logo.png";
+import { serve } from "esbuild";
+import { commonConfig } from "./build";
 
-export const MalloyLogo: React.FC = () => {
-  return <img src={"js/" + logoSrc} alt="Malloy" style={{ height: "40px" }} />;
-};
+async function doServe() {
+  await serve(
+    {
+      servedir: "public",
+      port: 3000,
+    },
+    commonConfig(true)
+  ).catch((e: any) => {
+    console.log(e);
+    process.exit(1);
+  });
+}
+
+doServe();

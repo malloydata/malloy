@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "license": "GPL-2.0",
+  "scripts": {
+    "start": "concurrently --kill-others-on-fail \"DEV=1 yarn start-server\" \"wait-on tcp:4000 && yarn start-app\"",
+    "start-server": "nodemon -e ts src/server/server.ts",
+    "start-app": "ts-node scripts/serve",
+    "build": "ts-node scripts/build",
+    "clean": "rm -rf ./node_modules",
+    "eject": "react-scripts eject"
+  },
   "dependencies": {
     "@google-cloud/bigquery": "^5.11.0",
     "@popperjs/core": "^2.11.4",
@@ -35,15 +43,6 @@
     "@malloydata/db-bigquery": "*",
     "@malloydata/render": "*"
   },
-  "scripts": {
-    "start-app": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "clean": "rm -rf ./node_modules",
-    "eject": "react-scripts eject",
-    "start": "concurrently --kill-others-on-fail \"DEV=1 yarn start-server\" \"wait-on tcp:4000 && yarn start-app\"",
-    "start-server": "nodemon -e ts src/server/server.ts"
-  },
   "browserslist": {
     "production": [
       ">0.2%",
@@ -63,6 +62,8 @@
     "@testing-library/dom": "^7.21.4",
     "@types/cors": "^2.8.12",
     "concurrently": "^6.2.1",
+    "esbuild": "^0.14.13",
+    "esbuild-plugin-svgr": "^1.0.1",
     "wait-on": "^6.0.1",
     "jest": "^26.6.0",
     "@types/node": "^16.7.13",
