@@ -33,6 +33,7 @@ import { DataStyles } from "@malloydata/render";
 import { DirectoryPicker } from "../DirectoryPicker";
 import { HotKeys } from "react-hotkeys";
 import { useTopValues } from "../data/use_top_values";
+import { ExploreSettingsMenu } from "../ExploreSettingsMenu";
 
 const KEY_MAP = {
   REMOVE_FIELDS: "command+k",
@@ -404,20 +405,27 @@ export const Explore: React.FC = () => {
   return (
     <Main handlers={handlers} keyMap={KEY_MAP}>
       <Header>
-        <HeaderLeft>
+        <HeaderItems>
           <MalloyLogo />
           <DirectoryPicker
             directory={directory}
             analysis={analysis}
             selectAnalysis={selectAnalysis}
           />
-        </HeaderLeft>
-        {!isRunning && <Button onClick={() => runQuery()}>Run</Button>}
-        {isRunning && (
-          <Button onClick={() => clearResult()} color="primary" outline={true}>
-            Cancel
-          </Button>
-        )}
+        </HeaderItems>
+        <HeaderItems>
+          {!isRunning && <Button onClick={() => runQuery()}>Run</Button>}
+          {isRunning && (
+            <Button
+              onClick={() => clearResult()}
+              color="primary"
+              outline={true}
+            >
+              Cancel
+            </Button>
+          )}
+          <ExploreSettingsMenu foo={1} />
+        </HeaderItems>
       </Header>
       <Body>
         <Content>
@@ -579,7 +587,7 @@ const Header = styled.div`
   padding: 5px 20px;
 `;
 
-const HeaderLeft = styled.div`
+const HeaderItems = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;

@@ -611,3 +611,35 @@ export type TimeFilter =
   | TimeCustomFilter;
 
 export type Filter = StringFilter | NumberFilter | BooleanFilter | TimeFilter;
+
+export enum ConnectionBackend {
+  BigQuery = "bigquery",
+  Postgres = "postgres",
+}
+
+interface ConnectionConfigBase {
+  name: string;
+  isDefault: boolean;
+  id: string;
+}
+
+export interface BigQueryConnectionConfig extends ConnectionConfigBase {
+  backend: ConnectionBackend.BigQuery;
+  serviceAccountKeyPath?: string;
+  projectName?: string;
+  location?: string;
+}
+
+export interface PostgresConnectionConfig extends ConnectionConfigBase {
+  backend: ConnectionBackend.Postgres;
+  username?: string;
+  password?: string;
+  host?: string;
+  port?: number;
+  databaseName?: string;
+  useKeychainPassword?: boolean;
+}
+
+export type ConnectionConfig =
+  | BigQueryConnectionConfig
+  | PostgresConnectionConfig;
