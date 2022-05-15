@@ -11,6 +11,9 @@
  * GNU General Public License for more details.
  */
 
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { serve } from "esbuild";
 import { commonConfig } from "./build";
 
