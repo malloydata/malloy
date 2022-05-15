@@ -63,7 +63,6 @@
     "@types/cors": "^2.8.12",
     "concurrently": "^6.2.1",
     "esbuild": "^0.14.13",
-    "esbuild-plugin-inline-image": "^0.0.8",
     "esbuild-plugin-svgr": "^1.0.1",
     "wait-on": "^6.0.1",
     "jest": "^26.6.0",

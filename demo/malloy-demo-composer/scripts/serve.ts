@@ -12,8 +12,7 @@
  */
 
 import { serve } from "esbuild";
-import inlineImage from "esbuild-plugin-inline-image";
-import svgrPlugin from "esbuild-plugin-svgr";
+import { commonConfig } from "./build";
 
 async function doServe() {
   await serve(
@@ -21,25 +20,7 @@ async function doServe() {
       servedir: "public",
       port: 3000,
     },
-    {
-      entryPoints: ["./src/index.tsx"],
-      outfile: "./public/js/app.js",
-      minify: false,
-      bundle: true,
-      platform: "browser",
-      sourcemap: true,
-      loader: {
-        ".js": "jsx",
-      },
-      plugins: [
-        inlineImage({ extensions: ["png"] }),
-        svgrPlugin({ exportType: "named" }),
-      ],
-      define: {
-        "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
-      },
-      inject: ["./react-shim.js"], // This shim elimanites needing to have "require React from 'react'" in every file
-    }
+    commonConfig(true)
   ).catch((e: any) => {
     console.log(e);
     process.exit(1);
