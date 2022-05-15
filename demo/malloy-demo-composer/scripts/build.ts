@@ -14,7 +14,7 @@
 import { build, BuildOptions } from "esbuild";
 import svgrPlugin from "esbuild-plugin-svgr";
 
-export const commonConfig = (development: boolean = false): BuildOptions => {
+export const commonConfig = (development = false): BuildOptions => {
   return {
     entryPoints: ["./src/index.tsx"],
     outfile: "./public/js/app.js",
