@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import logoSrc from "../assets/img/logo.png";
+import { contextBridge } from "electron";
 
-export const MalloyLogo: React.FC = () => {
-  return <img src={logoSrc} alt="Malloy" style={{ height: "40px" }} />;
-};
+process.once("loaded", () => {
+  contextBridge.exposeInMainWorld("versions", process.versions);
+});

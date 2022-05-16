@@ -11,8 +11,4 @@
  * GNU General Public License for more details.
  */
 
-import logoSrc from "../assets/img/logo.png";
-
-export const MalloyLogo: React.FC = () => {
-  return <img src={logoSrc} alt="Malloy" style={{ height: "40px" }} />;
-};
+export {};

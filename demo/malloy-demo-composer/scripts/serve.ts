@@ -15,15 +15,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { serve } from "esbuild";
-import { commonConfig } from "./build";
+import { appDirectory, buildDirectory, commonAppConfig } from "./build";
+import * as path from "path";
 
 async function doServe() {
   await serve(
     {
-      servedir: "public",
+      servedir: path.join(buildDirectory, appDirectory),
       port: 3000,
     },
-    commonConfig(true)
+    commonAppConfig(true)
   ).catch((e: any) => {
     console.log(e);
     process.exit(1);

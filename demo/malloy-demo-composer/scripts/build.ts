@@ -16,11 +16,19 @@
 
 import { build, BuildOptions } from "esbuild";
 import svgrPlugin from "esbuild-plugin-svgr";
+import * as path from "path";
+// importing this in normal fashion seems to import an older API?!
+// for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const fs = require("fs");
 
-export const commonConfig = (development = false): BuildOptions => {
+export const buildDirectory = "build/";
+export const appDirectory = "app/";
+
+export const commonAppConfig = (development = false): BuildOptions => {
   return {
     entryPoints: ["./src/index.tsx"],
-    outfile: "./public/js/app.js",
+    outfile: path.join(buildDirectory, appDirectory, "app.js"),
     minify: !development,
     sourcemap: development,
     bundle: true,
@@ -37,11 +45,48 @@ export const commonConfig = (development = false): BuildOptions => {
   };
 };
 
+const commonElectronConfig = (development = false): BuildOptions => {
+  return {
+    entryPoints: ["./src/electron/main.ts", "./src/electron/preload.ts"],
+    outdir: path.join(buildDirectory),
+    minify: !development,
+    sourcemap: development,
+    bundle: true,
+    platform: "node",
+    external: ["electron"],
+  };
+};
+
+function copyDir(src: string, dest: string) {
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    entry.isDirectory()
+      ? copyDir(srcPath, destPath)
+      : fs.copyFileSync(srcPath, destPath);
+  }
+}
+
+const errorHandler = (e: any) => {
+  console.log(e);
+  process.exit(1);
+};
+
 async function doBuild() {
-  await build(commonConfig()).catch((e: any) => {
-    console.log(e);
-    process.exit(1);
-  });
+  //const development = process.env.NODE_ENV == "development";
+  const development = true;
+
+  fs.rmSync(buildDirectory, { recursive: true, force: true });
+  fs.mkdirSync(buildDirectory, { recursive: true });
+
+  copyDir("public", path.join(buildDirectory, appDirectory));
+
+  await build(commonAppConfig(development)).catch(errorHandler);
+  await build(commonElectronConfig(development)).catch(errorHandler);
 }
 
 doBuild();
