@@ -2532,6 +2532,10 @@ export class Result extends PreparedResult {
     return new DataArray(this.inner.result, this.resultExplore, undefined);
   }
 
+  public get totalRows(): number {
+    return this.inner.totalRows;
+  }
+
   public toJSON(): ResultJSON {
     return { queryResult: this.inner, modelDef: this._modelDef };
   }
