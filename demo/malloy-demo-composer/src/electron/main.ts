@@ -44,22 +44,26 @@ function createWindow() {
   mainWindow.loadURL(appURL);
 
   if (!app.isPackaged) {
-    mainWindow.webContents.openDevTools({ mode: "detach" });
+    mainWindow.webContents.openDevTools({ mode: "detach", activate: false });
   }
+
+  mainWindow.on("ready-to-show", () => {
+    mainWindow.show();
+  });
 }
 
 app.whenReady().then(() => {
   registerIPC();
   createWindow();
 
-  app.on("activate", function () {
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 });
 
-app.on("window-all-closed", function () {
+app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
