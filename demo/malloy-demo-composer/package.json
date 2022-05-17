@@ -11,13 +11,12 @@
     "clean": "rm -rf ./node_modules"
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^5.11.0",
     "@malloydata/db-bigquery": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
     "@popperjs/core": "^2.11.4",
-    "cors": "^2.8.5",
     "electron": "^18.2.3",
+    "moment-js": "^1.1.15",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-hotkeys": "^2.0.0",
@@ -26,13 +25,9 @@
     "shiki": "^0.10.1",
     "styled-components": "^5.3.3",
     "url": "^0.11.0",
-    "us-atlas": "3.0.0",
-    "vega": "^5.21.0",
-    "vega-lite": "5.2.0",
     "web-vitals": "^2.1.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.12",
     "@types/moment": "^2.13.0",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
