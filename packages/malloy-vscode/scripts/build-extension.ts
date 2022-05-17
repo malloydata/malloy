@@ -172,7 +172,7 @@ export async function doBuild(target?: Target): Promise<void> {
     entryNames: "[dir]",
     bundle: true,
     minify: !development,
-    sourcemap: development ? 'inline' : false,
+    sourcemap: development ? "inline" : false,
     outdir: outDir,
     platform: "browser",
     loader: { [".svg"]: "file" },
