@@ -14,7 +14,6 @@
 import * as explore from "../types";
 import { promises as fs } from "fs";
 import * as path from "path";
-import * as os from "os";
 import { URLReader, URL, Runtime } from "@malloydata/malloy";
 import { CONNECTIONS } from "./connections";
 import { URL_READER } from "./urls";

@@ -13,13 +13,11 @@
 
 import { useQuery } from "react-query";
 import * as explore from "../../types";
-import { API } from "./api";
 
 export const KEY = "models";
 
 async function fetchModels(): Promise<explore.Model[]> {
-  const raw = await (await fetch(`${API}/models`)).json();
-  return raw.models as explore.Model[];
+  return await window.malloy.models();
 }
 
 export function useModels(): explore.Model[] | undefined {

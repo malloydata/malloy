@@ -13,27 +13,17 @@
 
 import { useMutation } from "react-query";
 import { Analysis } from "../../types";
-import { API } from "./api";
 import * as malloy from "@malloydata/malloy";
 
 async function runQuery(query: string, queryName: string, analysis?: Analysis) {
   if (analysis === undefined) {
     return undefined;
   }
-  const raw = await (
-    await fetch(`${API}/run_query`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query,
-        queryName,
-        analysis: { ...analysis, modelDef: {} },
-      }),
-    })
-  ).json();
-  return malloy.Result.fromJSON(raw.result) as malloy.Result;
+  const res = await window.malloy.runQuery(query, queryName, {
+    ...analysis,
+    modelDef: {},
+  });
+  return malloy.Result.fromJSON(res);
 }
 
 interface UseRunQueryResult {
