@@ -17,7 +17,7 @@ import { Analysis } from "../types";
 
 contextBridge.exposeInMainWorld("malloy", {
   analyses: () => ipcRenderer.invoke("get:analyses"),
-  analysis: (path: string) => ipcRenderer.invoke("get:analyses", path),
+  analysis: (path: string) => ipcRenderer.invoke("get:analysis", path),
   models: () => ipcRenderer.invoke("get:models"),
   schema: (analysis: Analysis) => ipcRenderer.invoke("get:schema", analysis),
   runQuery: (query: string, queryName: string, analysis: Analysis) =>
