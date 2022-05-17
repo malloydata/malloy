@@ -15,13 +15,13 @@ import { FieldDef } from "@malloydata/malloy";
 import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
 import url from "url";
-import { getAnalysis, readMalloyDirectory } from "../server/directory";
-import { getModels } from "../server/models";
-import { runQuery } from "../server/run_query";
-import { saveField } from "../server/save_query";
-import { getSchema } from "../server/schema";
-import { searchIndex } from "../server/search";
-import { topValues } from "../server/top_values";
+import { getAnalysis, readMalloyDirectory } from "./directory";
+import { getModels } from "./models";
+import { runQuery } from "./run_query";
+import { saveField } from "./save_query";
+import { getSchema } from "./schema";
+import { searchIndex } from "./search";
+import { topValues } from "./top_values";
 import { Analysis } from "../types";
 
 function createWindow() {
