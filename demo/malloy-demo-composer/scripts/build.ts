@@ -50,7 +50,7 @@ const commonElectronConfig = (development = false): BuildOptions => {
     entryPoints: ["./src/electron/main.ts", "./src/electron/preload.ts"],
     outdir: path.join(buildDirectory),
     minify: !development,
-    sourcemap: development,
+    sourcemap: development ? "inline" : false,
     bundle: true,
     platform: "node",
     external: ["electron"],
