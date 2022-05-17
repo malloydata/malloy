@@ -14,7 +14,6 @@
 import { StructDef } from "@malloydata/malloy";
 import { SearchIndexResult } from "@malloydata/malloy";
 import { useQuery } from "react-query";
-import { API } from "./api";
 
 async function search(
   source: StructDef | undefined,
@@ -24,16 +23,7 @@ async function search(
   if (source === undefined) {
     return undefined;
   }
-  const raw = await (
-    await fetch(`${API}/search`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ searchTerm, source, fieldPath }),
-    })
-  ).json();
-  return (raw.result || []) as SearchIndexResult[];
+  return await window.malloy.search(source, searchTerm, fieldPath);
 }
 
 interface UseSearchResult {

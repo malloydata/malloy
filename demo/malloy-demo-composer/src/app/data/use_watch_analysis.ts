@@ -14,7 +14,6 @@
 import { useEffect } from "react";
 import { useQuery } from "react-query";
 import * as explore from "../../types";
-import { API } from "./api";
 
 export const KEY = "currentAnalysis";
 
@@ -25,11 +24,7 @@ async function refetchAnalysis(
     return undefined;
   }
 
-  const params = new URLSearchParams({
-    path: analysis.fullPath,
-  });
-  const raw = await (await fetch(`${API}/analysis?${params}`)).json();
-  return raw.analysis as explore.Analysis;
+  return window.malloy.analysis(analysis.fullPath);
 }
 
 export function useWatchAnalysis(

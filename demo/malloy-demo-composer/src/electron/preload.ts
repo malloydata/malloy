@@ -11,8 +11,25 @@
  * GNU General Public License for more details.
  */
 
-import { contextBridge } from "electron";
+import { FieldDef, StructDef } from "@malloydata/malloy";
+import { contextBridge, ipcRenderer } from "electron";
+import { Analysis } from "../types";
 
-process.once("loaded", () => {
-  contextBridge.exposeInMainWorld("versions", process.versions);
+contextBridge.exposeInMainWorld("malloy", {
+  analyses: () => ipcRenderer.invoke("get:analyses"),
+  analysis: (path: string) => ipcRenderer.invoke("get:analyses", path),
+  models: () => ipcRenderer.invoke("get:models"),
+  schema: (analysis: Analysis) => ipcRenderer.invoke("get:schema", analysis),
+  runQuery: (query: string, queryName: string, analysis: Analysis) =>
+    ipcRenderer.invoke("post:run_query", query, queryName, analysis),
+  saveField: (
+    type: "query" | "dimension" | "measure",
+    field: FieldDef,
+    name: string,
+    analysis: Analysis
+  ) => ipcRenderer.invoke("post:save_field", type, field, name, analysis),
+  search: (source: StructDef, searchTerm: string, fieldPath?: string) =>
+    ipcRenderer.invoke("post:search", source, searchTerm, fieldPath),
+  topValues: (source: StructDef) =>
+    ipcRenderer.invoke("post:top_values", source),
 });

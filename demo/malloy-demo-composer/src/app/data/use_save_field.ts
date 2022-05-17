@@ -13,7 +13,6 @@
 
 import { useMutation, useQueryClient } from "react-query";
 import { Analysis } from "../../types";
-import { API } from "./api";
 import { KEY as DIRECTORY_KEY } from "./use_directory";
 import { FieldDef } from "@malloydata/malloy";
 
@@ -26,21 +25,10 @@ async function saveField(
   if (analysis === undefined) {
     return undefined;
   }
-  const raw = await (
-    await fetch(`${API}/save_field`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type,
-        field,
-        name,
-        analysis: { ...analysis, modelDef: {} },
-      }),
-    })
-  ).json();
-  return raw.analysis as Analysis;
+  return await window.malloy.saveField(type, field, name, {
+    ...analysis,
+    modelDef: {},
+  });
 }
 
 interface UseSaveFieldResult {

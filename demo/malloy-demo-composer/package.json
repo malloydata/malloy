@@ -5,8 +5,7 @@
   "main": "./build/main.js",
   "license": "GPL-2.0",
   "scripts": {
-    "start": "concurrently --kill-others \"DEV=1 yarn start-server\" \"yarn start-app\" \"wait-on tcp:3000 && sleep 1 && yarn electron .\"",
-    "start-server": "nodemon -e ts src/server/server.ts",
+    "start": "yarn build && concurrently --kill-others \"yarn start-app\" \"wait-on tcp:3000 && sleep 1 && yarn electron .\"",
     "start-app": "ts-node scripts/serve",
     "build": "ts-node scripts/build",
     "clean": "rm -rf ./node_modules"

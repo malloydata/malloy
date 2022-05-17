@@ -11,9 +11,18 @@
  * GNU General Public License for more details.
  */
 
-import { app, BrowserWindow } from "electron";
+import { FieldDef } from "@malloydata/malloy";
+import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
 import url from "url";
+import { getAnalysis, readMalloyDirectory } from "../server/directory";
+import { getModels } from "../server/models";
+import { runQuery } from "../server/run_query";
+import { saveField } from "../server/save_query";
+import { getSchema } from "../server/schema";
+import { searchIndex } from "../server/search";
+import { topValues } from "../server/top_values";
+import { Analysis } from "../types";
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -40,6 +49,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  registerIPC();
   createWindow();
 
   app.on("activate", function () {
@@ -61,3 +71,50 @@ app.on("web-contents-created", (event, contents) => {
     event.preventDefault();
   });
 });
+
+async function registerIPC(): Promise<void> {
+  ipcMain.handle("get:analyses", async () => {
+    return await readMalloyDirectory();
+  });
+
+  ipcMain.handle("get:analysis", async (_event, path) => {
+    return await getAnalysis(path);
+  });
+
+  ipcMain.handle("get:models", async () => getModels);
+
+  ipcMain.handle("get:schema", async (_event, analysis: Analysis) => {
+    return await getSchema(analysis);
+  });
+
+  ipcMain.handle(
+    "post:run_query",
+    async (_event, query: string, queryName: string, analysis: Analysis) => {
+      return (await runQuery(query, queryName, analysis)).toJSON();
+    }
+  );
+
+  ipcMain.handle(
+    "post:save_field",
+    async (
+      _event,
+      type: "query" | "dimension" | "measure",
+      field: FieldDef,
+      name: string,
+      analysis: Analysis
+    ) => {
+      return await saveField(type, field, name, analysis);
+    }
+  );
+
+  ipcMain.handle(
+    "post:search",
+    async (_event, source, searchTerm, fieldPath) => {
+      return await searchIndex(source, searchTerm, fieldPath);
+    }
+  );
+
+  ipcMain.handle("post:top_values", async (_event, source) => {
+    return await topValues(source);
+  });
+}

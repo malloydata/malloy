@@ -14,7 +14,6 @@
 import { SearchValueMapResult } from "@malloydata/malloy";
 import { useQuery } from "react-query";
 import { Analysis } from "../../types";
-import { API } from "./api";
 
 export function KEY(analysis?: Analysis): string {
   return analysis
@@ -31,16 +30,7 @@ async function fetchTopValues(
     return undefined;
   }
   const source = analysis && analysis.modelDef.contents[analysis.sourceName];
-  const raw = await (
-    await fetch(`${API}/top_values`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ source }),
-    })
-  ).json();
-  return raw.result as SearchValueMapResult[];
+  return await window.malloy.topValues(source);
 }
 
 export function useTopValues(
