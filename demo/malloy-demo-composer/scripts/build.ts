@@ -17,10 +17,7 @@
 import { build, BuildOptions } from "esbuild";
 import svgrPlugin from "esbuild-plugin-svgr";
 import * as path from "path";
-// importing this in normal fashion seems to import an older API?!
-// for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const fs = require("fs");
+import fs from "fs";
 
 export const buildDirectory = "build/";
 export const appDirectory = "app/";
