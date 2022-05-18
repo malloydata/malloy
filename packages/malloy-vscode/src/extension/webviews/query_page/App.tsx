@@ -45,6 +45,7 @@ export const App: React.FC = () => {
   const [json, setJSON] = useState("");
   const [sql, setSQL] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
+  const [warning, setWarning] = useState<string | undefined>(undefined);
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
   const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
   const drillTooltipId = useRef(0);
@@ -72,6 +73,7 @@ export const App: React.FC = () => {
             setError(undefined);
           }
           if (message.status === QueryRunStatus.Done) {
+            setWarning(undefined);
             setStatus(Status.Rendering);
             setTimeout(async () => {
               const result = Result.fromJSON(message.result);
@@ -98,6 +100,13 @@ export const App: React.FC = () => {
               setStatus(Status.Displaying);
               setTimeout(() => {
                 setHTML(rendered);
+                if (data.rowCount < result.totalRows) {
+                  const rowCount = data.rowCount.toLocaleString();
+                  const totalRows = result.totalRows.toLocaleString();
+                  setWarning(
+                    `Row limit hit. Viewing ${rowCount} of ${totalRows} results.`
+                  );
+                }
                 setStatus(Status.Done);
               }, 0);
             }, 0);
@@ -178,6 +187,7 @@ export const App: React.FC = () => {
         </Scroll>
       )}
       {error && <div>{error}</div>}
+      {warning && <Warning>{warning}</Warning>}
       {drillTooltipVisible && (
         <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
           Drill copied!
@@ -275,6 +285,12 @@ const DrillTooltip = styled.div`
   color: white;
   border-radius: 5px;
   box-shadow: rgb(144 144 144) 0px 1px 5px 0px;
+  padding: 5px;
+`;
+
+const Warning = styled.div`
+  color: var(--vscode-statusBarItem-warningForeground);
+  background-color: var(--vscode-statusBarItem-warningBackground);
   padding: 5px;
 `;
 
