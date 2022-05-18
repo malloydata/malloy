@@ -42,6 +42,7 @@ import {
   DocumentPosition as ModelDocumentPosition,
   SearchIndexResult,
   SearchValueMapResult,
+  MalloyQueryMetadata,
 } from "./model";
 import {
   LookupConnection,
@@ -55,14 +56,10 @@ import {
 } from "./runtime_types";
 
 export interface Loggable {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  debug: (message?: any, ...optionalParams: any[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  info: (message?: any, ...optionalParams: any[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  warn: (message?: any, ...optionalParams: any[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  error: (message?: any, ...optionalParams: any[]) => void;
+  debug: (message?: unknown, ...optionalParams: unknown[]) => void;
+  info: (message?: unknown, ...optionalParams: unknown[]) => void;
+  warn: (message?: unknown, ...optionalParams: unknown[]) => void;
+  error: (message?: unknown, ...optionalParams: unknown[]) => void;
 }
 
 export interface RunSQLOptions {
@@ -377,12 +374,12 @@ export class Malloy {
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
+      const { rows, ...more } = data;
       return new Result(
         {
           structs: [schema],
           sql: sqlBlock.select,
-          result: data.rows,
-          totalRows: data.totalRows,
+          result: rows,
           lastStageName: schema.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: "",
@@ -390,6 +387,7 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: "",
           sourceFilters: [],
+          ...more,
         },
         {
           name: "empty_model",
@@ -399,11 +397,12 @@ export class Malloy {
       );
     } else if (preparedResult !== undefined) {
       const result = await connection.runSQL(preparedResult.sql, options);
+      const { rows, ...more } = result;
       return new Result(
         {
           ...preparedResult._rawQuery,
-          result: result.rows,
-          totalRows: result.totalRows,
+          result: rows,
+          ...more,
         },
         preparedResult._modelDef
       );
@@ -2539,6 +2538,10 @@ export class Result extends PreparedResult {
 
   public get totalRows(): number {
     return this.inner.totalRows;
+  }
+
+  public get metadata(): MalloyQueryMetadata {
+    return this.inner.metadata;
   }
 
   public toJSON(): ResultJSON {

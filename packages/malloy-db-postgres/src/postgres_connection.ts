@@ -14,6 +14,7 @@
 import {
   StructDef,
   MalloyQueryData,
+  MalloyResultCache,
   NamedStructDefs,
   AtomicFieldTypeInner,
   QueryData,
@@ -83,6 +84,7 @@ const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
 export class PostgresConnection implements Connection, StreamingConnection {
+  protected resultCache = new MalloyResultCache();
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -218,13 +220,19 @@ export class PostgresConnection implements Connection, StreamingConnection {
 
   protected async runPostgresQuery(
     sqlCommand: string,
-    _pageSize: number,
-    _rowIndex: number,
+    pageSize: number,
+    rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
 
+    const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
+    const cached = this.resultCache.retrieve(hash);
+    if (cached !== undefined) {
+      const { data } = cached;
+      return data;
+    }
     let result = await client.query(sqlCommand);
     if (result instanceof Array) {
       result = result.pop();
@@ -235,7 +243,14 @@ export class PostgresConnection implements Connection, StreamingConnection {
       }
     }
     await client.end();
-    return { rows: result.rows as QueryData, totalRows: result.rows.length };
+
+    const rows = result.rows as QueryData;
+    const totalRows = result.rows.length;
+    const ranAt = Date.now();
+    const fromCache = false;
+    const data = { rows, totalRows, metadata: { ranAt, fromCache } };
+    this.resultCache.put(hash, { data });
+    return data;
   }
 
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
@@ -414,10 +429,17 @@ export class PooledPostgresConnection
 
   protected async runPostgresQuery(
     sqlCommand: string,
-    _pageSize: number,
-    _rowIndex: number,
+    pageSize: number,
+    rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
+    const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
+    const cached = this.resultCache.retrieve(hash);
+    if (cached !== undefined) {
+      const { data } = cached;
+      return data;
+    }
+
     let result = await this.pool.query(sqlCommand);
 
     if (result instanceof Array) {
@@ -428,7 +450,14 @@ export class PooledPostgresConnection
         result.rows[i] = result.rows[i].row;
       }
     }
-    return { rows: result.rows as QueryData, totalRows: result.rows.length };
+
+    const rows = result.rows as QueryData;
+    const totalRows = result.rows.length;
+    const ranAt = Date.now();
+    const fromCache = false;
+    const data = { rows, totalRows, metadata: { ranAt, fromCache } };
+    this.resultCache.put(hash, { data });
+    return data;
   }
 
   private async getClientFromPool(): Promise<[PoolClient, () => void]> {

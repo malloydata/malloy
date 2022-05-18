@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { Result } from "@malloydata/malloy";
+import { MalloyQueryMetadata, Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
@@ -44,8 +44,9 @@ export const App: React.FC = () => {
   const [html, setHTML] = useState<HTMLElement>(document.createElement("span"));
   const [json, setJSON] = useState("");
   const [sql, setSQL] = useState("");
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [warning, setWarning] = useState<string | undefined>(undefined);
+  const [error, setError] = useState<string>();
+  const [warning, setWarning] = useState<string>();
+  const [cacheData, setCacheData] = useState<MalloyQueryMetadata>();
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
   const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
   const drillTooltipId = useRef(0);
@@ -74,10 +75,12 @@ export const App: React.FC = () => {
           }
           if (message.status === QueryRunStatus.Done) {
             setWarning(undefined);
+            setCacheData(undefined);
             setStatus(Status.Rendering);
             setTimeout(async () => {
               const result = Result.fromJSON(message.result);
               const data = result.data;
+              setCacheData(result.metadata);
               setJSON(JSON.stringify(data.toObject(), null, 2));
               setSQL(
                 Prism.highlight(result.sql, Prism.languages["sql"], "sql")
@@ -187,6 +190,12 @@ export const App: React.FC = () => {
         </Scroll>
       )}
       {error && <div>{error}</div>}
+      {cacheData && (
+        <CacheData>
+          {cacheData.fromCache && "Cached result: "}
+          {`Ran at ${new Date(cacheData.ranAt).toLocaleString()}`}
+        </CacheData>
+      )}
       {warning && <Warning>{warning}</Warning>}
       {drillTooltipVisible && (
         <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
@@ -285,6 +294,12 @@ const DrillTooltip = styled.div`
   color: white;
   border-radius: 5px;
   box-shadow: rgb(144 144 144) 0px 1px 5px 0px;
+  padding: 5px;
+`;
+
+const CacheData = styled.div`
+  color: var(--vscode-statusBar-foreground);
+  background-color: var(--vscode-statusBar-background);
   padding: 5px;
 `;
 

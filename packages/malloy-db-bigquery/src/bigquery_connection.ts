@@ -29,12 +29,14 @@ import {
   QueryData,
   StructDef,
   MalloyQueryData,
+  MalloyResultCache,
   FieldTypeDef,
   NamedStructDefs,
   SQLBlock,
   Connection,
   QueryDataRow,
   toAsyncGenerator,
+  ResultCacheEntry,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -68,6 +70,10 @@ interface BigQueryConnectionConfiguration {
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
   needsPartitionPsuedoColumn: boolean;
+}
+
+interface BigQueryResultCacheEntry extends ResultCacheEntry {
+  schema: bigquery.ITableFieldSchema;
 }
 
 type QueryOptionsReader =
@@ -119,6 +125,7 @@ export class BigQueryConnection
   private temporaryTables = new Map<string, string>();
   private defaultProject;
 
+  private resultCache = new MalloyResultCache<BigQueryResultCacheEntry>();
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -223,6 +230,12 @@ export class BigQueryConnection
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
 
+    const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
+    const cached = this.resultCache.retrieve(hash);
+    if (cached !== undefined) {
+      return cached;
+    }
+
     try {
       const queryResultsOptions = {
         maxResults: pageSize,
@@ -244,9 +257,15 @@ export class BigQueryConnection
       }
 
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      const data = { rows: jobResult[0], totalRows };
+      const ranAt = Date.now();
+      const fromCache = false;
+      const data = {
+        rows: jobResult[0],
+        totalRows,
+        metadata: { ranAt, fromCache },
+      };
       const schema = jobResult[2]?.schema;
-
+      this.resultCache.put(hash, { data, schema });
       return { data, schema };
     } catch (e) {
       throw maybeRewriteError(e);

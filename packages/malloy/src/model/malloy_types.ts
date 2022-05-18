@@ -677,10 +677,17 @@ export type QueryDataRow = { [columnName: string]: QueryValue };
 /** Returned query data. */
 export type QueryData = QueryDataRow[];
 
+/** Information about query result data */
+export interface MalloyQueryMetadata {
+  ranAt: number;
+  fromCache: boolean;
+}
+
 /** Returned Malloy query data */
 export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
+  metadata: MalloyQueryMetadata;
 };
 
 export interface DrillSource {
@@ -701,6 +708,7 @@ export interface CompiledQuery extends DrillSource {
 export interface QueryResult extends CompiledQuery {
   result: QueryData;
   totalRows: number;
+  metadata: MalloyQueryMetadata;
   error?: string;
 }
 
